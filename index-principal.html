@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Controle Financeiro</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <style>
+        .background-blur { pointer-events: none !important; z-index: -1; }
+        header, main, nav, #modal, #modalConfirmacao { position: relative; z-index: 1; }
+        #modal[hidden], #modalConfirmacao[hidden] { display: none !important; }
+        .modal-overlay:not([hidden]) {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+        }
+        .btn-excluir-item {
+            background: #dc2626; border: none; color: white;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+            transition: transform 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
+        }
+        .btn-excluir-item:hover { transform: scale(1.1); background: #b91c1c; }
+    </style>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Controle Financeiro Inteligente</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button type="button" id="btnSair" class="btn-sair">Sair</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h2 id="saudacao">Bom dia!</h2>
+            <p>Acompanhe suas finanças em tempo real</p>
+        </section>
+
+        <section class="balance-card">
+            <small>Saldo Atual</small>
+            <h1>R$ <span id="saldoAtual">0,00</span></h1>
+            <div class="balance-info">
+                <div>
+                    <span>Total Entradas</span>
+                    <h3 class="cor-verde">R$ <span id="totalEntradas">0,00</span></h3>
+                </div>
+                <div>
+                    <span>Total Saídas</span>
+                    <h3 class="cor-vermelha">R$ <span id="totalSaidas">0,00</span></h3>
+                </div>
+            </div>
+        </section>
+
+        <section class="acoes-rapidas">
+            <button type="button" id="btnEntrada" class="btn-acao entrada">
+                <h3>+ Entrada</h3>
+                <p>Valor recebido</p>
+            </button>
+            <button type="button" id="btnSaida" class="btn-acao saida">
+                <h3>- Saída</h3>
+                <p>Valor gasto</p>
+            </button>
+        </section>
+
+        <section class="lista-transacoes">
+            <h2>Últimas Movimentações</h2>
+            <div id="lista" class="itens-lista"></div>
+            <p id="vazio" class="vazio" style="display:none;">Nenhuma transação cadastrada ainda.</p>
+        </section>
+    </main>
+
+    <div id="modal" class="modal-overlay" hidden>
+        <div class="modal">
+            <button type="button" id="fecharModal" class="fechar">✕</button>
+            <h3 id="tituloModal">Nova Transação</h3>
+            <form id="formTransacao">
+                <input type="hidden" id="tipoTransacao" name="tipo" value="">
+                <label>Valor (R$)
+                    <input type="number" step="0.01" min="0.01" id="valor" name="valor" required placeholder="0,00">
+                </label>
+                <label>Descrição
+                    <input type="text" id="descricao" name="descricao" required placeholder="Ex: Salário, Conta de luz">
+                </label>
+                <label>Data
+                    <input type="date" id="data" name="data" required>
+                </label>
+                <label>Conciliar com Meta (Opcional)
+                    <select id="metaSelecionada" name="metaId">
+                        <option value="">Nenhuma meta</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn-salvar">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalConfirmacao" class="modal-overlay" hidden>
+        <div class="modal">
+            <button type="button" id="fecharConfirmacao" class="fechar">✕</button>
+            <h3>Confirmar Lançamento</h3>
+            <div class="resumo-confirmacao">
+                <p><strong>Tipo:</strong> <span id="confTipo"></span></p>
+                <p><strong>Valor:</strong> R$ <span id="confValor"></span></p>
+                <p><strong>Descrição:</strong> <span id="confDescricao"></span></p>
+                <p><strong>Data:</strong> <span id="confData"></span></p>
+                <p id="confMetaContainer" style="display:none;"><strong>Meta:</strong> <span id="confMeta"></span></p>
+            </div>
+            <div class="botoes-confirmacao">
+                <button type="button" id="btnCancelarConfirmacao" class="btn-cancelar">Cancelar</button>
+                <button type="button" id="btnConfirmarSalvar" class="btn-salvar">Confirmar e Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navegacao-inferior">
+        <button type="button" class="ativo" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" onclick="window.location.href='analises.html'" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" onclick="window.location.href='metas.html'" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" onclick="window.location.href='relatorios.html'" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" onclick="window.location.href='perfil.html'" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+    <script src="script-principal.js"></script>
+</body>
+</html>

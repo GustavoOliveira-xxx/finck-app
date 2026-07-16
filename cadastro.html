@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Cadastre-se</title>
+    <link rel="stylesheet" href="style-auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Criar Conta</h2>
+            <p class="auth-subtitle">Comece a organizar sua vida financeira</p>
+
+            <form id="cadastroForm" autocomplete="on">
+                <div class="form-group">
+                    <label for="nome">Nome completo</label>
+                    <input type="text" id="nome" name="nome" placeholder="Seu nome" required autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="emailCad">E-mail</label>
+                    <input type="email" id="emailCad" name="emailCad" placeholder="meu@email.com" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="senhaCad">Senha</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="senhaCad" name="senhaCad" placeholder="Crie uma senha segura (mín. 6 caracteres)" required minlength="6" autocomplete="new-password">
+                        <button type="button" class="toggle-senha" id="toggleSenhaCad" aria-label="Mostrar/ocultar senha">👁</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmaSenha">Confirmar senha</label>
+                    <input type="password" id="confirmaSenha" name="confirmaSenha" placeholder="Repita a senha" required autocomplete="new-password">
+                </div>
+
+                <div class="captcha-container">
+                    <label>Arraste o controle até o final</label>
+                    <div class="captcha-track">
+                        <div class="captcha-slider" id="captchaSliderCad"></div>
+                        <span class="captcha-text" id="captchaTextCad">Deslize para verificar →</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-entrar" id="btnCadastrar" disabled>Cadastrar</button>
+            </form>
+
+            <p class="link-cadastro">Já tem conta? <a href="index.html">Fazer login</a></p>
+            <div id="mensagemCad" class="mensagem"></div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

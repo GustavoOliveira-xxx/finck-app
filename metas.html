@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Metas Financeiras</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+       
+        .resumo-metas {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: var(--gap-sm);
+        }
+        .card-resumo-meta {
+            padding: var(--gap-md);
+            background: var(--superficie);
+            border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-md);
+            display: flex; flex-direction: column; gap: 0.3rem;
+        }
+        .card-resumo-meta span { font-size: 0.75rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: 0.04em; }
+        .card-resumo-meta h3 { font-family: var(--fonte-dados); font-size: 1.1rem; color: var(--amarelo); }
+
+        .lista-metas { display: flex; flex-direction: column; gap: var(--gap-sm); }
+        .card-meta {
+            padding: var(--gap-md);
+            background: var(--superficie);
+            border: 1px solid var(--superficie-borda);
+            border-left: 3px solid var(--roxo);
+            border-radius: var(--raio-md);
+            display: flex; flex-direction: column; gap: 0.7rem;
+            transition: transform var(--dur-rapida), border-color var(--dur-rapida);
+        }
+        .card-meta:hover { transform: translateX(4px); background: var(--superficie-alta); }
+        .card-meta.concluida { border-left-color: var(--verde); }
+        .card-meta.rendendo  { border-left-color: var(--amarelo); }
+
+        .cabecalho-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .cabecalho-meta h4 { font-family: var(--fonte-display); font-size: 1rem; flex: 1; }
+        .etiqueta-rendimento, .etiqueta-concluida {
+            font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem;
+            border-radius: var(--raio-sm);
+        }
+        .etiqueta-rendimento { background: var(--amarelo-fraco); color: var(--amarelo); border: 1px solid rgba(254,200,0,0.3); }
+        .etiqueta-concluida  { background: var(--verde-fraco);   color: var(--verde);   border: 1px solid rgba(31,209,143,0.3); }
+
+        .barra-progresso-container { height: 8px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+        .barra-progresso { height: 100%; background: linear-gradient(90deg, var(--roxo-claro), var(--amarelo)); border-radius: 99px; transition: width 0.6s var(--ease-out); }
+        .barra-progresso.concluida { background: linear-gradient(90deg, var(--verde), #a3e635); }
+
+        .info-linha { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--texto-fraco); }
+        .valores-meta { display: flex; align-items: baseline; gap: 0.4rem; }
+        .valor-atual { font-family: var(--fonte-dados); font-size: 1.1rem; color: var(--texto); font-weight: 600; }
+        .valor-total { font-size: 0.85rem; color: var(--texto-fraco); }
+
+        .acoes-meta { display: flex; gap: 0.5rem; }
+        .btn-meta {
+            flex: 1; padding: 0.55rem; border-radius: var(--raio-sm);
+            font-size: 0.8rem; font-weight: 600; border: 1px solid var(--superficie-borda);
+            background: rgba(255,255,255,0.04); color: var(--texto);
+            transition: background var(--dur-rapida), transform var(--dur-rapida), border-color var(--dur-rapida);
+        }
+        .btn-meta:hover { transform: translateY(-1px); }
+        .btn-adicionar:hover { background: var(--verde-fraco); border-color: rgba(31,209,143,0.4); color: var(--verde); }
+        .btn-detalhes:hover  { background: var(--roxo-fraco);  border-color: rgba(104,12,144,0.4); color: var(--roxo-claro); }
+
+       
+        .modal-overlay-metas {
+            display: none; position: fixed; inset: 0; z-index: 999;
+            background: rgba(4,3,6,0.75); backdrop-filter: blur(6px);
+            align-items: flex-end; justify-content: center; padding: var(--gap-sm);
+        }
+        .modal-overlay-metas.ativo { display: flex; }
+        .modal-metas {
+            width: 100%; max-width: 480px;
+            background: linear-gradient(165deg, var(--superficie-alta), var(--superficie));
+            border: 1px solid var(--superficie-borda-forte);
+            border-radius: var(--raio-lg) var(--raio-lg) 0 0;
+            padding: var(--gap-lg) var(--gap-md) var(--gap-md);
+            box-shadow: 0 -20px 60px -20px var(--roxo-glow);
+            animation: subirModal var(--dur-media) var(--ease-out);
+            max-height: 90vh; overflow-y: auto;
+        }
+        @keyframes subirModal { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        .modal-metas h3 { font-family: var(--fonte-display); font-size: 1.2rem; margin-bottom: var(--gap-md); }
+        .modal-metas label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.03em; color: var(--texto-fraco); text-transform: uppercase; margin-bottom: 0.6rem; }
+        .modal-metas input, .modal-metas select {
+            font-family: var(--fonte-dados); font-size: 0.95rem; color: var(--texto);
+            background: rgba(255,255,255,0.03); border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-sm); padding: 0.85rem 0.9rem;
+            transition: border-color var(--dur-rapida), box-shadow var(--dur-rapida);
+        }
+        .modal-metas input:focus, .modal-metas select:focus { outline: none; border-color: var(--roxo-claro); box-shadow: 0 0 0 3px var(--roxo-fraco); }
+        .fechar-modal {
+            position: absolute; top: var(--gap-sm); right: var(--gap-sm);
+            width: 34px; height: 34px; border-radius: var(--raio-sm);
+            background: rgba(255,255,255,0.04); border: 1px solid var(--superficie-borda);
+            color: var(--texto-fraco); font-size: 0.85rem; display: grid; place-items: center;
+            transition: color var(--dur-rapida), transform var(--dur-rapida);
+        }
+        .fechar-modal:hover { color: var(--amarelo); transform: rotate(90deg); }
+        .modal-metas { position: relative; }
+
+       
+        .grade-detalhes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-sm); margin-bottom: var(--gap-md); }
+        .item-detalhe { background: var(--superficie); border: 1px solid var(--superficie-borda); border-radius: var(--raio-sm); padding: 0.8rem; }
+        .item-detalhe span { font-size: 0.72rem; color: var(--texto-fraco); text-transform: uppercase; display: block; margin-bottom: 0.3rem; }
+        .item-detalhe h4 { font-family: var(--fonte-dados); font-size: 1rem; }
+        .acoes-detalhe { display: flex; gap: var(--gap-sm); flex-wrap: wrap; }
+        .acoes-detalhe button { flex: 1; min-width: 100px; padding: 0.7rem; border-radius: var(--raio-sm); font-weight: 600; font-size: 0.85rem; border: 1px solid var(--superficie-borda); background: rgba(255,255,255,0.04); color: var(--texto); transition: background var(--dur-rapida), transform var(--dur-rapida); }
+        .acoes-detalhe button:hover { transform: translateY(-1px); }
+        #btnAporteDetalhe:hover  { background: var(--verde-fraco);    border-color: rgba(31,209,143,0.4);  color: var(--verde); }
+        #btnEditarDetalhe:hover  { background: var(--roxo-fraco);     border-color: rgba(104,12,144,0.4);  color: var(--roxo-claro); }
+        #btnExcluirDetalhe:hover { background: var(--vermelho-fraco); border-color: rgba(255,77,94,0.4);   color: var(--vermelho); }
+        .grafico-detalhe { height: 200px; margin-bottom: var(--gap-md); }
+    </style>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Metas Financeiras</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="btnSair" class="btn-sair">Sair</button>
+        </div>
+    </header>
+
+    <main class="pagina-metas">
+        <section class="hero">
+            <h2>Minhas Metas</h2>
+            <p>Defina objetivos e acompanhe seu progresso com rendimentos</p>
+        </section>
+
+     
+        <section class="resumo-metas">
+            <div class="card-resumo-meta">
+                <span>Total Reservado</span>
+                <h3 id="totalReservado">R$ 0,00</h3>
+            </div>
+            <div class="card-resumo-meta">
+                <span>Total Rendendo</span>
+                <h3 id="totalRendendo">R$ 0,00</h3>
+            </div>
+            <div class="card-resumo-meta">
+                <span>Total Faltante</span>
+                <h3 id="totalFalta">R$ 0,00</h3>
+            </div>
+        </section>
+
+        <div>
+            <button id="btnNovaMeta" class="btn-salvar" style="width:100%;">+ Nova Meta</button>
+        </div>
+
+        
+        <section>
+            <h2 style="font-family: var(--fonte-display); font-size: 1.1rem; margin-bottom: var(--gap-sm);">Suas Metas</h2>
+            <div id="listaMetas" class="lista-metas">
+                <div class="vazio">🎯 Nenhuma meta cadastrada. Comece criando uma!</div>
+            </div>
+        </section>
+    </main>
+
+
+    <div id="modalMeta" class="modal-overlay-metas">
+        <div class="modal-metas">
+            <button type="button" id="fecharModalMeta" class="fechar-modal">✕</button>
+            <h3 id="tituloModalMeta">Nova Meta</h3>
+            <form id="formMeta">
+                <label>Nome da Meta
+                    <input type="text" id="nomeMeta" required placeholder="Ex: Reserva de emergência">
+                </label>
+                <label>Valor Total (R$)
+                    <input type="number" id="valorTotalMeta" required min="1" step="0.01" placeholder="0,00">
+                </label>
+                <label>Valor Inicial (R$)
+                    <input type="number" id="valorInicialMeta" min="0" step="0.01" placeholder="0,00 (opcional)">
+                </label>
+                <label>Data Limite
+                    <input type="date" id="dataLimiteMeta" required>
+                </label>
+                <label>Tipo de Investimento
+                    <select id="tipoRentabilidade">
+                        <option value="simples">Sem rendimento (guardar dinheiro)</option>
+                        <option value="cdb">CDB / Poupança (com rendimento)</option>
+                    </select>
+                </label>
+                <div id="campoTaxa" style="display:none;">
+                    <label>Taxa Mensal (%)
+                        <input type="number" id="taxaMeta" step="0.01" min="0" placeholder="Ex: 0.8">
+                    </label>
+                </div>
+                <button type="submit" class="btn-salvar" style="width:100%; margin-top: var(--gap-sm);">Salvar Meta</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAporte" class="modal-overlay-metas">
+        <div class="modal-metas">
+            <button type="button" id="fecharModalAporte" class="fechar-modal">✕</button>
+            <h3>Adicionar Valor</h3>
+            <p style="color: var(--texto-fraco); margin-bottom: var(--gap-md);">Meta: <strong id="nomeMetaAporte"></strong></p>
+            <form id="formAporte">
+                <label>Valor a Adicionar (R$)
+                    <input type="number" id="valorAporte" required min="0.01" step="0.01" placeholder="0,00">
+                </label>
+                <button type="submit" class="btn-salvar" style="width:100%; margin-top: var(--gap-sm);">Adicionar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalDetalhes" class="modal-overlay-metas">
+        <div class="modal-metas">
+            <button type="button" id="fecharModalDetalhes" class="fechar-modal">✕</button>
+            <h3 id="tituloDetalhes">Detalhes da Meta</h3>
+            <div class="grafico-detalhe">
+                <canvas id="graficoProgresso"></canvas>
+            </div>
+            <div class="grade-detalhes">
+                <div class="item-detalhe"><span>Valor Total</span><h4 id="detalheTotal">—</h4></div>
+                <div class="item-detalhe"><span>Valor Atual</span><h4 id="detalheAtual">—</h4></div>
+                <div class="item-detalhe"><span>Falta</span><h4 id="detalheFalta">—</h4></div>
+                <div class="item-detalhe"><span>Aporte Mensal</span><h4 id="detalheMensal">—</h4></div>
+                <div class="item-detalhe"><span>Data Limite</span><h4 id="detalhePrazo">—</h4></div>
+                <div class="item-detalhe"><span>Tempo Restante</span><h4 id="detalheTempo">—</h4></div>
+            </div>
+            <div class="acoes-detalhe">
+                <button id="btnAporteDetalhe">+ Adicionar</button>
+                <button id="btnEditarDetalhe">✏️ Editar</button>
+                <button id="btnExcluirDetalhe">🗑️ Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navegacao-inferior">
+        <button type="button" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" onclick="window.location.href='analises.html'" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" class="ativo" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" onclick="window.location.href='relatorios.html'" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" onclick="window.location.href='perfil.html'" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+    <script src="metas.js"></script>
+</body>
+</html>

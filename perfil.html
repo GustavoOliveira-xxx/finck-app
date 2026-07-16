@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Perfil</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <style>
+        .secao-perfil {
+            display: flex;
+            flex-direction: column;
+            gap: var(--gap-lg);
+        }
+
+        .card-perfil {
+            padding: var(--gap-lg) var(--gap-md);
+            background: var(--superficie);
+            border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-lg);
+        }
+        .card-perfil h3 {
+            font-family: var(--fonte-display);
+            font-size: 1.1rem;
+            margin-bottom: var(--gap-md);
+            color: var(--texto);
+        }
+
+        .form-perfil { display: flex; flex-direction: column; gap: var(--gap-sm); }
+        .form-perfil label {
+            display: flex; flex-direction: column; gap: 0.4rem;
+            font-size: 0.78rem; font-weight: 600;
+            letter-spacing: 0.03em; color: var(--texto-fraco); text-transform: uppercase;
+        }
+        .form-perfil input, .form-perfil select {
+            font-family: var(--fonte-dados); font-size: 0.95rem; color: var(--texto);
+            background: rgba(255,255,255,0.03); border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-sm); padding: 0.85rem 0.9rem;
+            transition: border-color var(--dur-rapida), box-shadow var(--dur-rapida);
+        }
+        .form-perfil input:focus, .form-perfil select:focus {
+            outline: none; border-color: var(--roxo-claro); box-shadow: 0 0 0 3px var(--roxo-fraco);
+        }
+
+        .grade-estatisticas {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: var(--gap-sm);
+        }
+        .item-estatistica {
+            padding: var(--gap-sm);
+            background: var(--superficie-alta);
+            border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-md);
+            display: flex; flex-direction: column; gap: 0.3rem;
+        }
+        .item-estatistica span { font-size: 0.72rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: 0.04em; }
+        .item-estatistica h4 { font-family: var(--fonte-dados); font-size: 1rem; color: var(--amarelo); }
+
+        .acoes-perfil { display: flex; flex-direction: column; gap: var(--gap-sm); }
+        .btn-acao-perfil {
+            width: 100%; padding: 0.9rem 1rem;
+            border-radius: var(--raio-sm); font-weight: 600; font-size: 0.9rem;
+            border: 1px solid var(--superficie-borda);
+            background: rgba(255,255,255,0.04); color: var(--texto);
+            transition: background var(--dur-rapida), transform var(--dur-rapida), border-color var(--dur-rapida);
+            text-align: left;
+        }
+        .btn-acao-perfil:hover { transform: translateY(-1px); }
+        .btn-acao-perfil.verde:hover  { background: var(--verde-fraco);    border-color: rgba(31,209,143,0.4);  color: var(--verde); }
+        .btn-acao-perfil.roxo:hover   { background: var(--roxo-fraco);     border-color: rgba(104,12,144,0.4);  color: var(--roxo-claro); }
+        .btn-acao-perfil.vermelho:hover { background: var(--vermelho-fraco); border-color: rgba(255,77,94,0.4); color: var(--vermelho); }
+        .btn-acao-perfil.amarelo:hover  { background: var(--amarelo-fraco);  border-color: rgba(254,200,0,0.4);  color: var(--amarelo); }
+
+       
+        .modal-senha-overlay {
+            display: none; position: fixed; inset: 0; z-index: 999;
+            background: rgba(4,3,6,0.75); backdrop-filter: blur(6px);
+            align-items: flex-end; justify-content: center; padding: var(--gap-sm);
+        }
+        .modal-senha-overlay[style*="flex"] { display: flex !important; }
+        .modal-senha {
+            position: relative; width: 100%; max-width: 440px;
+            background: linear-gradient(165deg, var(--superficie-alta), var(--superficie));
+            border: 1px solid var(--superficie-borda-forte);
+            border-radius: var(--raio-lg) var(--raio-lg) 0 0;
+            padding: var(--gap-lg) var(--gap-md) var(--gap-md);
+            box-shadow: 0 -20px 60px -20px var(--roxo-glow);
+        }
+        .modal-senha h3 { font-family: var(--fonte-display); font-size: 1.2rem; margin-bottom: var(--gap-md); }
+        .modal-senha label { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.03em; color: var(--texto-fraco); text-transform: uppercase; margin-bottom: 0.6rem; }
+        .modal-senha input { font-family: var(--fonte-dados); font-size: 0.95rem; color: var(--texto); background: rgba(255,255,255,0.03); border: 1px solid var(--superficie-borda); border-radius: var(--raio-sm); padding: 0.85rem 0.9rem; transition: border-color var(--dur-rapida), box-shadow var(--dur-rapida); }
+        .modal-senha input:focus { outline: none; border-color: var(--roxo-claro); box-shadow: 0 0 0 3px var(--roxo-fraco); }
+        .fechar-modal-senha {
+            position: absolute; top: var(--gap-sm); right: var(--gap-sm);
+            width: 34px; height: 34px; border-radius: var(--raio-sm);
+            background: rgba(255,255,255,0.04); border: 1px solid var(--superficie-borda);
+            color: var(--texto-fraco); font-size: 0.85rem; display: grid; place-items: center;
+            transition: color var(--dur-rapida), transform var(--dur-rapida);
+        }
+        .fechar-modal-senha:hover { color: var(--amarelo); transform: rotate(90deg); }
+    </style>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Perfil e Configurações</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="btnSair" class="btn-sair">Sair</button>
+        </div>
+    </header>
+
+    <main class="pagina-perfil">
+        <section class="hero">
+            <h2>Meu Perfil</h2>
+            <p>Gerencie suas informações e preferências</p>
+        </section>
+
+        <div class="secao-perfil">
+
+            
+            <div class="card-perfil">
+                <h3>👤 Dados Pessoais</h3>
+                <form id="formPerfil" class="form-perfil">
+                    <label>Nome Completo
+                        <input type="text" id="nomeUsuario" placeholder="Seu nome" required>
+                    </label>
+                    <label>E-mail
+                        <input type="email" id="emailUsuario" placeholder="seu@email.com" required>
+                    </label>
+                    <label>Profissão
+                        <input type="text" id="profissaoUsuario" placeholder="Ex: Analista Financeiro">
+                    </label>
+                    <label>Renda Mensal (R$)
+                        <input type="number" id="rendaUsuario" min="0" step="0.01" placeholder="0,00">
+                    </label>
+                    <label>Formato de Moeda
+                        <select id="formatoMoeda">
+                            <option value="BRL">Real Brasileiro (R$)</option>
+                            <option value="USD">Dólar Americano ($)</option>
+                            <option value="EUR">Euro (€)</option>
+                        </select>
+                    </label>
+                    <label>Formato de Data
+                        <select id="formatoData">
+                            <option value="pt-BR">DD/MM/AAAA (Brasil)</option>
+                            <option value="en-US">MM/DD/AAAA (EUA)</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn-salvar" style="margin-top: var(--gap-xs);">Salvar Alterações</button>
+                </form>
+            </div>
+
+            
+            <div class="card-perfil">
+                <h3>📊 Estatísticas Gerais</h3>
+                <div class="grade-estatisticas">
+                    <div class="item-estatistica">
+                        <span>Total Entradas</span>
+                        <h4 id="estatEntradas">R$ 0,00</h4>
+                    </div>
+                    <div class="item-estatistica">
+                        <span>Total Saídas</span>
+                        <h4 id="estatSaidas">R$ 0,00</h4>
+                    </div>
+                    <div class="item-estatistica">
+                        <span>Saldo Total</span>
+                        <h4 id="estatSaldo">R$ 0,00</h4>
+                    </div>
+                    <div class="item-estatistica">
+                        <span>Metas Criadas</span>
+                        <h4 id="estatMetas">0</h4>
+                    </div>
+                    <div class="item-estatistica">
+                        <span>Metas Concluídas</span>
+                        <h4 id="estatMetasConcluidas">0</h4>
+                    </div>
+                    <div class="item-estatistica">
+                        <span>Taxa de Economia</span>
+                        <h4 id="estatTaxaEconomia">0%</h4>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card-perfil">
+                <h3>⚙️ Ações da Conta</h3>
+                <div class="acoes-perfil">
+                    <button id="btnAlterarSenha" class="btn-acao-perfil roxo">🔑 Alterar Senha</button>
+                    <button id="btnExportarBackup" class="btn-acao-perfil verde">💾 Exportar Backup (JSON)</button>
+                    <button id="btnImportarBackup" class="btn-acao-perfil amarelo">📥 Importar Backup (JSON)</button>
+                    <input type="file" id="inputImportarBackup" accept=".json" style="display:none;">
+                    <button id="btnApagarTudo" class="btn-acao-perfil vermelho">🗑️ Apagar Todos os Dados</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="modalSenha" class="modal-senha-overlay" style="display:none;">
+        <div class="modal-senha">
+            <button type="button" id="fecharModalSenha" class="fechar-modal-senha">✕</button>
+            <h3>Alterar Senha</h3>
+            <form id="formSenha">
+                <label>Senha Atual
+                    <input type="password" id="senhaAtual" required placeholder="Digite sua senha atual">
+                </label>
+                <label>Nova Senha
+                    <input type="password" id="novaSenha" required minlength="6" placeholder="Mínimo 6 caracteres">
+                </label>
+                <label>Confirmar Nova Senha
+                    <input type="password" id="confirmaSenha" required placeholder="Repita a nova senha">
+                </label>
+                <button type="submit" class="btn-salvar" style="width:100%; margin-top:var(--gap-sm);">Alterar Senha</button>
+            </form>
+        </div>
+    </div>
+
+    <nav class="navegacao-inferior">
+        <button type="button" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" onclick="window.location.href='analises.html'" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" onclick="window.location.href='metas.html'" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" onclick="window.location.href='relatorios.html'" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" class="ativo" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+    <script src="perfil.js"></script>
+</body>
+</html>
