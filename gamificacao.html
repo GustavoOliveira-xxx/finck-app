@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | XP e Gamificação</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <style>
+    
+        .pagina-gamificacao { display: flex; flex-direction: column; gap: var(--gap-lg); }
+
+        .card-nivel-principal {
+            display: flex;
+            align-items: center;
+            gap: var(--gap-md);
+            padding: var(--gap-lg) var(--gap-md);
+            background: linear-gradient(155deg, rgba(104,12,144,0.3) 0%, var(--superficie) 60%, var(--superficie-alta) 100%);
+            border: 1px solid var(--superficie-borda-forte);
+            border-radius: var(--raio-lg);
+            box-shadow: 0 20px 45px -20px rgba(0,0,0,0.6);
+        }
+
+        .emblema-nivel {
+            width: 80px; height: 80px; flex-shrink: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--roxo), var(--amarelo));
+            display: grid; place-items: center;
+            font-family: var(--fonte-dados);
+            font-size: 2rem; font-weight: 700; color: #fff;
+            box-shadow: 0 0 24px var(--roxo-glow);
+        }
+
+        .info-nivel { flex: 1; }
+        .info-nivel h2 { font-family: var(--fonte-display); font-size: 1.3rem; margin-bottom: 0.3rem; }
+        .info-nivel p  { color: var(--texto-fraco); font-size: 0.85rem; margin-bottom: 0.8rem; }
+
+        .barra-progresso-container {
+            height: 10px; background: rgba(255,255,255,0.08);
+            border-radius: 99px; overflow: hidden; margin-bottom: 0.8rem;
+        }
+        .barra-progresso-preenchida {
+            height: 100%; background: linear-gradient(90deg, var(--roxo-claro), var(--amarelo));
+            border-radius: 99px; transition: width 0.6s var(--ease-out);
+            width: 0%;
+        }
+
+        .resumo-xp { display: flex; gap: var(--gap-md); }
+        .resumo-xp > div { display: flex; flex-direction: column; gap: 0.2rem; }
+        .resumo-xp small { font-size: 0.72rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: 0.05em; }
+        .resumo-xp h3 { font-family: var(--fonte-dados); font-size: 1.1rem; color: var(--amarelo); }
+
+        .nivel-cabecalho {
+            font-family: var(--fonte-dados); font-size: 0.9rem;
+            color: var(--amarelo); background: var(--amarelo-fraco);
+            border: 1px solid rgba(254,200,0,0.25);
+            padding: 0.5rem 1rem; border-radius: var(--raio-sm);
+        }
+
+        .secao-catalogo-niveis h3,
+        .secao-regras h3,
+        .secao-conquistas h3 {
+            font-family: var(--fonte-display); font-size: 1.1rem;
+            margin-bottom: var(--gap-sm);
+        }
+
+        .lista-catalogo { display: flex; flex-direction: column; gap: 0.4rem; }
+        .item-catalogo {
+            display: flex; align-items: center; gap: var(--gap-sm);
+            padding: 0.7rem 1rem;
+            background: var(--superficie); border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-sm);
+            transition: background var(--dur-rapida);
+        }
+        .item-catalogo:hover { background: var(--superficie-alta); }
+        .item-catalogo.nivel-atual {
+            border-color: var(--amarelo);
+            background: var(--amarelo-fraco);
+        }
+        .numero-catalogo {
+            font-family: var(--fonte-dados); font-weight: 700;
+            color: var(--roxo-claro); min-width: 2rem; text-align: center;
+        }
+        .nome-catalogo { flex: 1; font-size: 0.9rem; }
+        .xp-catalogo { font-family: var(--fonte-dados); font-size: 0.8rem; color: var(--amarelo); }
+
+        /* Regras de XP */
+        .lista-regras { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--gap-sm); }
+        .item-regra {
+            padding: var(--gap-sm);
+            background: var(--superficie); border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-md);
+        }
+        .valor-xp {
+            display: inline-block; margin-bottom: 0.4rem;
+            font-family: var(--fonte-dados); font-weight: 700;
+            color: var(--verde); font-size: 1rem;
+        }
+        .item-regra p { font-size: 0.85rem; color: var(--texto-fraco); line-height: 1.4; }
+
+        /* Conquistas */
+        .grade-conquistas { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap-sm); }
+        .conquista {
+            padding: var(--gap-sm);
+            background: var(--superficie); border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-md); text-align: center;
+            transition: transform var(--dur-rapida), border-color var(--dur-rapida);
+        }
+        .conquista:hover { transform: translateY(-2px); }
+        .conquista.desbloqueada { border-color: var(--amarelo); background: var(--amarelo-fraco); }
+        .conquista.bloqueada { opacity: 0.5; }
+        .conquista .icone { font-size: 2rem; display: block; margin-bottom: 0.4rem; }
+        .conquista p { font-size: 0.82rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .conquista .descricao-conquista { font-size: 0.72rem; color: var(--texto-fraco); display: block; }
+        .conquista small { font-size: 0.68rem; color: var(--texto-fraquissimo); display: block; margin-top: 0.2rem; }
+
+        @media (max-width: 500px) {
+            .card-nivel-principal { flex-direction: column; text-align: center; }
+            .resumo-xp { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Controle Financeiro Inteligente</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="nivel-cabecalho">⭐ Nível <span id="nivelCabecalho">1</span></div>
+        </div>
+    </header>
+
+    <main class="pagina-gamificacao">
+
+        
+        <section class="card-nivel-principal">
+            <div class="emblema-nivel">
+                <span id="numeroNivel">1</span>
+            </div>
+            <div class="info-nivel">
+                <h2 id="nomeNivel">CK Newbie 🆕</h2>
+                <p id="textoProgresso">0 de 100 XP para o próximo nível</p>
+
+                <div class="barra-progresso-container">
+                    <div id="barraProgresso" class="barra-progresso-preenchida" style="width:0%"></div>
+                </div>
+
+                <div class="resumo-xp">
+                    <div>
+                        <small>Total Acumulado</small>
+                        <h3 id="totalXP">0 XP</h3>
+                    </div>
+                    <div>
+                        <small>Próximo Nível</small>
+                        <h3 id="xpProximo">100 XP</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="secao-regras">
+            <h3>✨ Como ganhar XP</h3>
+            <div class="lista-regras">
+                <div class="item-regra">
+                    <span class="valor-xp">+25 XP</span>
+                    <p>Ao cadastrar uma <strong>Entrada</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+10 XP</span>
+                    <p>Ao registrar uma <strong>Saída</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+15 XP</span>
+                    <p>Ao criar uma <strong>Meta</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+50 XP</span>
+                    <p>Ao <strong>concluir uma Meta</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+30 XP</span>
+                    <p>Ao <strong>completar seu perfil</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+10 XP</span>
+                    <p>Ao gerar um <strong>Relatório</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+5 XP</span>
+                    <p>Ao consultar <strong>Análises</strong></p>
+                </div>
+                <div class="item-regra">
+                    <span class="valor-xp">+10 XP</span>
+                    <p>Ao usar o app em <strong>dias consecutivos</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="secao-conquistas">
+            <h3>🏅 Conquistas</h3>
+            <div id="gradeConquistas" class="grade-conquistas">
+                
+                <div class="conquista bloqueada"><span class="icone">🔒</span><p>Carregando...</p></div>
+            </div>
+        </section>
+
+        <section class="secao-catalogo-niveis">
+            <h3>📚 Catálogo de Níveis</h3>
+            <div class="lista-catalogo">
+                <div class="item-catalogo"><span class="numero-catalogo">1</span><span class="nome-catalogo">CK Newbie 🆕</span><span class="xp-catalogo">0 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">2</span><span class="nome-catalogo">Conscious Planner 📝</span><span class="xp-catalogo">100 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">3</span><span class="nome-catalogo">Financial Thinker 💡</span><span class="xp-catalogo">300 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">4</span><span class="nome-catalogo">Stark's Investor 🚀</span><span class="xp-catalogo">600 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">5</span><span class="nome-catalogo">Economy "Knowledgist" 📚</span><span class="xp-catalogo">1.000 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">6</span><span class="nome-catalogo">Norman Osborn 🕷️</span><span class="xp-catalogo">1.500 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">7</span><span class="nome-catalogo">Golden Seeker 🏆</span><span class="xp-catalogo">2.100 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">8</span><span class="nome-catalogo">Fisk's Counter ⚖️</span><span class="xp-catalogo">2.800 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">9</span><span class="nome-catalogo">Fantastic Richards 🔬</span><span class="xp-catalogo">3.600 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">10</span><span class="nome-catalogo">The Miner ⛏️</span><span class="xp-catalogo">4.500 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">11</span><span class="nome-catalogo">The Philanthropist 🤝</span><span class="xp-catalogo">5.500 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">12</span><span class="nome-catalogo">Wealth Keeper 💰</span><span class="xp-catalogo">6.600 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">13</span><span class="nome-catalogo">The Future Guardian 🛡️</span><span class="xp-catalogo">7.800 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">14</span><span class="nome-catalogo">Wilson Fisk 👑</span><span class="xp-catalogo">9.100 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">15</span><span class="nome-catalogo">Lex Luthor 🦅</span><span class="xp-catalogo">10.500 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">16</span><span class="nome-catalogo">CK's Bruce Wayne 🦇</span><span class="xp-catalogo">12.000 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">17</span><span class="nome-catalogo">Tony Stark 🤖</span><span class="xp-catalogo">13.600 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">18</span><span class="nome-catalogo">EconomisT'Challa 🐆</span><span class="xp-catalogo">15.300 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">19</span><span class="nome-catalogo">The Future Doctor Doom 🎭</span><span class="xp-catalogo">17.100 XP</span></div>
+                <div class="item-catalogo"><span class="numero-catalogo">20</span><span class="nome-catalogo">THE TRUE CK ZEMO ⚔️</span><span class="xp-catalogo">19.000 XP</span></div>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="navegacao-inferior">
+        <button type="button" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" onclick="window.location.href='analises.html'" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" onclick="window.location.href='metas.html'" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" onclick="window.location.href='relatorios.html'" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" onclick="window.location.href='perfil.html'" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+</body>
+</html>

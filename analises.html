@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Análises Financeiras</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Análises e Estatísticas</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="btnSair" class="btn-sair">Sair</button>
+        </div>
+    </header>
+
+    <main class="pagina-analises">
+        <section class="hero">
+            <h2>Visão Geral</h2>
+            <p>Acompanhe o desempenho das suas finanças em gráficos e números</p>
+        </section>
+
+        <section class="balance-card">
+            <h3>Período de Análise</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: var(--gap-sm); align-items: center;">
+                <label>
+                    Mês
+                    <select id="filtroMes">
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </label>
+                <label>
+                    Ano
+                    <select id="filtroAno">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                    </select>
+                </label>
+                <button id="btnFiltrar" class="btn-salvar" style="margin-top: 1.3rem; padding: 0.7rem 1.2rem;">Atualizar</button>
+            </div>
+        </section>
+
+        <section class="balance-card">
+            <h3>Resumo do Mês</h3>
+            <div class="balance-info">
+                <div>
+                    <span>Total de Entradas</span>
+                    <h3 class="cor-verde">R$ <span id="resumoEntradas">0,00</span></h3>
+                </div>
+                <div>
+                    <span>Total de Saídas</span>
+                    <h3 class="cor-vermelha">R$ <span id="resumoSaidas">0,00</span></h3>
+                </div>
+                <div style="grid-column: 1 / -1; border-top: 1px dashed var(--superficie-borda-forte); padding-top: var(--gap-sm); margin-top: var(--gap-sm);">
+                    <span>Saldo do Período</span>
+                    <h3 style="font-family: var(--fonte-dados); font-size: 1.3rem; color: var(--amarelo);">R$ <span id="resumoSaldo">0,00</span></h3>
+                </div>
+            </div>
+        </section>
+
+        <section class="balance-card">
+            <h3>Entradas vs Saídas</h3>
+            <div style="position: relative; height: 320px; width: 100%;">
+                <canvas id="graficoComparativo"></canvas>
+            </div>
+        </section>
+
+        <section class="balance-card">
+            <h3>Distribuição de Gastos</h3>
+            <div style="position: relative; height: 320px; width: 100%;">
+                <canvas id="graficoPizza"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <nav class="navegacao-inferior">
+        <button type="button" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" class="ativo" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" onclick="window.location.href='metas.html'" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" onclick="window.location.href='relatorios.html'" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" onclick="window.location.href='perfil.html'" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+    <script src="analises.js"></script>
+</body>
+</html>

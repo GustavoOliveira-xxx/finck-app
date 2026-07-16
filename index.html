@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Entrar</title>
+    <link rel="stylesheet" href="style-auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Bem-vindo ao FINCK</h2>
+            <p class="auth-subtitle">Acesse sua conta para gerenciar suas finanças</p>
+
+            <form id="loginForm" autocomplete="on">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="senha" name="senha" placeholder="Digite sua senha" required autocomplete="current-password">
+                        <button type="button" class="toggle-senha" id="toggleSenha" aria-label="Mostrar/ocultar senha">👁</button>
+                    </div>
+                    <a href="#" class="link-esqueci" onclick="alert('Seus dados ficam salvos localmente. Caso esqueça a senha, use a opção \'Apagar Todos os Dados\' no Perfil e crie uma nova conta.'); return false;">Esqueci minha senha</a>
+                </div>
+
+                <div class="captcha-container">
+                    <label>Arraste até o final para verificar</label>
+                    <div class="captcha-track">
+                        <div class="captcha-slider" id="captchaSlider"></div>
+                        <span class="captcha-text" id="captchaText">Deslize →</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-entrar" id="btnEntrar" disabled>Entrar</button>
+            </form>
+
+            <p class="link-cadastro">Não tem conta? <a href="cadastro.html">Cadastre-se agora</a></p>
+            <div id="mensagem" class="mensagem"></div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

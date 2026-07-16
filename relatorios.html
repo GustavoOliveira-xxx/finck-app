@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINCK | Relatórios</title>
+    <link rel="stylesheet" href="style-principal.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        .resumo-relatorio {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: var(--gap-sm);
+        }
+        .card-resumo-rel {
+            padding: var(--gap-md);
+            background: var(--superficie);
+            border: 1px solid var(--superficie-borda);
+            border-radius: var(--raio-md);
+        }
+        .card-resumo-rel span { font-size: 0.72rem; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.3rem; }
+        .card-resumo-rel h3 { font-family: var(--fonte-dados); font-size: 1.1rem; }
+
+        .tabela-wrapper { overflow-x: auto; border-radius: var(--raio-md); border: 1px solid var(--superficie-borda); }
+        .tabela-transacoes { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .tabela-transacoes th { background: var(--superficie-alta); color: var(--texto-fraco); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--superficie-borda); }
+        .tabela-transacoes td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--superficie-borda); color: var(--texto); }
+        .tabela-transacoes tr:last-child td { border-bottom: none; }
+        .tabela-transacoes tr:hover td { background: var(--superficie-alta); }
+        .tipo-entrada { color: var(--verde); font-weight: 600; }
+        .tipo-saida   { color: var(--vermelho); font-weight: 600; }
+        .valor-entrada { color: var(--verde); font-family: var(--fonte-dados); }
+        .valor-saida   { color: var(--vermelho); font-family: var(--fonte-dados); }
+        .vazio-tabela { text-align: center; color: var(--texto-fraquissimo); padding: var(--gap-lg); }
+
+        .acoes-relatorio { display: flex; gap: var(--gap-sm); flex-wrap: wrap; }
+        .acoes-relatorio button { flex: 1; min-width: 120px; }
+    </style>
+</head>
+<body>
+
+    <div class="background-blur" aria-hidden="true"></div>
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">
+                <img src="Logo CK - Oficial.png" alt="Logo FINCK" loading="lazy">
+            </div>
+            <div class="logo-text">
+                <h1>FINCK</h1>
+                <span>Relatórios Financeiros</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="btnSair" class="btn-sair">Sair</button>
+        </div>
+    </header>
+
+    <main class="pagina-relatorios">
+        <section class="hero">
+            <h2>Relatórios</h2>
+            <p>Análise detalhada das suas movimentações financeiras</p>
+        </section>
+
+      
+        <section class="balance-card">
+            <h3>Período do Relatório</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:var(--gap-sm); align-items:center;">
+                <label>
+                    Mês
+                    <select id="filtroMes">
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </label>
+                <label>
+                    Ano
+                    <select id="filtroAno">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                    </select>
+                </label>
+                <div class="acoes-relatorio" style="margin-top:1.3rem;">
+                    <button id="btnFiltrar" class="btn-salvar" style="padding:0.7rem 1.2rem;">Gerar Relatório</button>
+                    <button id="btnExportar" class="btn-cancelar" style="padding:0.7rem 1.2rem;">Exportar CSV</button>
+                </div>
+            </div>
+        </section>
+
+      
+        <section class="resumo-relatorio">
+            <div class="card-resumo-rel">
+                <span>Entradas</span>
+                <h3 class="cor-verde" id="resumoEntradas">R$ 0,00</h3>
+            </div>
+            <div class="card-resumo-rel">
+                <span>Saídas</span>
+                <h3 class="cor-vermelha" id="resumoSaidas">R$ 0,00</h3>
+            </div>
+            <div class="card-resumo-rel">
+                <span>Saldo</span>
+                <h3 id="resumoSaldo" style="font-family:var(--fonte-dados);">R$ 0,00</h3>
+            </div>
+            <div class="card-resumo-rel">
+                <span>Taxa de Economia</span>
+                <h3 style="color:var(--amarelo); font-family:var(--fonte-dados);" id="resumoTaxa">0%</h3>
+            </div>
+        </section>
+
+      
+        <section class="balance-card">
+            <h3>Distribuição de Gastos</h3>
+            <div style="position:relative; height:300px; width:100%;">
+                <canvas id="graficoCategorias"></canvas>
+            </div>
+        </section>
+
+       
+        <section class="balance-card">
+            <h3>Evolução do Saldo no Mês</h3>
+            <div style="position:relative; height:300px; width:100%;">
+                <canvas id="graficoEvolucao"></canvas>
+            </div>
+        </section>
+
+       
+        <section class="balance-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--gap-sm);">
+                <h3>Transações do Período</h3>
+                <span id="qtdTransacoes" style="font-size:0.8rem; color:var(--texto-fraco);">0 registros</span>
+            </div>
+            <div class="tabela-wrapper">
+                <table class="tabela-transacoes">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        <tr><td colspan="5" class="vazio-tabela">Selecione um período e clique em "Gerar Relatório"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <nav class="navegacao-inferior">
+        <button type="button" onclick="window.location.href='index-principal.html'" title="Início">
+            <img src="home.png" alt="Início" class="nav-icon">
+            <span>Início</span>
+        </button>
+        <button type="button" onclick="window.location.href='analises.html'" title="Análises">
+            <img src="analises.png" alt="Análises" class="nav-icon">
+            <span>Análises</span>
+        </button>
+        <button type="button" onclick="window.location.href='metas.html'" title="Metas">
+            <img src="metas.png" alt="Metas" class="nav-icon">
+            <span>Metas</span>
+        </button>
+        <button type="button" class="ativo" title="Relatórios">
+            <img src="relatorios.png" alt="Relatórios" class="nav-icon">
+            <span>Relatórios</span>
+        </button>
+        <button type="button" onclick="window.location.href='gamificacao.html'" title="XP">
+            <img src="xp.png" alt="XP" class="nav-icon" >
+            <span>XP</span>
+        </button>
+        <button type="button" onclick="window.location.href='perfil.html'" title="Perfil">
+            <img src="perfil.png" alt="Perfil" class="nav-icon">
+            <span>Perfil</span>
+        </button>
+    </nav>
+
+    <div id="aviso" class="aviso" style="display:none;"></div>
+
+    <script src="gamificacao.js"></script>
+    <script src="relatorios.js"></script>
+</body>
+</html>

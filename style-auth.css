@@ -1,0 +1,368 @@
+/* ==========================================================================
+   FINCK — Telas de Autenticação (Login e Cadastro)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root {
+    --preto-fundo: #08070b;
+    --preto-fundo-2: #0d0b12;
+    --superficie: #141019;
+    --superficie-alta: #1c1626;
+    --superficie-borda: rgba(255, 255, 255, 0.08);
+    --superficie-borda-forte: rgba(255, 255, 255, 0.14);
+
+    --roxo: #680c90;
+    --roxo-claro: #9333c4;
+    --roxo-glow: rgba(104, 12, 144, 0.45);
+    --roxo-fraco: rgba(104, 12, 144, 0.16);
+
+    --amarelo: #fec800;
+    --amarelo-glow: rgba(254, 200, 0, 0.35);
+    --amarelo-fraco: rgba(254, 200, 0, 0.12);
+
+    --verde: #1fd18f;
+    --verde-fraco: rgba(31, 209, 143, 0.14);
+    --vermelho: #ff4d5e;
+    --vermelho-fraco: rgba(255, 77, 94, 0.14);
+
+    --texto: #f3f0f8;
+    --texto-fraco: #9b93a8;
+    --texto-fraquissimo: #6b6478;
+
+    --fonte-display: 'Space Grotesk', 'Inter', sans-serif;
+    --fonte-corpo: 'Inter', sans-serif;
+    --fonte-dados: 'JetBrains Mono', 'Consolas', monospace;
+
+    --raio-sm: 6px;
+    --raio-md: 10px;
+    --raio-lg: 14px;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-rapida: 160ms;
+    --dur-media: 320ms;
+    --dur-lenta: 640ms;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    font-family: var(--fonte-corpo);
+    color: var(--texto);
+    background: var(--preto-fundo);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    -webkit-font-smoothing: antialiased;
+
+    /* Fundo técnico */
+    background-image:
+        radial-gradient(ellipse 60% 45% at 12% -5%, var(--roxo-glow), transparent 60%),
+        radial-gradient(ellipse 50% 40% at 105% 15%, var(--amarelo-glow), transparent 65%),
+        radial-gradient(ellipse 70% 50% at 50% 115%, rgba(104, 12, 144, 0.28), transparent 60%),
+        linear-gradient(var(--superficie-borda) 1px, transparent 1px),
+        linear-gradient(90deg, var(--superficie-borda) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+
+button, input, select { font-family: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; }
+:focus-visible { outline: 2px solid var(--amarelo); outline-offset: 3px; border-radius: var(--raio-sm); }
+
+/* ==========================================================================
+   CARD PRINCIPAL
+   ========================================================================== */
+
+.auth-container {
+    width: 100%;
+    max-width: 420px;
+    animation: entradaCard var(--dur-lenta) var(--ease-out) both;
+}
+
+@keyframes entradaCard {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-card {
+    padding: 2.5rem 2rem;
+    background: linear-gradient(165deg, var(--superficie-alta), var(--superficie));
+    border: 1px solid var(--superficie-borda-forte);
+    border-radius: var(--raio-lg);
+    box-shadow: 0 30px 70px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(254,200,0,0.05);
+}
+
+.auth-card h2 {
+    font-family: var(--fonte-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    background: linear-gradient(90deg, var(--texto) 0%, var(--amarelo) 160%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.4rem;
+}
+
+.auth-subtitle {
+    font-size: 0.88rem;
+    color: var(--texto-fraco);
+    margin-bottom: 1.8rem;
+}
+
+/* ==========================================================================
+   FORMULÁRIO
+   ========================================================================== */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+}
+
+.form-group input {
+    font-family: var(--fonte-dados);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--texto);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--superficie-borda);
+    border-radius: var(--raio-sm);
+    padding: 0.85rem 0.9rem;
+    width: 100%;
+    transition: border-color var(--dur-rapida) var(--ease-out),
+                background var(--dur-rapida) var(--ease-out),
+                box-shadow var(--dur-rapida) var(--ease-out);
+}
+
+.form-group input::placeholder { color: var(--texto-fraquissimo); }
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--roxo-claro);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 3px var(--roxo-fraco);
+}
+
+/* Wrapper para senha + botão toggle */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 3rem;
+    width: 100%;
+}
+
+.toggle-senha {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--texto-fraco);
+    padding: 0.2rem;
+    transition: color var(--dur-rapida);
+}
+
+.toggle-senha:hover { color: var(--amarelo); }
+
+.link-esqueci {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--texto-fraquissimo);
+    text-decoration: none;
+    text-align: right;
+    transition: color var(--dur-rapida);
+}
+
+.link-esqueci:hover { color: var(--amarelo); }
+
+/* ==========================================================================
+   CAPTCHA DESLIZANTE
+   ========================================================================== */
+
+.captcha-container {
+    margin-bottom: 1.2rem;
+}
+
+.captcha-container label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+    margin-bottom: 0.5rem;
+}
+
+.captcha-track {
+    position: relative;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--superficie-borda);
+    border-radius: var(--raio-sm);
+    display: flex;
+    align-items: center;
+    cursor: grab;
+    user-select: none;
+    overflow: hidden;
+    transition: border-color var(--dur-rapida);
+}
+
+.captcha-track.verificado {
+    border-color: rgba(31, 209, 143, 0.5);
+    background: var(--verde-fraco);
+}
+
+.captcha-slider {
+    position: absolute;
+    left: 2px;
+    width: 44px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--roxo), var(--roxo-claro));
+    border-radius: calc(var(--raio-sm) - 2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: grab;
+    transition: background var(--dur-rapida);
+    z-index: 2;
+    box-shadow: 0 4px 12px -4px var(--roxo-glow);
+}
+
+.captcha-slider::after {
+    content: "⇒";
+    color: white;
+    font-weight: bold;
+}
+
+.captcha-track.verificado .captcha-slider {
+    background: linear-gradient(135deg, var(--verde), #a3e635);
+}
+
+.captcha-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    color: var(--texto-fraquissimo);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+/* ==========================================================================
+   BOTÃO ENTRAR
+   ========================================================================== */
+
+.btn-entrar {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border-radius: var(--raio-sm);
+    font-family: var(--fonte-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    color: var(--preto-fundo);
+    background: linear-gradient(100deg, var(--amarelo), #ffdf5c);
+    box-shadow: 0 10px 24px -10px var(--amarelo-glow);
+    border: none;
+    cursor: pointer;
+    transition: transform var(--dur-rapida) var(--ease-out),
+                box-shadow var(--dur-rapida) var(--ease-out),
+                filter var(--dur-rapida) var(--ease-out),
+                opacity var(--dur-rapida);
+    margin-bottom: 1rem;
+}
+
+.btn-entrar:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px -10px var(--amarelo-glow);
+    filter: brightness(1.05);
+}
+
+.btn-entrar:active:not(:disabled) { transform: translateY(0); }
+
+.btn-entrar:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.3);
+}
+
+/* ==========================================================================
+   LINKS E MENSAGENS
+   ========================================================================== */
+
+.link-cadastro {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--texto-fraco);
+    margin-top: 0.5rem;
+}
+
+.link-cadastro a {
+    color: var(--amarelo);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color var(--dur-rapida);
+}
+
+.link-cadastro a:hover { color: #ffdf5c; }
+
+.mensagem {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--raio-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: center;
+    display: none;
+}
+
+.mensagem:not(:empty) { display: block; }
+
+.mensagem.sucesso {
+    background: var(--verde-fraco);
+    border: 1px solid rgba(31, 209, 143, 0.3);
+    color: var(--verde);
+}
+
+.mensagem.erro {
+    background: var(--vermelho-fraco);
+    border: 1px solid rgba(255, 77, 94, 0.3);
+    color: var(--vermelho);
+}
+
+/* ==========================================================================
+   RESPONSIVO
+   ========================================================================== */
+
+@media (max-width: 480px) {
+    .auth-card { padding: 2rem 1.25rem; }
+    .auth-card h2 { font-size: 1.35rem; }
+}
