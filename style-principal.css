@@ -1,13 +1,8 @@
-/* ==========================================================================
-   FINCK — Controle Financeiro Inteligente
-   Design system: dark / técnico / empresarial
-   Paleta: Roxo #680c90 · Amarelo #fec800 · Preto #08070b
-   ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 :root{
-  /* --- cores base --- */
+
   --preto-fundo: #08070b;
   --preto-fundo-2: #0d0b12;
   --superficie: #141019;
@@ -33,24 +28,23 @@
   --texto-fraco: #9b93a8;
   --texto-fraquissimo: #6b6478;
 
-  /* --- tipografia --- */
+ 
   --fonte-display: 'Space Grotesk', 'Inter', sans-serif;
   --fonte-corpo: 'Inter', sans-serif;
   --fonte-dados: 'JetBrains Mono', 'Consolas', monospace;
 
-  /* --- forma --- */
+
   --raio-sm: 6px;
   --raio-md: 10px;
   --raio-lg: 14px;
 
-  /* --- espaçamento --- */
   --gap-xs: 0.5rem;
   --gap-sm: 1rem;
   --gap-md: 1.5rem;
   --gap-lg: 2.25rem;
   --gap-xl: 3.5rem;
 
-  /* --- movimento --- */
+
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-rapida: 160ms;
   --dur-media: 320ms;
@@ -66,9 +60,7 @@
   }
 }
 
-/* ==========================================================================
-   RESET
-   ========================================================================== */
+
 
 *, *::before, *::after{
   box-sizing: border-box;
@@ -113,9 +105,7 @@ button{
 
 a{ color: inherit; }
 
-/* ==========================================================================
-   FUNDO — camada decorativa (grid técnico + auras de cor)
-   ========================================================================== */
+
 
 .background-blur{
   position: fixed;
@@ -141,9 +131,6 @@ a{ color: inherit; }
   50%{ opacity: 1; }
 }
 
-/* ==========================================================================
-   LAYOUT GERAL
-   ========================================================================== */
 
 main{
   max-width: 1180px;
@@ -160,9 +147,7 @@ main{
   to{ opacity: 1; transform: translateY(0); }
 }
 
-/* ==========================================================================
-   HEADER
-   ========================================================================== */
+
 
 header{
   max-width: 1180px;
@@ -274,9 +259,6 @@ header{
 
 .btn-sair:active{ transform: translateY(0); }
 
-/* ==========================================================================
-   HERO
-   ========================================================================== */
 
 .hero{
   padding: var(--gap-sm) 0.25rem 0;
@@ -304,9 +286,7 @@ header{
   to{ opacity: 1; transform: translateY(0); }
 }
 
-/* ==========================================================================
-   BALANCE CARD — elemento-assinatura: painel de terminal seguro
-   ========================================================================== */
+
 
 .balance-card{
   position: relative;
@@ -329,7 +309,7 @@ header{
   100%{ background-position: 160% 0, 0 0; }
 }
 
-/* borda-gradiente animada, sutil, tipo "terminal ativo" */
+
 .balance-card::before{
   content: "";
   position: absolute;
@@ -355,7 +335,6 @@ header{
   initial-value: 0deg;
 }
 
-/* cantos de "mira" — leitura de painel seguro */
 .balance-card::after{
   content: "";
   position: absolute;
@@ -437,9 +416,7 @@ header{
 .cor-verde{ color: var(--verde); }
 .cor-vermelha{ color: var(--vermelho); }
 
-/* ==========================================================================
-   AÇÕES RÁPIDAS
-   ========================================================================== */
+
 
 .acoes-rapidas{
   display: grid;
@@ -476,7 +453,6 @@ header{
   z-index: 0;
 }
 
-/* brilho diagonal que desliza no hover */
 .btn-acao::after{
   content: "";
   position: absolute;
@@ -530,9 +506,7 @@ header{
 
 .btn-acao:active{ transform: translateY(-1px); }
 
-/* ==========================================================================
-   LISTA DE TRANSAÇÕES
-   ========================================================================== */
+
 
 .lista-transacoes h2{
   font-family: var(--fonte-display);
@@ -586,9 +560,6 @@ header{
   border-radius: var(--raio-md);
 }
 
-/* ==========================================================================
-   MODAL
-   ========================================================================== */
 
 .modal-overlay{
   position: fixed;
@@ -719,9 +690,6 @@ header{
 
 .btn-salvar:active{ transform: translateY(0); }
 
-/* ==========================================================================
-   NAVEGAÇÃO INFERIOR
-   ========================================================================== */
 
 .navegacao-inferior{
   position: fixed;
@@ -788,7 +756,7 @@ header{
   box-shadow: 0 0 8px var(--amarelo-glow);
 }
 
-/* Estilos para ícones de navegação */
+
 .nav-icon{
   width: 32px;
   height: 32px;
@@ -809,9 +777,6 @@ header{
   transform: scale(1.08);
 }
 
-/* ==========================================================================
-   AVISO (toast)
-   ========================================================================== */
 
 .aviso{
   position: fixed;
@@ -846,16 +811,12 @@ header{
 .aviso.sucesso { border-left-color: var(--verde); }
 .aviso.erro { border-left-color: var(--vermelho); }
 
-/* ==========================================================================
-   RESPONSIVO
-   ========================================================================== */
 
-/* Tablets pequenos e celulares maiores */
 @media (min-width: 480px){
   .acoes-rapidas{ gap: var(--gap-md); }
 }
 
-/* Tablets */
+
 @media (min-width: 700px){
   header{ padding: var(--gap-lg) var(--gap-md) var(--gap-sm); }
   main{ padding: var(--gap-lg) var(--gap-md) calc(var(--gap-xl) + 96px); gap: var(--gap-xl); }
@@ -864,10 +825,7 @@ header{
   .balance-info{ grid-template-columns: repeat(2, minmax(0, 220px)); }
 }
 
-/* Desktop — layout em grade, deixando o app "solto" e não compacto */
-/* Desktop — layout em grade APENAS na página inicial
-   (páginas com várias .balance-card devem usar <main class="pagina-analises">
-    ou qualquer classe != main padrão para NÃO cair nesse grid) */
+
 @media (min-width: 980px){
   main:not(.pagina-analises):not(.pagina-metas):not(.pagina-relatorios):not(.pagina-perfil){
     display: grid;
@@ -912,15 +870,10 @@ header{
   .balance-card > h1{ font-size: 3.4rem; }
 }
 
-/* Celulares bem pequenos */
 @media (max-width: 360px){
   .logo-text span{ display: none; }
   .balance-card > h1{ font-size: 2rem; }
 }
-
-/* ==========================================================================
-   AJUSTES GERAIS
-   ========================================================================== */
 .item-valor {
   font-weight: 600;
   font-size: 1.05rem;
@@ -932,7 +885,6 @@ header{
   color: var(--vermelho);
 }
 
-/* ------------------- Estilos para a confirmação ------------------- */
 .resumo-confirmacao {
     background: var(--superficie);
     border: 1px solid var(--superficie-borda);
@@ -984,11 +936,9 @@ header{
     transform: translateY(0);
 }
 
-/* ==========================================================================
-   ESTILOS ESPECÍFICOS — PÁGINA ANÁLISES
-   ========================================================================== */
 
-/* Filtro de período */
+
+
 #filtroMes, #filtroAno {
     font-family: var(--fonte-dados);
     font-size: 0.95rem;
@@ -1027,7 +977,6 @@ header{
     gap: 0.4rem;
 }
 
-/* Botão Atualizar */
 #btnFiltrar {
     padding: 0.75rem 1.4rem;
     border-radius: var(--raio-sm);
@@ -1051,14 +1000,13 @@ header{
     filter: brightness(1.08);
 }
 
-/* Área dos gráficos */
 canvas {
     width: 100% !important;
     height: 100% !important;
     opacity: 1 !important;
 }
 
-/* Mensagem quando não há dados */
+
 .grafico-vazio {
     display: flex;
     align-items: center;
@@ -1074,7 +1022,6 @@ canvas {
     opacity: 1 !important;
 }
 
-/* Títulos e valores visíveis */
 .balance-card h3 {
     font-family: var(--fonte-display);
     font-size: 1.25rem;
@@ -1121,11 +1068,8 @@ canvas {
   }
 }
 
-/* ==========================================================================
-   ESTILOS — PÁGINA METAS
-   ========================================================================== */
 
-/* Card de meta */
+
 .card-meta {
     background: var(--superficie);
     border: 1px solid var(--superficie-borda-forte);
@@ -1268,7 +1212,6 @@ canvas {
     background: rgba(104, 12, 144, 0.22);
 }
 
-/* Botões de ação */
 .btn-principal {
     background: linear-gradient(90deg, var(--roxo), #9333c4);
     color: white;
@@ -1305,16 +1248,12 @@ canvas {
     cursor: pointer;
 }
 
-/* ==========================================================================
-   MODAL — CENTRALIZAÇÃO PERFEITA
-   (agora controlado por classe .ativo, não por style inline)
-   ========================================================================== */
+
 
 .modal-overlay{
     position:fixed;
     inset:0;
 
-    /* escondido por padrão via display:none, some da árvore de layout */
     display:none;
     align-items:center;
     justify-content:center;
@@ -1331,7 +1270,6 @@ canvas {
     box-sizing:border-box;
 }
 
-/* Classe adicionada via JS (classList.add('ativo')) para exibir o modal */
 .modal-overlay.ativo{
     display:flex;
 }
@@ -1383,9 +1321,7 @@ canvas {
 
 }
 
-/* ==========================================================================
-   FORMULÁRIOS DENTRO DO MODAL
-   ========================================================================== */
+
 
 .modal h3{
     font-family: var(--fonte-display);
@@ -1477,7 +1413,6 @@ canvas {
     color: var(--texto);
 }
 
-/* Input de data: ajustar o ícone do calendário ao tema escuro */
 .modal form input[type="date"]{
     color-scheme: dark;
 }
@@ -1499,11 +1434,7 @@ canvas {
     margin-top:0.4rem;
 }
 
-/* ==========================================================================
-   ESTILOS — PÁGINA RELATÓRIOS
-   ========================================================================== */
 
-/* Campos de filtro */
 .campo-filtro {
     font-family: var(--fonte-dados);
     font-size: 0.95rem;
@@ -1530,7 +1461,7 @@ canvas {
     box-shadow: 0 0 0 3px var(--roxo-fraco);
 }
 
-/* Cards de resumo */
+
 .card-resumo {
     background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
     border: 1px solid var(--superficie-borda);
@@ -1560,7 +1491,6 @@ canvas {
     color: var(--roxo-claro);
 }
 
-/* Tabela de transações */
 .tabela-container {
     overflow-x: auto;
     border-radius: var(--raio-md);
@@ -1628,11 +1558,7 @@ canvas {
     }
 }
 
-/* ==========================================================================
-   ESTILOS — PÁGINA PERFIL
-   ========================================================================== */
 
-/* Layout geral */
 .pagina-perfil {
     max-width: 1120px;
     margin: 0 auto;
@@ -1651,12 +1577,10 @@ canvas {
     }
 }
 
-/* Card de perfil */
 .card-perfil {
     height: fit-content;
 }
 
-/* Lista de estatísticas */
 .estatisticas-lista {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -1692,8 +1616,6 @@ canvas {
     color: var(--amarelo);
     margin: 0;
 }
-
-/* Lista de preferências */
 .preferencias-lista {
     display: flex;
     flex-direction: column;
@@ -1753,7 +1675,6 @@ canvas {
     font-weight: 500;
 }
 
-/* Botões de ações */
 .acoes-perfil {
     display: flex;
     flex-direction: column;
@@ -1794,9 +1715,6 @@ canvas {
     margin-bottom: 0.5rem;
 }
 
-/* ==================================================
-   CATÁLOGO DE NÍVEIS
-================================================== */
 .secao-catalogo-niveis {
     margin-bottom: 2rem;
 }
@@ -1859,8 +1777,6 @@ canvas {
     font-size: 0.85rem;
     font-weight: 500;
 }
-
-/* RESTO DO CSS DA GAMIFICAÇÃO (já tinha antes) */
 .pagina-gamificacao {
     max-width: 600px;
     margin: 0 auto;
