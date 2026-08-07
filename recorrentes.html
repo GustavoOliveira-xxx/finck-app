@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK | Lançamentos recorrentes</title>
+  <meta name="description" content="Cadastre salário, aluguel, internet e assinaturas como previsão do orçamento mensal.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-principal.css">
+</head>
+<body data-page="home">
+
+  <header data-finck-header></header>
+
+  <main class="conteudo">
+    <section class="hero">
+      <h2>Lançamentos recorrentes</h2>
+      <p>Estes itens funcionam como <strong>previsão do orçamento</strong>: eles não alteram seu saldo automaticamente, mas alimentam o cálculo da renda livre no FinCK of Reality.</p>
+    </section>
+
+    <section class="cards-indicadores" id="resumoRecorrentes"></section>
+
+    <section class="bloco">
+      <h3>Novo recorrente</h3>
+      <form id="formRecorrente" class="form-inline" novalidate>
+        <label>Descrição
+          <input type="text" id="recDescricao" required placeholder="Ex.: Internet">
+        </label>
+        <label>Tipo
+          <select id="recTipo">
+            <option value="saida">Saída</option>
+            <option value="entrada">Entrada</option>
+          </select>
+        </label>
+        <label>Valor (R$)
+          <input type="number" id="recValor" min="0.01" step="0.01" required placeholder="0,00">
+        </label>
+        <label>Dia do mês
+          <input type="number" id="recDia" min="1" max="31" value="10">
+        </label>
+        <button type="submit" class="btn-primario">Adicionar</button>
+      </form>
+    </section>
+
+    <section class="bloco">
+      <h3>Previsão mensal</h3>
+      <ul class="lista-simples" id="listaRecorrentes"></ul>
+      <p class="vazio" id="vazioRecorrentes" hidden>Nenhum lançamento recorrente cadastrado.</p>
+    </section>
+
+    <p class="link-rodape"><a href="home.html">← Voltar ao início</a></p>
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/recorrentes.js"></script>
+  <script src="js/ui-fx.js"></script>
+</body>
+</html>

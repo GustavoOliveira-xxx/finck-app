@@ -1,0 +1,77 @@
+/* ============================================================
+   FinCK v2 — CONTRATO DE CSS (arquivo de referência)
+   Este arquivo NÃO estiliza nada: ele lista todas as classes e
+   variáveis que o HTML/JS utilizam, para que o CSS definitivo
+   (gerado à parte) cubra tudo sem faltar nenhum seletor.
+
+   Arquivos esperados:
+     css/style-auth.css       -> index.html, cadastro.html
+     css/style-principal.css  -> demais páginas
+
+   Variáveis lidas pelo JS (js/charts.js):
+     --finck-chart-1 ... --finck-chart-9   cores dos gráficos
+     --finck-chart-texto                   cor do texto nos gráficos
+   ============================================================
+
+   ESTRUTURA GLOBAL
+   body[data-page="login|cadastro|onboarding|home|reality|metas|relatorios|perfil"]
+   header (montado por js/nav.js): .logo .logo-mark .logo-text
+                                   .header-actions .modo-dados .btn-sair
+   main.conteudo
+   nav.nav-inferior > a.nav-item (.ativo, .nav-item--destaque)
+                        > .nav-icone, .nav-rotulo
+
+   AUTENTICAÇÃO (style-auth.css)
+   .pagina-auth .auth-wrapper .auth-marca .auth-logo .auth-tagline
+   .auth-card .auth-sub .auth-rodape
+   .campo-senha .toggle-senha
+   .captcha .captcha-slider .captcha-texto .captcha.verificado
+   .mensagem (.erro, .sucesso)
+   .checkbox
+
+   BOTÕES
+   .btn-primario .btn-secundario .btn-salvar .btn-texto .btn-perigo
+   .btn-mini .btn-excluir-item .btn-acao (.entrada, .saida) .arquivo
+
+   BLOCOS E CARDS
+   .hero  .bloco  .bloco-interno  .bloco-cabecalho  .link-mais  .link-rodape
+   .balance-card  .balance-info
+   .cards-indicadores > .card-indicador
+   .reality-cta .reality-cta__texto .reality-cta__hora
+   .acoes-rapidas .acoes-etapa .acoes-modal .acoes-card .acoes-exportar
+   .card-nivel .nivel-topo .nivel-badge
+   .grade-conquistas > .conquista (.conquista--ativa, .conquista--bloqueada) .conquista-icone
+   .grade-metas .metas-resumo .card-meta (.card-meta--concluida) .selo
+   .card-impacto-meta
+
+   ONBOARDING
+   .pagina-onboarding .etapa .opcoes-fluxo .card-opcao .resumo-onboarding
+
+   FINCK REALITY
+   .semaforo .semaforo-card (.semaforo--verde, .semaforo--atencao, .semaforo--alerta)
+   .reflexoes .reflexao .opcoes-reflexao .chip
+   .opcoes-decisao .botao-decisao (.botao-decisao--consciente, .ativo)
+   .lista-alternativas .alternativa .campo-nota
+   .item-decisao (.impacto--verde, .impacto--atencao, .impacto--alerta) .tag-decisao
+
+   LISTAS E TABELAS
+   .itens-lista .item-transacao (.entrada, .saida) .item-info .item-lado
+   .lista-simples .item-lista (.inativo) .item-desc .item-dia .item-valor
+   .lista-resumo .lista-categorias .linha-categoria .ponto .cat-nome .cat-valor .cat-pct
+   .tabela-wrapper .tabela
+   .filtros .filtro .form-inline .linha-dupla .switch
+   .barra .barra-preenchida
+   .total-linha .descricao .dica .nota .alerta .destaque .vazio
+   .cor-verde .cor-vermelha
+
+   MODAIS
+   .modal-overlay[hidden] (deve ficar oculto) .modal .fechar
+   body.modal-aberto (bloquear scroll)
+   .resumo-confirmacao
+
+   TOASTS (criados via JS)
+   .finck-toast-host .finck-toast (.finck-toast--info, --sucesso, --erro)
+
+   IMPRESSÃO
+   @media print: ocultar header, .nav-inferior, .acoes-exportar, .filtros
+   ============================================================ */

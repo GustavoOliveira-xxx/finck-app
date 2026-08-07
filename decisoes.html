@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK | Decisões conscientes</title>
+  <meta name="description" content="Histórico das análises do FinCK of Reality e das decisões de compra registradas.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-principal.css">
+</head>
+<body data-page="reality">
+
+  <header data-finck-header></header>
+
+  <main class="conteudo">
+    <section class="hero">
+      <h2>Decisões conscientes</h2>
+      <p>Tudo o que você analisou antes de comprar, e o que decidiu em cada caso.</p>
+    </section>
+
+    <section class="cards-indicadores" id="resumoDecisoes"></section>
+
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h3>Histórico</h3>
+        <label class="filtro">Filtrar
+          <select id="filtroDecisao">
+            <option value="">Todas as decisões</option>
+          </select>
+        </label>
+      </div>
+      <div id="listaDecisoes" class="itens-lista"></div>
+      <p class="vazio" id="vazioDecisoes" hidden>Nenhuma análise registrada ainda. <a href="reality.html">Analisar uma compra</a>.</p>
+    </section>
+
+    <p class="link-rodape"><a href="reality.html">← Voltar ao FinCK of Reality</a></p>
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <!-- Detalhe da análise -->
+  <div id="modalDetalhe" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloDetalhe">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalDetalhe" aria-label="Fechar">✕</button>
+      <h3 id="tituloDetalhe">Detalhe da análise</h3>
+      <div id="conteudoDetalhe"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/decisoes.js"></script>
+  <script src="js/ui-fx.js"></script>
+</body>
+</html>
