@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK | Início</title>
+  <meta name="description" content="Painel do FinCK: saldo, orçamento do mês, metas e decisões conscientes.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-principal.css">
+</head>
+<body data-page="home">
+
+  <header data-finck-header></header>
+
+  <main class="conteudo">
+
+    <section class="hero">
+      <h2 id="saudacao">Olá!</h2>
+      <p id="fraseDia">Antes de comprar, veja quanto custa em tempo de trabalho.</p>
+    </section>
+
+    <!-- Cartão de saldo -->
+    <section class="balance-card" aria-labelledby="rotuloSaldo">
+      <small id="rotuloSaldo">Saldo atual</small>
+      <p id="saldoAtual">R$ 0,00</p>
+      <div class="balance-info">
+        <div>
+          <span>Entradas do mês</span>
+          <strong class="cor-verde" id="entradasMes">R$ 0,00</strong>
+        </div>
+        <div>
+          <span>Saídas do mês</span>
+          <strong class="cor-vermelha" id="saidasMes">R$ 0,00</strong>
+        </div>
+        <div>
+          <span>Renda livre</span>
+          <strong id="rendaLivre">R$ 0,00</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chamada principal do produto -->
+    <section class="reality-cta">
+      <div class="reality-cta__marca">
+        <img src="assets/logo-reality-transparente.png" alt="FinCK of Reality" loading="lazy" decoding="async">
+      </div>
+      <div class="reality-cta__texto">
+        <h2>FinCK of Reality</h2>
+        <p>Vai comprar algo? Descubra antes quantas horas de trabalho isso custa e o impacto nas suas metas.</p>
+        <p class="reality-cta__hora">Sua hora vale <strong id="valorHora">R$ 0,00</strong> · seu dia vale <strong id="valorDia">R$ 0,00</strong></p>
+      </div>
+      <div class="reality-cta__acoes">
+        <a class="btn-primario" href="reality.html">Calcular uma compra</a>
+        <a class="btn-secundario" href="reality.html#calculos">Meus cálculos reais</a>
+      </div>
+    </section>
+
+    <nav class="atalhos-secundarios" aria-label="Outras áreas">
+      <a href="relatorios.html"><span aria-hidden="true">📊</span> Relatórios</a>
+      <a href="gamificacao.html"><span aria-hidden="true">🏅</span> Jornada</a>
+      <a href="decisoes.html"><span aria-hidden="true">🧾</span> Decisões</a>
+      <a href="recorrentes.html"><span aria-hidden="true">🔁</span> Recorrentes</a>
+    </nav>
+
+    <!-- Indicadores de consumo consciente -->
+    <section class="cards-indicadores">
+      <article class="card-indicador">
+        <span>Compras evitadas</span>
+        <strong id="indEvitadas">0</strong>
+      </article>
+      <article class="card-indicador">
+        <span>Economia consciente</span>
+        <strong id="indEconomia" class="cor-verde">R$ 0,00</strong>
+      </article>
+      <article class="card-indicador">
+        <span>Horas preservadas</span>
+        <strong id="indHoras">0 h</strong>
+      </article>
+      <article class="card-indicador">
+        <span>Nível</span>
+        <strong id="indNivel">1</strong>
+      </article>
+    </section>
+
+    <!-- Orçamento previsto -->
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h2>Orçamento previsto do mês</h2>
+        <a href="recorrentes.html" class="link-mais">Gerenciar</a>
+      </div>
+      <div class="orcamento" id="orcamento"></div>
+    </section>
+
+    <!-- Ações rápidas -->
+    <section class="acoes-rapidas">
+      <button type="button" id="btnEntrada" class="btn-acao entrada">
+        <strong>+ Entrada</strong>
+        <span>Valor recebido</span>
+      </button>
+      <button type="button" id="btnSaida" class="btn-acao saida">
+        <strong>− Saída</strong>
+        <span>Valor gasto</span>
+      </button>
+    </section>
+
+    <!-- Metas em destaque -->
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h2>Suas metas</h2>
+        <a href="metas.html" class="link-mais">Ver todas</a>
+      </div>
+      <div id="metasResumo" class="metas-resumo"></div>
+    </section>
+
+    <!-- Movimentações -->
+    <section class="bloco lista-transacoes">
+      <div class="bloco-cabecalho">
+        <h2>Últimas movimentações</h2>
+        <a href="analises.html" class="link-mais">Analisar</a>
+      </div>
+      <div id="lista" class="itens-lista"></div>
+      <p id="vazio" class="vazio" hidden>Nenhuma movimentação registrada ainda.</p>
+    </section>
+
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <!-- Modal de lançamento -->
+  <div id="modalTransacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloModal">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalTransacao" aria-label="Fechar">✕</button>
+      <h3 id="tituloModal">Nova movimentação</h3>
+      <form id="formTransacao" novalidate>
+        <input type="hidden" id="tipoTransacao" value="">
+        <label>Valor (R$)
+          <input type="number" id="valor" step="0.01" min="0.01" required placeholder="0,00">
+        </label>
+        <label>Descrição
+          <input type="text" id="descricao" required placeholder="Ex.: Salário, conta de luz">
+        </label>
+        <label>Categoria
+          <select id="categoria"></select>
+        </label>
+        <label>Data
+          <input type="date" id="data" required>
+        </label>
+        <label>Vincular a uma meta (opcional)
+          <select id="metaSelecionada"><option value="">Nenhuma meta</option></select>
+        </label>
+        <button type="submit" class="btn-salvar">Revisar e salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação -->
+  <div id="modalConfirmacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConfirmacao">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalConfirmacao" aria-label="Fechar">✕</button>
+      <h3 id="tituloConfirmacao">Confirmar lançamento</h3>
+      <div class="resumo-confirmacao" id="resumoConfirmacao"></div>
+      <div class="acoes-modal">
+        <button type="button" class="btn-secundario" data-fechar="modalConfirmacao">Cancelar</button>
+        <button type="button" class="btn-primario" id="btnConfirmarSalvar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/ui-fx.js"></script>
+</body>
+</html>

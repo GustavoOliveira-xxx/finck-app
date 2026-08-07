@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK of Reality | Cálculo realista de compra</title>
+  <meta name="description" content="Traduza o preço de uma compra em horas de trabalho, impacto no orçamento e efeito nas suas metas.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-principal.css">
+</head>
+<body data-page="reality">
+
+  <header data-finck-header></header>
+
+  <main class="conteudo">
+
+    <section class="hero hero--reality">
+      <div class="hero-marca"><img src="assets/logo-reality-transparente.png" alt="FinCK of Reality" loading="eager" decoding="async"></div>
+      <div>
+        <h2>FinCK of Reality</h2>
+        <p>Informe o item que você quer comprar. O FinCK of Reality mostra o custo em tempo de trabalho, o impacto no seu mês e alternativas — sem julgar a sua escolha.</p>
+      </div>
+    </section>
+
+    <div class="abas" role="tablist" aria-label="Áreas do FinCK of Reality">
+      <button type="button" class="aba ativa" id="abaCalculo" role="tab" aria-selected="true" aria-controls="painelCalculo" data-aba="calculo">Novo cálculo</button>
+      <button type="button" class="aba" id="abaCalculos" role="tab" aria-selected="false" aria-controls="painelCalculos" data-aba="calculos">Cálculos cadastrados</button>
+    </div>
+
+    <div id="painelCalculo" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculo">
+
+    <!-- Passo 1: dados da compra -->
+    <section class="bloco" id="passoDados">
+      <h3>1. O que você quer comprar?</h3>
+      <form id="formReality" novalidate>
+        <label>Item desejado
+          <input type="text" id="itemName" required placeholder="Ex.: Fone de ouvido">
+        </label>
+        <div class="linha-dupla">
+          <label>Preço (R$)
+            <input type="number" id="itemPrice" min="0.01" step="0.01" required placeholder="800,00">
+          </label>
+          <label>Categoria
+            <select id="itemCategory"></select>
+          </label>
+        </div>
+        <label>Observação (opcional)
+          <input type="text" id="itemNote" placeholder="Ex.: promoção acaba amanhã">
+        </label>
+        <button type="submit" class="btn-primario">Analisar compra</button>
+      </form>
+    </section>
+
+    <!-- Passo 2: resultado -->
+    <section class="bloco resultado" id="passoResultado" hidden>
+      <h3>2. O que essa compra significa</h3>
+
+      <div class="semaforo" id="semaforo"></div>
+
+      <div class="cards-indicadores" id="indicadores"></div>
+
+      <div class="bloco-interno">
+        <h4>Impacto no orçamento</h4>
+        <div id="impactoOrcamento"></div>
+      </div>
+
+      <div class="bloco-interno">
+        <h4>Efeito sobre suas metas</h4>
+        <div id="impactoMetas"></div>
+      </div>
+
+      <div class="bloco-interno">
+        <h4>Alternativas mais sustentáveis</h4>
+        <ul class="lista-alternativas" id="alternativas"></ul>
+      </div>
+
+      <div class="acoes-etapa acoes-etapa--registro">
+        <button type="button" class="btn-primario" id="btnRegistrarCalculo">Cadastrar cálculo real</button>
+        <button type="button" class="btn-secundario" data-ir-aba="calculos">Meus cálculos reais</button>
+      </div>
+      <p class="nota" id="statusRegistro" aria-live="polite"></p>
+    </section>
+
+    <!-- Passo 3: reflexão -->
+    <section class="bloco" id="passoReflexao" hidden>
+      <h3>3. Perguntas de reflexão</h3>
+      <p class="descricao">Nenhuma resposta bloqueia a compra. O objetivo é dar clareza.</p>
+      <form id="formReflexao" class="reflexoes"></form>
+    </section>
+
+    <!-- Passo 4: decisão -->
+    <section class="bloco" id="passoDecisao" hidden>
+      <h3>4. Sua decisão</h3>
+      <div class="opcoes-decisao" id="opcoesDecisao"></div>
+
+      <label class="campo-nota">Quer registrar um lembrete sobre essa decisão?
+        <input type="text" id="decisaoNota" placeholder="Ex.: reavaliar em 30 dias">
+      </label>
+
+      <div class="acoes-etapa">
+        <button type="button" class="btn-secundario" id="btnNovaAnalise">Nova análise</button>
+        <button type="button" class="btn-primario" id="btnSalvarDecisao" disabled>Salvar decisão</button>
+      </div>
+
+      <p class="nota" id="avisoDespesa" hidden>
+        Ao escolher “Comprar agora”, o FinCK também registra a saída no seu extrato.
+      </p>
+    </section>
+
+    </div><!-- /painelCalculo -->
+
+    <div id="painelCalculos" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculos" hidden>
+      <section class="cards-indicadores" id="resumoCalculos"></section>
+
+      <section class="bloco">
+        <div class="bloco-cabecalho">
+          <h3>Cálculos cadastrados</h3>
+          <div class="filtros">
+            <label class="filtro">Buscar
+              <input type="search" id="buscaCalculo" placeholder="Item ou categoria">
+            </label>
+            <label class="filtro">Decisão
+              <select id="filtroCalculo"><option value="">Todas</option></select>
+            </label>
+            <label class="filtro">Ordenar
+              <select id="ordemCalculo">
+                <option value="recentes">Mais recentes</option>
+                <option value="antigos">Mais antigos</option>
+                <option value="caros">Maior valor</option>
+                <option value="horas">Mais horas de trabalho</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div id="listaCalculos" class="itens-lista"></div>
+        <p class="vazio" id="vazioCalculos" hidden>Nenhum cálculo cadastrado ainda. <a href="#" data-ir-aba="calculo">Fazer o primeiro cálculo</a>.</p>
+
+        <div class="acoes-etapa">
+          <button type="button" class="btn-secundario" id="btnExportarCalculos">Exportar CSV</button>
+          <button type="button" class="btn-primario" data-ir-aba="calculo">Novo cálculo real</button>
+        </div>
+      </section>
+    </div><!-- /painelCalculos -->
+
+    <p class="link-rodape"><a href="decisoes.html">Histórico de decisões</a> · <a href="home.html">← Voltar ao início</a></p>
+
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <!-- Detalhe completo do cálculo -->
+  <div id="modalCalculo" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloCalculo">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalCalculo" aria-label="Fechar">✕</button>
+      <h3 id="tituloCalculo">Detalhe do cálculo</h3>
+      <div id="conteudoCalculo"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/reality-page.js"></script>
+  <script src="js/calculos.js"></script>
+  <script src="js/abas-reality.js"></script>
+  <script src="js/ui-fx.js"></script>
+</body>
+</html>

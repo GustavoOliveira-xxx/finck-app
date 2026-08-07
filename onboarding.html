@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK | Perfil financeiro inicial</title>
+  <meta name="description" content="Configure renda, jornada de trabalho e despesas fixas para ativar o FinCK of Reality.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-principal.css">
+</head>
+<body data-page="onboarding" class="pagina-onboarding">
+
+  <header data-finck-header></header>
+
+  <main class="conteudo">
+
+    <!-- Etapa 0: escolha do fluxo (item 6 do documento) -->
+    <section class="etapa" id="etapaFluxo" data-etapa="0">
+      <h2>Como você quer começar?</h2>
+      <p class="descricao">Escolha o caminho que combina com o seu momento. Dá para mudar depois.</p>
+
+      <div class="opcoes-fluxo">
+        <button type="button" class="card-opcao" data-fluxo="perfil">
+          <strong>Perfil Financeiro Inicial</strong>
+          <span>Informe renda, jornada, despesas fixas e saldo. O FinCK monta sua situação financeira.</span>
+          <small>Recomendado</small>
+        </button>
+
+        <button type="button" class="card-opcao" data-fluxo="manual">
+          <strong>Configuração Manual</strong>
+          <span>Comece com o saldo atual e cadastre tudo por conta própria.</span>
+          <small>Controle total</small>
+        </button>
+
+        <button type="button" class="card-opcao" data-fluxo="demo">
+          <strong>Modo Demonstrativo</strong>
+          <span>Carrega dados fictícios (salário, mercado, streaming, transporte e metas) para você conhecer o app.</span>
+          <small>Apresentação e testes</small>
+        </button>
+      </div>
+    </section>
+
+    <!-- Etapa 1: renda -->
+    <section class="etapa" id="etapaRenda" data-etapa="1" hidden>
+      <h2>Sua renda</h2>
+      <p class="descricao">Esses dados alimentam o FinCK of Reality: é com eles que calculamos o preço de uma compra em horas de trabalho.</p>
+
+      <form id="formRenda" novalidate>
+        <label>Renda mensal (R$)
+          <input type="number" id="incomeMonthly" min="0" step="0.01" required placeholder="3500,00">
+        </label>
+
+        <label>Tipo de renda
+          <select id="incomeType">
+            <option value="fixa">Fixa (salário)</option>
+            <option value="variavel">Variável (média dos últimos meses)</option>
+            <option value="mista">Mista</option>
+          </select>
+        </label>
+
+        <label>Dia do recebimento
+          <input type="number" id="payday" min="1" max="31" value="5">
+        </label>
+
+        <div class="linha-dupla">
+          <label>Dias trabalhados por mês
+            <input type="number" id="workDays" min="1" max="31" value="22" required>
+          </label>
+          <label>Horas por dia
+            <input type="number" id="workHours" min="1" max="16" step="0.5" value="8" required>
+          </label>
+        </div>
+
+        <p class="dica" id="dicaValorHora">Informe a renda para ver quanto vale a sua hora.</p>
+
+        <div class="acoes-etapa">
+          <button type="button" class="btn-secundario" data-voltar="0">Voltar</button>
+          <button type="submit" class="btn-primario">Continuar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Etapa 2: despesas fixas -->
+    <section class="etapa" id="etapaDespesas" data-etapa="2" hidden>
+      <h2>Despesas fixas</h2>
+      <p class="descricao">Cadastre os compromissos que se repetem todo mês. Eles entram como previsão do orçamento, sem alterar seu saldo.</p>
+
+      <form id="formDespesa" class="form-inline" novalidate>
+        <label>Descrição
+          <input type="text" id="despesaDescricao" placeholder="Ex.: Aluguel" required>
+        </label>
+        <label>Valor (R$)
+          <input type="number" id="despesaValor" min="0" step="0.01" placeholder="0,00" required>
+        </label>
+        <label>Dia
+          <input type="number" id="despesaDia" min="1" max="31" value="10">
+        </label>
+        <button type="submit" class="btn-secundario">Adicionar</button>
+      </form>
+
+      <ul class="lista-simples" id="listaDespesas"></ul>
+      <p class="total-linha">Total de despesas fixas: <strong id="totalDespesas">R$ 0,00</strong></p>
+
+      <div class="acoes-etapa">
+        <button type="button" class="btn-secundario" data-voltar="1">Voltar</button>
+        <button type="button" class="btn-primario" id="btnIrSaldo">Continuar</button>
+      </div>
+    </section>
+
+    <!-- Etapa 3: saldo e conclusão -->
+    <section class="etapa" id="etapaSaldo" data-etapa="3" hidden>
+      <h2>Saldo atual</h2>
+      <p class="descricao">Quanto você tem disponível hoje, somando conta e dinheiro em espécie?</p>
+
+      <form id="formSaldo" novalidate>
+        <label>Saldo inicial (R$)
+          <input type="number" id="initialBalance" step="0.01" value="0" required>
+        </label>
+
+        <section class="resumo-onboarding" id="resumoOnboarding"></section>
+
+        <div class="acoes-etapa">
+          <button type="button" class="btn-secundario" data-voltar="2">Voltar</button>
+          <button type="submit" class="btn-primario">Concluir configuração</button>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/onboarding.js"></script>
+  <script src="js/ui-fx.js"></script>
+</body>
+</html>

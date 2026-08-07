@@ -1,57 +1,77 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FINCK | Cadastre-se</title>
-    <link rel="stylesheet" href="style-auth.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinCK | Criar conta</title>
+  <meta name="description" content="Crie sua conta no FinCK e comece a analisar suas compras antes de gastar.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="stylesheet" href="css/style-auth.css">
 </head>
-<body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <h2>Criar Conta</h2>
-            <p class="auth-subtitle">Comece a organizar sua vida financeira</p>
+<body data-page="cadastro" class="pagina-auth">
 
-            <form id="cadastroForm" autocomplete="on">
-                <div class="form-group">
-                    <label for="nome">Nome completo</label>
-                    <input type="text" id="nome" name="nome" placeholder="Seu nome" required autocomplete="name">
-                </div>
+  <main class="auth-wrapper">
+    <section class="auth-marca">
+      <img src="assets/logo-ck.png" alt="Conscious Knowledge" class="auth-logo">
+      <h1>FinCK</h1>
+      <p class="auth-tagline">Consumo consciente começa com informação clara.</p>
+    </section>
 
-                <div class="form-group">
-                    <label for="emailCad">E-mail</label>
-                    <input type="email" id="emailCad" name="emailCad" placeholder="meu@email.com" required autocomplete="email">
-                </div>
+    <section class="auth-card">
+      <h2>Criar conta</h2>
+      <p class="auth-sub">Leva menos de um minuto.</p>
 
-                <div class="form-group">
-                    <label for="senhaCad">Senha</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="senhaCad" name="senhaCad" placeholder="Crie uma senha segura (mín. 6 caracteres)" required minlength="6" autocomplete="new-password">
-                        <button type="button" class="toggle-senha" id="toggleSenhaCad" aria-label="Mostrar/ocultar senha">👁</button>
-                    </div>
-                </div>
+      <form id="cadastroForm" novalidate>
+        <label for="nome">Nome
+          <input type="text" id="nome" name="nome" autocomplete="name" required placeholder="Como quer ser chamado(a)">
+        </label>
 
-                <div class="form-group">
-                    <label for="confirmaSenha">Confirmar senha</label>
-                    <input type="password" id="confirmaSenha" name="confirmaSenha" placeholder="Repita a senha" required autocomplete="new-password">
-                </div>
+        <label for="emailCad">E-mail
+          <input type="email" id="emailCad" name="email" autocomplete="email" required placeholder="voce@email.com">
+        </label>
 
-                <div class="captcha-container">
-                    <label>Arraste o controle até o final</label>
-                    <div class="captcha-track">
-                        <div class="captcha-slider" id="captchaSliderCad"></div>
-                        <span class="captcha-text" id="captchaTextCad">Deslize para verificar →</span>
-                    </div>
-                </div>
+        <label for="senhaCad">Senha
+          <span class="campo-senha">
+            <input type="password" id="senhaCad" name="senha" autocomplete="new-password" minlength="6" required placeholder="Mínimo de 6 caracteres">
+            <button type="button" class="toggle-senha" aria-label="Mostrar senha">👁</button>
+          </span>
+        </label>
 
-                <button type="submit" class="btn-entrar" id="btnCadastrar" disabled>Cadastrar</button>
-            </form>
+        <label for="confirmaSenha">Confirmar senha
+          <span class="campo-senha">
+            <input type="password" id="confirmaSenha" name="confirmaSenha" autocomplete="new-password" required placeholder="Repita a senha">
+            <button type="button" class="toggle-senha" aria-label="Mostrar senha">👁</button>
+          </span>
+        </label>
 
-            <p class="link-cadastro">Já tem conta? <a href="index.html">Fazer login</a></p>
-            <div id="mensagemCad" class="mensagem"></div>
+        <label class="checkbox">
+          <input type="checkbox" id="aceite" required>
+          <span>Concordo em usar o FinCK como ferramenta educacional de finanças pessoais.</span>
+        </label>
+
+        <div class="captcha" id="captchaTrackCad">
+          <div class="captcha-slider" id="captchaSliderCad" role="slider" aria-label="Deslize para verificar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Não verificado" tabindex="0">›</div>
+          <span class="captcha-texto" id="captchaTextCad">Deslize para verificar →</span>
         </div>
-    </div>
 
-    <script src="auth.js"></script>
+        <p id="mensagemCad" class="mensagem" role="alert"></p>
+
+        <button type="submit" id="btnCadastrar" class="btn-primario" disabled>Criar conta</button>
+      </form>
+
+      <div class="auth-rodape">
+        <p>Já tem conta? <a href="index.html">Entrar</a></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui-fx.js"></script>
 </body>
 </html>
