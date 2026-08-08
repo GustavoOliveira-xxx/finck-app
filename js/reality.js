@@ -111,7 +111,7 @@ window.FinckReality = (() => {
    * jornada, valor da hora), para que o histórico continue fiel
    * mesmo depois de a renda da pessoa mudar.
    */
-  function paraRegistro({ item_name, price, category, resultado, perfil, decision, reflections, note }) {
+  function paraRegistro({ item_name, price, category, resultado, perfil, decision, reflections, note, item_link }) {
     return {
       item_name,
       price: Number(price),
@@ -123,6 +123,7 @@ window.FinckReality = (() => {
       decision: decision || null,
       reflections: reflections || {},
       note: note || null,
+      item_link: item_link || null,
       // --- snapshot da realidade financeira na data do cálculo ---
       income_base: Number(resultado.income_monthly || perfil?.income_monthly || 0),
       hour_value: Number((resultado.valor_hora || 0).toFixed(2)),

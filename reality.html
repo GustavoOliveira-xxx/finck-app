@@ -6,6 +6,9 @@
   <title>FinCK of Reality | Cálculo realista de compra</title>
   <meta name="description" content="Traduza o preço de uma compra em horas de trabalho, impacto no orçamento e efeito nas suas metas.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
 </head>
 <body data-page="reality">
@@ -44,6 +47,12 @@
             <select id="itemCategory"></select>
           </label>
         </div>
+        <label>Link do item (opcional)
+          <span class="campo-com-icone">
+            <svg class="campo-com-icone__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 14.5 14.5 9.5"/><path d="M8 15 5.8 17.2a3 3 0 1 1-4.2-4.2L4 10.7"/><path d="M16 9l2.2-2.2a3 3 0 1 1 4.2 4.2L20 13.3"/></svg>
+            <input type="url" id="itemLink" placeholder="Ex.: link do produto, do anúncio ou da loja">
+          </span>
+        </label>
         <label>Observação (opcional)
           <input type="text" id="itemNote" placeholder="Ex.: promoção acaba amanhã">
         </label>

@@ -1,5 +1,6 @@
 @charset "UTF-8";
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* fontes carregadas via <link> no <head> de cada página (evita o
+   "waterfall" serial que o @import causa: HTML -> CSS -> fonts.css -> fontes) */
 
 /* ============================================================
    FinCK v2 — style-auth.css  (index.html e cadastro.html)
@@ -35,6 +36,7 @@
   --texto:            #f4f1f9;
   --texto-fraco:      #a49bb2;
   --texto-fraquissimo:#6d6579;
+  --texto-suave:      #a49bb2;
 
   --grad-marca: linear-gradient(120deg, var(--roxo) 0%, var(--roxo-claro) 48%, var(--roxo-neon) 100%);
   --grad-sinal: linear-gradient(120deg, var(--amarelo) 0%, var(--amarelo-quente) 100%);
@@ -61,7 +63,14 @@
 }
 
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
-html{ -webkit-text-size-adjust:100%; }
+html{
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color: transparent;
+}
+button,a,input,select,.nav-item,.captcha-slider,.toggle-senha{
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 body.pagina-auth{
   min-height:100vh; min-height:100dvh;
@@ -117,29 +126,52 @@ body.pagina-auth::before{
   width:44vw; height:44vw; min-width:320px; min-height:320px;
   bottom:-20vw; right:-12vw;
   background:radial-gradient(circle at 60% 40%, rgba(180,92,240,.5), rgba(104,12,144,0) 70%);
-  animation: orbe-deriva-b 32s var(--ease-suave) infinite alternate;
 }
 .fundo-finck__orbe--amarelo{
   width:28vw; height:28vw; min-width:220px; min-height:220px;
   top:56%; left:56%; opacity:.3;
   background:radial-gradient(circle, rgba(254,200,0,.42), rgba(254,200,0,0) 68%);
-  animation: orbe-deriva-c 22s var(--ease-suave) infinite alternate;
 }
-.fundo-finck__canvas{ position:absolute; inset:0; width:100%; height:100%; opacity:.8; }
-.fundo-finck__holofote{
+.fundo-finck__ticker{
   position:absolute; inset:0;
-  background:radial-gradient(420px 420px at var(--px,50%) var(--py,40%),
-    rgba(147,51,196,.20), rgba(147,51,196,.05) 40%, transparent 68%);
+  overflow:hidden;
+  opacity:.8;
+  mask-image:linear-gradient(180deg, transparent, #000 20%, #000 75%, transparent);
+  -webkit-mask-image:linear-gradient(180deg, transparent, #000 20%, #000 75%, transparent);
+}
+.fundo-finck__ticker-trilho{
+  position:absolute; left:0; top:8%;
+  width:200%; height:46%;
+  display:block;
+  animation: ticker-desliza 46s linear infinite;
+  will-change:transform;
+}
+.fundo-finck__ticker-linha{ fill:none; stroke-linejoin:round; stroke-linecap:round; }
+.fundo-finck__ticker-linha--a{ stroke:var(--roxo-neon); stroke-width:2.4; opacity:.55; filter:drop-shadow(0 0 6px rgba(180,92,240,.55)); }
+.fundo-finck__ticker-linha--b{ stroke:var(--roxo-claro); stroke-width:1.6; opacity:.34; }
+.fundo-finck__ticker-linha--c{ stroke:var(--amarelo); stroke-width:1.4; opacity:.24; }
+
+.fundo-finck__brilho{
+  position:absolute; top:0; left:0;
+  width:640px; height:640px;
+  margin:-320px 0 0 -320px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(147,51,196,.22), rgba(147,51,196,.07) 42%, transparent 70%);
+  filter:blur(6px);
+  transform:translate3d(50vw,32vh,0);
+  transition:transform 900ms var(--ease-out);
+  will-change:transform;
+  opacity:.9;
 }
 .fundo-finck__grao{
-  position:absolute; inset:-50%; opacity:.05;
+  position:absolute; inset:0; opacity:.045;
+  mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
-  animation: grao-treme 900ms steps(3) infinite;
 }
 .fundo-finck__fio{
   position:absolute; top:0; left:0; right:0; height:1px;
-  background:var(--grad-linha); background-size:220% 100%;
-  animation: fio-corre 7s linear infinite; opacity:.6;
+  background:var(--grad-linha);
+  opacity:.6;
 }
 
 /* ---------- layout ---------- */
@@ -166,7 +198,7 @@ body.pagina-auth::before{
   padding:0;
   object-fit:contain;
   filter:drop-shadow(0 16px 40px rgba(104,12,144,.65));
-  animation: logo-flutua 7s var(--ease-suave) infinite;
+  animation: logo-flutua 1.4s var(--ease-suave) .1s 1 both;
 }
 .auth-marca h1{
   font-family:var(--fonte-display);
@@ -175,9 +207,7 @@ body.pagina-auth::before{
   letter-spacing:-.045em;
   line-height:1;
   background:linear-gradient(96deg, #fff 18%, var(--roxo-neon) 64%, var(--amarelo) 108%);
-  background-size:200% 100%;
   -webkit-background-clip:text; background-clip:text; color:transparent;
-  animation: grad-anda 8s var(--ease-suave) infinite alternate;
 }
 .auth-tagline{
   max-width:44ch;
@@ -189,8 +219,8 @@ body.pagina-auth::before{
   width:120px; height:2px;
   border-radius:99px;
   background:var(--grad-linha);
-  background-size:200% 100%;
-  animation: fio-corre 5s linear infinite;
+  transform-origin:left;
+  animation: risco-entra .6s var(--ease-out) .5s both;
 }
 
 /* ---------- card ---------- */
@@ -201,16 +231,15 @@ body.pagina-auth::before{
   background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)), var(--vidro);
   border:1px solid var(--superficie-borda);
   box-shadow:var(--sombra-card);
-  backdrop-filter:blur(18px) saturate(150%);
-  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  backdrop-filter:blur(13px) saturate(138%);
+  -webkit-backdrop-filter:blur(13px) saturate(138%);
   overflow:hidden;
   animation: card-entra .85s var(--ease-out) .12s both;
 }
 .auth-card::before{
   content:"";
   position:absolute; top:0; left:0; right:0; height:2px;
-  background:var(--grad-linha); background-size:200% 100%;
-  animation: fio-corre 6s linear infinite;
+  background:var(--grad-linha);
 }
 .auth-card::after{
   content:"";
@@ -218,7 +247,7 @@ body.pagina-auth::before{
   width:240px; height:240px; border-radius:50%;
   background:radial-gradient(circle, rgba(147,51,196,.26), transparent 68%);
   filter:blur(14px);
-  animation: respira 9s var(--ease-suave) infinite;
+  animation: respira 2.2s var(--ease-suave) .35s 1 both;
   pointer-events:none;
 }
 .auth-card h2{
@@ -278,6 +307,7 @@ input:-webkit-autofill{
   opacity:.6;
   transition:all var(--dur-rapida) var(--ease-out);
 }
+.toggle-senha svg{ width:19px; height:19px; }
 .toggle-senha:hover{
   opacity:1;
   background:var(--roxo-vidro);
@@ -386,10 +416,8 @@ input:-webkit-autofill{
   color:#fff;
   border-radius:var(--raio-md);
   background:var(--grad-marca);
-  background-size:180% 180%;
   box-shadow:var(--sombra-roxa), inset 0 1px 0 rgba(255,255,255,.2);
   overflow:hidden;
-  animation: grad-anda 9s var(--ease-suave) infinite alternate;
   transition:transform var(--dur-rapida) var(--ease-back),
              box-shadow var(--dur-media) var(--ease-out),
              filter var(--dur-rapida);
@@ -487,8 +515,8 @@ input:-webkit-autofill{
   font-size:.88rem;
   color:var(--texto);
   background:rgba(28,22,40,.82);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
+  backdrop-filter:blur(11px);
+  -webkit-backdrop-filter:blur(11px);
   border:1px solid var(--superficie-borda-forte);
   box-shadow:0 24px 60px -30px #000;
   overflow:hidden;
@@ -516,11 +544,8 @@ input:-webkit-autofill{
 /* ---------- keyframes ---------- */
 @keyframes grade-desliza{ from{ transform:translate3d(0,0,0);} to{ transform:translate3d(-58px,-58px,0);} }
 @keyframes orbe-deriva-a{ 0%{ transform:translate3d(0,0,0) scale(1);} 100%{ transform:translate3d(9vw,6vh,0) scale(1.15);} }
-@keyframes orbe-deriva-b{ 0%{ transform:translate3d(0,0,0) scale(1.1);} 100%{ transform:translate3d(-8vw,-7vh,0) scale(.95);} }
-@keyframes orbe-deriva-c{ 0%{ transform:translate3d(0,0,0) scale(.9);} 100%{ transform:translate3d(-12vw,-9vh,0) scale(1.25);} }
-@keyframes grao-treme{ 0%{transform:translate(0,0);} 33%{transform:translate(-2%,1%);} 66%{transform:translate(1%,-2%);} 100%{transform:translate(0,0);} }
-@keyframes fio-corre{ from{ background-position:0% 0; } to{ background-position:200% 0; } }
-@keyframes grad-anda{ from{ background-position:0% 50%; } to{ background-position:100% 50%; } }
+@keyframes ticker-desliza{ from{ transform:translate3d(0,0,0); } to{ transform:translate3d(-50%,0,0); } }
+@keyframes risco-entra{ from{ transform:scaleX(0); opacity:0; } to{ transform:scaleX(1); opacity:1; } }
 @keyframes respira{ 0%,100%{ transform:scale(1); opacity:.75; } 50%{ transform:scale(1.16); opacity:1; } }
 @keyframes logo-flutua{ 0%,100%{ transform:translateY(0) rotate(0); } 50%{ transform:translateY(-8px) rotate(-2deg); } }
 @keyframes marca-entra{ from{ opacity:0; transform:translateY(24px); } to{ opacity:1; transform:none; } }
@@ -564,5 +589,5 @@ input:-webkit-autofill{
     animation-iteration-count:1 !important;
     transition-duration:.001ms !important;
   }
-  .fundo-finck__canvas,.fundo-finck__grao{ display:none; }
+  .fundo-finck__ticker,.fundo-finck__grao,.fundo-finck__brilho{ display:none; }
 }

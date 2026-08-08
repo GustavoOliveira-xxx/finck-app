@@ -30,9 +30,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const price = Number(document.getElementById("itemPrice").value);
     const category = document.getElementById("itemCategory").value;
     const note = document.getElementById("itemNote").value.trim();
+    let item_link = document.getElementById("itemLink").value.trim();
 
     if (!item_name) return U.toast("Informe o item desejado.", "erro");
     if (!(price > 0)) return U.toast("Informe um preço maior que zero.", "erro");
+    if (item_link && !/^https?:\/\//i.test(item_link)) item_link = `https://${item_link}`;
+    if (item_link) {
+      try { new URL(item_link); }
+      catch { return U.toast("O link do item parece inválido. Confira o endereço.", "erro"); }
+    }
 
     ctx = await F.carregarContexto();
     if (!ctx.perfil?.income_monthly) {
@@ -41,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    entrada = { item_name, price, category, note };
+    entrada = { item_name, price, category, note, item_link: item_link || null };
     resultado = R.calcular(price, ctx.perfil, {
       saldo: ctx.saldo,
       despesasFixas: ctx.despesasFixas,
