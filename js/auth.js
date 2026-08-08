@@ -7,12 +7,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const U = window.FinckUtils;
 
   /* ---------- mostrar/ocultar senha ---------- */
+  const ICONE_OLHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.6A10.6 10.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a15.6 15.6 0 0 1-3.1 3.9M7.4 7.4A15.7 15.7 0 0 0 2.5 12S6 18.5 12 18.5a10.4 10.4 0 0 0 3.4-.6"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/></svg>';
   document.querySelectorAll(".toggle-senha").forEach((btn) => {
+    btn.innerHTML = ICONE_OLHO;
     btn.addEventListener("click", () => {
       const input = btn.parentElement.querySelector("input");
       const visivel = input.type === "text";
       input.type = visivel ? "password" : "text";
-      btn.textContent = visivel ? "👁" : "🙈";
+      btn.innerHTML = visivel ? ICONE_OLHO : ICONE_OLHO_FECHADO;
       btn.setAttribute("aria-label", visivel ? "Mostrar senha" : "Ocultar senha");
     });
   });

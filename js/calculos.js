@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     host.innerHTML = itens.map((a) => `
       <article class="item-decisao impacto--${a.impact_level || "verde"}">
         <div class="item-info">
-          <h4>${U.escapeHTML(a.item_name)}</h4>
+          <h4>${U.escapeHTML(a.item_name)}${a.item_link ? ` <a class="link-item" href="${U.escapeHTML(a.item_link)}" target="_blank" rel="noopener noreferrer" title="Abrir link do item">🔗</a>` : ""}</h4>
           <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>
           <p class="tag-decisao">${a.decision ? U.escapeHTML(rotulo(a.decision)) : "Cálculo sem decisão"}</p>
           <p class="tag-salario" title="Salário base usado neste cálculo">
@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <li><span>Data do cálculo</span><strong>${U.dataBR(a.analyzed_at || a.created_at)}</strong></li>
         <li><span>Decisão</span><strong>${a.decision ? U.escapeHTML(rotulo(a.decision)) : "—"}</strong></li>
         <li><span>Impacto</span><strong>${U.escapeHTML(a.impact_level || "—")}</strong></li>
+        ${a.item_link ? `<li><span>Link do item</span><strong><a href="${U.escapeHTML(a.item_link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a></strong></li>` : ""}
       </ul>
 
       <h4>Realidade financeira usada</h4>
@@ -155,14 +156,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const linhas = [[
       "data", "item", "categoria", "preco", "salario_base", "tipo_renda",
       "dias_mes", "horas_dia", "valor_hora", "valor_dia",
-      "percentual_renda", "dias_trabalho", "horas_trabalho", "impacto", "decisao", "observacao",
+      "percentual_renda", "dias_trabalho", "horas_trabalho", "impacto", "decisao", "observacao", "link",
     ]];
     filtrar().forEach((a) => linhas.push([
       (a.analyzed_at || a.created_at || "").slice(0, 10),
       a.item_name, a.category, a.price, a.income_base, a.income_type,
       a.work_days_month, a.work_hours_day, a.hour_value, a.day_value,
       a.income_percent, a.work_days, a.work_hours, a.impact_level,
-      a.decision || "", (a.note || "").replace(/[\r\n;]+/g, " "),
+      a.decision || "", (a.note || "").replace(/[\r\n;]+/g, " "), a.item_link || "",
     ]));
     const csv = linhas.map((l) => l.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
