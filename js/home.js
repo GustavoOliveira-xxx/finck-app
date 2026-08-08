@@ -40,8 +40,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dias = Number(ctx.perfil?.work_days_month) || cfg.PADRAO.work_days_month;
     const horas = Number(ctx.perfil?.work_hours_day) || cfg.PADRAO.work_hours_day;
     const valorDia = (Number(ctx.perfil?.income_monthly) || 0) / dias;
+    const valorHora = valorDia / horas;
     document.getElementById("valorDia").textContent = U.moeda(valorDia);
-    document.getElementById("valorHora").textContent = U.moeda(valorDia / horas);
+    document.getElementById("valorHora").textContent = U.moeda(valorHora);
+
+    /* prisma: a sobra do mês traduzida em quatro unidades.
+       O número é sempre o mesmo — muda só a régua usada para medi-lo. */
+    const sobra = ctx.rendaLivre;
+    document.getElementById("prismaReais").textContent = U.moeda(sobra);
+    document.getElementById("prismaHoras").textContent =
+      valorHora > 0 ? `${U.numero(sobra / valorHora, 0)} h` : "—";
+    document.getElementById("prismaDias").textContent =
+      valorDia > 0 ? `${U.numero(sobra / valorDia, 1)} dias` : "—";
+
+    const faceMetaRotulo = document.getElementById("prismaMetaRotulo");
+    const faceMetaValor = document.getElementById("prismaMeta");
+    const faceMetaNota = document.getElementById("prismaMetaNota");
+    // meta mais perto de fechar entre as que ainda não fecharam
+    const emAberto = ctx.metas
+      .filter((m) => Number(m.current_amount || 0) < Number(m.target_amount || 0))
+      .sort((a, b) =>
+        (a.target_amount - a.current_amount) - (b.target_amount - b.current_amount));
+
+    if (emAberto.length) {
+      const alvo = emAberto[0];
+      const falta = Number(alvo.target_amount) - Number(alvo.current_amount);
+      faceMetaRotulo.textContent = "Na meta mais perto";
+      faceMetaValor.textContent = U.percentual(Math.min(100, (sobra / falta) * 100), 0);
+      faceMetaNota.textContent = `de "${alvo.name}" — ainda faltam ${U.moeda(falta)}`;
+    } else if (ctx.metas.length) {
+      faceMetaRotulo.textContent = "Suas metas";
+      faceMetaValor.textContent = "100%";
+      faceMetaNota.textContent = "todas as metas já foram alcançadas";
+    } else {
+      faceMetaRotulo.textContent = "Na sua meta";
+      faceMetaValor.textContent = "—";
+      faceMetaNota.textContent = "crie uma meta para ver esta face";
+    }
 
     /* indicadores conscientes */
     document.getElementById("indEvitadas").textContent = resumo.evitadas;

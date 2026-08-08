@@ -10,8 +10,27 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
+  <link rel="stylesheet" href="css/finck-fx.css">
 </head>
 <body data-page="relatorios">
+  <div class="finck-carga" data-finck-carga aria-hidden="true">
+    <div class="finck-carga__nucleo">
+      <svg class="finck-carga__orbitas" viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="finck-carga__anel finck-carga__anel--externo" cx="110" cy="110" r="104"/>
+        <circle class="finck-carga__anel finck-carga__anel--medio" cx="110" cy="110" r="88"/>
+        <g class="finck-carga__satelite-g">
+          <circle class="finck-carga__satelite" cx="110" cy="6" r="5"/>
+        </g>
+        <g class="finck-carga__satelite-g finck-carga__satelite-g--2">
+          <circle class="finck-carga__satelite finck-carga__satelite--roxo" cx="110" cy="22" r="3.5"/>
+        </g>
+      </svg>
+      <img class="finck-carga__logo" src="assets/logo-ck.png" alt="" decoding="async">
+    </div>
+    <p class="finck-carga__marca">FinCK</p>
+    <p class="finck-carga__frase">Traduzindo preço em tempo de vida…</p>
+    <div class="finck-carga__barra"><span class="finck-carga__preenche"></span></div>
+  </div>
 
   <header data-finck-header></header>
 
@@ -77,5 +96,6 @@
   <script src="js/nav.js"></script>
   <script src="js/relatorios.js"></script>
   <script src="js/ui-fx.js"></script>
+  <script src="js/finck-fx.js"></script>
 </body>
 </html>
