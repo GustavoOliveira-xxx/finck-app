@@ -2533,3 +2533,129 @@ body.rolando header[data-finck-header]{
   background:var(--vermelho-fraco);
   border-left-color:var(--vermelho);
 }
+
+/* ============================================================
+   19. PLANEJAMENTO — projeção, calendário, parcelas e tetos
+   ============================================================ */
+
+/* ---------- projeção em barras ---------- */
+.projecao-grafico{
+  display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
+  gap:.5rem; align-items:end;
+  min-height:190px;
+  margin-block:1rem;
+  padding:.8rem .4rem 0;
+  border-radius:var(--raio-lg);
+  background:rgba(0,0,0,.22);
+  overflow-x:auto;
+}
+.projecao-col{ display:grid; justify-items:center; gap:.35rem; min-width:54px; }
+.projecao-barra-caixa{ display:flex; align-items:end; height:110px; width:100%; }
+.projecao-barra{
+  width:100%; border-radius:8px 8px 3px 3px;
+  background:linear-gradient(180deg, var(--roxo-neon), var(--roxo));
+  box-shadow:0 0 18px -8px var(--roxo-glow);
+  transition:height var(--dur-lenta) var(--ease-out);
+}
+.projecao-barra--negativa{
+  background:linear-gradient(180deg, var(--vermelho), #7d1f2a);
+  box-shadow:0 0 18px -8px rgba(255,77,94,.8);
+}
+.projecao-valor{
+  font-family:var(--fonte-dados); font-size:.68rem;
+  font-variant-numeric:tabular-nums; color:var(--texto);
+  white-space:nowrap;
+}
+.projecao-mes{ font-size:.68rem; color:var(--texto-fraco); text-transform:capitalize; }
+
+/* ---------- calendário ---------- */
+.calendario-navegacao{ display:flex; align-items:center; gap:.6rem; }
+.calendario-navegacao strong{ font-size:.92rem; text-transform:capitalize; min-width:9ch; text-align:center; }
+
+.calendario{
+  display:grid; grid-template-columns:repeat(7, 1fr);
+  gap:.3rem;
+  margin-block:.8rem;
+}
+.calendario__cabecalho{
+  padding:.3rem 0; text-align:center;
+  font-size:.66rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--texto-fraquissimo);
+}
+.calendario__vazio{ aspect-ratio:1; }
+.calendario__dia{
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.2rem;
+  aspect-ratio:1; min-height:40px;
+  border-radius:10px;
+  font:inherit;
+  color:var(--texto-fraco);
+  background:rgba(255,255,255,.028);
+  border:1px solid transparent;
+  transition:background var(--dur-rapida), border-color var(--dur-rapida), transform var(--dur-rapida) var(--ease-back);
+}
+.calendario__dia:disabled{ opacity:.4; cursor:default; }
+.calendario__dia--com-evento{ color:var(--texto); background:rgba(147,51,196,.14); cursor:pointer; }
+.calendario__dia--com-evento:hover{ transform:translateY(-2px); border-color:var(--roxo-neon); }
+.calendario__dia--hoje{ border-color:var(--amarelo); color:var(--amarelo); font-weight:700; }
+.calendario__numero{ font-size:.82rem; font-variant-numeric:tabular-nums; }
+.calendario__pontos{ display:flex; gap:2px; height:5px; }
+
+.ponto{ width:5px; height:5px; border-radius:50%; display:inline-block; }
+.ponto--entrada{ background:var(--verde); }
+.ponto--saida{   background:var(--vermelho); }
+.ponto--parcela{ background:var(--amarelo); }
+
+.legenda-calendario{
+  display:flex; flex-wrap:wrap; gap:.9rem;
+  list-style:none; margin:0; padding:0;
+  font-size:.76rem; color:var(--texto-fraco);
+}
+.legenda-calendario li{ display:flex; align-items:center; gap:.35rem; }
+
+.detalhe-dia:not(:empty){
+  margin-top:.9rem; padding:.9rem 1rem;
+  border-radius:var(--raio-lg);
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--superficie-borda);
+}
+.detalhe-dia h4{ font-size:.92rem; margin-bottom:.4rem; }
+
+/* ---------- parcelas ---------- */
+.item-parcela .barra--fina{ height:4px; margin-top:.45rem; max-width:230px; }
+.previa-parcela{
+  min-height:1.2rem;
+  padding:.6rem .8rem;
+  border-radius:12px;
+  font-size:.86rem; color:var(--texto-fraco);
+  background:rgba(147,51,196,.12);
+  border-left:3px solid var(--roxo-neon);
+}
+.previa-parcela:empty{ display:none; }
+.previa-parcela strong{ font-family:var(--fonte-dados); color:var(--texto); }
+
+/* ---------- tetos por categoria ---------- */
+.lista-orcamento{ display:grid; gap:.7rem; margin-block:.8rem; }
+.teto{
+  padding:.85rem 1rem;
+  border-radius:var(--raio-lg);
+  background:rgba(255,255,255,.028);
+  border:1px solid var(--superficie-borda);
+  border-left:4px solid var(--verde);
+}
+.teto--atencao{   border-left-color:var(--amarelo); }
+.teto--estourado{ border-left-color:var(--vermelho); background:var(--vermelho-fraco); }
+.teto__topo{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:.4rem; margin-bottom:.5rem; }
+.teto__valores{
+  font-family:var(--fonte-dados); font-size:.82rem;
+  font-variant-numeric:tabular-nums; color:var(--texto-fraco);
+}
+.teto__nota{ margin-top:.45rem; font-size:.8rem; color:var(--texto-fraco); }
+.teto__nota .btn-texto{ font-size:.78rem; margin-left:.5rem; }
+.teto--estourado .teto__nota{ color:var(--vermelho); }
+
+.chip--acao{
+  cursor:pointer; margin-left:.3rem;
+  border-color:var(--roxo-neon); color:var(--texto);
+}

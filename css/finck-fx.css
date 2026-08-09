@@ -603,7 +603,133 @@ body.finck-carregando{ overflow:hidden; }
 }
 
 /* ============================================================
-   5. ACESSIBILIDADE E TELAS SEM PONTEIRO
+   5. PILHA DE MOEDAS DAS METAS
+
+   Progresso de meta quase sempre vira barrinha, e barra não dá
+   noção de acúmulo — ela mede a lacuna, não o que já foi juntado.
+   Aqui cada moeda empilhada é uma fatia real do que a pessoa
+   guardou: a pilha cresce, ganha altura e projeta sombra. As
+   moedas que faltam ficam como contorno vazado, no mesmo lugar,
+   para o que falta ser tão visível quanto o que já existe.
+   ============================================================ */
+
+.cofre-cena{
+  --moeda:104px;      /* diâmetro */
+  --passo:9px;        /* altura de cada moeda na pilha */
+  position:relative;
+  display:grid; place-items:center;
+  width:100%; min-height:190px;
+  perspective:760px;
+  perspective-origin:50% 42%;
+}
+
+.cofre-orbita{
+  transform-style:preserve-3d;
+  animation:cofre-orbita 22s linear infinite;
+}
+@keyframes cofre-orbita{ to{ transform:rotateZ(360deg); } }
+.cofre-cena:hover .cofre-orbita,
+.cofre-cena:focus-within .cofre-orbita{ animation-play-state:paused; }
+
+/* a pilha nasce deitada; o eixo Z do empilhamento vira a vertical */
+.cofre-pilha{
+  position:relative;
+  width:var(--moeda); height:var(--moeda);
+  transform-style:preserve-3d;
+  transform:
+    rotateX(calc(64deg + var(--py, 0) * 16deg))
+    rotateZ(calc(var(--px, 0) * 360deg));
+  transition:transform 420ms var(--ease-out, cubic-bezier(.16,1,.3,1));
+  will-change:transform;
+}
+.cofre-cena:hover .cofre-pilha{ scale:1.04; }
+
+.cofre-moeda{
+  position:absolute; inset:0;
+  border-radius:50%;
+  transform:translateZ(calc(var(--i) * var(--passo)));
+  transform-style:preserve-3d;
+}
+
+/* moeda conquistada: ouro com a serrilha da borda */
+.cofre-moeda--cheia{
+  background:
+    radial-gradient(circle at 34% 30%, #fff6d2, var(--amarelo-quente, #ffb020) 46%, #7a5200 100%);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.28) inset,
+    0 0 0 5px rgba(122,82,0,.55) inset,
+    0 2px 5px -1px rgba(0,0,0,.65);
+}
+/* serrilha: risquinhos radiais que só aparecem de perto */
+.cofre-moeda--cheia::after{
+  content:"";
+  position:absolute; inset:3px;
+  border-radius:50%;
+  background:repeating-conic-gradient(
+    rgba(0,0,0,.16) 0deg 3deg, transparent 3deg 6deg);
+  opacity:.5;
+}
+
+/* moeda que falta: só o contorno, no lugar que ela vai ocupar */
+.cofre-moeda--vazia{
+  border:1.5px dashed rgba(180,92,240,.5);
+  background:rgba(147,51,196,.07);
+}
+
+/* sombra no chão da pilha */
+.cofre-sombra{
+  position:absolute; bottom:14%; left:50%;
+  width:calc(var(--moeda) * .92); height:16px;
+  translate:-50% 0;
+  border-radius:50%;
+  background:radial-gradient(ellipse, rgba(254,200,0,.35), transparent 70%);
+  filter:blur(9px);
+  pointer-events:none;
+}
+
+/* leitura no centro da cena, por cima da pilha */
+.cofre-leitura{
+  position:absolute; top:0; left:0; right:0;
+  display:grid; gap:.1rem; justify-items:center;
+  pointer-events:none;
+}
+.cofre-leitura__pct{
+  font-family:var(--fonte-display, sans-serif);
+  font-size:1.7rem; font-weight:700; line-height:1;
+  letter-spacing:-.03em;
+  background:linear-gradient(96deg, #fff 20%, var(--amarelo, #fec800));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.cofre-leitura__meta{
+  font-size:.74rem; font-weight:600;
+  color:var(--texto-fraco, #a49bb2);
+  max-width:22ch; text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.cofre-leitura__valor{
+  font-family:var(--fonte-dados, monospace);
+  font-size:.72rem; font-variant-numeric:tabular-nums;
+  color:var(--amarelo, #fec800);
+}
+
+.cofre-dica{
+  position:absolute; bottom:0; left:50%; translate:-50% 0;
+  padding:.28rem .7rem; border-radius:99px;
+  font-size:.68rem; white-space:nowrap;
+  color:var(--texto-fraco, #a49bb2);
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);
+  transition:opacity 260ms var(--ease-suave, cubic-bezier(.4,0,.2,1));
+  pointer-events:none;
+}
+.cofre-cena:hover .cofre-dica{ opacity:0; }
+
+@media (min-width: 620px){
+  .cofre-cena{ --moeda:120px; --passo:10px; min-height:215px; }
+}
+
+/* ============================================================
+   6. ACESSIBILIDADE E TELAS SEM PONTEIRO
    ============================================================ */
 
 /* sem hover (celular/tablet): a cena de entrada fica parada e reta.
@@ -642,6 +768,12 @@ body.finck-carregando{ overflow:hidden; }
    conduzir. Arrastar na horizontal passa a girar; pan-y mantém a
    rolagem vertical da página funcionando por cima do bloco. */
 @media (hover: none){
+  .cofre-cena{ touch-action:pan-y; }
+  .cofre-cena.cofre-cena--conduzindo .cofre-orbita{ animation-play-state:paused; }
+  .cofre-dica::before{ content:"Arraste para girar"; }
+  .cofre-dica span{ display:none; }
+  .cofre-cena--conduzindo .cofre-dica{ opacity:0; }
+
   .medalha-cena{ touch-action:pan-y; }
   .medalha-cena.medalha-cena--conduzindo .medalha-orbita{ animation-play-state:paused; }
   .medalha-dica::before{ content:"Arraste para girar"; }
@@ -675,7 +807,10 @@ body.finck-carregando{ overflow:hidden; }
   .cena3d__moeda,
   .prisma-orbita,
   .prisma__sombra,
-  .medalha-orbita{ animation:none !important; }
+  .medalha-orbita,
+  .cofre-orbita{ animation:none !important; }
+  .cofre-pilha{ transform:rotateX(64deg) rotateZ(-24deg) !important; transition:none; }
+  .cofre-cena:hover .cofre-pilha{ scale:1; }
   .medalha{ transform:rotateY(-14deg) !important; transition:none; }
   .medalha-cena:hover .medalha{ scale:1; }
   .finck-carga__preenche{ transform:scaleX(1); }

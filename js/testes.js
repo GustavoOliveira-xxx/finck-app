@@ -441,6 +441,247 @@ window.FinckTestes = (() => {
   });
 
   /* ============================================================
+     Planejamento: parcelas, orçamento, calendário e projeção
+     ============================================================ */
+  descrever("Planejamento (FinckPlano)", () => {
+    const P = window.FinckPlano;
+
+    teste("divisão de parcelas não perde nem cria centavo", () => {
+      [[100, 3], [2400, 12], [999.99, 7], [0.03, 2]].forEach(([total, q]) => {
+        const partes = P.dividirParcelas(total, q);
+        esperar(partes).aTerTamanho(q);
+        const soma = partes.reduce((s, v) => s + v, 0);
+        esperar(Math.round(soma * 100)).aSer(Math.round(total * 100));
+      });
+    });
+
+    teste("a diferença de arredondamento fica na última parcela", () => {
+      const p = P.dividirParcelas(100, 3);
+      esperar(p[0]).aSerPerto(33.33, 2);
+      esperar(p[1]).aSerPerto(33.33, 2);
+      esperar(p[2]).aSerPerto(33.34, 2);
+    });
+
+    teste("divisão exata mantém todas as parcelas iguais", () => {
+      const p = P.dividirParcelas(1200, 12);
+      esperar(new Set(p).size).aSer(1);
+      esperar(p[0]).aSer(100);
+    });
+
+    teste("cronograma avança um mês por parcela", () => {
+      const c = P.cronograma({
+        total_amount: 300, installments_count: 3,
+        first_due_date: "2026-01-10", paid_count: 0,
+      });
+      esperar(c).aTerTamanho(3);
+      esperar(c[0].mes).aSer("2026-01");
+      esperar(c[1].mes).aSer("2026-02");
+      esperar(c[2].mes).aSer("2026-03");
+    });
+
+    teste("vencimento no dia 31 recua em mês curto", () => {
+      const c = P.cronograma({
+        total_amount: 300, installments_count: 2,
+        first_due_date: "2026-01-31", paid_count: 0,
+      });
+      esperar(c[1].vencimento.getMonth()).aSer(1);      // fevereiro
+      esperar(c[1].vencimento.getDate()).aSer(28);      // último dia possível
+    });
+
+    teste("saldo devedor ignora as parcelas já pagas", () => {
+      const p = { total_amount: 1000, installments_count: 10, first_due_date: "2026-01-05", paid_count: 4 };
+      esperar(P.saldoDevedor(p)).aSerPerto(600, 2);
+    });
+
+    teste("parcelamento quitado não deve mais nada", () => {
+      const p = { total_amount: 500, installments_count: 5, first_due_date: "2026-01-05", paid_count: 5 };
+      esperar(P.saldoDevedor(p)).aSer(0);
+    });
+
+    teste("parcelas somam por mês e ignoram inativos", () => {
+      const base = new Date(2026, 0, 1);
+      const mapa = P.parcelasPorMes([
+        { total_amount: 300, installments_count: 3, first_due_date: "2026-01-10", paid_count: 0, active: true },
+        { total_amount: 600, installments_count: 3, first_due_date: "2026-01-20", paid_count: 0, active: false },
+      ], 3, base);
+      esperar(mapa["2026-01"]).aSerPerto(100, 2);
+      esperar(mapa["2026-02"]).aSerPerto(100, 2);
+    });
+
+    teste("orçamento classifica tranquilo, atenção e estourado", () => {
+      const tetos = [
+        { id: 1, category: "Alimentação", limit_amount: 1000 },
+        { id: 2, category: "Lazer", limit_amount: 100 },
+        { id: 3, category: "Transporte", limit_amount: 200 },
+      ];
+      const transacoes = [
+        { type: "saida", amount: 200, category: "Alimentação", date: "2026-08-03" },
+        { type: "saida", amount: 80, category: "Lazer", date: "2026-08-04" },
+        { type: "saida", amount: 260, category: "Transporte", date: "2026-08-05" },
+      ];
+      const r = P.situacaoOrcamento(tetos, transacoes, "2026-08");
+      const porCat = Object.fromEntries(r.map((x) => [x.categoria, x]));
+      esperar(porCat["Alimentação"].situacao).aSer("tranquilo");
+      esperar(porCat["Lazer"].situacao).aSer("atencao");        // 80%
+      esperar(porCat["Transporte"].situacao).aSer("estourado"); // 130%
+      esperar(porCat["Transporte"].restante).aSer(-60);
+    });
+
+    teste("orçamento ignora gasto de outro mês", () => {
+      const r = P.situacaoOrcamento(
+        [{ id: 1, category: "Lazer", limit_amount: 100 }],
+        [{ type: "saida", amount: 500, category: "Lazer", date: "2026-07-15" }],
+        "2026-08"
+      );
+      esperar(r[0].gasto).aSer(0);
+    });
+
+    teste("orçamento ignora entradas", () => {
+      const r = P.situacaoOrcamento(
+        [{ id: 1, category: "Salário", limit_amount: 100 }],
+        [{ type: "entrada", amount: 5000, category: "Salário", date: "2026-08-05" }],
+        "2026-08"
+      );
+      esperar(r[0].gasto).aSer(0);
+    });
+
+    teste("aponta categorias com gasto e sem teto", () => {
+      const semTeto = P.categoriasSemTeto(
+        [{ category: "Lazer" }],
+        [
+          { type: "saida", amount: 10, category: "Lazer", date: "2026-08-01" },
+          { type: "saida", amount: 10, category: "Moradia", date: "2026-08-02" },
+        ],
+        "2026-08"
+      );
+      esperar(semTeto).aTerTamanho(1);
+      esperar(semTeto[0]).aSer("Moradia");
+    });
+
+    teste("calendário posiciona recorrentes e parcelas no dia certo", () => {
+      const eventos = P.eventosDoMes({
+        recorrentes: [{ description: "Salário", type: "entrada", amount: 3000, day_of_month: 5, active: true }],
+        parcelamentos: [{ description: "TV", total_amount: 300, installments_count: 3, first_due_date: "2026-08-12", paid_count: 0, active: true }],
+        transacoes: [{ description: "Mercado", type: "saida", amount: 120, date: "2026-08-20" }],
+      }, "2026-08");
+
+      esperar(eventos.get(5)[0].titulo).aSer("Salário");
+      esperar(eventos.get(5)[0].sinal).aSer(1);
+      esperar(eventos.get(12)[0].tipo).aSer("parcela");
+      esperar(eventos.get(20)[0].titulo).aSer("Mercado");
+    });
+
+    teste("dia fora do mês é encaixado no último dia", () => {
+      // recorrente no dia 31 num mês de 30 dias
+      const eventos = P.eventosDoMes({
+        recorrentes: [{ description: "Conta", type: "saida", amount: 90, day_of_month: 31, active: true }],
+      }, "2026-09");
+      esperar(eventos.has(30)).aSerVerdadeiro();
+      esperar(eventos.has(31)).aSerFalso();
+    });
+
+    teste("projeção acumula o resultado mês a mês", () => {
+      const base = new Date(2026, 0, 1);
+      const linhas = P.projecaoSaldo({
+        saldo: 1000,
+        recorrentes: [
+          { description: "Salário", type: "entrada", amount: 3000, day_of_month: 5, active: true },
+          { description: "Aluguel", type: "saida", amount: 1000, day_of_month: 10, active: true },
+        ],
+        parcelamentos: [],
+        meses: 3,
+      }, base);
+
+      esperar(linhas).aTerTamanho(3);
+      esperar(linhas[0].saldoFim).aSer(3000);   // 1000 + 2000
+      esperar(linhas[1].saldoFim).aSer(5000);
+      esperar(linhas[2].saldoFim).aSer(7000);
+    });
+
+    teste("projeção soma as parcelas às saídas do mês", () => {
+      const base = new Date(2026, 0, 1);
+      const linhas = P.projecaoSaldo({
+        saldo: 0,
+        recorrentes: [{ description: "Salário", type: "entrada", amount: 1000, day_of_month: 1, active: true }],
+        parcelamentos: [{ total_amount: 300, installments_count: 3, first_due_date: "2026-01-15", paid_count: 0, active: true }],
+        meses: 2,
+      }, base);
+      esperar(linhas[0].parcelas).aSerPerto(100, 2);
+      esperar(linhas[0].saldoFim).aSerPerto(900, 2);
+    });
+
+    teste("aponta o primeiro mês em que o saldo fura", () => {
+      const base = new Date(2026, 0, 1);
+      const linhas = P.projecaoSaldo({
+        saldo: 500,
+        recorrentes: [{ description: "Aluguel", type: "saida", amount: 400, day_of_month: 5, active: true }],
+        parcelamentos: [],
+        meses: 4,
+      }, base);
+      const furo = P.primeiroMesNegativo(linhas);
+      esperar(furo === null).aSerFalso();
+      // jan fecha em 100 (500-400); fev já fecha negativo (100-400)
+      esperar(furo.mes).aSer("2026-02");
+      esperar(linhas[0].saldoFim).aSer(100);
+      esperar(furo.saldoFim).aSer(-300);
+    });
+
+    teste("saldo saudável não acusa mês negativo", () => {
+      const base = new Date(2026, 0, 1);
+      const linhas = P.projecaoSaldo({
+        saldo: 5000,
+        recorrentes: [{ description: "Salário", type: "entrada", amount: 100, day_of_month: 1, active: true }],
+        parcelamentos: [],
+        meses: 4,
+      }, base);
+      esperar(P.primeiroMesNegativo(linhas)).aSer(null);
+    });
+
+    teste("plano da meta divide o que falta pelos meses restantes", () => {
+      const hoje = new Date(2026, 0, 15);
+      const plano = P.planoDaMeta(
+        { target_amount: 6000, current_amount: 1200, deadline: "2026-07-01" },
+        2000, hoje
+      );
+      esperar(plano.meses).aSer(6);
+      esperar(plano.porMes).aSerPerto(800, 2);
+      esperar(plano.cabe).aSerVerdadeiro();
+      esperar(plano.fatiaDaRenda).aSerPerto(40, 1);
+    });
+
+    teste("plano marca a meta que não cabe na renda livre", () => {
+      const hoje = new Date(2026, 0, 15);
+      const plano = P.planoDaMeta(
+        { target_amount: 12000, current_amount: 0, deadline: "2026-03-01" },
+        1000, hoje
+      );
+      esperar(plano.cabe).aSerFalso();
+    });
+
+    teste("meta com prazo vencido é sinalizada", () => {
+      const hoje = new Date(2026, 5, 1);
+      const plano = P.planoDaMeta(
+        { target_amount: 1000, current_amount: 0, deadline: "2026-01-01" },
+        5000, hoje
+      );
+      esperar(plano.vencida).aSerVerdadeiro();
+    });
+
+    teste("meta já atingida não gera plano", () => {
+      esperar(P.planoDaMeta({ target_amount: 1000, current_amount: 1000, deadline: "2027-01-01" }, 500)).aSer(null);
+    });
+
+    teste("atraso na meta converte gasto em meses de espera", () => {
+      const a = P.atrasoNaMeta({}, 1600, 800);
+      esperar(a.mesesExtras).aSerPerto(2, 2);
+    });
+
+    teste("atraso não calcula sem aporte definido", () => {
+      esperar(P.atrasoNaMeta({}, 1000, 0)).aSer(null);
+    });
+  });
+
+  /* ============================================================
      Formatação
      ============================================================ */
   descrever("Formatação (FinckUtils)", () => {
