@@ -39,6 +39,8 @@ window.FinckStore = (() => {
     goals: "finck.goals",
     recurring_transactions: "finck.recurring",
     purchase_analyses: "finck.analyses",
+    installment_purchases: "finck.parcelas",
+    category_budgets: "finck.orcamentos",
     gamification: "finck.gamification",
     demo: "finck.demo",
   };
@@ -318,7 +320,10 @@ window.FinckStore = (() => {
   }
 
   /* ---------------- Backup / restauração ---------------- */
-  const TABELAS = ["accounts", "transactions", "goals", "recurring_transactions", "purchase_analyses"];
+  const TABELAS = [
+    "accounts", "transactions", "goals", "recurring_transactions",
+    "purchase_analyses", "installment_purchases", "category_budgets",
+  ];
 
   /* Identidade de um registro para efeito de duplicata. Não usa id
      nem created_at: um mesmo lançamento reimportado ganha id novo,
@@ -333,6 +338,9 @@ window.FinckStore = (() => {
        (ainda sem o campo) nunca casar com o que já estava salvo, e
        o registro entrava de novo a cada importação. */
     purchase_analyses:      (r) => [r.item_name, Number(r.price), String(r.analyzed_at || r.created_at || "").slice(0, 10)].join("|"),
+    installment_purchases:  (r) => [r.description, Number(r.total_amount), r.installments_count, String(r.first_due_date).slice(0, 10)].join("|"),
+    // um teto por categoria: a categoria é a identidade
+    category_budgets:       (r) => String(r.category),
   };
 
   const assinar = (tabela, linha) => {

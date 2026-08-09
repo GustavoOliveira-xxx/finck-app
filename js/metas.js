@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       S.listar("recurring_transactions"),
     ]);
     renderResumo();
+    renderCofre();
     renderLista();
   }
 
@@ -41,6 +42,56 @@ document.addEventListener("DOMContentLoaded", async () => {
       .reduce((s, r) => s + Number(r.amount || 0), 0);
     return Math.max(0, renda - fixas);
   };
+
+  /* Pilha de moedas: a meta mais perto de fechar, em volume.
+     Cada moeda vale 10% do alvo, então a pilha cresce junto com o
+     que foi guardado — barra mede a lacuna, pilha mostra o que já
+     existe, que é o que sustenta o hábito. */
+  const MOEDAS = 10;
+
+  function renderCofre() {
+    const host = document.getElementById("cofreMetas");
+    if (!host) return;
+
+    const abertas = metas.filter((m) => Number(m.target_amount) > 0);
+    if (!abertas.length) {
+      host.innerHTML = `<p class="vazio">Crie uma meta para ver o quanto já foi guardado.</p>`;
+      return;
+    }
+
+    // a que está mais perto de fechar sem ter fechado; senão, a mais cheia
+    const naoConcluidas = abertas.filter((m) => Number(m.current_amount) < Number(m.target_amount));
+    const foco = (naoConcluidas.length ? naoConcluidas : abertas)
+      .slice()
+      .sort((a, b) => U.progresso(b.current_amount, b.target_amount) - U.progresso(a.current_amount, a.target_amount))[0];
+
+    const pct = U.progresso(foco.current_amount, foco.target_amount);
+    const cheias = Math.min(MOEDAS, Math.round((pct / 100) * MOEDAS));
+
+    const moedas = Array.from({ length: MOEDAS }, (_, i) => {
+      const cheia = i < cheias;
+      return `<span class="cofre-moeda ${cheia ? "cofre-moeda--cheia" : "cofre-moeda--vazia"}"
+                    style="--i:${i}"></span>`;
+    }).join("");
+
+    host.innerHTML = `
+      <div class="cofre-cena" data-cofre
+           role="img"
+           aria-label="${U.escapeHTML(foco.name)}: ${U.percentual(pct, 0)} guardado, ${U.moeda(foco.current_amount)} de ${U.moeda(foco.target_amount)}">
+        <div class="cofre-sombra" aria-hidden="true"></div>
+        <div class="cofre-orbita">
+          <div class="cofre-pilha" aria-hidden="true">${moedas}</div>
+        </div>
+        <div class="cofre-leitura" aria-hidden="true">
+          <span class="cofre-leitura__pct">${U.percentual(pct, 0)}</span>
+          <span class="cofre-leitura__meta">${U.escapeHTML(foco.name)}</span>
+          <span class="cofre-leitura__valor">${U.moeda(foco.current_amount)} de ${U.moeda(foco.target_amount)}</span>
+        </div>
+        <span class="cofre-dica"><span>Passe o mouse para girar</span></span>
+      </div>`;
+
+    window.FinckFX?.ligarCofre?.();
+  }
 
   function renderResumo() {
     const alvo = F.soma(metas, "target_amount");
