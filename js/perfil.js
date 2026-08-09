@@ -21,12 +21,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("tituloPerfil").textContent = p.name ? `Olá, ${p.name}` : "Seu perfil";
     $("perfilNome").value = p.name || "";
-    $("perfilRenda").value = p.income_monthly || "";
+    U.escreverMoeda("perfilRenda", p.income_monthly || 0);
     $("perfilTipoRenda").value = p.income_type || "fixa";
     $("perfilDias").value = p.work_days_month || 22;
     $("perfilHoras").value = p.work_hours_day || 8;
     $("perfilPayday").value = p.payday || 5;
-    $("perfilSaldoInicial").value = p.initial_balance || 0;
+    U.escreverMoeda("perfilSaldoInicial", p.initial_balance || 0);
 
     $("perfilEmail").textContent = user.email || "—";
     $("perfilModo").textContent = S.ONLINE ? "Banco de dados (online)" : "Offline (localStorage)";
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function atualizarDica() {
-    const renda = Number($("perfilRenda").value) || 0;
+    const renda = U.lerMoeda("perfilRenda");
     const dias = Number($("perfilDias").value) || 22;
     const horas = Number($("perfilHoras").value) || 8;
     $("perfilDica").textContent = renda > 0
@@ -56,12 +56,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
     const dados = {
       name: $("perfilNome").value.trim(),
-      income_monthly: Number($("perfilRenda").value),
+      income_monthly: U.lerMoeda("perfilRenda"),
       income_type: $("perfilTipoRenda").value,
       work_days_month: Number($("perfilDias").value),
       work_hours_day: Number($("perfilHoras").value),
       payday: Number($("perfilPayday").value) || 5,
-      initial_balance: Number($("perfilSaldoInicial").value) || 0,
+      initial_balance: U.lerMoeda("perfilSaldoInicial"),
     };
     if (!dados.name) return U.toast("Informe seu nome.", "erro");
     if (!(dados.income_monthly > 0)) return U.toast("Informe uma renda maior que zero.", "erro");

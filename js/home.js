@@ -143,6 +143,50 @@ document.addEventListener("DOMContentLoaded", async () => {
         · projetado para o fim do mês <strong class="${projetado < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(projetado)}</strong>
       </p>`;
 
+    /* ---------- resumo das contas (6.5) ----------
+       Só o essencial: quanto tem, onde, e um caminho. O detalhe
+       fica em contas.html — a home não pode virar a tela de contas. */
+    const CT = window.FinckContas;
+    const [contas, transferencias, ajustes] = await Promise.all([
+      S.listar("accounts"),
+      S.listar("transfers"),
+      S.listar("balance_adjustments"),
+    ]);
+    const resumoContas = CT.consolidado(contas, {
+      transacoes: ctx.transacoes, transferencias, ajustes,
+    });
+    const orfaos = CT.semConta(ctx.transacoes);
+
+    document.getElementById("cardContas").innerHTML = contas.length
+      ? `<article class="card-contas">
+           <div class="card-contas__topo">
+             <h2>Minhas contas</h2>
+             <span class="card-contas__total ${resumoContas.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">
+               ${U.moeda(resumoContas.disponivel)}</span>
+           </div>
+           <p class="descricao">${resumoContas.quantidade} conta(s) ativa(s)${
+             orfaos ? ` · ${orfaos} lançamento(s) sem conta` : ""}</p>
+           ${resumoContas.contas.slice(0, 3).map((c) => `
+             <div class="card-contas__linha">
+               <span class="ponto-banco" style="--cor:${c.instituicao.cor}"></span>
+               <span>${U.escapeHTML(c.name)}</span>
+               <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>
+             </div>`).join("")}
+           <a class="link-mais" href="contas.html">Ver contas →</a>
+         </article>`
+      : `<article class="card-contas">
+           <div class="card-contas__topo"><h2>Minhas contas</h2></div>
+           <p class="descricao">Você ainda não cadastrou onde seu dinheiro está. O FinCK não acessa seu banco — você informa e edita quando quiser.</p>
+           <a class="link-mais" href="contas.html">Cadastrar minha primeira conta →</a>
+         </article>`;
+
+    /* select de contas do modal de lançamento */
+    document.getElementById("contaSelecionada").innerHTML =
+      `<option value="">Conta não informada</option>` +
+      contas.filter((c) => c.active !== false)
+        .map((c) => `<option value="${c.id}"${c.is_default ? " selected" : ""}>${U.escapeHTML(c.name)}</option>`)
+        .join("");
+
     /* orçamento previsto (previstoSaida/previstoEntrada vêm do bloco acima) */
     const comprometido = previstoEntrada > 0 ? (previstoSaida / previstoEntrada) * 100 : 0;
     document.getElementById("orcamento").innerHTML = `
@@ -209,6 +253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("tipoTransacao").value = tipo;
     document.getElementById("tituloModal").textContent = tipo === "entrada" ? "Nova entrada" : "Nova saída";
     document.getElementById("formTransacao").reset();
+    U.limparMoeda("valor");
     document.getElementById("data").value = U.hojeISO();
     U.abrirModal("modalTransacao");
   };
@@ -219,7 +264,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("formTransacao").addEventListener("submit", (e) => {
     e.preventDefault();
     const type = document.getElementById("tipoTransacao").value;
-    const amount = Number(document.getElementById("valor").value);
+    const amount = U.lerMoeda("valor");
     const description = document.getElementById("descricao").value.trim();
     const date = document.getElementById("data").value;
     const category = document.getElementById("categoria").value;
@@ -230,7 +275,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!description) return U.toast("Informe uma descrição.", "erro");
     if (!date) return U.toast("Informe a data.", "erro");
 
-    pendente = { type, amount, description, date, category, goal_id };
+    // account_id fica opcional: o histórico antigo não tem conta e
+    // continua valendo, como "Conta não informada"
+    const contaSel = document.getElementById("contaSelecionada");
+    const account_id = contaSel.value || null;
+
+    pendente = { type, amount, description, date, category, goal_id, account_id };
 
     document.getElementById("resumoConfirmacao").innerHTML = `
       <ul class="lista-resumo">
@@ -239,6 +289,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <li><span>Descrição</span><strong>${U.escapeHTML(description)}</strong></li>
         <li><span>Categoria</span><strong>${U.escapeHTML(category)}</strong></li>
         <li><span>Data</span><strong>${U.dataBR(date)}</strong></li>
+        <li><span>Conta</span><strong>${U.escapeHTML(contaSel.selectedOptions[0].textContent)}</strong></li>
         ${goal_id ? `<li><span>Meta</span><strong>${U.escapeHTML(goalSel.selectedOptions[0].textContent)}</strong></li>` : ""}
       </ul>`;
     U.fecharModal("modalTransacao");

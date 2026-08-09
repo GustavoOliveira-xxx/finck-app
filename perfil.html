@@ -58,7 +58,7 @@
         </label>
         <div class="linha-dupla">
           <label>Renda mensal (R$)
-            <input type="number" id="perfilRenda" min="0" step="0.01" required>
+            <input type="text" inputmode="numeric" data-moeda id="perfilRenda">
           </label>
           <label>Tipo de renda
             <select id="perfilTipoRenda">
@@ -81,7 +81,7 @@
             <input type="number" id="perfilPayday" min="1" max="31">
           </label>
           <label>Saldo inicial (R$)
-            <input type="number" id="perfilSaldoInicial" step="0.01">
+            <input type="text" inputmode="numeric" data-moeda id="perfilSaldoInicial">
           </label>
         </div>
         <p class="dica" id="perfilDica"></p>
@@ -157,6 +157,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/moeda-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>

@@ -2659,3 +2659,162 @@ body.rolando header[data-finck-header]{
   cursor:pointer; margin-left:.3rem;
   border-color:var(--roxo-neon); color:var(--texto);
 }
+
+/* ============================================================
+   20. FINCK CONTAS
+   ============================================================ */
+
+.aviso-privacidade{
+  display:flex; align-items:flex-start; gap:.7rem;
+  padding:.85rem 1.1rem;
+  margin-bottom:var(--gap-md, 1rem);
+  border-radius:var(--raio-lg);
+  font-size:.85rem; line-height:1.5;
+  color:var(--texto-fraco);
+  background:rgba(31,209,143,.08);
+  border:1px solid rgba(31,209,143,.28);
+}
+.aviso-privacidade svg{ width:20px; height:20px; flex:0 0 auto; color:var(--verde); margin-top:1px; }
+.aviso-privacidade strong{ color:var(--texto); }
+
+.acoes-contas{ display:flex; flex-wrap:wrap; gap:.6rem; margin-block:var(--gap-md, 1rem); }
+.acoes-contas .btn-primario,.acoes-contas .btn-secundario{ flex:1 1 180px; text-align:center; }
+
+.lista-consolidado li strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; }
+
+/* ---------- cartão de conta ---------- */
+.grade-contas{ display:grid; gap:.7rem; }
+@media (min-width: 720px){
+  .grade-contas{ grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); }
+}
+.cartao-conta{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center; gap:.85rem;
+  padding:.9rem 1rem;
+  border-radius:var(--raio-lg);
+  background:rgba(255,255,255,.028);
+  border:1px solid var(--superficie-borda);
+  /* faixa na cor do banco: identifica a instituição sem depender
+     de o logo ter carregado */
+  border-left:4px solid var(--cor-banco, var(--roxo-neon));
+  transition:transform var(--dur-media) var(--ease-back), border-color var(--dur-media);
+}
+.cartao-conta:hover{ transform:translateY(-2px); border-color:rgba(255,255,255,.18); }
+.cartao-conta--arquivada{ opacity:.55; }
+
+.cartao-conta__marca{
+  display:grid; place-items:center;
+  width:46px; height:46px;
+  border-radius:12px;
+  background:#fff;
+  padding:.35rem;
+  overflow:hidden;
+}
+.conta-logo{ max-width:100%; max-height:100%; object-fit:contain; }
+.conta-sigla{
+  display:grid; place-items:center;
+  width:100%; height:100%;
+  border-radius:9px;
+  font-size:.9rem; font-weight:700; letter-spacing:-.02em;
+  color:#fff; background:var(--cor, var(--roxo-claro));
+}
+
+.cartao-conta__info{ min-width:0; }
+.cartao-conta__info h4{
+  display:flex; align-items:center; gap:.4rem; flex-wrap:wrap;
+  font-size:.98rem; letter-spacing:-.01em;
+}
+.cartao-conta__info small{ display:block; font-size:.78rem; color:var(--texto-fraco); }
+.cartao-conta__extra{ opacity:.75; }
+.cartao-conta__lado{ display:flex; flex-direction:column; align-items:flex-end; gap:.3rem; }
+.cartao-conta__lado strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:1.05rem; }
+
+.selo--mini{
+  padding:.05rem .45rem; font-size:.62rem; letter-spacing:.06em;
+  text-transform:uppercase; border-radius:99px;
+}
+.selo--apagado{ background:rgba(255,255,255,.1); color:var(--texto-fraco); }
+
+/* ---------- total por instituição ---------- */
+.lista-instituicoes{ list-style:none; margin:0; padding:0; display:grid; gap:.45rem; }
+.lista-instituicoes li{
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto auto;
+  align-items:center; gap:.6rem;
+  padding:.55rem .7rem;
+  border-radius:12px;
+  background:rgba(255,255,255,.025);
+  font-size:.9rem;
+}
+.ponto-banco{ width:9px; height:9px; border-radius:50%; background:var(--cor); }
+.inst-contas{ font-size:.76rem; color:var(--texto-fraco); }
+.lista-instituicoes strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; }
+
+/* ---------- escolha de instituição ---------- */
+.campo-instituicoes{ border:none; padding:0; margin-bottom:.4rem; }
+.campo-instituicoes legend{
+  padding:0; margin-bottom:.5rem;
+  font-size:.82rem; font-weight:600; color:var(--texto-fraco);
+}
+.grade-instituicoes{
+  display:grid; gap:.5rem;
+  grid-template-columns:repeat(auto-fill, minmax(88px, 1fr));
+}
+.opcao-banco{
+  display:grid; justify-items:center; gap:.35rem;
+  padding:.6rem .4rem;
+  border-radius:14px;
+  font:inherit;
+  background:rgba(255,255,255,.03);
+  border:1.5px solid var(--superficie-borda);
+  cursor:pointer;
+  transition:border-color var(--dur-rapida), background var(--dur-rapida), transform var(--dur-rapida) var(--ease-back);
+}
+.opcao-banco:hover{ transform:translateY(-2px); border-color:var(--cor); }
+.opcao-banco--ativa{ border-color:var(--cor); background:rgba(255,255,255,.07); }
+.opcao-banco__logo{
+  width:100%; height:26px; object-fit:contain;
+  /* os logos são coloridos para fundo claro: a chapa branca
+     garante contraste sem alterar a arte de cada marca */
+  background:#fff; border-radius:6px; padding:2px;
+}
+.opcao-banco__sigla{
+  display:grid; place-items:center;
+  width:100%; height:26px; border-radius:6px;
+  font-size:.72rem; font-weight:700; color:#fff;
+  background:var(--cor);
+}
+.opcao-banco__nome{ font-size:.72rem; color:var(--texto-fraco); text-align:center; }
+.opcao-banco--ativa .opcao-banco__nome{ color:var(--texto); font-weight:600; }
+
+.card-opcao--perigo{ border-color:rgba(255,77,94,.4); }
+.card-opcao--perigo strong{ color:var(--vermelho); }
+
+.select-mini{
+  padding:.35rem .5rem !important;
+  font-size:.78rem !important;
+  max-width:150px;
+}
+.filtro--enxuto{ min-width:auto; }
+.filtro--enxuto select{ padding-block:.45rem; }
+
+.item-transferencia{ border-left:3px solid var(--roxo-neon); }
+.item-transferencia .item-dia{ font-size:.72rem; opacity:.8; }
+
+/* ---------- cartão de contas na home ---------- */
+.card-contas{
+  display:grid; gap:.55rem;
+  padding:clamp(1rem,.9rem + 1vw,1.4rem);
+  border-radius:var(--raio-xl);
+  background:linear-gradient(150deg, rgba(255,255,255,.05), rgba(255,255,255,.01)), var(--vidro);
+  border:1px solid var(--superficie-borda);
+}
+.card-contas__topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; }
+.card-contas__topo h2{ font-size:1.05rem; letter-spacing:-.02em; }
+.card-contas__total{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-weight:700; }
+.card-contas__linha{
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center; gap:.55rem;
+  font-size:.88rem;
+}
+.card-contas__linha strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; }

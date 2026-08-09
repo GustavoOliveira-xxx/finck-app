@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("tituloParcela").textContent = p ? "Editar parcelamento" : "Nova compra parcelada";
     $("parcelaId").value = p?.id || "";
     $("parcelaDescricao").value = p?.description || "";
-    $("parcelaTotal").value = p?.total_amount || "";
+    U.escreverMoeda("parcelaTotal", p?.total_amount || 0);
     $("parcelaQtd").value = p?.installments_count || "";
     $("parcelaData").value = p ? String(p.first_due_date).slice(0, 10) : U.hojeISO();
     $("parcelaPagas").value = p?.paid_count || 0;
@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* mostra o valor da parcela enquanto a pessoa digita: sem isto
      ela precisa fazer a divisão de cabeça para saber se cabe */
   function atualizarPrevia() {
-    const total = Number($("parcelaTotal").value);
+    const total = U.lerMoeda("parcelaTotal");
     const qtd = Number($("parcelaQtd").value);
     if (!(total > 0) || !(qtd >= 1)) { $("previaParcela").textContent = ""; return; }
 
@@ -293,7 +293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("formParcela").addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = $("parcelaId").value;
-    const total = Number($("parcelaTotal").value);
+    const total = U.lerMoeda("parcelaTotal");
     const qtd = Number($("parcelaQtd").value);
     const pagas = Number($("parcelaPagas").value) || 0;
 
@@ -371,7 +371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const t = id ? tetos.find((x) => String(x.id) === String(id)) : null;
     const categoria = t?.category || categoriaSugerida || cfg.CATEGORIAS[0];
     $("tetoId").value = t?.id || "";
-    $("tetoLimite").value = t?.limit_amount || "";
+    U.escreverMoeda("tetoLimite", t?.limit_amount || 0);
     $("tetoCategoria").innerHTML = cfg.CATEGORIAS
       .map((c) => `<option value="${c}"${c === categoria ? " selected" : ""}>${c}</option>`).join("");
     $("tetoCategoria").disabled = Boolean(t);
@@ -393,7 +393,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("formTeto").addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = $("tetoId").value;
-    const limite = Number($("tetoLimite").value);
+    const limite = U.lerMoeda("tetoLimite");
     if (!(limite > 0)) return U.toast("Informe um limite maior que zero.", "erro");
 
     const categoria = $("tetoCategoria").value;
