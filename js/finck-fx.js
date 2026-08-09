@@ -142,7 +142,7 @@
      --------------------------------------------------------- */
   function prisma() {
     const cena = document.querySelector("[data-prisma]");
-    if (!cena || reduzido || toque) return;
+    if (!cena || reduzido) return;
 
     const corpo = cena.querySelector(".prisma");
     if (!corpo) return;
@@ -156,23 +156,66 @@
       agendado = false;
     };
 
-    cena.addEventListener("pointermove", (e) => {
-      const r = cena.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      px = (e.clientX - r.left) / r.width  - 0.5;   // -0.5 .. 0.5 => meia volta
-      py = ((e.clientY - r.top) / r.height - 0.5) * -1;
+    const agendar = () => {
       if (agendado) return;
       agendado = true;
       raf(aplicar);
+    };
+
+    /* --- com ponteiro: a posição dentro da cena comanda o giro --- */
+    if (!toque) {
+      cena.addEventListener("pointermove", (e) => {
+        const r = cena.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        px = (e.clientX - r.left) / r.width  - 0.5;   // -0.5 .. 0.5 => meia volta
+        py = ((e.clientY - r.top) / r.height - 0.5) * -1;
+        agendar();
+      }, { passive: true });
+
+      // ao sair, o prisma volta ao repouso e a animação assume de novo
+      cena.addEventListener("pointerleave", () => {
+        px = 0; py = 0;
+        agendar();
+      });
+      return;
+    }
+
+    /* --- no toque: o giro vem do arraste, e só do arraste ---
+       O dedo não tem "posição de repouso" sobre a tela, então
+       mapear a posição absoluta como no mouse faria o prisma
+       saltar assim que o dedo encostasse. Aqui vale o quanto o
+       dedo andou desde onde encostou, somado ao ângulo em que o
+       prisma já estava. A rolagem vertical continua com a
+       página: só o deslocamento horizontal gira.               */
+    let arrastando = false;
+    let xInicial = 0;
+    let pxInicial = 0;
+
+    cena.addEventListener("pointerdown", (e) => {
+      arrastando = true;
+      xInicial = e.clientX;
+      pxInicial = px;
+      cena.classList.add("prisma-cena--conduzindo");
     }, { passive: true });
 
-    // ao sair, o prisma volta ao repouso e a animação assume de novo
-    cena.addEventListener("pointerleave", () => {
-      px = 0; py = 0;
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    });
+    cena.addEventListener("pointermove", (e) => {
+      if (!arrastando) return;
+      const r = cena.getBoundingClientRect();
+      if (!r.width) return;
+      // atravessar a largura da cena = meia volta para cada lado
+      px = pxInicial + (e.clientX - xInicial) / r.width;
+      agendar();
+    }, { passive: true });
+
+    /* Ao soltar, o giro automático volta de onde parou. Não há
+       salto: a animação mora no elemento de fora e o arraste no
+       de dentro, então os dois ângulos apenas se somam. */
+    const soltar = () => {
+      arrastando = false;
+      cena.classList.remove("prisma-cena--conduzindo");
+    };
+    cena.addEventListener("pointerup", soltar, { passive: true });
+    cena.addEventListener("pointercancel", soltar, { passive: true });
   }
 
   /* ---------------------------------------------------------

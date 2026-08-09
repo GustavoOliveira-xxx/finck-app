@@ -28,8 +28,8 @@ window.FinckNav = (() => {
     if (!host) return;
     host.innerHTML = `
       <div class="logo">
-        <a class="logo-mark logo-mark--marca" href="home.html" aria-label="Conscious Knowledge — início">
-          <img src="assets/logo-ck.png" alt="Conscious Knowledge" loading="eager" decoding="async">
+        <a class="logo-mark logo-mark--marca" href="home.html" aria-label="FinCK — início">
+          <img src="assets/logo-ck-256.png" alt="Financial CK" width="256" height="256" loading="eager" decoding="async">
         </a>
         <div class="logo-text">
           <h1>${U.escapeHTML(titulo || "FinCK of Reality")}</h1>

@@ -199,6 +199,14 @@ body.finck-carregando{ overflow:hidden; }
   will-change:transform;
 }
 
+/* No celular a página de entrada empilha e centraliza a marca.
+   Esta regra precisa morar aqui, e não em style-auth.css: este
+   arquivo é carregado depois, e como as duas têm a mesma
+   especificidade, a última é que vale. */
+@media (max-width: 900px){
+  .cena3d__palco{ align-items:center; text-align:center; }
+}
+
 /* cada camada ganha uma altura diferente => paralaxe real */
 .cena3d__logo-caixa{ transform:translateZ(78px); }
 .cena3d__titulo    { transform:translateZ(52px); }
@@ -232,8 +240,8 @@ body.finck-carregando{ overflow:hidden; }
   background:radial-gradient(
     circle 130px at calc(var(--gx, 50) * 1%) calc(var(--gy, 50) * 1%),
     rgba(255,255,255,.72), rgba(255,236,168,.28) 38%, transparent 68%);
-  -webkit-mask-image:url("../assets/logo-ck.png");
-          mask-image:url("../assets/logo-ck.png");
+  -webkit-mask-image:url("../assets/logo-ck-512.png");
+          mask-image:url("../assets/logo-ck-512.png");
   -webkit-mask-size:contain;  mask-size:contain;
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
   -webkit-mask-position:center;  mask-position:center;
@@ -447,15 +455,52 @@ body.finck-carregando{ overflow:hidden; }
    ============================================================ */
 
 /* sem hover (celular/tablet): a cena de entrada fica parada e reta.
-   O prisma continua girando sozinho — é o que dá vida à home no
-   celular, onde não existe ponteiro para conduzir o giro. */
+   O prisma continua girando sozinho e passa a aceitar arraste do
+   dedo — ver o bloco de toque mais abaixo. */
 @media (hover: none){
   .cena3d__palco,
   .cena3d-eco{ transform:none; transition:none; }
   .cena3d__moeda{ animation:none; }
   .cena3d__brilho{ display:none; }
-  .prisma{ transform:rotateX(-6deg); }
-  .prisma-dica{ display:none; }
+}
+
+/* ============================================================
+   CELULAR — peso de renderização
+   ============================================================ */
+@media (max-width: 780px){
+  /* a saída da abertura desfocava a tela inteira: num aparelho
+     intermediário esse blur de tela cheia engasga justo no
+     primeiro quadro que o usuário vê. Sai só com opacidade e
+     escala, que a GPU resolve sem repintar. */
+  .finck-carga{ transition:opacity 460ms var(--ease-suave), transform 460ms var(--ease-out); }
+  .finck-carga--saiu{ filter:none; transform:scale(1.06); }
+
+  /* as tampas do prisma somavam um conic-gradient desfocado que
+     quase nunca aparece — no celular viram um brilho chapado */
+  .prisma__face--topo::after,
+  .prisma__face--base::after{ filter:none; opacity:.5; }
+
+  /* moedas orbitando: menos elementos animados sobre a marca */
+  .cena3d__moeda--2,
+  .cena3d__moeda--4{ display:none; }
+}
+
+/* ---------- prisma no toque ----------
+   Sem ponteiro o prisma girava sozinho e o usuário não tinha como
+   conduzir. Arrastar na horizontal passa a girar; pan-y mantém a
+   rolagem vertical da página funcionando por cima do bloco. */
+@media (hover: none){
+  .prisma-cena{ touch-action:pan-y; }
+  /* sem ponteiro o --py fica sempre em zero e o prisma ficaria
+     de frente, chapado; uma inclinação fixa devolve o volume
+     sem atrapalhar o giro do arraste */
+  .prisma{ transform:rotateX(-7deg) rotateY(calc(var(--px, 0) * 360deg)); }
+  .prisma-cena.prisma-cena--conduzindo .prisma-orbita{ animation-play-state:paused; }
+  .prisma-cena.prisma-cena--conduzindo .prisma__sombra{ animation-play-state:paused; }
+  .prisma-dica::before{ content:"Arraste para girar"; }
+  .prisma-dica{ font-size:.72rem; }
+  .prisma-dica span{ display:none; }
+  .prisma-cena--conduzindo .prisma-dica{ opacity:0; }
 }
 
 @media (prefers-reduced-motion: reduce){

@@ -2,10 +2,17 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FinCK | Início</title>
   <meta name="description" content="Painel do FinCK: saldo, orçamento do mês, metas e decisões conscientes.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icone-apple-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinCK">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
@@ -25,7 +32,7 @@
           <circle class="finck-carga__satelite finck-carga__satelite--roxo" cx="110" cy="22" r="3.5"/>
         </g>
       </svg>
-      <img class="finck-carga__logo" src="assets/logo-ck.png" alt="" decoding="async">
+      <img class="finck-carga__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
     </div>
     <p class="finck-carga__marca">FinCK</p>
     <p class="finck-carga__frase">Traduzindo preço em tempo de vida…</p>
@@ -67,25 +74,25 @@
         <h2>As faces do seu dinheiro</h2>
         <a href="reality.html" class="link-mais">Calcular uma compra</a>
       </div>
-      <p class="descricao">A sua sobra do mês, lida de quatro ângulos diferentes. É o mesmo valor — muda só a unidade em que ele é medido.</p>
+      <p class="descricao">A sua renda livre, lida de quatro ângulos diferentes. É o mesmo valor — muda só a unidade em que ele é medido.</p>
 
       <div class="prisma-cena" data-prisma>
         <div class="prisma-orbita">
           <div class="prisma">
             <div class="prisma__face prisma__face--frente">
-              <span class="prisma__rotulo">Sobra do mês</span>
+              <span class="prisma__rotulo">Renda livre</span>
               <strong class="prisma__valor" id="prismaReais">R$ 0,00</strong>
-              <span class="prisma__nota">o que entra menos o que já está comprometido</span>
+              <span class="prisma__nota">sua renda do mês menos as despesas fixas</span>
             </div>
             <div class="prisma__face prisma__face--direita">
               <span class="prisma__rotulo">Em trabalho</span>
               <strong class="prisma__valor" id="prismaHoras">0 h</strong>
-              <span class="prisma__nota">horas que você trocou por esse valor</span>
+              <span class="prisma__nota">horas de trabalho para ganhar esse valor</span>
             </div>
             <div class="prisma__face prisma__face--tras">
               <span class="prisma__rotulo">Em dias</span>
               <strong class="prisma__valor" id="prismaDias">0 dias</strong>
-              <span class="prisma__nota">dias de trabalho parados nessa sobra</span>
+              <span class="prisma__nota">dias de trabalho equivalentes</span>
             </div>
             <div class="prisma__face prisma__face--esquerda">
               <span class="prisma__rotulo" id="prismaMetaRotulo">Na sua meta</span>
@@ -97,7 +104,7 @@
           </div>
         </div>
         <div class="prisma__sombra" aria-hidden="true"></div>
-        <span class="prisma-dica">Passe o mouse para girar</span>
+        <span class="prisma-dica"><span>Passe o mouse para girar</span></span>
       </div>
     </section>
 
