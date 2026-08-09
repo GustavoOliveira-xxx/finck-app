@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       S.listar("recurring_transactions"),
     ]);
     renderResumo();
-    renderCofre();
     renderLista();
   }
 
@@ -42,56 +41,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       .reduce((s, r) => s + Number(r.amount || 0), 0);
     return Math.max(0, renda - fixas);
   };
-
-  /* Pilha de moedas: a meta mais perto de fechar, em volume.
-     Cada moeda vale 10% do alvo, então a pilha cresce junto com o
-     que foi guardado — barra mede a lacuna, pilha mostra o que já
-     existe, que é o que sustenta o hábito. */
-  const MOEDAS = 10;
-
-  function renderCofre() {
-    const host = document.getElementById("cofreMetas");
-    if (!host) return;
-
-    const abertas = metas.filter((m) => Number(m.target_amount) > 0);
-    if (!abertas.length) {
-      host.innerHTML = `<p class="vazio">Crie uma meta para ver o quanto já foi guardado.</p>`;
-      return;
-    }
-
-    // a que está mais perto de fechar sem ter fechado; senão, a mais cheia
-    const naoConcluidas = abertas.filter((m) => Number(m.current_amount) < Number(m.target_amount));
-    const foco = (naoConcluidas.length ? naoConcluidas : abertas)
-      .slice()
-      .sort((a, b) => U.progresso(b.current_amount, b.target_amount) - U.progresso(a.current_amount, a.target_amount))[0];
-
-    const pct = U.progresso(foco.current_amount, foco.target_amount);
-    const cheias = Math.min(MOEDAS, Math.round((pct / 100) * MOEDAS));
-
-    const moedas = Array.from({ length: MOEDAS }, (_, i) => {
-      const cheia = i < cheias;
-      return `<span class="cofre-moeda ${cheia ? "cofre-moeda--cheia" : "cofre-moeda--vazia"}"
-                    style="--i:${i}"></span>`;
-    }).join("");
-
-    host.innerHTML = `
-      <div class="cofre-cena" data-cofre
-           role="img"
-           aria-label="${U.escapeHTML(foco.name)}: ${U.percentual(pct, 0)} guardado, ${U.moeda(foco.current_amount)} de ${U.moeda(foco.target_amount)}">
-        <div class="cofre-sombra" aria-hidden="true"></div>
-        <div class="cofre-orbita">
-          <div class="cofre-pilha" aria-hidden="true">${moedas}</div>
-        </div>
-        <div class="cofre-leitura" aria-hidden="true">
-          <span class="cofre-leitura__pct">${U.percentual(pct, 0)}</span>
-          <span class="cofre-leitura__meta">${U.escapeHTML(foco.name)}</span>
-          <span class="cofre-leitura__valor">${U.moeda(foco.current_amount)} de ${U.moeda(foco.target_amount)}</span>
-        </div>
-        <span class="cofre-dica"><span>Passe o mouse para girar</span></span>
-      </div>`;
-
-    window.FinckFX?.ligarCofre?.();
-  }
 
   function renderResumo() {
     const alvo = F.soma(metas, "target_amount");
@@ -190,8 +139,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("tituloMeta").textContent = m ? "Editar meta" : "Nova meta";
     document.getElementById("metaId").value = m?.id || "";
     document.getElementById("metaNome").value = m?.name || "";
-    document.getElementById("metaAlvo").value = m?.target_amount || "";
-    document.getElementById("metaAtual").value = m?.current_amount || 0;
+    U.escreverMoeda("metaAlvo", m?.target_amount || 0);
+    U.escreverMoeda("metaAtual", m?.current_amount || 0);
     document.getElementById("metaPrazo").value = m?.deadline ? String(m.deadline).slice(0, 10) : "";
     document.getElementById("metaTaxa").value = m?.rate || 0;
     U.abrirModal("modalMeta");
@@ -203,8 +152,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = document.getElementById("metaId").value;
     const dados = {
       name: document.getElementById("metaNome").value.trim(),
-      target_amount: Number(document.getElementById("metaAlvo").value),
-      current_amount: Number(document.getElementById("metaAtual").value) || 0,
+      target_amount: U.lerMoeda("metaAlvo"),
+      current_amount: U.lerMoeda("metaAtual"),
       deadline: document.getElementById("metaPrazo").value || null,
       rate: Number(document.getElementById("metaTaxa").value) || 0,
     };
@@ -228,14 +177,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("aporteMetaId").value = m.id;
     document.getElementById("aporteInfo").textContent =
       `${m.name} — faltam ${U.moeda(Math.max(0, Number(m.target_amount) - Number(m.current_amount)))}.`;
-    document.getElementById("aporteValor").value = "";
+    U.limparMoeda("aporteValor");
     U.abrirModal("modalAporte");
   }
 
   document.getElementById("formAporte").addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = document.getElementById("aporteMetaId").value;
-    const valor = Number(document.getElementById("aporteValor").value);
+    const valor = U.lerMoeda("aporteValor");
     if (!(valor > 0)) return U.toast("Informe um valor maior que zero.", "erro");
     try {
       const meta = metas.find((x) => String(x.id) === String(id));

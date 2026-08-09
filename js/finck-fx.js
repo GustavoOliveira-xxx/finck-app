@@ -311,31 +311,33 @@
     cena3d();
     prisma();
     medalha();
+    alvo();
   }
 
   /* A medalha é montada pelo JS da página, depois de buscar o XP no
      banco — ou seja, depois deste bootstrap. A página avisa quando
      terminou chamando FinckFX.ligarMedalha(). */
   /* ---------------------------------------------------------
-     5. Pilha de moedas das metas
+     5. Alvo das metas
 
-     Mesmo contrato dos outros: varrer a largura dá uma volta, o
-     eixo vertical inclina a pilha, e no toque o giro vem do
-     arraste. A pilha é montada pelo JS da página de metas.
+     Puramente decorativo: não carrega dado nenhum, só a identidade
+     da página. Por isso não tem arraste no toque — o ponteiro
+     inclina o cone de anéis, e quem não tem ponteiro vê o balanço
+     automático, sem perder o gesto de rolagem.
      --------------------------------------------------------- */
-  function cofre() {
-    const cena = document.querySelector("[data-cofre]");
-    if (!cena || reduzido) return;
+  function alvo() {
+    const cena = document.querySelector("[data-alvo]");
+    if (!cena || reduzido || toque) return;
 
-    const pilha = cena.querySelector(".cofre-pilha");
-    if (!pilha) return;
+    const corpo = cena.querySelector(".alvo");
+    if (!corpo) return;
 
     let agendado = false;
     let px = 0, py = 0;
 
     const aplicar = () => {
-      pilha.style.setProperty("--px", px.toFixed(3));
-      pilha.style.setProperty("--py", py.toFixed(3));
+      corpo.style.setProperty("--px", px.toFixed(3));
+      corpo.style.setProperty("--py", py.toFixed(3));
       agendado = false;
     };
     const agendar = () => {
@@ -344,44 +346,18 @@
       raf(aplicar);
     };
 
-    if (!toque) {
-      cena.addEventListener("pointermove", (e) => {
-        const r = cena.getBoundingClientRect();
-        if (!r.width || !r.height) return;
-        px = (e.clientX - r.left) / r.width - 0.5;
-        py = ((e.clientY - r.top) / r.height - 0.5) * -1;
-        agendar();
-      }, { passive: true });
-
-      cena.addEventListener("pointerleave", () => { px = 0; py = 0; agendar(); });
-      return;
-    }
-
-    let arrastando = false, xInicial = 0, pxInicial = 0;
-    cena.addEventListener("pointerdown", (e) => {
-      arrastando = true;
-      xInicial = e.clientX;
-      pxInicial = px;
-      cena.classList.add("cofre-cena--conduzindo");
-    }, { passive: true });
-
     cena.addEventListener("pointermove", (e) => {
-      if (!arrastando) return;
       const r = cena.getBoundingClientRect();
-      if (!r.width) return;
-      px = pxInicial + (e.clientX - xInicial) / r.width;
+      if (!r.width || !r.height) return;
+      px = (e.clientX - r.left) / r.width - 0.5;
+      py = ((e.clientY - r.top) / r.height - 0.5) * -1;
       agendar();
     }, { passive: true });
 
-    const soltar = () => {
-      arrastando = false;
-      cena.classList.remove("cofre-cena--conduzindo");
-    };
-    cena.addEventListener("pointerup", soltar, { passive: true });
-    cena.addEventListener("pointercancel", soltar, { passive: true });
+    cena.addEventListener("pointerleave", () => { px = 0; py = 0; agendar(); });
   }
 
-  window.FinckFX = { ligarMedalha: medalha, ligarCofre: cofre };
+  window.FinckFX = { ligarMedalha: medalha };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", iniciar, { once: true });

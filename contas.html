@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FinCK | Contas</title>
+  <meta name="description" content="Organize onde seu dinheiro está: contas por instituição, transferências internas e saldo consolidado.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icone-apple-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinCK">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style-principal.css">
+  <link rel="stylesheet" href="css/finck-fx.css">
+</head>
+<body data-page="contas">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+  <div class="finck-carga" data-finck-carga aria-hidden="true">
+    <div class="finck-carga__nucleo">
+      <svg class="finck-carga__orbitas" viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="finck-carga__anel finck-carga__anel--externo" cx="110" cy="110" r="104"/>
+        <circle class="finck-carga__anel finck-carga__anel--medio" cx="110" cy="110" r="88"/>
+        <g class="finck-carga__satelite-g">
+          <circle class="finck-carga__satelite" cx="110" cy="6" r="5"/>
+        </g>
+        <g class="finck-carga__satelite-g finck-carga__satelite-g--2">
+          <circle class="finck-carga__satelite finck-carga__satelite--roxo" cx="110" cy="22" r="3.5"/>
+        </g>
+      </svg>
+      <img class="finck-carga__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
+    </div>
+    <p class="finck-carga__marca">FinCK</p>
+    <p class="finck-carga__frase">Traduzindo preço em tempo de vida…</p>
+    <div class="finck-carga__barra"><span class="finck-carga__preenche"></span></div>
+  </div>
+
+  <header data-finck-header></header>
+
+  <main class="conteudo" id="conteudo" tabindex="-1">
+
+    <section class="hero">
+      <h2>Contas</h2>
+      <p>Organize onde seu dinheiro está.</p>
+    </section>
+
+    <!-- Aviso de privacidade: exigido pela especificação (6.2 e 7) -->
+    <p class="aviso-privacidade">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span><strong>O FinCK não se conecta ao seu banco.</strong> Você informa os dados manualmente e pode alterá-los ou apagá-los quando quiser. Nunca pedimos senha, token, agência ou número completo de cartão.</span>
+    </p>
+
+    <!-- 4.6 Visão consolidada -->
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h3>Visão consolidada</h3>
+        <span class="chip" id="chipContas"></span>
+      </div>
+      <ul class="lista-resumo lista-consolidado" id="consolidado"></ul>
+    </section>
+
+    <div class="acoes-etapa acoes-contas">
+      <button type="button" class="btn-primario" id="btnNovaConta">Adicionar conta</button>
+      <button type="button" class="btn-secundario" id="btnTransferir">Nova transferência</button>
+      <button type="button" class="btn-secundario" id="btnAjustar">Ajustar saldo</button>
+    </div>
+
+    <!-- Lista de contas -->
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h3>Suas contas</h3>
+        <label class="filtro filtro--enxuto">
+          <span class="visualmente-oculto">Mostrar</span>
+          <select id="filtroStatus">
+            <option value="ativas">Ativas</option>
+            <option value="arquivadas">Arquivadas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </label>
+      </div>
+      <div class="grade-contas" id="listaContas"></div>
+      <p class="vazio" id="vazioContas" hidden>
+        Nenhuma conta cadastrada. Comece pela conta onde você recebe seu dinheiro.
+      </p>
+    </section>
+
+    <!-- Total por instituição -->
+    <section class="bloco" id="blocoInstituicoes" hidden>
+      <h3>Total por instituição</h3>
+      <ul class="lista-instituicoes" id="listaInstituicoes"></ul>
+    </section>
+
+    <!-- Lançamentos sem conta (legado) -->
+    <section class="bloco" id="blocoSemConta" hidden>
+      <h3>Lançamentos sem conta</h3>
+      <p class="descricao" id="textoSemConta"></p>
+      <div id="listaSemConta" class="itens-lista"></div>
+    </section>
+
+    <!-- Histórico de transferências -->
+    <section class="bloco" id="blocoTransferencias" hidden>
+      <h3>Transferências internas</h3>
+      <p class="descricao">Mover dinheiro entre suas contas não é entrada nem saída: o patrimônio consolidado não muda.</p>
+      <div id="listaTransferencias" class="itens-lista"></div>
+    </section>
+
+    <p class="link-rodape"><a href="home.html">← Voltar ao início</a></p>
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <!-- 6.3 Modal de nova conta -->
+  <div id="modalConta" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConta">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalConta" aria-label="Fechar">✕</button>
+      <h3 id="tituloConta">Nova conta</h3>
+      <form id="formConta" novalidate>
+        <input type="hidden" id="contaId">
+
+        <fieldset class="campo-instituicoes">
+          <legend>Onde está essa conta?</legend>
+          <div class="grade-instituicoes" id="gradeInstituicoes"></div>
+          <label id="campoOutraInstituicao" hidden>Nome da instituição
+            <input type="text" id="contaOutraInstituicao" placeholder="Ex.: Banco XP" maxlength="40">
+          </label>
+        </fieldset>
+
+        <label>Nome da conta
+          <input type="text" id="contaNome" required maxlength="40" placeholder="Ex.: Inter principal">
+        </label>
+
+        <div class="linha-dupla">
+          <label>Tipo
+            <select id="contaTipo"></select>
+          </label>
+          <label>Últimos 4 dígitos (opcional)
+            <input type="text" id="contaDigitos" inputmode="numeric" maxlength="4" placeholder="0000">
+          </label>
+        </div>
+
+        <div class="linha-dupla">
+          <label>Saldo inicial
+            <input type="text" inputmode="numeric" data-moeda id="contaSaldo">
+          </label>
+          <label>Data do saldo inicial
+            <input type="date" id="contaData" required>
+          </label>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="contaNegativa">
+          <span>Esse saldo é devedor (negativo)</span>
+        </label>
+
+        <label>Observação (opcional)
+          <input type="text" id="contaNota" maxlength="80" placeholder="Ex.: conta do salário">
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" id="contaPadrao">
+          <span>Usar como conta padrão em novos lançamentos</span>
+        </label>
+
+        <p class="nota">Não pedimos agência, número completo, senha nem token — nada disso é necessário aqui.</p>
+
+        <button type="submit" class="btn-salvar">Salvar conta</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4.4 Transferência interna -->
+  <div id="modalTransferencia" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloTransferencia">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalTransferencia" aria-label="Fechar">✕</button>
+      <h3 id="tituloTransferencia">Nova transferência</h3>
+      <form id="formTransferencia" novalidate>
+        <div class="linha-dupla">
+          <label>De
+            <select id="transferOrigem"></select>
+          </label>
+          <label>Para
+            <select id="transferDestino"></select>
+          </label>
+        </div>
+        <div class="linha-dupla">
+          <label>Valor
+            <input type="text" inputmode="numeric" data-moeda id="transferValor" required>
+          </label>
+          <label>Data
+            <input type="date" id="transferData" required>
+          </label>
+        </div>
+        <label>Descrição (opcional)
+          <input type="text" id="transferDescricao" maxlength="60" placeholder="Ex.: reserva do mês">
+        </label>
+        <p class="nota">Isso muda o dinheiro de lugar. Não conta como entrada nem como saída, e o saldo consolidado continua o mesmo.</p>
+        <button type="submit" class="btn-salvar">Registrar transferência</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4.5 Ajuste de saldo -->
+  <div id="modalAjuste" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloAjuste">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalAjuste" aria-label="Fechar">✕</button>
+      <h3 id="tituloAjuste">Ajustar saldo</h3>
+      <form id="formAjuste" novalidate>
+        <label>Conta
+          <select id="ajusteConta"></select>
+        </label>
+        <p class="previa-parcela" id="saldoEsperado" aria-live="polite"></p>
+        <div class="linha-dupla">
+          <label>Saldo real na conta
+            <input type="text" inputmode="numeric" data-moeda id="ajusteSaldo" required>
+          </label>
+          <label>Data da conferência
+            <input type="date" id="ajusteData" required>
+          </label>
+        </div>
+        <label class="checkbox">
+          <input type="checkbox" id="ajusteNegativo">
+          <span>O saldo real está negativo</span>
+        </label>
+        <label>Motivo (opcional)
+          <input type="text" id="ajusteMotivo" maxlength="80" placeholder="Ex.: tarifa não lançada">
+        </label>
+        <p class="nota" id="diferencaAjuste" aria-live="polite"></p>
+        <label class="checkbox">
+          <input type="checkbox" id="ajusteConfirma" required>
+          <span>Confirmo que conferi esse saldo no extrato.</span>
+        </label>
+        <button type="submit" class="btn-salvar">Aplicar ajuste</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Exclusão de conta com dependências -->
+  <div id="modalExcluirConta" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloExcluirConta">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalExcluirConta" aria-label="Fechar">✕</button>
+      <h3 id="tituloExcluirConta">Esta conta tem histórico</h3>
+      <p class="descricao" id="textoExcluirConta"></p>
+      <div class="opcoes-fluxo opcoes-fluxo--importar">
+        <button type="button" class="card-opcao" data-acao-conta="arquivar">
+          <strong>Arquivar</strong>
+          <span>Some dos formulários de novos lançamentos, mas o histórico continua inteiro. É o caminho recomendado.</span>
+        </button>
+        <button type="button" class="card-opcao" data-acao-conta="mover">
+          <strong>Mover lançamentos e apagar</strong>
+          <span>Passa o histórico para outra conta e depois apaga esta.</span>
+        </button>
+        <button type="button" class="card-opcao card-opcao--perigo" data-acao-conta="apagar">
+          <strong>Apagar mesmo assim</strong>
+          <span>Os lançamentos ficam sem conta. Não dá para desfazer.</span>
+        </button>
+      </div>
+      <label id="campoContaDestino" hidden>Mover para
+        <select id="contaDestinoMover"></select>
+      </label>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/moeda-input.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/contas-engine.js"></script>
+  <script src="js/planejamento-engine.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/contas.js"></script>
+  <script src="js/ui-fx.js"></script>
+  <script src="js/finck-fx.js"></script>
+</body>
+</html>

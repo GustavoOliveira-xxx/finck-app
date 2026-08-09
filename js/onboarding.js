@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const dicaEl = document.getElementById("dicaValorHora");
 
   function atualizarDica() {
-    const renda = Number(incomeEl.value) || 0;
+    const renda = U.lerMoeda(incomeEl);
     const dias = Number(diasEl.value) || 22;
     const horas = Number(horasEl.value) || 8;
     if (renda <= 0) {
@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("formDespesa").addEventListener("submit", (e) => {
     e.preventDefault();
     const description = document.getElementById("despesaDescricao").value.trim();
-    const amount = Number(document.getElementById("despesaValor").value);
+    const amount = U.lerMoeda("despesaValor");
     const day_of_month = Number(document.getElementById("despesaDia").value) || 10;
     if (!description || !(amount > 0)) return U.toast("Preencha descrição e valor.", "erro");
     despesas.push({ description, amount, day_of_month, type: "saida", active: true });
@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   saldoEl.addEventListener("input", renderResumo);
 
   function renderResumo() {
-    const renda = Number(incomeEl.value) || 0;
+    const renda = U.lerMoeda(incomeEl);
     const dias = Number(diasEl.value) || 22;
     const horas = Number(horasEl.value) || 8;
     const fixas = despesas.reduce((s, d) => s + d.amount, 0);
@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <li><span>Renda livre estimada</span><strong class="cor-verde">${U.moeda(livre)}</strong></li>
         <li><span>Valor do seu dia de trabalho</span><strong>${U.moeda(valorDia)}</strong></li>
         <li><span>Valor da sua hora</span><strong>${U.moeda(valorDia / horas)}</strong></li>
-        <li><span>Saldo inicial</span><strong>${U.moeda(Number(saldoEl.value) || 0)}</strong></li>
+        <li><span>Saldo inicial</span><strong>${U.moeda(U.lerMoeda(saldoEl) || 0)}</strong></li>
       </ul>
       <p class="nota">Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho.</p>`;
   }
@@ -156,7 +156,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         payday: Number(document.getElementById("payday").value) || 5,
         work_days_month: Number(diasEl.value),
         work_hours_day: Number(horasEl.value),
-        initial_balance: Number(saldoEl.value) || 0,
+        initial_balance: U.lerMoeda(saldoEl) || 0,
         setup_mode: fluxo,
         onboarded_at: new Date().toISOString(),
       });

@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("formRecorrente").addEventListener("submit", async (e) => {
     e.preventDefault();
     const description = document.getElementById("recDescricao").value.trim();
-    const amount = Number(document.getElementById("recValor").value);
+    const amount = U.lerMoeda("recValor");
     const type = document.getElementById("recTipo").value;
     const day_of_month = Number(document.getElementById("recDia").value) || 1;
     if (!description) return U.toast("Informe a descrição.", "erro");

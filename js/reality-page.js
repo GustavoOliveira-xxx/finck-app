@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("formReality").addEventListener("submit", async (e) => {
     e.preventDefault();
     const item_name = document.getElementById("itemName").value.trim();
-    const price = Number(document.getElementById("itemPrice").value);
+    const price = U.lerMoeda("itemPrice");
     const category = document.getElementById("itemCategory").value;
     const note = document.getElementById("itemNote").value.trim();
     let item_link = document.getElementById("itemLink").value.trim();
@@ -253,6 +253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnRegistrarCalculo").disabled = false;
     document.getElementById("statusRegistro").textContent = "";
     document.getElementById("formReality").reset();
+    U.limparMoeda("itemPrice");
     ["passoResultado", "passoReflexao", "passoDecisao"].forEach((id) => {
       document.getElementById(id).hidden = true;
     });

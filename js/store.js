@@ -41,6 +41,8 @@ window.FinckStore = (() => {
     purchase_analyses: "finck.analyses",
     installment_purchases: "finck.parcelas",
     category_budgets: "finck.orcamentos",
+    transfers: "finck.transferencias",
+    balance_adjustments: "finck.ajustes",
     gamification: "finck.gamification",
     demo: "finck.demo",
   };
@@ -320,16 +322,21 @@ window.FinckStore = (() => {
   }
 
   /* ---------------- Backup / restauração ---------------- */
+  /* Ordem importa no backup: accounts entra antes de transactions
+     e transfers, que apontam para ela. */
   const TABELAS = [
     "accounts", "transactions", "goals", "recurring_transactions",
     "purchase_analyses", "installment_purchases", "category_budgets",
+    "transfers", "balance_adjustments",
   ];
 
   /* Identidade de um registro para efeito de duplicata. Não usa id
      nem created_at: um mesmo lançamento reimportado ganha id novo,
      mas continua sendo o mesmo lançamento aos olhos do usuário. */
   const ASSINATURA = {
-    accounts:               (r) => [r.name, r.type].join("|"),
+    accounts:               (r) => [r.name, r.institution_name, r.account_type].join("|"),
+    transfers:              (r) => [r.from_account_id, r.to_account_id, Number(r.amount), String(r.date).slice(0, 10)].join("|"),
+    balance_adjustments:    (r) => [r.account_id, Number(r.new_balance), String(r.date).slice(0, 10)].join("|"),
     transactions:           (r) => [r.type, r.description, Number(r.amount), String(r.date).slice(0, 10)].join("|"),
     goals:                  (r) => [r.name, Number(r.target_amount)].join("|"),
     recurring_transactions: (r) => [r.description, r.type, Number(r.amount), r.day_of_month].join("|"),

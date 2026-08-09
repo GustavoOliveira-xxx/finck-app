@@ -63,7 +63,7 @@
           </select>
         </label>
         <label>Valor (R$)
-          <input type="number" id="recValor" min="0.01" step="0.01" required placeholder="0,00">
+          <input type="text" inputmode="numeric" data-moeda id="recValor">
         </label>
         <label>Dia do mês
           <input type="number" id="recDia" min="1" max="31" value="10">
@@ -86,6 +86,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/moeda-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>

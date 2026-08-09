@@ -101,8 +101,17 @@ window.FinckUtils = (() => {
     URL.revokeObjectURL(url);
   }
 
+  /* Campos de dinheiro: o valor real mora em data-centavos, porque
+     o que aparece na tela é texto formatado ("R$ 1.234,56"). Ver
+     js/moeda-input.js. Estes atalhos evitam que cada página precise
+     saber desse detalhe. */
+  const lerMoeda = (alvo) => (window.FinckMoeda ? window.FinckMoeda.ler(alvo) : 0);
+  const escreverMoeda = (alvo, valor) => window.FinckMoeda?.escrever(alvo, valor);
+  const limparMoeda = (alvo) => window.FinckMoeda?.limpar(alvo);
+
   return {
     moeda, numero, percentual, dataBR, hojeISO, mesAtual, uid, escapeHTML,
     toast, abrirModal, fecharModal, ligarModais, saudacao, progresso, baixarArquivo,
+    lerMoeda, escreverMoeda, limparMoeda,
   };
 })();

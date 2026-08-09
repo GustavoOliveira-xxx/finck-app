@@ -682,6 +682,210 @@ window.FinckTestes = (() => {
   });
 
   /* ============================================================
+     FinCK Contas — saldo, transferência e isolamento
+     Cobre os critérios de aceite do MVP da especificação.
+     ============================================================ */
+  descrever("Contas (FinckContas)", () => {
+    const CT = window.FinckContas;
+
+    const conta = (id, saldoInicial, extra = {}) => ({
+      id, name: `Conta ${id}`, institution_name: "inter",
+      account_type: "corrente", initial_balance: saldoInicial,
+      active: true, ...extra,
+    });
+
+    teste("saldo inicial aparece sozinho quando não há movimento", () => {
+      esperar(CT.saldoDaConta(conta("a", 500), {})).aSer(500);
+    });
+
+    teste("entrada aumenta só a conta vinculada", () => {
+      const mov = { transacoes: [{ account_id: "a", type: "entrada", amount: 200 }] };
+      esperar(CT.saldoDaConta(conta("a", 500), mov)).aSer(700);
+      esperar(CT.saldoDaConta(conta("b", 500), mov)).aSer(500);
+    });
+
+    teste("saída reduz só a conta vinculada", () => {
+      const mov = { transacoes: [{ account_id: "a", type: "saida", amount: 150 }] };
+      esperar(CT.saldoDaConta(conta("a", 500), mov)).aSer(350);
+      esperar(CT.saldoDaConta(conta("b", 500), mov)).aSer(500);
+    });
+
+    teste("lançamento sem conta não entra em conta nenhuma", () => {
+      const mov = { transacoes: [{ account_id: null, type: "saida", amount: 999 }] };
+      esperar(CT.saldoDaConta(conta("a", 500), mov)).aSer(500);
+    });
+
+    teste("transferência reduz a origem e aumenta o destino", () => {
+      const mov = { transferencias: [{ from_account_id: "a", to_account_id: "b", amount: 200 }] };
+      esperar(CT.saldoDaConta(conta("a", 1000), mov)).aSer(800);
+      esperar(CT.saldoDaConta(conta("b", 500), mov)).aSer(700);
+    });
+
+    teste("transferência NÃO altera o patrimônio consolidado", () => {
+      const contas = [conta("a", 1000), conta("b", 500)];
+      const antes = CT.consolidado(contas, {});
+      const depois = CT.consolidado(contas, {
+        transferencias: [{ from_account_id: "a", to_account_id: "b", amount: 300 }],
+      });
+      esperar(antes.disponivel).aSer(1500);
+      esperar(depois.disponivel).aSer(1500);
+    });
+
+    teste("ajuste de saldo entra na conta certa", () => {
+      const mov = { ajustes: [{ account_id: "a", amount: -45 }] };
+      esperar(CT.saldoDaConta(conta("a", 500), mov)).aSer(455);
+    });
+
+    teste("consolidado ignora contas arquivadas", () => {
+      const r = CT.consolidado([conta("a", 1000), conta("b", 500, { active: false })], {});
+      esperar(r.disponivel).aSer(1000);
+      esperar(r.quantidade).aSer(1);
+    });
+
+    teste("conta arquivada mantém o histórico dela", () => {
+      const mov = { transacoes: [{ account_id: "b", type: "entrada", amount: 200 }] };
+      esperar(CT.saldoDaConta(conta("b", 500, { active: false }), mov)).aSer(700);
+    });
+
+    teste("saldo devedor é aceito e marcado", () => {
+      const r = CT.consolidado([conta("a", -300)], {});
+      esperar(r.disponivel).aSer(-300);
+      esperar(r.negativas).aTerTamanho(1);
+    });
+
+    teste("total por instituição soma as contas de cada banco", () => {
+      const contas = [
+        conta("a", 100, { institution_name: "inter" }),
+        conta("b", 250, { institution_name: "inter" }),
+        conta("c", 400, { institution_name: "nubank" }),
+      ];
+      const linhas = CT.porInstituicao(CT.saldos(contas, {}));
+      const inter = linhas.find((l) => l.instituicao.id === "inter");
+      esperar(inter.total).aSer(350);
+      esperar(inter.contas).aSer(2);
+    });
+
+    teste("instituição desconhecida cai em Outro sem quebrar", () => {
+      esperar(CT.instituicao("banco-que-nao-existe").id).aSer("outro");
+    });
+
+    teste("transferência para a mesma conta é recusada", () => {
+      esperar(CT.validarTransferencia({ origem: "a", destino: "a", valor: 100 })).aConter("diferente");
+    });
+
+    teste("transferência sem valor é recusada", () => {
+      esperar(CT.validarTransferencia({ origem: "a", destino: "b", valor: 0 })).aConter("maior que zero");
+    });
+
+    teste("transferência válida passa", () => {
+      esperar(CT.validarTransferencia({ origem: "a", destino: "b", valor: 100 })).aSer(null);
+    });
+
+    teste("ajuste calcula a diferença até o saldo real", () => {
+      esperar(CT.diferencaDoAjuste(500, 480)).aSer(-20);
+      esperar(CT.diferencaDoAjuste(500, 530)).aSer(30);
+      esperar(CT.diferencaDoAjuste(500, 500)).aSer(0);
+    });
+
+    teste("conta quantos lançamentos ainda estão sem conta", () => {
+      esperar(CT.semConta([{ account_id: "a" }, {}, { account_id: null }])).aSer(2);
+    });
+  });
+
+  /* ============================================================
+     Campo de dinheiro: dígitos entram pela direita
+     ============================================================ */
+  descrever("Campo de dinheiro (FinckMoeda)", () => {
+    const M = window.FinckMoeda;
+
+    // campo de mentira, fora da tela, só para o teste
+    const comCampo = (fn) => {
+      const el = document.createElement("input");
+      el.type = "text";
+      el.setAttribute("data-moeda", "");
+      document.body.appendChild(el);
+      M.ligar(el);
+      try { return fn(el); } finally { el.remove(); }
+    };
+
+    const digitar = (el, seq) => {
+      el.dataset.centavos = "0";
+      el.value = "";
+      for (const ch of seq) {
+        el.value += ch;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      return M.ler(el);
+    };
+
+    teste("um dígito vira centavo", () => {
+      comCampo((el) => esperar(digitar(el, "3")).aSerPerto(0.03, 2));
+    });
+
+    teste("dois dígitos ainda são centavos", () => {
+      comCampo((el) => esperar(digitar(el, "32")).aSerPerto(0.32, 2));
+    });
+
+    teste("quatro dígitos viram reais com centavos zerados", () => {
+      comCampo((el) => esperar(digitar(el, "3200")).aSer(32));
+    });
+
+    teste("valor grande mantém a separação de milhar", () => {
+      comCampo((el) => {
+        esperar(digitar(el, "123456")).aSerPerto(1234.56, 2);
+        esperar(el.value).aConter("1.234,56");
+      });
+    });
+
+    teste("texto colado aproveita só os dígitos", () => {
+      comCampo((el) => {
+        el.dataset.centavos = "0";
+        el.value = "R$ 1.500,90 aprox";
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        esperar(M.ler(el)).aSerPerto(1500.90, 2);
+      });
+    });
+
+    teste("backspace remove um dígito, não a formatação", () => {
+      comCampo((el) => {
+        digitar(el, "3200");
+        el.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true }));
+        esperar(M.ler(el)).aSerPerto(3.20, 2);
+      });
+    });
+
+    teste("escrever de código formata e é lido de volta igual", () => {
+      comCampo((el) => {
+        M.escrever(el, 1234.5);
+        esperar(M.ler(el)).aSerPerto(1234.5, 2);
+        esperar(el.value).aConter("1.234,50");
+      });
+    });
+
+    teste("campo vazio vale zero", () => {
+      comCampo((el) => esperar(M.ler(el)).aSer(0));
+    });
+
+    teste("limpar zera o campo", () => {
+      comCampo((el) => {
+        digitar(el, "5000");
+        M.limpar(el);
+        esperar(M.ler(el)).aSer(0);
+        esperar(el.value).aSer("");
+      });
+    });
+
+    teste("type=number vira text para caber o texto formatado", () => {
+      const el = document.createElement("input");
+      el.type = "number";
+      document.body.appendChild(el);
+      M.ligar(el);
+      esperar(el.type).aSer("text");
+      el.remove();
+    });
+  });
+
+  /* ============================================================
      Formatação
      ============================================================ */
   descrever("Formatação (FinckUtils)", () => {

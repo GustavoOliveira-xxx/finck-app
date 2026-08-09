@@ -37,6 +37,33 @@ window.FINCK_CONFIG = {
     "Outros",
   ],
 
+  /* Catálogo de instituições do FinCK Contas.
+     É catálogo estático de rótulos, como prevê a especificação
+     (5.1): nenhuma credencial, nenhum identificador de conexão.
+     Cadastrar "Inter" aqui não cria vínculo nenhum com o Inter —
+     é só o nome que o usuário escolheu para organizar o dinheiro
+     dele. "Outro" existe para quem usa instituição fora da lista. */
+  INSTITUICOES: [
+    { id: "inter",     nome: "Banco Inter",              curto: "Inter",     cor: "#ea7100", logo: "assets/bancos/inter.svg" },
+    { id: "nubank",    nome: "Nubank",                   curto: "Nubank",    cor: "#820ad1", logo: "assets/bancos/nubank.svg" },
+    { id: "itau",      nome: "Itaú Unibanco",            curto: "Itaú",      cor: "#ff6200", logo: "assets/bancos/itau.svg" },
+    { id: "bradesco",  nome: "Bradesco",                 curto: "Bradesco",  cor: "#e5173f", logo: "assets/bancos/bradesco.svg" },
+    { id: "bb",        nome: "Banco do Brasil",          curto: "BB",        cor: "#fde100", logo: "assets/bancos/banco-do-brasil.svg" },
+    { id: "caixa",     nome: "Caixa Econômica Federal",  curto: "Caixa",     cor: "#0066b3", logo: "assets/bancos/caixa.svg" },
+    { id: "banrisul",  nome: "Banrisul",                 curto: "Banrisul",  cor: "#0788fe", logo: "assets/bancos/banrisul.svg" },
+    { id: "santander", nome: "Santander",                curto: "Santander", cor: "#ec0000", logo: null },
+    { id: "carteira",  nome: "Dinheiro em espécie",      curto: "Carteira",  cor: "#1fd18f", logo: null },
+    { id: "outro",     nome: "Outro banco ou instituição", curto: "Outro",   cor: "#9333c4", logo: null },
+  ],
+
+  TIPOS_CONTA: [
+    { id: "corrente",     rotulo: "Conta corrente" },
+    { id: "poupanca",     rotulo: "Poupança" },
+    { id: "digital",      rotulo: "Conta digital" },
+    { id: "carteira",     rotulo: "Carteira / dinheiro" },
+    { id: "investimento", rotulo: "Investimento (manual)" },
+  ],
+
   // Decisões possíveis no FinCK of Reality (item 5.2)
   DECISOES: [
     { id: "comprar", label: "Comprar agora", xp: 5, consciente: false },
