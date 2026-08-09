@@ -2,10 +2,17 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FinCK | Entrar</title>
   <meta name="description" content="FinCK — descubra quanto uma compra custa em dinheiro e em tempo de trabalho antes de decidir.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icone-apple-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinCK">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
@@ -26,7 +33,7 @@
           <circle class="finck-carga__satelite finck-carga__satelite--roxo" cx="110" cy="22" r="3.5"/>
         </g>
       </svg>
-      <img class="finck-carga__logo" src="assets/logo-ck.png" alt="" decoding="async">
+      <img class="finck-carga__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
     </div>
     <p class="finck-carga__marca">FinCK</p>
     <p class="finck-carga__frase">Traduzindo preço em tempo de vida…</p>
@@ -45,7 +52,11 @@
           <span class="cena3d__moeda cena3d__moeda--5"></span>
         </div>
         <span class="cena3d__logo-caixa">
-          <img src="assets/logo-ck.png" alt="Conscious Knowledge" class="auth-logo">
+          <img src="assets/logo-ck-256.png"
+               srcset="assets/logo-ck-256.png 256w, assets/logo-ck-512.png 512w"
+               sizes="(max-width: 900px) 128px, 168px"
+               width="256" height="256"
+               alt="Financial CK" class="auth-logo" decoding="async">
           <span class="cena3d__brilho" aria-hidden="true"></span>
         </span>
         <h1 class="cena3d__titulo">FinCK</h1>

@@ -44,8 +44,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("valorDia").textContent = U.moeda(valorDia);
     document.getElementById("valorHora").textContent = U.moeda(valorHora);
 
-    /* prisma: a sobra do mês traduzida em quatro unidades.
-       O número é sempre o mesmo — muda só a régua usada para medi-lo. */
+    /* prisma: a renda livre traduzida em quatro unidades.
+       O número é sempre o mesmo — muda só a régua usada para medi-lo.
+       Usa exatamente o ctx.rendaLivre do cartão de saldo (renda do mês
+       menos despesas fixas), e não a "sobra prevista" do bloco de
+       orçamento, que parte das entradas recorrentes quando existem. */
     const sobra = ctx.rendaLivre;
     document.getElementById("prismaReais").textContent = U.moeda(sobra);
     document.getElementById("prismaHoras").textContent =

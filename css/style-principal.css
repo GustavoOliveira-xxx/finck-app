@@ -2293,3 +2293,92 @@ canvas{
 }
 .painel-aba{ display:flex; flex-direction:column; gap:var(--gap-md, 1rem); animation: aba-entra .35s var(--ease-out); }
 @keyframes aba-entra{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+/* ============================================================
+   16. APP EM CELULAR
+   O FinCK é usado como aplicativo instalado, quase sempre em
+   tela pequena e com o dedo. Esta seção resolve três frentes:
+   entrada de dados, recorte físico da tela e custo de GPU.
+   ============================================================ */
+
+/* ---------- 16.1 campos: impedir o zoom automático do iOS ----------
+   O Safari amplia a página inteira ao focar um campo cuja fonte
+   seja menor que 16px — o layout "pula" e o usuário precisa
+   voltar o zoom na mão. Em ponteiro grosso (dedo) os campos
+   sobem para 16px e o problema deixa de existir. */
+@media (pointer: coarse){
+  input[type="text"],input[type="email"],input[type="password"],
+  input[type="number"],input[type="date"],input[type="month"],
+  input[type="url"],input[type="search"],
+  select,textarea{ font-size:16px; }
+}
+
+/* ---------- 16.2 recorte da tela (notch e barra de gestos) ----------
+   Depende de viewport-fit=cover no <meta viewport> de cada página:
+   sem ele o env(safe-area-inset-*) resolve zero e o conteúdo passa
+   por baixo da barra de status e do indicador de home. */
+header[data-finck-header]{
+  padding-top:calc(.7rem + env(safe-area-inset-top));
+}
+body.rolando header[data-finck-header]{
+  padding-top:calc(.45rem + env(safe-area-inset-top));
+  padding-bottom:.45rem;
+}
+.modal-overlay{
+  padding:max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+}
+/* dvh acompanha a barra do navegador aparecendo e sumindo; vh não */
+.modal{ max-height:88dvh; }
+
+/* ---------- 16.3 alvos de toque ----------
+   Controles decorativos de 30px funcionam no mouse e falham no
+   dedo. A área clicável cresce sem alterar o desenho: o quadrado
+   visível continua igual, quem cresce é a caixa ao redor. */
+@media (pointer: coarse){
+  .btn-excluir-item,.btn-remover,.fechar{
+    min-width:44px; min-height:44px;
+  }
+  .btn-texto,.link-mais,.btn-sair,.link-rodape a{
+    min-height:44px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .aba{ min-height:44px; }
+}
+
+/* ---------- 16.4 custo de composição ----------
+   Cada superfície com backdrop-filter obriga o navegador a
+   desfocar tudo o que está atrás dela, num passe extra de GPU.
+   Numa página com vários .bloco isso multiplica e é a causa mais
+   comum de rolagem travada em aparelho intermediário. Abaixo de
+   780px o vidro vira opacidade nas superfícies repetidas e o
+   desfoque fica só onde ele carrega a identidade da marca:
+   cabeçalho, navegação e modal. */
+@media (max-width: 780px){
+  :root{
+    --vidro:      rgba(20,16,28,.88);
+    --vidro-alto: rgba(28,22,40,.93);
+  }
+  .hero,.bloco,.etapa,.finck-toast{
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+}
+
+/* ---------- 16.5 camadas de fundo ----------
+   O "ticker" é um SVG largo em translação contínua: no celular ele
+   ocupa uma camada do tamanho da tela para um efeito que quase não
+   se vê. O brilho segue o ponteiro — sem ponteiro, é peso morto. */
+@media (max-width: 780px){
+  .fundo-finck__ticker{ display:none; }
+}
+@media (hover: none){
+  .fundo-finck__brilho{ display:none; }
+}
+
+/* ---------- 16.6 rolagem lateral de tabelas ----------
+   Mantém o embalo do dedo e impede que o gesto na tabela arraste
+   a página inteira junto. */
+.tabela-wrapper{
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+}

@@ -591,3 +591,44 @@ input:-webkit-autofill{
   }
   .fundo-finck__ticker,.fundo-finck__grao,.fundo-finck__brilho{ display:none; }
 }
+
+/* ============================================================
+   APP EM CELULAR — entrada e cadastro
+   ============================================================ */
+
+/* Obs.: o alinhamento central da marca no celular mora em
+   finck-fx.css, que é carregado depois deste arquivo e venceria
+   qualquer regra equivalente escrita aqui. */
+
+/* o iOS amplia a página ao focar campo com fonte menor que 16px */
+@media (pointer: coarse){
+  input[type="text"],input[type="email"],input[type="password"],
+  input[type="number"],input[type="url"],input[type="search"],
+  select,textarea{ font-size:16px; }
+}
+
+/* alvo de toque do olho de mostrar senha */
+@media (pointer: coarse){
+  .toggle-senha{ width:44px; height:44px; }
+  .campo-senha input{ padding-right:3.4rem; }
+  .btn-texto{ min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+  .auth-rodape a{ display:inline-block; padding-block:.5rem; }
+}
+
+/* recorte da tela (depende de viewport-fit=cover no <meta viewport>) */
+.auth-wrapper{
+  padding-top:max(clamp(2rem,5vh,4rem), env(safe-area-inset-top));
+  padding-bottom:max(clamp(2rem,5vh,4rem), env(safe-area-inset-bottom));
+}
+
+/* vidro custa um passe extra de GPU; no celular vira opacidade */
+@media (max-width: 780px){
+  .auth-card{
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+    background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)), rgba(20,16,28,.9);
+  }
+}
+
+/* o captcha é arrastado com o dedo: o gesto não pode rolar a página */
+.captcha{ touch-action:none; }
