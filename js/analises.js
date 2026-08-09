@@ -44,6 +44,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const categorias = F.porCategoria(transacoes);
     C.rosca(document.getElementById("graficoCategorias"), categorias);
+    // o canvas não é legível por leitor de tela: mesma informação em tabela
+    C.tabelaEquivalente(document.getElementById("graficoCategorias"), {
+      colunas: ["Categoria", "Total", "% das saídas"],
+      linhas: categorias.map((c) => [
+        c.categoria,
+        U.moeda(c.valor),
+        U.percentual(saidas > 0 ? (c.valor / saidas) * 100 : 0, 1),
+      ]),
+      resumo: `Gastos por categoria no período: ${categorias.length} categoria(s), total de ${U.moeda(saidas)}.`,
+    });
     document.getElementById("listaCategorias").innerHTML = categorias.length
       ? categorias.map((c, i) => {
           const pct = saidas > 0 ? (c.valor / saidas) * 100 : 0;
@@ -59,7 +69,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         }).join("")
       : `<li class="vazio">Nenhuma saída registrada no período.</li>`;
 
-    C.barras(document.getElementById("graficoMensal"), F.serieMensal(ctx.transacoes, 6));
+    const serie = F.serieMensal(ctx.transacoes, 6);
+    C.barras(document.getElementById("graficoMensal"), serie);
+    C.tabelaEquivalente(document.getElementById("graficoMensal"), {
+      colunas: ["Mês", "Entradas", "Saídas", "Resultado"],
+      linhas: serie.map((m) => [m.rotulo, U.moeda(m.entradas), U.moeda(m.saidas), U.moeda(m.resultado)]),
+      resumo: `Entradas e saídas dos últimos ${serie.length} meses.`,
+    });
 
     const resumo = R.resumoHistorico(ctx.analises);
     document.getElementById("blocoConsciente").innerHTML = `

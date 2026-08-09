@@ -13,11 +13,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let metas = [];
   let perfil = null;
+  let recorrentes = [];
 
   async function carregar() {
-    [metas, perfil] = await Promise.all([
+    // as recorrentes entram para saber quanto sobra por mês: sem elas
+    // o "aporte necessário" seria comparado com a renda bruta
+    [metas, perfil, recorrentes] = await Promise.all([
       S.listar("goals", { ordem: "created_at", asc: false }),
       S.obterPerfil(),
+      S.listar("recurring_transactions"),
     ]);
     renderResumo();
     renderLista();
@@ -29,6 +33,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     return renda > 0 ? renda / dias : 0;
   };
 
+  /** Renda do mês menos as despesas fixas ativas. */
+  const rendaLivre = () => {
+    const renda = Number(perfil?.income_monthly || 0);
+    const fixas = recorrentes
+      .filter((r) => r.active !== false && r.type === "saida")
+      .reduce((s, r) => s + Number(r.amount || 0), 0);
+    return Math.max(0, renda - fixas);
+  };
+
   function renderResumo() {
     const alvo = F.soma(metas, "target_amount");
     const atual = F.soma(metas, "current_amount");
@@ -38,6 +51,44 @@ document.addEventListener("DOMContentLoaded", async () => {
       <article class="card-indicador"><span>Concluídas</span><strong>${concluidas}</strong></article>
       <article class="card-indicador"><span>Total guardado</span><strong class="cor-verde">${U.moeda(atual)}</strong></article>
       <article class="card-indicador"><span>Objetivo total</span><strong>${U.moeda(alvo)}</strong></article>`;
+  }
+
+  /**
+   * Quanto guardar por mês para chegar no prazo, e se isso cabe.
+   *
+   * "Faltam R$ 2.800" não diz o que fazer neste mês. O aporte
+   * mensal é o número acionável — e comparar com a renda livre
+   * revela cedo a meta que já nasceu impossível, em vez de deixar
+   * o usuário descobrir isso no último mês.
+   */
+  function ritmoDaMeta(m, falta) {
+    if (!m.deadline || falta <= 0) return "";
+
+    const hoje = new Date();
+    const prazo = new Date(`${String(m.deadline).slice(0, 10)}T12:00:00`);
+    if (Number.isNaN(prazo.getTime())) return "";
+
+    const meses = (prazo.getFullYear() - hoje.getFullYear()) * 12 + (prazo.getMonth() - hoje.getMonth());
+
+    if (meses <= 0) {
+      return `<p class="ritmo-meta ritmo-meta--vencida">
+                O prazo já passou. Faltam ${U.moeda(falta)} — vale remarcar a data.
+              </p>`;
+    }
+
+    const porMes = falta / meses;
+    const livre = rendaLivre();
+    const cabe = livre <= 0 ? null : porMes <= livre;
+    const fatia = livre > 0 ? (porMes / livre) * 100 : 0;
+
+    const veredito =
+      cabe === null ? "Preencha sua renda no perfil para saber se esse ritmo cabe."
+      : cabe ? `Cabe na sua renda livre — ${U.percentual(fatia, 0)} dela.`
+      : `Acima da sua renda livre de ${U.moeda(livre)}. Vale esticar o prazo ou reduzir o alvo.`;
+
+    return `<p class="ritmo-meta${cabe === false ? " ritmo-meta--apertada" : ""}">
+              <strong>${U.moeda(porMes)}/mês</strong> por ${meses} ${meses === 1 ? "mês" : "meses"}. ${veredito}
+            </p>`;
   }
 
   function renderLista() {
@@ -58,6 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="barra"><div class="barra-preenchida" style="width:${p}%"></div></div>
           <p>${U.moeda(m.current_amount)} de ${U.moeda(m.target_amount)} · ${U.percentual(p, 0)}</p>
           <p class="nota">Faltam ${U.moeda(falta)} — cerca de ${U.numero(dias, 1)} dias de trabalho.</p>
+          ${concluida ? "" : ritmoDaMeta(m, falta)}
           ${m.deadline ? `<small>Prazo: ${U.dataBR(m.deadline)}</small>` : ""}
           <div class="acoes-card">
             <button type="button" class="btn-secundario btn-mini" data-aporte="${m.id}">Aportar</button>

@@ -83,26 +83,116 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.toast("Backup exportado.", "sucesso");
   });
 
+  /* ---------- importar backup ----------
+     Antes o arquivo era despejado direto por cima dos dados atuais,
+     sempre com inserção: reimportar o mesmo backup duplicava tudo e
+     o saldo saía errado, sem nenhum aviso. Agora o usuário escolhe
+     mesclar ou substituir, e recebe o relatório do que entrou. */
+  const TABELAS_ROTULO = {
+    accounts: "contas",
+    transactions: "movimentações",
+    goals: "metas",
+    recurring_transactions: "recorrentes",
+    purchase_analyses: "cálculos",
+  };
+
   $("inputImportar").addEventListener("change", async (e) => {
     const arquivo = e.target.files?.[0];
+    e.target.value = "";
     if (!arquivo) return;
+
+    let dados;
     try {
-      const dados = JSON.parse(await arquivo.text());
-      await S.importarTudo(dados);
-      U.toast("Backup importado.", "sucesso");
-      carregar();
-    } catch (err) {
-      U.toast(`Não foi possível importar: ${err.message}`, "erro");
-    } finally {
-      e.target.value = "";
+      dados = JSON.parse(await arquivo.text());
+    } catch {
+      return U.toast("Não foi possível ler o arquivo: ele não é um JSON válido.", "erro");
     }
+
+    const contagem = Object.entries(TABELAS_ROTULO)
+      .map(([t, rotulo]) => (Array.isArray(dados[t]) && dados[t].length ? `${dados[t].length} ${rotulo}` : null))
+      .filter(Boolean);
+
+    $("resumoArquivo").textContent = contagem.length
+      ? `O arquivo traz ${contagem.join(", ")}.`
+      : "O arquivo não traz registros além do perfil.";
+
+    U.abrirModal("modalImportar");
+
+    // cada abertura religa os botões, evitando handlers acumulados
+    document.querySelectorAll("#modalImportar [data-modo]").forEach((botao) => {
+      botao.onclick = async () => {
+        const modo = botao.dataset.modo;
+        if (modo === "substituir" &&
+            !confirm("Substituir apaga seus dados atuais e não pode ser desfeito. Continuar?")) return;
+
+        document.querySelectorAll("#modalImportar [data-modo]").forEach((b) => { b.disabled = true; });
+        try {
+          const rel = await S.importarTudo(dados, { modo });
+          U.fecharModal("modalImportar");
+          mostrarRelatorio(rel);
+          carregar();
+        } catch (err) {
+          U.toast(`Não foi possível importar: ${err.message}`, "erro");
+        } finally {
+          document.querySelectorAll("#modalImportar [data-modo]").forEach((b) => { b.disabled = false; });
+        }
+      };
+    });
   });
 
+  function mostrarRelatorio(rel) {
+    const linhas = Object.entries(rel.porTabela)
+      .filter(([, v]) => v.total > 0)
+      .map(([t, v]) => `
+        <li><span>${U.escapeHTML(TABELAS_ROTULO[t] || t)}</span>
+            <strong>${v.inseridos} de ${v.total}</strong></li>`)
+      .join("");
+
+    const conflitos = rel.conflitos.length
+      ? `<div class="bloco-interno">
+           <h4>Ignorados por já existirem</h4>
+           <ul class="lista-simples">
+             ${rel.conflitos.map((c) => `
+               <li class="item-lista">
+                 <span class="item-desc">${U.escapeHTML(c.descricao)}</span>
+                 <span class="item-dia">${U.escapeHTML(TABELAS_ROTULO[c.tabela] || c.tabela)}</span>
+               </li>`).join("")}
+           </ul>
+           ${rel.ignorados > rel.conflitos.length
+             ? `<p class="nota">…e mais ${rel.ignorados - rel.conflitos.length} registro(s).</p>` : ""}
+         </div>`
+      : "";
+
+    $("conteudoRelatorio").innerHTML = `
+      <p class="descricao">
+        ${rel.modo === "substituir"
+          ? "Seus dados foram substituídos pelo conteúdo do arquivo."
+          : "O arquivo foi mesclado com os seus dados."}
+      </p>
+      <ul class="lista-resumo">
+        ${linhas || "<li><span>Nenhum registro no arquivo</span><strong>0</strong></li>"}
+      </ul>
+      <p class="total-linha">
+        <span>Importados</span> <strong>${rel.inseridos}</strong>
+        ${rel.ignorados ? `· <span>ignorados</span> <strong>${rel.ignorados}</strong>` : ""}
+      </p>
+      ${conflitos}`;
+    U.abrirModal("modalRelatorio");
+  }
+
+  /* carregarDemo agora é idempotente: repetir o clique não cria um
+     segundo salário nem um segundo aluguel, então o aviso mudou de
+     "serão somados" para o que de fato acontece. */
   $("btnDemoDados").addEventListener("click", async () => {
-    if (!confirm("Carregar dados de exemplo? Eles serão somados aos seus dados atuais.")) return;
-    await F.carregarDemo();
+    if (!confirm("Carregar dados de exemplo? O que já existir não será duplicado.")) return;
+    const r = await F.carregarDemo();
     await G.sincronizarConquistas();
-    U.toast("Dados de exemplo carregados.", "sucesso");
+    U.toast(
+      r.inseridos
+        ? `Dados de exemplo carregados: ${r.inseridos} registro(s) novo(s).`
+        : "Os dados de exemplo já estavam carregados.",
+      r.inseridos ? "sucesso" : "info"
+    );
     carregar();
   });
 

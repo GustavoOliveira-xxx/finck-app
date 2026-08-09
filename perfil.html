@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/finck-fx.css">
 </head>
 <body data-page="perfil">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <div class="finck-carga" data-finck-carga aria-hidden="true">
     <div class="finck-carga__nucleo">
       <svg class="finck-carga__orbitas" viewBox="0 0 220 220" aria-hidden="true">
@@ -41,7 +42,7 @@
 
   <header data-finck-header></header>
 
-  <main class="conteudo">
+  <main class="conteudo" id="conteudo" tabindex="-1">
     <section class="hero">
       <h2 id="tituloPerfil">Seu perfil</h2>
       <p id="subtituloPerfil">Ajuste os dados que alimentam o FinCK of Reality.</p>
@@ -118,6 +119,40 @@
   </main>
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <!-- Como restaurar o backup: mesclar ou substituir -->
+  <div id="modalImportar" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloImportar">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalImportar" aria-label="Fechar">✕</button>
+      <h3 id="tituloImportar">Como restaurar este backup?</h3>
+      <p class="descricao" id="resumoArquivo"></p>
+
+      <div class="opcoes-fluxo opcoes-fluxo--importar">
+        <button type="button" class="card-opcao" data-modo="mesclar">
+          <strong>Mesclar com o que já existe</strong>
+          <span>Mantém seus dados atuais e acrescenta só o que faltar. Registros repetidos são ignorados.</span>
+        </button>
+        <button type="button" class="card-opcao" data-modo="substituir">
+          <strong>Substituir tudo</strong>
+          <span>Apaga movimentações, metas, recorrentes e análises atuais e deixa apenas o conteúdo do arquivo.</span>
+        </button>
+      </div>
+
+      <p class="nota" id="avisoImportar">A substituição não pode ser desfeita. Exporte um backup antes, se tiver dúvida.</p>
+    </div>
+  </div>
+
+  <!-- Relatório do que entrou e do que foi ignorado -->
+  <div id="modalRelatorio" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloRelatorio">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalRelatorio" aria-label="Fechar">✕</button>
+      <h3 id="tituloRelatorio">Importação concluída</h3>
+      <div id="conteudoRelatorio"></div>
+      <div class="acoes-modal">
+        <button type="button" class="btn-primario" data-fechar="modalRelatorio">Entendi</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>

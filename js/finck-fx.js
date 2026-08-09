@@ -219,13 +219,104 @@
   }
 
   /* ---------------------------------------------------------
+     4. Medalha do nível (Jornada)
+
+     Mesma mecânica do prisma — varrer a largura gira a peça, e no
+     toque o giro vem do arraste. A diferença é o reflexo: além do
+     ângulo, o ponteiro move o ponto de luz sobre o metal, que é o
+     que faz um disco chapado parecer uma medalha de verdade.
+     --------------------------------------------------------- */
+  function medalha() {
+    const cena = document.querySelector("[data-medalha]");
+    if (!cena || reduzido) return;
+
+    const corpo = cena.querySelector(".medalha");
+    const brilhos = [...cena.querySelectorAll(".medalha__brilho")];
+    if (!corpo) return;
+
+    let agendado = false;
+    let gx = 0, gy = 0, lx = 50, ly = 50;
+
+    const aplicar = () => {
+      corpo.style.setProperty("--gx", gx.toFixed(3));
+      corpo.style.setProperty("--gy", gy.toFixed(3));
+      brilhos.forEach((b) => {
+        b.style.setProperty("--lx", lx.toFixed(1));
+        b.style.setProperty("--ly", ly.toFixed(1));
+      });
+      agendado = false;
+    };
+    const agendar = () => {
+      if (agendado) return;
+      agendado = true;
+      raf(aplicar);
+    };
+
+    const luzDoPonteiro = (e) => {
+      const r = corpo.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      // reflexo espelhado: a luz corre para o lado oposto ao ponteiro
+      lx = 100 - ((e.clientX - r.left) / r.width) * 100;
+      ly = 100 - ((e.clientY - r.top) / r.height) * 100;
+    };
+
+    if (!toque) {
+      cena.addEventListener("pointermove", (e) => {
+        const r = cena.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        gx = (e.clientX - r.left) / r.width - 0.5;
+        gy = ((e.clientY - r.top) / r.height - 0.5) * -1;
+        luzDoPonteiro(e);
+        agendar();
+      }, { passive: true });
+
+      cena.addEventListener("pointerleave", () => {
+        gx = 0; gy = 0; lx = 50; ly = 50;
+        agendar();
+      });
+      return;
+    }
+
+    // no toque: arraste horizontal gira, como no prisma
+    let arrastando = false, xInicial = 0, gxInicial = 0;
+    cena.addEventListener("pointerdown", (e) => {
+      arrastando = true;
+      xInicial = e.clientX;
+      gxInicial = gx;
+      cena.classList.add("medalha-cena--conduzindo");
+    }, { passive: true });
+
+    cena.addEventListener("pointermove", (e) => {
+      if (!arrastando) return;
+      const r = cena.getBoundingClientRect();
+      if (!r.width) return;
+      gx = gxInicial + (e.clientX - xInicial) / r.width;
+      luzDoPonteiro(e);
+      agendar();
+    }, { passive: true });
+
+    const soltar = () => {
+      arrastando = false;
+      cena.classList.remove("medalha-cena--conduzindo");
+    };
+    cena.addEventListener("pointerup", soltar, { passive: true });
+    cena.addEventListener("pointercancel", soltar, { passive: true });
+  }
+
+  /* ---------------------------------------------------------
      Bootstrap
      --------------------------------------------------------- */
   function iniciar() {
     abertura();
     cena3d();
     prisma();
+    medalha();
   }
+
+  /* A medalha é montada pelo JS da página, depois de buscar o XP no
+     banco — ou seja, depois deste bootstrap. A página avisa quando
+     terminou chamando FinckFX.ligarMedalha(). */
+  window.FinckFX = { ligarMedalha: medalha };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", iniciar, { once: true });

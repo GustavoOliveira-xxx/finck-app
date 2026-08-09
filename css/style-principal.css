@@ -2382,3 +2382,154 @@ body.rolando header[data-finck-header]{
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-x:contain;
 }
+
+/* ---------- 16.7 indicador de modo de dados ----------
+   O visitante precisa distinguir "salvo na minha conta" de
+   "exemplo que some quando eu limpar o navegador". */
+.modo-dados--demo{
+  color:#0d0712;
+  background:linear-gradient(96deg, var(--amarelo), #ffdf6b);
+  border-color:transparent;
+  font-weight:700;
+}
+.modo-dados--demo::before{ background:#0d0712; box-shadow:none; animation:none; }
+.modo-dados--local{
+  color:var(--vermelho);
+  background:var(--vermelho-fraco);
+  border-color:rgba(255,77,94,.35);
+}
+.modo-dados--local::before{ background:var(--vermelho); animation:none; }
+
+/* opções de restauração de backup lado a lado */
+.opcoes-fluxo--importar{
+  display:grid; gap:.7rem;
+  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+  margin-block:.4rem 0;
+}
+
+/* ============================================================
+   17. ACESSIBILIDADE
+   ============================================================ */
+
+/* Texto só para leitor de tela: sai da vista sem sair da árvore
+   de acessibilidade. display:none o esconderia de todo mundo. */
+.visualmente-oculto{
+  position:absolute !important;
+  width:1px; height:1px;
+  margin:-1px; padding:0; border:0;
+  clip-path:inset(50%);
+  overflow:hidden; white-space:nowrap;
+}
+
+/* Pular para o conteúdo: primeiro alvo do Tab, some até receber foco.
+   Sem isso, quem navega por teclado atravessa o cabeçalho inteiro em
+   toda página antes de chegar ao que interessa. */
+.pular-para-conteudo{
+  position:absolute; top:.5rem; left:.5rem; z-index:999;
+  padding:.7rem 1.1rem;
+  border-radius:var(--raio-md);
+  font-size:.9rem; font-weight:700;
+  color:#0d0712;
+  background:var(--amarelo);
+  transform:translateY(-160%);
+  transition:transform var(--dur-media) var(--ease-out);
+}
+.pular-para-conteudo:focus{ transform:translateY(0); }
+
+/* Números do gráfico em tabela, ao lado do canvas */
+.grafico-dados{ margin-top:.7rem; }
+.grafico-dados__caixa summary{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.5rem .9rem;
+  min-height:44px;
+  border-radius:99px;
+  font-size:.84rem; font-weight:600;
+  color:var(--texto-fraco);
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--superficie-borda);
+  cursor:pointer;
+  list-style:none;
+}
+.grafico-dados__caixa summary::-webkit-details-marker{ display:none; }
+.grafico-dados__caixa summary::before{
+  content:"▸"; font-size:.7rem; transition:transform var(--dur-rapida) var(--ease-out);
+}
+.grafico-dados__caixa[open] summary::before{ transform:rotate(90deg); }
+.grafico-dados__caixa summary:hover{ color:var(--texto); border-color:var(--roxo-neon); }
+.grafico-dados__caixa .tabela-wrapper{ margin-top:.7rem; }
+
+/* Foco sempre visível, inclusive sobre superfícies claras.
+   O anel duplo garante contraste tanto no escuro quanto no amarelo. */
+:focus-visible{
+  outline:3px solid var(--amarelo);
+  outline-offset:2px;
+  box-shadow:0 0 0 5px rgba(0,0,0,.55);
+  border-radius:var(--raio-sm);
+}
+
+/* Alguns rótulos secundários ficavam em cinza fraco sobre fundo
+   escuro, abaixo do mínimo de contraste de 4.5:1 do WCAG AA.
+   Este tom passa a 7:1 mantendo a hierarquia visual. */
+.descricao,.nota,.item-dia,.card-indicador span,.lista-resumo span{
+  color:#b9b2c6;
+}
+
+/* ============================================================
+   18. PRÓXIMO PASSO NA HOME
+   Oito indicadores competindo pela atenção não dizem o que fazer.
+   Este bloco carrega uma recomendação só, escolhida por urgência.
+   ============================================================ */
+.proxima-acao{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  gap:var(--gap-sm);
+  padding:clamp(1.1rem,1rem + 1vw,1.6rem);
+  border-radius:var(--raio-xl);
+  border:1px solid var(--superficie-borda-forte);
+  background:linear-gradient(150deg, rgba(255,255,255,.05), rgba(255,255,255,.01)), var(--vidro);
+  box-shadow:var(--sombra-card);
+}
+.proxima-acao__texto{ min-width:0; flex:1 1 260px; }
+.proxima-acao__etiqueta{
+  display:inline-block; margin-bottom:.3rem;
+  font-size:.66rem; font-weight:700;
+  letter-spacing:.18em; text-transform:uppercase;
+  color:var(--amarelo);
+}
+.proxima-acao h2{ font-size:1.16rem; letter-spacing:-.02em; text-wrap:balance; }
+.proxima-acao p{ margin-top:.3rem; font-size:.9rem; color:var(--texto-fraco); max-width:62ch; }
+.proxima-acao .btn-primario{ flex:0 0 auto; }
+
+/* a borda esquerda codifica a urgência sem depender só da cor do texto */
+.proxima-acao--alerta{  border-left:4px solid var(--vermelho); }
+.proxima-acao--atencao{ border-left:4px solid var(--amarelo); }
+.proxima-acao--neutro{  border-left:4px solid var(--roxo-neon); }
+.proxima-acao--bom{     border-left:4px solid var(--verde); }
+
+.projecao{
+  margin-top:.6rem; padding-inline:.3rem;
+  font-size:.86rem; color:var(--texto-fraco);
+}
+.projecao strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; color:var(--texto); }
+
+/* ritmo necessário da meta: o número acionável do mês */
+.ritmo-meta{
+  margin-top:.3rem;
+  padding:.5rem .7rem;
+  border-radius:12px;
+  font-size:.84rem;
+  color:var(--texto-fraco);
+  background:rgba(147,51,196,.12);
+  border-left:3px solid var(--roxo-neon);
+}
+.ritmo-meta strong{
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+  color:var(--texto);
+}
+.ritmo-meta--apertada{
+  background:rgba(254,200,0,.10);
+  border-left-color:var(--amarelo);
+}
+.ritmo-meta--vencida{
+  background:var(--vermelho-fraco);
+  border-left-color:var(--vermelho);
+}

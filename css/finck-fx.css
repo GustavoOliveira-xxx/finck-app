@@ -451,7 +451,159 @@ body.finck-carregando{ overflow:hidden; }
 .prisma-cena:hover .prisma-dica{ opacity:0; }
 
 /* ============================================================
-   4. ACESSIBILIDADE E TELAS SEM PONTEIRO
+   4. MEDALHA DO NÍVEL (Jornada)
+
+   O troféu da página: um disco metálico com o nível gravado de um
+   lado e o título conquistado do outro. Medalha existe para ser
+   girada na mão — aqui ela gira sozinha e obedece ao ponteiro,
+   com o reflexo acompanhando de onde vem a luz.
+   ============================================================ */
+
+.medalha-cena{
+  --d:clamp(132px, 30vw, 176px);   /* diâmetro */
+  position:relative;
+  display:grid; place-items:center;
+  width:var(--d); height:calc(var(--d) + 26px);
+  flex:0 0 auto;
+  perspective:820px;
+}
+
+.medalha-orbita{
+  transform-style:preserve-3d;
+  animation:medalha-orbita 18s linear infinite;
+}
+@keyframes medalha-orbita{ to{ transform:rotateY(360deg); } }
+.medalha-cena:hover .medalha-orbita,
+.medalha-cena:focus-within .medalha-orbita{ animation-play-state:paused; }
+
+.medalha{
+  position:relative;
+  width:var(--d); height:var(--d);
+  transform-style:preserve-3d;
+  /* --gx varre de -0,5 a 0,5 => volta inteira de cada lado */
+  transform:
+    rotateX(calc(var(--gy, 0) * 18deg))
+    rotateY(calc(var(--gx, 0) * 360deg));
+  transition:transform 400ms var(--ease-out, cubic-bezier(.16,1,.3,1));
+  will-change:transform;
+}
+.medalha-cena:hover .medalha{ scale:1.05; }
+
+.medalha__face{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.1rem;
+  padding:1rem .9rem;
+  text-align:center;
+  border-radius:50%;
+  backface-visibility:hidden;
+  overflow:hidden;
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.10) inset,
+    0 0 0 9px rgba(0,0,0,.30) inset,
+    0 18px 40px -18px rgba(0,0,0,.9);
+}
+
+/* frente: ouro escovado */
+.medalha__face--frente{
+  transform:translateZ(7px);
+  background:
+    conic-gradient(from 210deg,
+      #6b4a00, #ffe9a8 12%, #b8860b 26%, #fff3c4 42%,
+      #8a6100 58%, #ffdf6b 74%, #7a5200 88%, #6b4a00);
+}
+/* verso: mesma peça em roxo, para o giro ler como uma volta real */
+.medalha__face--verso{
+  transform:rotateY(180deg) translateZ(7px);
+  background:
+    conic-gradient(from 210deg,
+      #2b0a3d, #d79bff 12%, #680c90 26%, #f0d8ff 42%,
+      #3d0a58 58%, #b45cf0 74%, #35084b 88%, #2b0a3d);
+}
+
+/* canto da medalha: dá espessura ao disco */
+.medalha__borda{
+  position:absolute; inset:-2px;
+  border-radius:50%;
+  background:linear-gradient(180deg, rgba(255,255,255,.28), rgba(0,0,0,.5));
+  transform:translateZ(0);
+  opacity:.55;
+  pointer-events:none;
+}
+
+/* reflexo que acompanha o ponteiro: é o que faz o disco parecer metal */
+.medalha__brilho{
+  position:absolute; inset:0;
+  border-radius:50%;
+  background:radial-gradient(
+    circle 90px at calc(var(--lx, 50) * 1%) calc(var(--ly, 50) * 1%),
+    rgba(255,255,255,.85), rgba(255,255,255,.25) 32%, transparent 62%);
+  mix-blend-mode:soft-light;
+  pointer-events:none;
+}
+
+.medalha__icone{ font-size:1.5rem; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.medalha__nivel{
+  font-family:var(--fonte-display, sans-serif);
+  font-size:2.4rem; font-weight:700; line-height:1;
+  color:#2a1c00;
+  text-shadow:0 1px 0 rgba(255,255,255,.5);
+}
+.medalha__rotulo{
+  font-size:.6rem; font-weight:700;
+  letter-spacing:.22em; text-transform:uppercase;
+  color:rgba(42,28,0,.72);
+}
+.medalha__xp{
+  margin-top:.25rem;
+  font-family:var(--fonte-dados, monospace);
+  font-size:.7rem; font-weight:700;
+  color:#2a1c00;
+  background:rgba(255,255,255,.42);
+  padding:.1rem .5rem; border-radius:99px;
+}
+.medalha__titulo{
+  font-family:var(--fonte-display, sans-serif);
+  font-size:.92rem; font-weight:700; line-height:1.2;
+  letter-spacing:-.01em;
+  color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.7);
+  padding-inline:.3rem;
+  text-wrap:balance;
+}
+.medalha__lema{
+  margin-top:.25rem;
+  font-size:.62rem; line-height:1.3;
+  color:rgba(255,255,255,.82);
+  padding-inline:.4rem;
+}
+
+.medalha-dica{
+  position:absolute; bottom:0; left:50%; translate:-50% 0;
+  padding:.28rem .7rem;
+  border-radius:99px;
+  font-size:.68rem; white-space:nowrap;
+  color:var(--texto-fraco, #a49bb2);
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);
+  transition:opacity 260ms var(--ease-suave, cubic-bezier(.4,0,.2,1));
+  pointer-events:none;
+}
+.medalha-cena:hover .medalha-dica{ opacity:0; }
+
+/* a medalha divide espaço com o texto do nível */
+.nivel-com-medalha{
+  display:grid; gap:1.1rem;
+  justify-items:center;
+  align-items:center;
+}
+.nivel-com-medalha__texto{ width:100%; min-width:0; }
+@media (min-width: 620px){
+  .nivel-com-medalha{ grid-template-columns:auto minmax(0,1fr); gap:1.5rem; justify-items:start; }
+}
+
+/* ============================================================
+   5. ACESSIBILIDADE E TELAS SEM PONTEIRO
    ============================================================ */
 
 /* sem hover (celular/tablet): a cena de entrada fica parada e reta.
@@ -490,6 +642,13 @@ body.finck-carregando{ overflow:hidden; }
    conduzir. Arrastar na horizontal passa a girar; pan-y mantém a
    rolagem vertical da página funcionando por cima do bloco. */
 @media (hover: none){
+  .medalha-cena{ touch-action:pan-y; }
+  .medalha-cena.medalha-cena--conduzindo .medalha-orbita{ animation-play-state:paused; }
+  .medalha-dica::before{ content:"Arraste para girar"; }
+  .medalha-dica span{ display:none; }
+  .medalha-cena--conduzindo .medalha-dica{ opacity:0; }
+  .medalha__brilho{ display:none; }
+
   .prisma-cena{ touch-action:pan-y; }
   /* sem ponteiro o --py fica sempre em zero e o prisma ficaria
      de frente, chapado; uma inclinação fixa devolve o volume
@@ -515,7 +674,10 @@ body.finck-carregando{ overflow:hidden; }
   .cena3d__halo,
   .cena3d__moeda,
   .prisma-orbita,
-  .prisma__sombra{ animation:none !important; }
+  .prisma__sombra,
+  .medalha-orbita{ animation:none !important; }
+  .medalha{ transform:rotateY(-14deg) !important; transition:none; }
+  .medalha-cena:hover .medalha{ scale:1; }
   .finck-carga__preenche{ transform:scaleX(1); }
   .finck-carga__logo{ opacity:1; }
   .cena3d__palco,

@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/finck-fx.css">
 </head>
 <body data-page="login" class="pagina-auth">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
 
   <div class="finck-carga" data-finck-carga aria-hidden="true">
     <div class="finck-carga__nucleo">
@@ -40,7 +41,8 @@
     <div class="finck-carga__barra"><span class="finck-carga__preenche"></span></div>
   </div>
 
-  <main class="auth-wrapper">
+  <main class="auth-wrapper" id="conteudo" tabindex="-1">
+   <div class="auth-coluna">
     <section class="auth-marca cena3d" data-cena3d>
       <div class="cena3d__palco">
         <div class="cena3d__halo" aria-hidden="true"></div>
@@ -66,6 +68,42 @@
         </p>
       </div>
     </section>
+
+    <!-- Exemplo interativo: mostra a ideia do produto antes de pedir conta -->
+    <section class="vitrine" id="vitrine" aria-labelledby="vitrineTitulo">
+      <h2 id="vitrineTitulo" class="vitrine__pergunta">
+        Uma compra de
+        <span class="vitrine__campo">
+          <span aria-hidden="true">R$</span>
+          <input type="number" id="vitrinePreco" value="800" min="1" max="9999999"
+                 step="10" inputmode="decimal" aria-label="Preço da compra em reais">
+        </span>
+        custa quantas horas da sua realidade?
+      </h2>
+
+      <p class="vitrine__resposta" id="vitrineResposta" aria-live="polite"></p>
+
+      <div class="vitrine__barra" aria-hidden="true">
+        <span class="vitrine__barra-preenchida" id="vitrineBarra"></span>
+      </div>
+      <p class="vitrine__legenda" id="vitrineLegenda"></p>
+
+      <label class="vitrine__renda" for="vitrineRenda">
+        Considerando uma renda de
+        <span class="vitrine__campo">
+          <span aria-hidden="true">R$</span>
+          <input type="number" id="vitrineRenda" value="3500" min="1" max="9999999"
+                 step="100" inputmode="decimal">
+        </span>
+        por mês, 22 dias de 8 horas.
+      </label>
+
+      <div class="vitrine__acoes">
+        <button type="button" id="btnDemo" class="btn-primario">Ver o app com dados de exemplo</button>
+        <span class="vitrine__nota">Sem cadastro. Nada sai do seu aparelho.</span>
+      </div>
+    </section>
+   </div>
 
     <section class="auth-card cena3d-eco" data-cena3d-eco>
       <h2>Entrar</h2>
@@ -94,8 +132,8 @@
       </form>
 
       <div class="auth-rodape">
+        <p><a href="recuperar.html">Esqueci minha senha</a></p>
         <p>Não tem conta? <a href="cadastro.html">Criar conta</a></p>
-        <button type="button" id="btnDemo" class="btn-texto">Entrar no modo demonstração</button>
       </div>
     </section>
   </main>
@@ -107,6 +145,7 @@
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/vitrine.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>
 </body>

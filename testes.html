@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FinCK | Testes</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style-principal.css">
+  <style>
+    /* a página de testes é ferramenta interna: estilo mínimo, aqui mesmo */
+    .placar{
+      display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+      margin-block:1rem;
+      font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+    }
+    .selo{
+      padding:.4rem .9rem; border-radius:99px;
+      font-size:.9rem; font-weight:700;
+      border:1px solid var(--superficie-borda-forte);
+    }
+    .selo--ok{ color:#0d0712; background:var(--verde); border-color:transparent; }
+    .selo--falha{ color:#fff; background:var(--vermelho); border-color:transparent; }
+    .selo--neutro{ color:var(--texto-fraco); background:var(--superficie-alta); }
+
+    .suite{ margin-top:1.4rem; }
+    .suite h3{
+      font-size:1rem; letter-spacing:-.01em;
+      padding-bottom:.4rem; margin-bottom:.5rem;
+      border-bottom:1px solid var(--superficie-borda);
+    }
+    .caso{
+      display:grid; grid-template-columns:auto minmax(0,1fr); gap:.6rem;
+      align-items:start;
+      padding:.4rem 0;
+      font-size:.9rem;
+      border-bottom:1px solid rgba(255,255,255,.04);
+    }
+    .caso__marca{ font-family:var(--fonte-dados); font-weight:700; }
+    .caso--ok .caso__marca{ color:var(--verde); }
+    .caso--falha .caso__marca{ color:var(--vermelho); }
+    .caso--falha .caso__nome{ color:var(--vermelho); }
+    .caso__erro{
+      grid-column:2; margin-top:.25rem;
+      font-family:var(--fonte-dados); font-size:.8rem;
+      color:var(--amarelo);
+      overflow-wrap:anywhere;
+    }
+  </style>
+</head>
+<body data-page="testes">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
+  <main class="conteudo" id="conteudo" tabindex="-1">
+    <section class="hero">
+      <h2>Testes do FinCK</h2>
+      <p>Regras de cálculo, finanças, anti-farm de XP e camada de dados. Rodam aqui mesmo, sem instalar nada.</p>
+    </section>
+
+    <section class="bloco">
+      <div class="placar" id="placar">
+        <span class="selo selo--neutro" id="selo">Executando…</span>
+        <span id="contagem"></span>
+      </div>
+      <button type="button" class="btn-secundario" id="btnRodar">Rodar de novo</button>
+      <div id="resultado"></div>
+    </section>
+
+    <p class="link-rodape"><a href="home.html">← Voltar ao app</a></p>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/testes.js"></script>
+  <script>
+    const elResultado = document.getElementById("resultado");
+    const elSelo = document.getElementById("selo");
+    const elContagem = document.getElementById("contagem");
+
+    function pintar(r) {
+      elContagem.textContent = `${r.passou} passaram · ${r.falhou} falharam · ${r.total} no total`;
+      elSelo.className = "selo " + (r.falhou ? "selo--falha" : "selo--ok");
+      elSelo.textContent = r.falhou ? "FALHOU" : "TUDO VERDE";
+
+      elResultado.innerHTML = r.suites.map((s) => `
+        <div class="suite">
+          <h3>${s.nome}</h3>
+          ${s.casos.map((c) => `
+            <div class="caso ${c.ok ? "caso--ok" : "caso--falha"}">
+              <span class="caso__marca">${c.ok ? "PASS" : "FALHA"}</span>
+              <span class="caso__nome">${c.nome}</span>
+              ${c.ok ? "" : `<span class="caso__erro">${c.erro}</span>`}
+            </div>`).join("")}
+        </div>`).join("");
+    }
+
+    async function rodar() {
+      elSelo.className = "selo selo--neutro";
+      elSelo.textContent = "Executando…";
+      const r = await window.FinckTestes.rodar();
+      pintar(r);
+      // deixa o resultado legível para automação externa
+      window.__resultadoTestes = r;
+      document.body.dataset.testes = r.falhou ? "falhou" : "ok";
+    }
+
+    document.getElementById("btnRodar").addEventListener("click", rodar);
+    rodar();
+  </script>
+</body>
+</html>

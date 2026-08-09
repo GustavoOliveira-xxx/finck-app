@@ -127,5 +127,61 @@ window.FinckCharts = (() => {
     ctx.fillRect(0, (altura - h) / 2, (Math.max(0, Math.min(100, percentual)) / 100) * largura, h);
   }
 
-  return { rosca, barras, progresso, cores };
+  /* ============================================================
+     Equivalente em tabela para os gráficos
+
+     O conteúdo de um <canvas> é opaco para leitor de tela: o
+     aria-label descreve que existe um gráfico, mas não diz um
+     único número. Aqui cada gráfico ganha uma tabela irmã com os
+     mesmos dados — visível para quem navega por teclado ou leitor,
+     e disponível para todos atrás de um botão, porque ler o valor
+     exato é útil para qualquer pessoa.
+     ============================================================ */
+  const U = () => window.FinckUtils;
+
+  /**
+   * Publica a tabela equivalente logo depois do canvas.
+   * @param {HTMLCanvasElement} canvas
+   * @param {object} spec { colunas: string[], linhas: (string|number)[][], resumo?: string }
+   */
+  function tabelaEquivalente(canvas, spec) {
+    if (!canvas || !spec?.linhas?.length) return;
+
+    const id = `${canvas.id || "grafico"}-tabela`;
+    let bloco = document.getElementById(id);
+    if (!bloco) {
+      bloco = document.createElement("div");
+      bloco.id = id;
+      bloco.className = "grafico-dados";
+      canvas.insertAdjacentElement("afterend", bloco);
+    }
+
+    const cabecalho = spec.colunas.map((c) => `<th scope="col">${U().escapeHTML(c)}</th>`).join("");
+    const corpo = spec.linhas
+      .map((l) => `<tr>${l.map((v, i) =>
+        i === 0
+          ? `<th scope="row">${U().escapeHTML(String(v))}</th>`
+          : `<td>${U().escapeHTML(String(v))}</td>`).join("")}</tr>`)
+      .join("");
+
+    bloco.innerHTML = `
+      <details class="grafico-dados__caixa">
+        <summary>Ver os números deste gráfico</summary>
+        <div class="tabela-wrapper">
+          <table class="tabela">
+            <caption class="visualmente-oculto">${U().escapeHTML(spec.resumo || "Dados do gráfico")}</caption>
+            <thead><tr>${cabecalho}</tr></thead>
+            <tbody>${corpo}</tbody>
+          </table>
+        </div>
+      </details>`;
+
+    // o canvas vira decorativo: quem lê a tabela não precisa ouvir
+    // "imagem: gráfico de..." antes de chegar aos dados
+    canvas.setAttribute("role", "img");
+    if (spec.resumo) canvas.setAttribute("aria-label", spec.resumo);
+    bloco.setAttribute("aria-live", "polite");
+  }
+
+  return { rosca, barras, progresso, cores, tabelaEquivalente };
 })();

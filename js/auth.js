@@ -100,11 +100,18 @@ document.addEventListener("DOMContentLoaded", () => {
     el.textContent = texto;
   };
 
-  /* ---------- já autenticado? vai direto ---------- */
-  S.usuarioAtual().then(async (user) => {
-    if (!user) return;
-    location.href = (await S.precisaOnboarding()) ? "onboarding.html" : "home.html";
-  });
+  /* ---------- já autenticado? vai direto ----------
+     Só nas telas de entrada. A página de nova senha é alcançada
+     pelo link do e-mail, e esse link já abre uma sessão válida —
+     redirecionar ali jogaria o usuário para a home antes de ele
+     conseguir trocar a senha, que é justamente o que foi pedir. */
+  const TELAS_DE_ENTRADA = ["login", "cadastro"];
+  if (TELAS_DE_ENTRADA.includes(document.body.dataset.page)) {
+    S.usuarioAtual().then(async (user) => {
+      if (!user) return;
+      location.href = (await S.precisaOnboarding()) ? "onboarding.html" : "home.html";
+    });
+  }
 
   /* ---------- login ---------- */
   const formLogin = document.getElementById("loginForm");
@@ -153,14 +160,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const btn = document.getElementById("btnCadastrar");
       btn.disabled = true;
       try {
-        await S.cadastrar({ nome, email, senha });
+        const { precisaConfirmar } = await S.cadastrar({ nome, email, senha });
         const logado = await S.usuarioAtual();
-        if (logado) {
+        if (logado && !precisaConfirmar) {
           msg(mensagemEl, "Conta criada! Vamos configurar seu perfil financeiro.", "sucesso");
           setTimeout(() => { location.href = "onboarding.html"; }, 800);
         } else {
-          msg(mensagemEl, "Conta criada! Confirme o e-mail e faça login.", "sucesso");
-          btn.disabled = false;
+          mostrarConfirmacaoPendente(email, mensagemEl);
         }
       } catch (err) {
         msg(mensagemEl, err.message, "erro");
@@ -169,21 +175,141 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- modo demonstração ---------- */
+  /* ---------- confirmação de e-mail pendente ----------
+     Sem isto o usuário via "confirme o e-mail" e ficava sem saída
+     se o e-mail não chegasse: nada de reenviar, nada de corrigir. */
+  function mostrarConfirmacaoPendente(email, mensagemEl) {
+    const card = document.querySelector(".auth-card");
+    const form = document.getElementById("cadastroForm");
+    if (!card || !form) {
+      msg(mensagemEl, "Conta criada! Confirme o e-mail e faça login.", "sucesso");
+      return;
+    }
+    form.hidden = true;
+    const aviso = document.createElement("div");
+    aviso.className = "aviso-confirmacao";
+    aviso.innerHTML = `
+      <h3>Falta confirmar seu e-mail</h3>
+      <p>Enviamos um link para <strong>${U.escapeHTML(email)}</strong>.
+         Abra o link e depois entre normalmente.</p>
+      <p class="auth-sub">Não chegou? Confira o spam — ou peça outro.</p>
+      <div class="acoes-confirmacao">
+        <button type="button" class="btn-secundario" id="btnReenviar">Reenviar e-mail</button>
+        <a class="btn-primario" href="index.html">Ir para o login</a>
+      </div>
+      <p class="mensagem" id="msgReenvio" role="status"></p>`;
+    card.appendChild(aviso);
+
+    const btnReenviar = document.getElementById("btnReenviar");
+    const msgReenvio = document.getElementById("msgReenvio");
+    let espera = 0;
+    btnReenviar.addEventListener("click", async () => {
+      if (espera > 0) return;
+      btnReenviar.disabled = true;
+      try {
+        await S.reenviarConfirmacao(email);
+        msg(msgReenvio, "E-mail reenviado. Pode levar um minuto.", "sucesso");
+      } catch (err) {
+        msg(msgReenvio, err.message, "erro");
+      }
+      // o provedor limita reenvios; a contagem evita insistência inútil
+      espera = 60;
+      const tick = setInterval(() => {
+        espera--;
+        btnReenviar.textContent = espera > 0 ? `Reenviar em ${espera}s` : "Reenviar e-mail";
+        if (espera <= 0) { clearInterval(tick); btnReenviar.disabled = false; }
+      }, 1000);
+      btnReenviar.textContent = `Reenviar em ${espera}s`;
+    });
+  }
+
+  /* ---------- pedir redefinição de senha ---------- */
+  const formRecuperar = document.getElementById("recuperarForm");
+  if (formRecuperar) {
+    const mensagemEl = document.getElementById("msgRecuperar");
+    formRecuperar.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg(mensagemEl, "");
+      const email = document.getElementById("emailRecuperar").value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return msg(mensagemEl, "Informe um e-mail válido.", "erro");
+
+      const btn = document.getElementById("btnRecuperar");
+      btn.disabled = true;
+      try {
+        await S.recuperarSenha(email);
+        /* Resposta igual existindo a conta ou não: dizer "este e-mail
+           não está cadastrado" entregaria a estranhos quais endereços
+           têm conta aqui. */
+        msg(mensagemEl,
+          "Se existir uma conta com esse e-mail, o link de redefinição já está a caminho. O link vale por 1 hora.",
+          "sucesso");
+        formRecuperar.reset();
+      } catch (err) {
+        msg(mensagemEl, err.message, "erro");
+      } finally {
+        setTimeout(() => { btn.disabled = false; }, 3000);
+      }
+    });
+  }
+
+  /* ---------- gravar a nova senha ----------
+     Esta página só é alcançada pelo link do e-mail. O Supabase troca
+     o token da URL por uma sessão temporária; sem ela, não há o que
+     atualizar. */
+  const formNovaSenha = document.getElementById("novaSenhaForm");
+  if (formNovaSenha) {
+    const mensagemEl = document.getElementById("msgNovaSenha");
+    const btn = document.getElementById("btnNovaSenha");
+
+    const erroNaUrl = new URLSearchParams(location.hash.slice(1)).get("error_description");
+    if (erroNaUrl) {
+      msg(mensagemEl, "Este link expirou ou já foi usado. Peça outro na página de recuperação.", "erro");
+      btn.disabled = true;
+    }
+
+    formNovaSenha.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg(mensagemEl, "");
+      const senha = document.getElementById("senhaNova").value;
+      const confirma = document.getElementById("senhaNovaConfirma").value;
+      if (senha.length < 6) return msg(mensagemEl, "A senha precisa ter ao menos 6 caracteres.", "erro");
+      if (senha !== confirma) return msg(mensagemEl, "As senhas não conferem.", "erro");
+
+      btn.disabled = true;
+      try {
+        await S.definirNovaSenha(senha);
+        msg(mensagemEl, "Senha atualizada! Redirecionando para o login…", "sucesso");
+        await S.sair();
+        setTimeout(() => { location.href = "index.html"; }, 1200);
+      } catch (err) {
+        msg(mensagemEl, err.message, "erro");
+        btn.disabled = false;
+      }
+    });
+  }
+
+  /* ---------- modo demonstração ----------
+     Antes isto criava uma conta de verdade no Supabase, com e-mail
+     inventado em @finck.local: o provedor recusava o domínio e o
+     botão simplesmente não funcionava no site publicado — bem no
+     caminho de descoberta mais usado por quem chega. Agora a
+     demonstração é local: nenhuma conta, nenhuma chamada ao
+     servidor, e os dados ficam só neste aparelho. */
   const btnDemo = document.getElementById("btnDemo");
   if (btnDemo) {
     btnDemo.addEventListener("click", async () => {
       btnDemo.disabled = true;
-      const email = `demo${Date.now()}@finck.local`;
+      const rotulo = btnDemo.textContent;
+      btnDemo.textContent = "Preparando demonstração…";
       try {
-        await S.cadastrar({ nome: "Usuário Demonstração", email, senha: "finck123" });
-        if (!(await S.usuarioAtual())) await S.entrar({ email, senha: "finck123" });
+        await S.entrarDemo();
         await window.FinckFinance.carregarDemo();
-        U.toast("Dados de demonstração carregados.", "sucesso");
-        setTimeout(() => { location.href = "home.html"; }, 600);
+        U.toast("Demonstração pronta. Nada foi salvo em nenhuma conta.", "sucesso");
+        setTimeout(() => { location.href = "home.html"; }, 500);
       } catch (err) {
         U.toast(err.message, "erro");
         btnDemo.disabled = false;
+        btnDemo.textContent = rotulo;
       }
     });
   }
