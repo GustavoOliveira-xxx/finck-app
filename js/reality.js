@@ -74,24 +74,28 @@ window.FinckReality = (() => {
 
   /** Classificação sem culpabilizar: verde / atencao / alerta. */
   function semaforo(incomePercent, saldoDepois, percentualRendaLivre) {
+    /* O texto descreve o efeito no orçamento e devolve a escolha ao
+       usuário. Antes soava como veredito ("compromete", "verifique
+       se é prioritária"), e um cálculo que julga faz a pessoa parar
+       de calcular — que é justamente o hábito que o app quer criar. */
     if (saldoDepois < 0 || incomePercent >= 30 || percentualRendaLivre >= 60) {
       return {
         nivel: "alerta",
-        titulo: "Impacto alto",
-        texto: "Esta compra compromete uma parte relevante do seu mês. Vale considerar adiar, parcelar com planejamento ou buscar uma alternativa.",
+        titulo: "Peso alto no mês",
+        texto: "Nesta faixa a compra ocupa boa parte do que entra no mês. Se ela for importante para você, esticar o prazo ou comparar alternativas costuma abrir espaço sem abrir mão do item.",
       };
     }
     if (incomePercent >= 10 || percentualRendaLivre >= 25) {
       return {
         nivel: "atencao",
-        titulo: "Impacto moderado",
-        texto: "A compra cabe no orçamento, mas reduz sua folga do mês. Verifique se ela é prioritária diante das suas metas.",
+        titulo: "Peso médio no mês",
+        texto: "A compra cabe no orçamento e reduz parte da folga do mês. Vale olhar ao lado das suas metas para decidir com o quadro completo.",
       };
     }
     return {
       nivel: "verde",
-      titulo: "Impacto baixo",
-      texto: "A compra representa uma fatia pequena da sua renda. Ainda assim, considere necessidade, durabilidade e descarte.",
+      titulo: "Peso baixo no mês",
+      texto: "A compra ocupa uma fatia pequena da sua renda. Se quiser, dá para comparar durabilidade e uso antes de fechar.",
     };
   }
 

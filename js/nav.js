@@ -23,6 +23,25 @@ window.FinckNav = (() => {
     { id: "perfil", href: "perfil.html", rotulo: "Perfil", icone: ICONES.perfil },
   ];
 
+  /* Como o app se apresenta em cada modo de operação. O visitante
+     precisa saber que está numa demonstração local — senão ele
+     cadastra a vida financeira inteira achando que está salvo numa
+     conta, e perde tudo ao limpar o navegador. */
+  const MODOS = {
+    online: {
+      classe: "online", rotulo: "Online", ajuda: "Conectado ao banco de dados",
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-7.96 5.5 5.5 0 0 0-10.6 1.63A3.5 3.5 0 0 0 7 18Z"/></svg>',
+    },
+    demo: {
+      classe: "demo", rotulo: "Demonstração", ajuda: "Dados de exemplo, salvos só neste aparelho",
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>',
+    },
+    local: {
+      classe: "local", rotulo: "Sem banco", ajuda: "Banco de dados não configurado",
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M7 14h10v6H7z"/></svg>',
+    },
+  };
+
   function montarHeader(titulo, subtitulo) {
     const host = document.querySelector("[data-finck-header]");
     if (!host) return;
@@ -37,16 +56,22 @@ window.FinckNav = (() => {
         </div>
       </div>
       <div class="header-actions">
-        <span class="modo-dados" title="${S.ONLINE ? "Conectado ao banco de dados" : "Modo offline (localStorage)"}">
-          <span class="modo-dados-icone" aria-hidden="true">${S.ONLINE
-            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .6-7.96 5.5 5.5 0 0 0-10.6 1.63A3.5 3.5 0 0 0 7 18Z"/></svg>'
-            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><path d="M7 14h10v6H7z"/></svg>'
-          }</span> ${S.ONLINE ? "Online" : "Offline"}
+        <span class="modo-dados modo-dados--${MODOS[S.MODO].classe}" title="${MODOS[S.MODO].ajuda}">
+          <span class="modo-dados-icone" aria-hidden="true">${MODOS[S.MODO].icone}</span>
+          ${MODOS[S.MODO].rotulo}
         </span>
-        <button type="button" id="btnSair" class="btn-sair">Sair</button>
+        <button type="button" id="btnSair" class="btn-sair">${S.emDemo() ? "Sair da demo" : "Sair"}</button>
       </div>`;
     const btn = document.getElementById("btnSair");
-    if (btn) btn.addEventListener("click", async () => { await S.sair(); location.href = "index.html"; });
+    if (btn) {
+      btn.addEventListener("click", async () => {
+        // a demonstração some do aparelho ao sair: vale avisar
+        if (S.emDemo() &&
+            !confirm("Sair da demonstração apaga os dados de exemplo deste aparelho. Continuar?")) return;
+        await S.sair();
+        location.href = "index.html";
+      });
+    }
   }
 
   function montarNav() {

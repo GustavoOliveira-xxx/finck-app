@@ -87,9 +87,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("indHoras").textContent = `${U.numero(resumo.horas_preservadas, 1)} h`;
     document.getElementById("indNivel").textContent = nivel.level;
 
-    /* orçamento previsto */
+    /* ---------- uma única próxima ação ----------
+       O painel mostrava oito indicadores competindo pela atenção e
+       nenhum caminho. Aqui sai uma recomendação só, escolhida pela
+       ordem de urgência real: saldo negativo > orçamento estourado
+       > perfil incompleto > sem meta > decisão pendente > rotina. */
     const previstoSaida = ctx.despesasFixas;
     const previstoEntrada = ctx.previstoEntradas || Number(ctx.perfil?.income_monthly || 0);
+    // projeção simples: saldo de hoje mais o resultado das recorrentes
+    const projetado = ctx.saldo + previstoEntrada - previstoSaida;
+    const decisoesPendentes = ctx.analises.filter((a) => !a.decision).length;
+    const metaLonge = ctx.metas.find((m) => {
+      if (!m.deadline) return false;
+      const falta = Number(m.target_amount) - Number(m.current_amount);
+      const meses = Math.max(1, Math.ceil((new Date(m.deadline) - new Date()) / (1000 * 60 * 60 * 24 * 30)));
+      return falta > 0 && falta / meses > ctx.rendaLivre;
+    });
+
+    const acao =
+      ctx.saldo < 0
+        ? { tom: "alerta", titulo: "Seu saldo está negativo",
+            texto: "Antes de qualquer meta, o buraco do mês precisa parar de crescer. Veja para onde o dinheiro foi.",
+            rotulo: "Ver gastos por categoria", href: "analises.html" }
+      : previstoSaida > previstoEntrada
+        ? { tom: "alerta", titulo: "As contas fixas passam da renda prevista",
+            texto: `Você tem ${U.moeda(previstoSaida)} em despesas fixas para ${U.moeda(previstoEntrada)} previstos de entrada.`,
+            rotulo: "Revisar recorrentes", href: "recorrentes.html" }
+      : decisoesPendentes > 0
+        ? { tom: "atencao", titulo: `${decisoesPendentes} cálculo(s) sem decisão`,
+            texto: "Você analisou essas compras mas não registrou o que decidiu. Fechar a decisão é o que vira histórico.",
+            rotulo: "Concluir decisões", href: "reality.html#calculos" }
+      : !ctx.metas.length
+        ? { tom: "neutro", titulo: "Você ainda não tem uma meta",
+            texto: `Sobram ${U.moeda(ctx.rendaLivre)} por mês. Com um destino, essa sobra vira objetivo em vez de sumir aos poucos.`,
+            rotulo: "Criar minha primeira meta", href: "metas.html" }
+      : metaLonge
+        ? { tom: "atencao", titulo: `"${metaLonge.name}" está fora do ritmo`,
+            texto: "O aporte necessário por mês passou da sua renda livre. Vale rever o prazo ou o valor.",
+            rotulo: "Ajustar a meta", href: "metas.html" }
+      : { tom: "bom", titulo: "Está tudo no rumo",
+          texto: `Saldo projetado para o fim do mês: ${U.moeda(projetado)}. Antes da próxima compra, passe pelo cálculo.`,
+          rotulo: "Calcular uma compra", href: "reality.html" };
+
+    document.getElementById("proximaAcao").innerHTML = `
+      <article class="proxima-acao proxima-acao--${acao.tom}">
+        <div class="proxima-acao__texto">
+          <span class="proxima-acao__etiqueta">Próximo passo</span>
+          <h2>${U.escapeHTML(acao.titulo)}</h2>
+          <p>${U.escapeHTML(acao.texto)}</p>
+        </div>
+        <a class="btn-primario" href="${acao.href}">${U.escapeHTML(acao.rotulo)}</a>
+      </article>
+      <p class="projecao">
+        Saldo hoje <strong>${U.moeda(ctx.saldo)}</strong>
+        · projetado para o fim do mês <strong class="${projetado < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(projetado)}</strong>
+      </p>`;
+
+    /* orçamento previsto (previstoSaida/previstoEntrada vêm do bloco acima) */
     const comprometido = previstoEntrada > 0 ? (previstoSaida / previstoEntrada) * 100 : 0;
     document.getElementById("orcamento").innerHTML = `
       <ul class="lista-resumo">

@@ -92,10 +92,34 @@ window.FinckFinance = (() => {
     });
   }
 
-  /** Dados demonstrativos (item 6 — Modo Demonstrativo). */
-  async function carregarDemo() {
+  /**
+   * Dados demonstrativos (item 6 — Modo Demonstrativo).
+   *
+   * Idempotente: chamar duas vezes não duplica nada. Cada registro
+   * passa por inserirSeNovo, que compara pela assinatura do
+   * conteúdo — antes bastava clicar duas vezes em "carregar dados
+   * de exemplo" para ficar com dois salários e dois aluguéis, e o
+   * saldo saía errado.
+   *
+   * @param {object} opcoes  substituir: apaga os dados atuais antes
+   * @returns {object} quantos registros entraram de fato
+   */
+  async function carregarDemo({ substituir = false } = {}) {
+    if (substituir) await S.limparDados();
+
     const hoje = new Date();
     const dia = (n) => new Date(hoje.getFullYear(), hoje.getMonth(), n).toISOString().slice(0, 10);
+    const resumo = { inseridos: 0, jaExistiam: 0 };
+
+    // uma leitura por tabela, reaproveitada em todas as comparações
+    const cache = {};
+    const registrar = async (tabela, linha) => {
+      if (!cache[tabela]) cache[tabela] = await S.listar(tabela);
+      const criado = await S.inserirSeNovo(tabela, linha, cache[tabela]);
+      if (criado) { cache[tabela].push(criado); resumo.inseridos++; }
+      else resumo.jaExistiam++;
+      return criado;
+    };
 
     await S.salvarPerfil({
       name: "Usuário Demonstração",
@@ -117,7 +141,7 @@ window.FinckFinance = (() => {
       { type: "saida", description: "Streaming", amount: 55, date: dia(10), category: "Lazer" },
       { type: "saida", description: "Tênis novo", amount: 380, date: dia(12), category: "Vestuário" },
     ];
-    for (const t of transacoes) await S.inserir("transactions", t);
+    for (const t of transacoes) await registrar("transactions", t);
 
     const recorrentes = [
       { description: "Salário", type: "entrada", amount: 3500, day_of_month: 5, active: true },
@@ -125,24 +149,29 @@ window.FinckFinance = (() => {
       { description: "Internet", type: "saida", amount: 99, day_of_month: 10, active: true },
       { description: "Streaming", type: "saida", amount: 55, day_of_month: 10, active: true },
     ];
-    for (const r of recorrentes) await S.inserir("recurring_transactions", r);
+    for (const r of recorrentes) await registrar("recurring_transactions", r);
 
-    await S.inserir("goals", {
+    await registrar("goals", {
       name: "Reserva de emergência", target_amount: 6000, current_amount: 1500,
       deadline: new Date(hoje.getFullYear(), hoje.getMonth() + 8, 1).toISOString().slice(0, 10), rate: 0,
     });
-    await S.inserir("goals", {
+    await registrar("goals", {
       name: "Notebook para estudos", target_amount: 3200, current_amount: 400,
       deadline: new Date(hoje.getFullYear() + 1, 2, 1).toISOString().slice(0, 10), rate: 0,
     });
 
-    await S.inserir("purchase_analyses", {
+    await registrar("purchase_analyses", {
       item_name: "Fone de ouvido premium", price: 800, category: "Eletrônicos",
       work_days: 5.03, work_hours: 40.22, income_percent: 22.86,
       impact_level: "atencao", decision: "adiar",
       reflections: { necessidade: "impulso", uso: "raro" },
-      note: "Vou reavaliar em 30 dias.", analyzed_at: new Date().toISOString(),
+      // data fixa no mês corrente, como as demais linhas de exemplo:
+      // com new Date() a cada chamada, a assinatura mudava e o
+      // registro voltava a entrar toda vez
+      note: "Vou reavaliar em 30 dias.", analyzed_at: `${dia(12)}T12:00:00.000Z`,
     });
+
+    return resumo;
   }
 
   return { soma, ehEntrada, ehSaida, doMes, carregarContexto, porCategoria, serieMensal, aportarMeta, carregarDemo };

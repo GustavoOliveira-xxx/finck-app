@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FinCK | Recuperar senha</title>
+  <meta name="description" content="Receba um link para criar uma nova senha da sua conta FinCK.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icone-apple-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinCK">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style-auth.css">
+  <link rel="stylesheet" href="css/finck-fx.css">
+</head>
+<body data-page="recuperar" class="pagina-auth">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
+  <main class="auth-wrapper auth-wrapper--simples" id="conteudo" tabindex="-1">
+    <section class="auth-card">
+      <h1>Recuperar senha</h1>
+      <p class="auth-sub">Informe o e-mail da sua conta. Enviamos um link para você criar uma nova senha.</p>
+
+      <form id="recuperarForm" novalidate>
+        <label for="emailRecuperar">E-mail
+          <input type="email" id="emailRecuperar" name="email" autocomplete="email" required placeholder="voce@email.com">
+        </label>
+
+        <p id="msgRecuperar" class="mensagem" role="status"></p>
+
+        <button type="submit" id="btnRecuperar" class="btn-primario">Enviar link de redefinição</button>
+      </form>
+
+      <div class="auth-rodape">
+        <p>Lembrou a senha? <a href="index.html">Voltar ao login</a></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui-fx.js"></script>
+  <script src="js/finck-fx.js"></script>
+</body>
+</html>

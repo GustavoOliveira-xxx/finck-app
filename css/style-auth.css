@@ -632,3 +632,135 @@ input:-webkit-autofill{
 
 /* o captcha é arrastado com o dedo: o gesto não pode rolar a página */
 .captcha{ touch-action:none; }
+
+/* ============================================================
+   VITRINE — exemplo interativo da primeira visita
+   Antes o visitante só entendia a proposta depois de criar conta.
+   ============================================================ */
+
+.auth-coluna{ display:grid; gap:clamp(1.4rem,3vw,2.2rem); align-content:center; }
+
+/* páginas sem coluna de marca (recuperar senha, nova senha) */
+.auth-wrapper--simples{
+  grid-template-columns:minmax(0,1fr);
+  justify-items:center;
+}
+.auth-wrapper--simples .auth-card{ width:min(100%, 460px); }
+.auth-wrapper--simples h1{
+  font-family:var(--fonte-display);
+  font-size:clamp(1.6rem,1.3rem + 1.4vw,2.1rem);
+  letter-spacing:-.03em;
+}
+
+.vitrine{
+  display:grid; gap:.7rem;
+  padding:clamp(1.1rem,1rem + 1vw,1.6rem);
+  border-radius:var(--raio-lg);
+  background:linear-gradient(160deg, rgba(147,51,196,.14), rgba(255,255,255,.02));
+  border:1px solid var(--superficie-borda);
+  animation: marca-entra 1s var(--ease-out) .3s both;
+}
+
+.vitrine__pergunta{
+  font-family:var(--fonte-display);
+  font-size:clamp(1rem,.95rem + .5vw,1.22rem);
+  font-weight:600; line-height:1.5;
+  letter-spacing:-.01em;
+  color:var(--texto);
+  text-wrap:balance;
+}
+
+/* campo embutido na frase: o número faz parte do texto, não de um formulário */
+.vitrine__campo{
+  display:inline-flex; align-items:baseline; gap:.15rem;
+  padding:.1rem .45rem;
+  border-radius:9px;
+  background:rgba(0,0,0,.42);
+  border:1px solid rgba(254,200,0,.45);
+  color:var(--amarelo);
+  font-family:var(--fonte-dados);
+  font-variant-numeric:tabular-nums;
+}
+.vitrine__campo input{
+  width:5ch;
+  padding:0; margin:0;
+  border:none; background:none;
+  color:var(--amarelo);
+  font:inherit; font-weight:700;
+  text-align:right;
+}
+.vitrine__campo input:focus{ outline:none; }
+.vitrine__campo:focus-within{
+  border-color:var(--amarelo);
+  box-shadow:0 0 0 3px rgba(254,200,0,.16);
+}
+/* as setinhas de number roubam espaço e não ajudam aqui */
+.vitrine__campo input::-webkit-outer-spin-button,
+.vitrine__campo input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.vitrine__campo input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+
+.vitrine__resposta{
+  font-size:clamp(1.05rem,1rem + .6vw,1.35rem);
+  line-height:1.35;
+  color:var(--texto-fraco);
+}
+.vitrine__resposta strong{
+  font-family:var(--fonte-dados);
+  font-variant-numeric:tabular-nums;
+  color:#fff;
+}
+.vitrine__ou{ opacity:.55; padding-inline:.15rem; }
+
+.vitrine__barra{
+  height:6px; border-radius:99px;
+  background:rgba(255,255,255,.09);
+  overflow:hidden;
+}
+.vitrine__barra-preenchida{
+  display:block; height:100%; width:0;
+  border-radius:inherit;
+  background:linear-gradient(90deg, var(--roxo-claro), var(--roxo-neon));
+  transition:width .45s var(--ease-out), background .45s var(--ease-out);
+}
+.vitrine__barra-preenchida[data-nivel="atencao"]{
+  background:linear-gradient(90deg, var(--roxo-neon), var(--amarelo));
+}
+.vitrine__barra-preenchida[data-nivel="alerta"]{
+  background:linear-gradient(90deg, var(--amarelo-quente), var(--vermelho));
+}
+
+.vitrine__legenda{ font-size:.84rem; color:var(--texto-fraco); }
+
+.vitrine__renda{
+  display:block;
+  font-size:.84rem; font-weight:500;
+  color:var(--texto-fraquissimo);
+  line-height:1.9;
+}
+
+.vitrine__acoes{
+  display:flex; flex-wrap:wrap; align-items:center; gap:.6rem .9rem;
+  margin-top:.2rem;
+}
+.vitrine__nota{ font-size:.78rem; color:var(--texto-fraquissimo); }
+
+/* ---------- confirmação de e-mail pendente ---------- */
+.aviso-confirmacao{
+  display:grid; gap:.6rem;
+  animation: marca-entra .5s var(--ease-out) both;
+}
+.aviso-confirmacao h3{
+  font-family:var(--fonte-display);
+  font-size:1.2rem; letter-spacing:-.02em;
+}
+.aviso-confirmacao p{ font-size:.92rem; color:var(--texto-fraco); }
+.acoes-confirmacao{
+  display:flex; flex-wrap:wrap; gap:.6rem;
+  margin-top:.4rem;
+}
+.acoes-confirmacao .btn-primario,
+.acoes-confirmacao .btn-secundario{ flex:1 1 160px; text-align:center; }
+
+@media (max-width: 900px){
+  .vitrine{ text-align:left; }
+}

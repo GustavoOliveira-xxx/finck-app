@@ -19,19 +19,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   const nivel = G.nivelDe(estado.xp);
   const diario = await G.statusDiario();
 
+  /* A medalha é o troféu da página: um objeto que existe para ser
+     olhado de perto. Ela gira sozinha e responde ao ponteiro —
+     frente traz nível e XP, verso traz o título e o lema. */
   document.getElementById("cardNivel").innerHTML = `
-    <div class="nivel-topo">
-      <span class="nivel-badge">${nivel.icone} Nível ${nivel.level}</span>
-      <strong>${U.numero(estado.xp, 0)} XP</strong>
-    </div>
-    <h3 class="nivel-titulo">${U.escapeHTML(nivel.titulo)}</h3>
-    <p class="nivel-lema">${U.escapeHTML(nivel.lema || "")}</p>
-    <div class="barra"><div class="barra-preenchida" style="width:${nivel.progresso}%"></div></div>
-    <p class="nota">${
-      nivel.proximo
-        ? `Faltam ${U.numero(nivel.xpParaProximo, 0)} XP para ${U.escapeHTML(nivel.proximo.titulo)}.`
-        : "Você chegou ao último título da trilha."
-    }</p>`;
+    <div class="nivel-com-medalha">
+      <div class="medalha-cena" data-medalha
+           title="${U.escapeHTML(nivel.titulo)} — nível ${nivel.level}">
+        <div class="medalha-orbita">
+          <div class="medalha">
+            <div class="medalha__face medalha__face--frente">
+              <span class="medalha__brilho" aria-hidden="true"></span>
+              <span class="medalha__icone" aria-hidden="true">${nivel.icone}</span>
+              <span class="medalha__nivel">${nivel.level}</span>
+              <span class="medalha__rotulo">nível</span>
+              <span class="medalha__xp">${U.numero(estado.xp, 0)} XP</span>
+            </div>
+            <div class="medalha__face medalha__face--verso">
+              <span class="medalha__brilho" aria-hidden="true"></span>
+              <span class="medalha__titulo">${U.escapeHTML(nivel.titulo)}</span>
+              <span class="medalha__lema">${U.escapeHTML(nivel.lema || "")}</span>
+            </div>
+            <span class="medalha__borda" aria-hidden="true"></span>
+          </div>
+        </div>
+        <span class="medalha-dica"><span>Passe o mouse para girar</span></span>
+      </div>
+
+      <div class="nivel-com-medalha__texto">
+        <div class="nivel-topo">
+          <span class="nivel-badge">${nivel.icone} Nível ${nivel.level}</span>
+          <strong>${U.numero(estado.xp, 0)} XP</strong>
+        </div>
+        <h3 class="nivel-titulo">${U.escapeHTML(nivel.titulo)}</h3>
+        <p class="nivel-lema">${U.escapeHTML(nivel.lema || "")}</p>
+        <div class="barra" role="img"
+             aria-label="Progresso para o próximo nível: ${U.percentual(nivel.progresso, 0)}">
+          <div class="barra-preenchida" style="width:${nivel.progresso}%"></div>
+        </div>
+        <p class="nota">${
+          nivel.proximo
+            ? `Faltam ${U.numero(nivel.xpParaProximo, 0)} XP para ${U.escapeHTML(nivel.proximo.titulo)}.`
+            : "Você chegou ao último título da trilha."
+        }</p>
+      </div>
+    </div>`;
+
+  // a medalha só existe agora; o finck-fx já rodou e não a viu
+  window.FinckFX?.ligarMedalha?.();
 
   document.getElementById("resumoGame").innerHTML = `
     <article class="card-indicador"><span>Sequência</span><strong>${estado.streak || 0} dias</strong></article>
