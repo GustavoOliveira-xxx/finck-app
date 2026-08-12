@@ -50,7 +50,7 @@ window.FinckNav = (() => {
       <div class="header-actions">
         <span class="modo-dados modo-dados--${MODOS[S.MODO].classe}" title="${MODOS[S.MODO].ajuda}">
           <span class="modo-dados-icone" aria-hidden="true">${MODOS[S.MODO].icone}</span>
-          ${MODOS[S.MODO].rotulo}
+          <span class="modo-dados-rotulo">${MODOS[S.MODO].rotulo}</span>
         </span>
         <button type="button" id="btnSair" class="btn-sair">${S.emDemo() ? "Sair da demo" : "Sair"}</button>
       </div>`;

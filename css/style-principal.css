@@ -2681,3 +2681,196 @@ body.rolando header[data-finck-header]{
 .fluxo-rotulo{ fill:var(--texto-fraco); }
 .fluxo-numero{ fill:var(--texto); font-family:var(--fonte-dados); font-weight:600; }
 .fluxo-assinatura{ fill:var(--roxo-neon); font-weight:600; font-family:var(--fonte-display); }
+
+/* ==========================================================================
+   Console do Cofre — a UI sobre o fundo em perspectiva
+   --------------------------------------------------------------------------
+   O fundo passou a ser uma grade que corre até o horizonte, com moedas e
+   pulsos. Antes desta camada ele existia mas quase não aparecia: as
+   superfícies cobriam a tela quase inteira, e só sobrava a grade nas frestas
+   entre um card e outro.
+
+   A ideia aqui é uma só — deixar o fundo atravessar a interface. Todo o
+   resto (raios, fios de luz, alinhamento de números) é acabamento discreto
+   em volta dessa decisão.
+
+   Fica no fim do arquivo de propósito: são ajustes que precisam vencer o que
+   foi declarado antes, sem que nada acima precise ser reescrito.
+   ========================================================================== */
+
+:root{
+  /* Baixar a opacidade sozinha deixaria o texto competindo com a grade em
+     movimento. O que devolve a legibilidade é o desfoque logo abaixo: ele
+     apaga o detalhe e deixa passar só a luz e a cor. */
+  --vidro:      rgba(18,14,26,.46);
+  --vidro-alto: rgba(26,20,38,.62);
+
+  /* A grade do fundo é geométrica; cantos muito arredondados brigam com ela. */
+  --raio-lg: 16px;
+  --raio-xl: 22px;
+}
+
+.hero,
+.bloco,
+.etapa{
+  backdrop-filter:blur(20px) saturate(125%);
+  -webkit-backdrop-filter:blur(20px) saturate(125%);
+}
+
+.card-indicador{
+  backdrop-filter:blur(16px) saturate(120%);
+  -webkit-backdrop-filter:blur(16px) saturate(120%);
+}
+
+/* O card de saldo era o único totalmente opaco — bem no meio da tela, era
+   ele que mais escondia o fundo. */
+.balance-card{
+  background:
+    linear-gradient(150deg,
+      rgba(147,51,196,.34) 0%,
+      rgba(104,12,144,.18) 42%,
+      rgba(10,8,15,.55) 100%);
+  backdrop-filter:blur(22px) saturate(130%);
+  -webkit-backdrop-filter:blur(22px) saturate(130%);
+}
+
+/* O modal precisa de mais corpo: é leitura em primeiro plano, não ambiente. */
+.modal{
+  background:
+    linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)),
+    rgba(24,18,34,.8);
+  backdrop-filter:blur(26px) saturate(130%);
+  -webkit-backdrop-filter:blur(26px) saturate(130%);
+}
+
+.modal-overlay{
+  background:rgba(5,4,9,.62);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+}
+
+/* Fio de luz na borda de cima dos blocos: o mesmo brilho que o fundo tem na
+   linha do horizonte, agora repetido no topo de cada card.
+   `.bloco` é o único destes seletores sem ::before ocupado. */
+.bloco::before{
+  content:"";
+  position:absolute;
+  top:0; left:12%; right:12%;
+  height:1px;
+  background:linear-gradient(90deg,
+    transparent,
+    rgba(180,92,240,.5) 28%,
+    rgba(254,200,0,.3) 72%,
+    transparent);
+  pointer-events:none;
+}
+
+/* Cabeçalho e barra inferior acompanham: se ficassem densos, virariam duas
+   tarjas opacas prendendo a tela em cima e embaixo. */
+header[data-finck-header]{
+  background:linear-gradient(180deg, rgba(9,7,13,.82), rgba(9,7,13,.44));
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+}
+
+.nav-inferior{
+  backdrop-filter:blur(20px) saturate(150%);
+  -webkit-backdrop-filter:blur(20px) saturate(150%);
+}
+
+/* Números em colunas precisam de dígitos de largura fixa, senão a vírgula
+   dança de linha para linha. */
+.card-indicador strong,
+.lista-resumo strong,
+.lista-resumo span,
+.balance-card strong,
+table td,
+table th{
+  font-variant-numeric:tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Celular
+   O app já desligava o desfoque abaixo de 780px, e com razão: desfocar uma
+   área grande a cada quadro é caro no telefone. Mantemos desligado — mas as
+   superfícies deixam de ser quase opacas, para o fundo aparecer mesmo sem
+   desfoque. Sem esta parte, o Cofre sumiria justamente onde o app mais é
+   usado.
+   -------------------------------------------------------------------------- */
+@media (max-width: 780px){
+  :root{
+    --vidro:      rgba(20,16,28,.78);
+    --vidro-alto: rgba(28,22,40,.84);
+  }
+
+  .hero,
+  .bloco,
+  .etapa,
+  .finck-toast,
+  .card-indicador,
+  .balance-card,
+  .modal{
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+
+  /* O saldo é o maior número do app e fica bem sobre o ponto de fuga da
+     grade. Sem desfoque para amaciar, as linhas cruzavam os dígitos. Este
+     card é o único que fica quase opaco no celular: hierarquia, não recuo —
+     o fundo continua aparecendo nos demais blocos. */
+  .balance-card{
+    background:
+      linear-gradient(150deg,
+        rgba(96,26,134,.9) 0%,
+        rgba(52,14,78,.93) 45%,
+        rgba(12,9,17,.95) 100%);
+  }
+
+  .modal{
+    background:
+      linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)),
+      rgba(24,18,34,.95);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Cabeçalho em tela estreita
+   A 390px os três itens do cabeçalho não cabem: o título era cortado no meio
+   da palavra e o "Sair da demo" quebrava em três linhas, porque em telas de
+   toque o botão tem altura mínima de 44px. O selo de modo passa a mostrar só
+   o ícone — o texto dele já está no atributo title — e sobra espaço para o
+   nome da página aparecer inteiro.
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px){
+  header[data-finck-header]{
+    gap:.45rem;
+    padding-inline:.85rem;
+  }
+
+  .modo-dados-rotulo{ display:none; }
+
+  .modo-dados{
+    padding:.34rem .48rem;
+    gap:0;
+  }
+
+  .btn-sair{
+    white-space:nowrap;
+    padding-inline:.8rem;
+  }
+
+  .logo-text h1{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}
+
+/* Navegador sem suporte a desfoque: sem ele, texto sobre a grade em
+   movimento fica cansativo. Devolve-se o corpo das superfícies. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+  :root{
+    --vidro:      rgba(18,14,26,.84);
+    --vidro-alto: rgba(26,20,38,.9);
+  }
+}

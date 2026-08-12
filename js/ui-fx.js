@@ -37,7 +37,7 @@
     const ctx = tela && tela.getContext && tela.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    let L = 0, A = 0, hz = 0;
+    let L = 0, A = 0, hz = 0, escala = 1;
     let pulsos = [], moedas = [];
     let t = 0, anterior = 0, laco = 0;
 
@@ -75,11 +75,18 @@
       tela.height = Math.max(1, Math.round(A * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       hz = A * 0.34;
+
+      // Moeda e pulso são medidos em pixels. Sem escalar pela largura, o que
+      // é discreto num monitor vira enorme num celular de 390px — as moedas
+      // chegavam a cobrir o valor do saldo.
+      escala = Math.max(0.42, Math.min(1, L / 900));
     }
 
     function povoar() {
-      pulsos = Array.from({ length: 8 }, () => novoPulso(Math.random()));
-      moedas = Array.from({ length: 7 }, () => novaMoeda(Math.random()));
+      // menos elementos na tela estreita: além do custo, ficariam amontoados
+      const cheio = L > 700;
+      pulsos = Array.from({ length: cheio ? 8 : 5 }, () => novoPulso(Math.random()));
+      moedas = Array.from({ length: cheio ? 7 : 5 }, () => novaMoeda(Math.random()));
     }
 
     /** Uma moeda de perfil variável: a largura oscila e ela parece girar. */
@@ -174,7 +181,7 @@
         const prof = k * k * k;
         const y = emY(prof);
         const x = emX(p.col, prof, fuga);
-        const raio = 15 * k + 3;
+        const raio = (15 * k + 3) * escala;
         const luz = ctx.createRadialGradient(x, y, 0, x, y, raio);
         luz.addColorStop(0, `rgba(254,200,0,${0.34 * k + 0.1})`);
         luz.addColorStop(1, "rgba(254,200,0,0)");
@@ -184,7 +191,7 @@
         ctx.fill();
         ctx.fillStyle = `rgba(255,236,170,${0.55 * k + 0.2})`;
         ctx.beginPath();
-        ctx.arc(x, y, 1.5 * k + 0.7, 0, TAU);
+        ctx.arc(x, y, (1.5 * k + 0.7) * escala, 0, TAU);
         ctx.fill();
       }
       ctx.globalCompositeOperation = "source-over";
@@ -202,7 +209,7 @@
         const prof = k * k * k;
         const y = emY(prof) - (A - hz) * prof * m.alto;
         const x = emX(m.faixa, prof, fuga);
-        desenharMoeda(x, y, 19 * k + 1.2, m.giro);
+        desenharMoeda(x, y, (19 * k + 1.2) * escala, m.giro);
       }
 
       // Névoa: é ela que faz pulsos e moedas sumirem no horizonte. Começa
