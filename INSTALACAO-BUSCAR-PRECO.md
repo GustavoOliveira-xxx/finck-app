@@ -1,6 +1,22 @@
 # Busca automática de preço pelo link
 
-Traz o preço do produto a partir do link colado no FinCK of Reality.
+Traz um panorama do produto a partir do link colado no FinCK of Reality:
+preço atual, preço riscado com o desconto, valor à vista no Pix, parcelamento
+e frete grátis — cada um aparecendo só quando a página tem aquela informação.
+
+> **Já publicou a função antes?** O `index.ts` mudou bastante nesta versão.
+> Republique — sem isso o painel não aparece e o erro do preço riscado
+> continua. O passo 2 explica como.
+
+## O que o frete faz — e o que não faz
+
+A busca informa **frete grátis** e o valor mínimo, quando a página anuncia
+isso. Ela **não calcula o frete por CEP**, e isso não é uma limitação que dê
+para contornar depois: o valor do frete não está na página. Ele é calculado
+por um endereço próprio de cada plataforma (Nuvemshop, Shopify, VTEX, Tray,
+WooCommerce — cada uma com o seu), quase sempre exigindo carrinho, sessão e o
+código da variação escolhida. Não existe um jeito que funcione em todas as
+lojas, que é justamente o critério aqui.
 
 ---
 
@@ -15,13 +31,18 @@ Traz o preço do produto a partir do link colado no FinCK of Reality.
 | `js/buscar-preco.js` | Botão, aviso e modal na tela |
 | `css/buscar-preco.css` | Estilo, usando as cores que o FinCK já tem |
 | `ferramentas/testar-lojas.mjs` | Testa lojas de verdade e diz quais funcionam |
+| `ferramentas/testar-extracao.mjs` | 69 testes da leitura, sem depender de rede |
+| `ferramentas/gerar-icones.py` | Regera os ícones do app |
+| `assets/icone-maskable-192.png` · `-512.png` | Ícones para o recorte do Android |
 
 **Arquivos alterados**
 
 | Arquivo | O que mudou |
 |---|---|
-| `reality.html` | Botão + aviso abaixo do campo de link, o modal, e 3 linhas de `<script>`/`<link>` |
+| `reality.html` | Botão + painel abaixo do campo de link, o modal, e 3 linhas de `<script>`/`<link>` |
 | `js/store.js` | Ganhou `tokenAcesso()` — 6 linhas, para chamar a função autenticado |
+| `manifest.json` | Aponta os ícones `maskable` novos |
+| `assets/icone-192.png` · `icone-512.png` · `icone-apple-180.png` | Regerados com fundo roxo |
 
 > Se você já mexeu nesses dois arquivos depois de me mandar o projeto, não
 > substitua direto: abra os dois e copie só os trechos marcados.
@@ -124,6 +145,26 @@ o destino no servidor — e aí quem barra é a função.
 
 ---
 
+## Os ícones do app
+
+`assets/icone-192.png`, `icone-512.png` e `icone-apple-180.png` foram regerados
+com a logo sobre o gradiente roxo da marca, e entraram dois `icone-maskable-*`.
+
+O motivo: a logo é um PNG de fundo transparente. Na tela inicial do celular o
+sistema preenchia esse vazio com branco ou preto, e no formato *maskable* — que
+o Android recorta em círculo ou squircle — as pontas do desenho eram cortadas.
+Agora o gradiente ocupa a arte inteira e a logo fica dentro da área segura, então
+qualquer recorte tira só fundo.
+
+Como os nomes dos arquivos continuam os mesmos, **nenhum HTML precisou mudar**.
+Só o `manifest.json`, que passou a apontar os dois `maskable`.
+
+Para mexer no visual depois, edite `PARADAS` em `ferramentas/gerar-icones.py`
+e rode `python3 ferramentas/gerar-icones.py` (precisa de `pip install Pillow`).
+
+> O ícone pode demorar a trocar no celular: o sistema guarda o antigo em cache.
+> Remova o app da tela inicial e adicione de novo para ver o novo.
+
 ## Como funciona a leitura
 
 Quatro tentativas, da mais confiável para a menos:
@@ -154,6 +195,22 @@ Quando o preço vem por JSON-LD, é um número limpo, sem ambiguidade:
 ```json
 { "@type": "Product", "offers": { "price": "1299.90", "priceCurrency": "BRL" } }
 ```
+
+### O caso do preço riscado
+
+Nem sempre o dado estruturado está certo. Várias lojas publicam ali o preço
+**cheio**, não o promocional — foi o que aconteceu no primeiro teste real, em
+que a busca trouxe R$ 439,90 num produto anunciado por R$ 349,90.
+
+A correção: quando o valor do dado estruturado é **igual ao valor riscado** da
+página e o texto encontrou um menor, quem vale é o texto — o estruturado é o
+preço cheio. Nesse caso a confiança cai para média e o painel avisa.
+
+### Como o parcelamento é validado
+
+"6x de R$ 58,32" só é aceito se `vezes × valor` fechar com o preço do produto.
+É o que separa o parcelamento real de um banner de topo ("parcele em até 12x"),
+que fala de outro valor e seria capturado por qualquer regex ingênua.
 
 ---
 
