@@ -1,7 +1,4 @@
-/* ============================================================
-   FinCK v2 — Utilitários compartilhados
-   Sem dependências externas. Carregar depois de config.js.
-   ============================================================ */
+
 
 window.FinckUtils = (() => {
   const cfg = window.FINCK_CONFIG;
@@ -41,7 +38,6 @@ window.FinckUtils = (() => {
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     }[c]));
 
-  /** Toast simples. O CSS pode estilizar .finck-toast / .finck-toast--erro */
   function toast(mensagem, tipo = "info", ms = 3200) {
     let host = document.getElementById("finckToastHost");
     if (!host) {
@@ -58,7 +54,6 @@ window.FinckUtils = (() => {
     setTimeout(() => el.remove(), ms);
   }
 
-  /** Abre/fecha modais que usam o atributo [hidden]. */
   const abrirModal = (id) => {
     const el = document.getElementById(id);
     if (el) { el.hidden = false; document.body.classList.add("modal-aberto"); }
@@ -68,7 +63,6 @@ window.FinckUtils = (() => {
     if (el) { el.hidden = true; document.body.classList.remove("modal-aberto"); }
   };
 
-  /** Liga qualquer [data-fechar="idDoModal"] e clique no overlay. */
   function ligarModais() {
     document.querySelectorAll("[data-fechar]").forEach((btn) => {
       btn.addEventListener("click", () => fecharModal(btn.dataset.fechar));
@@ -87,7 +81,6 @@ window.FinckUtils = (() => {
     return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
   };
 
-  /** Progresso 0–100 protegido contra divisão por zero. */
   const progresso = (atual, alvo) =>
     !alvo || alvo <= 0 ? 0 : Math.max(0, Math.min(100, (Number(atual) / Number(alvo)) * 100));
 
@@ -101,10 +94,6 @@ window.FinckUtils = (() => {
     URL.revokeObjectURL(url);
   }
 
-  /* Campos de dinheiro: o valor real mora em data-centavos, porque
-     o que aparece na tela é texto formatado ("R$ 1.234,56"). Ver
-     js/moeda-input.js. Estes atalhos evitam que cada página precise
-     saber desse detalhe. */
   const lerMoeda = (alvo) => (window.FinckMoeda ? window.FinckMoeda.ler(alvo) : 0);
   const escreverMoeda = (alvo, valor) => window.FinckMoeda?.escrever(alvo, valor);
   const limparMoeda = (alvo) => window.FinckMoeda?.limpar(alvo);

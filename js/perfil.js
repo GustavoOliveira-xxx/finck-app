@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK v2 — Perfil, conta e gestão de dados
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
@@ -83,11 +81,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.toast("Backup exportado.", "sucesso");
   });
 
-  /* ---------- importar backup ----------
-     Antes o arquivo era despejado direto por cima dos dados atuais,
-     sempre com inserção: reimportar o mesmo backup duplicava tudo e
-     o saldo saía errado, sem nenhum aviso. Agora o usuário escolhe
-     mesclar ou substituir, e recebe o relatório do que entrou. */
   const TABELAS_ROTULO = {
     accounts: "contas",
     transactions: "movimentações",
@@ -118,7 +111,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     U.abrirModal("modalImportar");
 
-    // cada abertura religa os botões, evitando handlers acumulados
     document.querySelectorAll("#modalImportar [data-modo]").forEach((botao) => {
       botao.onclick = async () => {
         const modo = botao.dataset.modo;
@@ -180,9 +172,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalRelatorio");
   }
 
-  /* carregarDemo agora é idempotente: repetir o clique não cria um
-     segundo salário nem um segundo aluguel, então o aviso mudou de
-     "serão somados" para o que de fato acontece. */
   $("btnDemoDados").addEventListener("click", async () => {
     if (!confirm("Carregar dados de exemplo? O que já existir não será duplicado.")) return;
     const r = await F.carregarDemo();

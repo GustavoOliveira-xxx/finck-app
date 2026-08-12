@@ -1,10 +1,4 @@
-/* ============================================================
-   FinCK Contas — contas.js
-   Tela de contas: cadastro, transferências e ajuste de saldo.
 
-   Fases 1 e 2 da especificação. Nenhuma chamada a instituição
-   externa: tudo aqui é dado que o próprio usuário digitou.
-   ============================================================ */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -23,7 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let ajustes = [];
   let instituicaoEscolhida = "inter";
 
-  /* ---------------- carga ---------------- */
   async function carregar() {
     [contas, transacoes, transferencias, ajustes] = await Promise.all([
       S.listar("accounts", { ordem: "created_at", asc: true }),
@@ -39,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const contasComSaldo = () => C.saldos(contas, movimentos());
   const ativas = () => contasComSaldo().filter((c) => c.active !== false);
 
-  /* ---------------- render ---------------- */
   function render() {
     const resumo = C.consolidado(contas, movimentos());
     $("chipContas").textContent = `${resumo.quantidade} ativa${resumo.quantidade === 1 ? "" : "s"}`;
@@ -120,8 +112,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </li>`).join("");
   }
 
-  /* Lançamentos antigos sem conta: a especificação pede que
-     continuem funcionando e possam ser vinculados depois. */
   function renderSemConta() {
     const orfaos = transacoes.filter((t) => !t.account_id);
     $("blocoSemConta").hidden = orfaos.length === 0 || contas.length === 0;
@@ -184,9 +174,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("filtroStatus").addEventListener("change", renderContas);
 
-  /* ============================================================
-     Cadastro de conta
-     ============================================================ */
   function pintarInstituicoes() {
     $("gradeInstituicoes").innerHTML = cfg.INSTITUICOES.map((i) => `
       <button type="button" class="opcao-banco${i.id === instituicaoEscolhida ? " opcao-banco--ativa" : ""}"
@@ -204,7 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       b.addEventListener("click", () => {
         instituicaoEscolhida = b.dataset.inst;
         pintarInstituicoes();
-        // sugere um nome quando o campo ainda está vazio
+
         const nome = $("contaNome");
         if (!nome.value.trim()) {
           const inst = C.instituicao(instituicaoEscolhida);
@@ -266,7 +253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     try {
-      // só uma conta padrão por vez
+
       if (dados.is_default) {
         for (const c of contas.filter((x) => x.is_default && String(x.id) !== String(id))) {
           await S.atualizar("accounts", c.id, { is_default: false });
@@ -290,7 +277,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     carregar();
   }
 
-  /* ---------- exclusão com dependências (seção 7) ---------- */
   let contaParaExcluir = null;
 
   function pedirExclusao(id) {
@@ -322,7 +308,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!id) return;
 
       if (acao === "mover" && $("campoContaDestino").hidden) {
-        // primeiro clique revela para onde vai; o segundo confirma
+
         $("campoContaDestino").hidden = false;
         b.querySelector("strong").textContent = "Confirmar e apagar";
         return;
@@ -340,8 +326,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               await S.atualizar("transactions", t.id, { account_id: destino });
             }
           }
-          // transferências que citam a conta somem junto: sem uma das
-          // pontas elas não descrevem mais movimento nenhum
+
           for (const t of transferencias.filter((x) =>
             String(x.from_account_id) === String(id) || String(x.to_account_id) === String(id))) {
             await S.remover("transfers", t.id);
@@ -358,9 +343,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) { U.toast(err.message, "erro"); }
     }));
 
-  /* ============================================================
-     Transferência interna
-     ============================================================ */
   function abrirTransferencia() {
     const lista = ativas();
     if (lista.length < 2) {
@@ -390,10 +372,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!$("transferData").value) return U.toast("Informe a data.", "erro");
 
     try {
-      /* Uma linha só: a transferência é atômica por construção.
-         Se fossem duas transações (uma de saída e uma de entrada),
-         falhar no meio deixaria dinheiro sumido de uma conta sem
-         aparecer na outra. */
+
       await S.inserir("transfers", {
         from_account_id: origem,
         to_account_id: destino,
@@ -407,9 +386,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { U.toast(err.message, "erro"); }
   });
 
-  /* ============================================================
-     Ajuste de saldo
-     ============================================================ */
   function abrirAjuste() {
     const lista = ativas();
     if (!lista.length) return U.toast("Cadastre uma conta antes de ajustar saldo.", "info");

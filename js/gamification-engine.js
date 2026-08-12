@@ -1,17 +1,4 @@
-/* ============================================================
-   FinCK of Reality — Motor de gamificação (v2)
-   Recompensa hábitos conscientes: registros consistentes,
-   metas concluídas e compras adiadas/substituídas.
 
-   Regras anti-farm (todas aplicadas em premiar()):
-   1. Cada ação tem um teto diário de repetições.
-   2. Existe um teto diário global de XP.
-   3. Ações com "chave" só pagam XP uma única vez na vida
-      (ex.: um cálculo específico, uma conquista específica).
-   4. Intervalo mínimo entre dois ganhos evita cliques em rajada.
-   5. Conquistas são recalculadas a partir dos DADOS reais,
-      nunca somadas de novo ao serem revistas.
-   ============================================================ */
 
 window.FinckGame = (() => {
   const cfg = window.FINCK_CONFIG;
@@ -20,7 +7,7 @@ window.FinckGame = (() => {
 
   const NIVEIS = cfg.NIVEIS;
   const REGRAS = cfg.XP;
-  const XP_POR_NIVEL = 250; // compatibilidade com telas antigas
+  const XP_POR_NIVEL = 250; 
 
   const CONQUISTAS = [
     { id: "primeiro_passo",     icone: "🌱", titulo: "Primeiro passo",       descricao: "Configurou o perfil financeiro.",                         teste: (c) => Boolean(c.perfilCompleto) },
@@ -44,7 +31,6 @@ window.FinckGame = (() => {
     { id: "mes_firme",          icone: "☄️", titulo: "Mês firme",            descricao: "Manteve 30 dias seguidos de uso do app.",                 teste: (c) => c.streak >= 30 },
   ];
 
-  /* ---------------- níveis e títulos ---------------- */
   function nivelDe(xpTotal) {
     const xp = Math.max(0, Number(xpTotal || 0));
     let atual = NIVEIS[0];
@@ -68,7 +54,6 @@ window.FinckGame = (() => {
 
   const tituloDe = (xp) => nivelDe(xp).titulo;
 
-  /* ---------------- livro-razão anti-farm ---------------- */
   function normalizarLedger(estado) {
     const hoje = U.hojeISO();
     const l = estado.ledger && typeof estado.ledger === "object" ? estado.ledger : {};
@@ -77,7 +62,6 @@ window.FinckGame = (() => {
     return { dia: hoje, total: Number(l.total || 0), acoes: l.acoes || {}, ultimo: Number(l.ultimo || 0), chaves };
   }
 
-  /** Diz se a ação pagaria XP agora — sem gravar nada (usado na UI). */
   function podePremiar(estado, tipo, chave) {
     const regra = REGRAS.ACOES[tipo];
     if (!regra) return { ok: false, motivo: "Ação desconhecida." };
@@ -89,19 +73,13 @@ window.FinckGame = (() => {
     return { ok: true, regra, ledger: l };
   }
 
-  /**
-   * Concede XP de forma auditada.
-   * @param {string} tipo   chave de cfg.XP.ACOES
-   * @param {object} opcoes { chave, xp, motivo, silencioso }
-   */
   async function premiar(tipo, opcoes = {}) {
     const estado = await S.obterGamificacao();
     const hoje = U.hojeISO();
     const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
-    // streak sempre atualiza (presença conta, mesmo sem XP)
     let streak = Number(estado.streak || 0);
-    if (estado.last_active === hoje) { /* mantém */ }
+    if (estado.last_active === hoje) {  }
     else if (estado.last_active === ontem) streak += 1;
     else streak = 1;
 
@@ -143,12 +121,10 @@ window.FinckGame = (() => {
     return { concedido: ganho, estado: novo, nivel: nivelDepois };
   }
 
-  /** Compatibilidade com chamadas antigas: ganharXP(quantia, motivo). */
   async function ganharXP(quantidade, motivo = "", tipo = "transacao") {
     return premiar(tipo, { xp: quantidade, motivo });
   }
 
-  /** Recalcula conquistas a partir do estado real dos dados. */
   async function sincronizarConquistas() {
     const [estado, perfil, transacoes, metas, analises] = await Promise.all([
       S.obterGamificacao(), S.obterPerfil(),
@@ -176,7 +152,7 @@ window.FinckGame = (() => {
     const novas = desbloqueadas.filter((id) => !antes.includes(id));
 
     if (novas.length) {
-      // grava a lista antes de premiar, para que reabrir a tela não pague de novo
+
       await S.salvarGamificacao({ ...estado, achievements: desbloqueadas });
       for (const id of novas) {
         const c = CONQUISTAS.find((x) => x.id === id);
@@ -187,7 +163,6 @@ window.FinckGame = (() => {
     return { lista: CONQUISTAS, desbloqueadas, ctx };
   }
 
-  /** Resumo dos limites do dia, para exibir na tela de progresso. */
   async function statusDiario() {
     const estado = await S.obterGamificacao();
     const l = normalizarLedger(estado);

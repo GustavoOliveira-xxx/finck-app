@@ -1,7 +1,4 @@
-/* ============================================================
-   FinCK of Reality — Página de análise (fluxo completo) (fluxo completo)
-   Dados -> Resultado -> Reflexão -> Decisão -> Histórico
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -18,12 +15,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   let resultado = null;
   let entrada = null;
   let decisao = null;
-  let registroId = null;   // id do cálculo já cadastrado (evita duplicar)
+  let registroId = null;   
 
   document.getElementById("itemCategory").innerHTML =
     cfg.CATEGORIAS.map((c) => `<option value="${c}">${c}</option>`).join("");
 
-  /* ---------- 1. análise ---------- */
   document.getElementById("formReality").addEventListener("submit", async (e) => {
     e.preventDefault();
     const item_name = document.getElementById("itemName").value.trim();
@@ -67,7 +63,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       "Cálculo ainda não cadastrado. Registre para guardar no seu histórico real.";
   });
 
-  /* ---------- 2. resultado ---------- */
   function renderResultado() {
     const r = resultado;
 
@@ -114,7 +109,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </li>`).join("");
   }
 
-  /* ---------- 3. reflexões ---------- */
   const OPCOES = {
     necessidade: ["Preciso agora", "Posso esperar", "É impulso"],
     uso: ["Uso diário", "Uso ocasional", "Uso raro"],
@@ -145,7 +139,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return dados;
   };
 
-  /* ---------- 4. decisão ---------- */
   function renderDecisoes() {
     document.getElementById("opcoesDecisao").innerHTML = cfg.DECISOES.map((d) => `
       <button type="button" class="botao-decisao${d.consciente ? " botao-decisao--consciente" : ""}" data-decisao="${d.id}">
@@ -164,7 +157,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  /* ---------- cadastro do cálculo realista ---------- */
   const chaveCalculo = () =>
     `${(entrada.item_name || "").toLowerCase().trim()}|${Number(entrada.price).toFixed(2)}|${U.hojeISO()}`;
 
@@ -178,7 +170,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /** Cadastra (ou atualiza) o cálculo em purchase_analyses e devolve o id. */
   async function cadastrarCalculo(extra = {}) {
     const registro = montarRegistro(extra);
     if (registroId) {
@@ -197,7 +188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     botao.disabled = true;
     try {
       await cadastrarCalculo({ decision: null });
-      // XP apenas para cálculos economicamente relevantes e não repetidos
+
       if (Number(entrada.price) >= cfg.XP.VALOR_MINIMO_CALCULO) {
         await G.premiar("calculo", { chave: chaveCalculo(), motivo: "cálculo real cadastrado" });
         window.FinckCalculos?.recarregar?.();

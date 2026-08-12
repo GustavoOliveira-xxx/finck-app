@@ -1,10 +1,9 @@
-/* ============================================================
-   FinCK v2 — Lançamentos recorrentes (previsão do orçamento)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;
+  const T = window.FinckTempo;
   const F = window.FinckFinance;
 
   const user = await window.FinckNav.iniciarPagina({ titulo: "Recorrentes", subtitulo: "Previsão do mês" });
@@ -37,6 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <strong class="${i.type === "entrada" ? "cor-verde" : "cor-vermelha"}">
           ${i.type === "entrada" ? "+" : "−"} ${U.moeda(i.amount)}
         </strong>
+        ${T.selo(i.amount, { classe: i.type === "entrada" ? "selo-tempo--entrada" : "" })}
         <label class="switch">
           <input type="checkbox" data-ativo="${i.id}" ${i.active === false ? "" : "checked"}>
           <span>${i.active === false ? "Pausado" : "Ativo"}</span>

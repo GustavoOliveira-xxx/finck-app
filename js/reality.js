@@ -1,20 +1,8 @@
-/* ============================================================
-   FinCK of Reality — motor de cálculo (item 5 do documento)
 
-   Fórmulas validadas com o cenário de teste do documento:
-   renda 3500, 22 dias, 8h/dia, item de R$ 800
-     -> 22,86% da renda | 5,03 dias | 40,22 horas
-   ============================================================ */
 
 window.FinckReality = (() => {
   const cfg = window.FINCK_CONFIG;
 
-  /**
-   * Calcula os indicadores de uma compra.
-   * @param {number} price  preço do item
-   * @param {object} perfil profiles: income_monthly, work_days_month, work_hours_day, initial_balance
-   * @param {object} ctx    { saldo, despesasFixas, metas: [], gastoMes }
-   */
   function calcular(price, perfil, ctx = {}) {
     const preco = Number(price) || 0;
     const renda = Number(perfil?.income_monthly) || 0;
@@ -53,7 +41,6 @@ window.FinckReality = (() => {
     };
   }
 
-  /** Efeito da compra sobre cada meta cadastrada (item 3.4 / 5.1). */
   function impactoMetas(preco, metas, valorDia) {
     return metas.map((m) => {
       const alvo = Number(m.target_amount) || 0;
@@ -72,12 +59,8 @@ window.FinckReality = (() => {
     });
   }
 
-  /** Classificação sem culpabilizar: verde / atencao / alerta. */
   function semaforo(incomePercent, saldoDepois, percentualRendaLivre) {
-    /* O texto descreve o efeito no orçamento e devolve a escolha ao
-       usuário. Antes soava como veredito ("compromete", "verifique
-       se é prioritária"), e um cálculo que julga faz a pessoa parar
-       de calcular — que é justamente o hábito que o app quer criar. */
+
     if (saldoDepois < 0 || incomePercent >= 30 || percentualRendaLivre >= 60) {
       return {
         nivel: "alerta",
@@ -99,7 +82,6 @@ window.FinckReality = (() => {
     };
   }
 
-  /** Sugestões de consumo consciente com estimativas simples. */
   function alternativas(preco) {
     return [
       { id: "usado", titulo: "Comprar usado ou recondicionado", economia: preco * 0.4, texto: "Mercados de segunda mão costumam custar cerca de 40% menos e evitam a produção de um novo item." },
@@ -109,12 +91,6 @@ window.FinckReality = (() => {
     ];
   }
 
-  /**
-   * Monta o registro gravado em purchase_analyses.
-   * Guarda um SNAPSHOT do perfil usado no cálculo (salário base,
-   * jornada, valor da hora), para que o histórico continue fiel
-   * mesmo depois de a renda da pessoa mudar.
-   */
   function paraRegistro({ item_name, price, category, resultado, perfil, decision, reflections, note, item_link }) {
     return {
       item_name,
@@ -128,7 +104,7 @@ window.FinckReality = (() => {
       reflections: reflections || {},
       note: note || null,
       item_link: item_link || null,
-      // --- snapshot da realidade financeira na data do cálculo ---
+
       income_base: Number(resultado.income_monthly || perfil?.income_monthly || 0),
       hour_value: Number((resultado.valor_hora || 0).toFixed(2)),
       day_value: Number((resultado.valor_dia || 0).toFixed(2)),
@@ -142,7 +118,6 @@ window.FinckReality = (() => {
     };
   }
 
-  /** Estatísticas do histórico para relatórios e gamificação. */
   function resumoHistorico(analises) {
     const conscientes = new Set(cfg.DECISOES.filter((d) => d.consciente).map((d) => d.id));
     const decididas = analises.filter((a) => a.decision);

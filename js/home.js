@@ -1,11 +1,10 @@
-/* ============================================================
-   FinCK v2 — Dashboard (home)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
   const U = window.FinckUtils;
+  const T = window.FinckTempo;
   const F = window.FinckFinance;
   const R = window.FinckReality;
   const G = window.FinckGame;
@@ -15,7 +14,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let pendente = null;
 
-  /* ---------- selects estáticos ---------- */
   document.getElementById("categoria").innerHTML =
     cfg.CATEGORIAS.map((c) => `<option value="${c}">${c}</option>`).join("");
   document.getElementById("data").value = U.hojeISO();
@@ -26,17 +24,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const game = await S.obterGamificacao();
     const nivel = G.nivelDe(game.xp);
 
-    /* saudação */
     document.getElementById("saudacao").textContent =
       `${U.saudacao()}, ${ctx.perfil?.name || "por aqui"}!`;
 
-    /* saldo */
     document.getElementById("saldoAtual").textContent = U.moeda(ctx.saldo);
     document.getElementById("entradasMes").textContent = U.moeda(ctx.entradasMes);
     document.getElementById("saidasMes").textContent = U.moeda(ctx.saidasMes);
     document.getElementById("rendaLivre").textContent = U.moeda(ctx.rendaLivre);
 
-    /* valor do tempo */
     const dias = Number(ctx.perfil?.work_days_month) || cfg.PADRAO.work_days_month;
     const horas = Number(ctx.perfil?.work_hours_day) || cfg.PADRAO.work_hours_day;
     const valorDia = (Number(ctx.perfil?.income_monthly) || 0) / dias;
@@ -44,11 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("valorDia").textContent = U.moeda(valorDia);
     document.getElementById("valorHora").textContent = U.moeda(valorHora);
 
-    /* prisma: a renda livre traduzida em quatro unidades.
-       O número é sempre o mesmo — muda só a régua usada para medi-lo.
-       Usa exatamente o ctx.rendaLivre do cartão de saldo (renda do mês
-       menos despesas fixas), e não a "sobra prevista" do bloco de
-       orçamento, que parte das entradas recorrentes quando existem. */
     const sobra = ctx.rendaLivre;
     document.getElementById("prismaReais").textContent = U.moeda(sobra);
     document.getElementById("prismaHoras").textContent =
@@ -59,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const faceMetaRotulo = document.getElementById("prismaMetaRotulo");
     const faceMetaValor = document.getElementById("prismaMeta");
     const faceMetaNota = document.getElementById("prismaMetaNota");
-    // meta mais perto de fechar entre as que ainda não fecharam
+
     const emAberto = ctx.metas
       .filter((m) => Number(m.current_amount || 0) < Number(m.target_amount || 0))
       .sort((a, b) =>
@@ -81,71 +71,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       faceMetaNota.textContent = "crie uma meta para ver esta face";
     }
 
-    /* indicadores conscientes */
     document.getElementById("indEvitadas").textContent = resumo.evitadas;
     document.getElementById("indEconomia").textContent = U.moeda(resumo.economia);
     document.getElementById("indHoras").textContent = `${U.numero(resumo.horas_preservadas, 1)} h`;
     document.getElementById("indNivel").textContent = nivel.level;
 
-    /* ---------- uma única próxima ação ----------
-       O painel mostrava oito indicadores competindo pela atenção e
-       nenhum caminho. Aqui sai uma recomendação só, escolhida pela
-       ordem de urgência real: saldo negativo > orçamento estourado
-       > perfil incompleto > sem meta > decisão pendente > rotina. */
-    const previstoSaida = ctx.despesasFixas;
-    const previstoEntrada = ctx.previstoEntradas || Number(ctx.perfil?.income_monthly || 0);
-    // projeção simples: saldo de hoje mais o resultado das recorrentes
-    const projetado = ctx.saldo + previstoEntrada - previstoSaida;
-    const decisoesPendentes = ctx.analises.filter((a) => !a.decision).length;
-    const metaLonge = ctx.metas.find((m) => {
-      if (!m.deadline) return false;
-      const falta = Number(m.target_amount) - Number(m.current_amount);
-      const meses = Math.max(1, Math.ceil((new Date(m.deadline) - new Date()) / (1000 * 60 * 60 * 24 * 30)));
-      return falta > 0 && falta / meses > ctx.rendaLivre;
-    });
-
-    const acao =
-      ctx.saldo < 0
-        ? { tom: "alerta", titulo: "Seu saldo está negativo",
-            texto: "Antes de qualquer meta, o buraco do mês precisa parar de crescer. Veja para onde o dinheiro foi.",
-            rotulo: "Ver gastos por categoria", href: "analises.html" }
-      : previstoSaida > previstoEntrada
-        ? { tom: "alerta", titulo: "As contas fixas passam da renda prevista",
-            texto: `Você tem ${U.moeda(previstoSaida)} em despesas fixas para ${U.moeda(previstoEntrada)} previstos de entrada.`,
-            rotulo: "Revisar recorrentes", href: "recorrentes.html" }
-      : decisoesPendentes > 0
-        ? { tom: "atencao", titulo: `${decisoesPendentes} cálculo(s) sem decisão`,
-            texto: "Você analisou essas compras mas não registrou o que decidiu. Fechar a decisão é o que vira histórico.",
-            rotulo: "Concluir decisões", href: "reality.html#calculos" }
-      : !ctx.metas.length
-        ? { tom: "neutro", titulo: "Você ainda não tem uma meta",
-            texto: `Sobram ${U.moeda(ctx.rendaLivre)} por mês. Com um destino, essa sobra vira objetivo em vez de sumir aos poucos.`,
-            rotulo: "Criar minha primeira meta", href: "metas.html" }
-      : metaLonge
-        ? { tom: "atencao", titulo: `"${metaLonge.name}" está fora do ritmo`,
-            texto: "O aporte necessário por mês passou da sua renda livre. Vale rever o prazo ou o valor.",
-            rotulo: "Ajustar a meta", href: "metas.html" }
-      : { tom: "bom", titulo: "Está tudo no rumo",
-          texto: `Saldo projetado para o fim do mês: ${U.moeda(projetado)}. Antes da próxima compra, passe pelo cálculo.`,
-          rotulo: "Calcular uma compra", href: "reality.html" };
-
-    document.getElementById("proximaAcao").innerHTML = `
-      <article class="proxima-acao proxima-acao--${acao.tom}">
-        <div class="proxima-acao__texto">
-          <span class="proxima-acao__etiqueta">Próximo passo</span>
-          <h2>${U.escapeHTML(acao.titulo)}</h2>
-          <p>${U.escapeHTML(acao.texto)}</p>
-        </div>
-        <a class="btn-primario" href="${acao.href}">${U.escapeHTML(acao.rotulo)}</a>
-      </article>
-      <p class="projecao">
-        Saldo hoje <strong>${U.moeda(ctx.saldo)}</strong>
-        · projetado para o fim do mês <strong class="${projetado < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(projetado)}</strong>
-      </p>`;
-
-    /* ---------- resumo das contas (6.5) ----------
-       Só o essencial: quanto tem, onde, e um caminho. O detalhe
-       fica em contas.html — a home não pode virar a tela de contas. */
     const CT = window.FinckContas;
     const [contas, transferencias, ajustes] = await Promise.all([
       S.listar("accounts"),
@@ -180,14 +110,14 @@ document.addEventListener("DOMContentLoaded", async () => {
            <a class="link-mais" href="contas.html">Cadastrar minha primeira conta →</a>
          </article>`;
 
-    /* select de contas do modal de lançamento */
     document.getElementById("contaSelecionada").innerHTML =
       `<option value="">Conta não informada</option>` +
       contas.filter((c) => c.active !== false)
         .map((c) => `<option value="${c.id}"${c.is_default ? " selected" : ""}>${U.escapeHTML(c.name)}</option>`)
         .join("");
 
-    /* orçamento previsto (previstoSaida/previstoEntrada vêm do bloco acima) */
+    const previstoSaida = ctx.despesasFixas;
+    const previstoEntrada = ctx.previstoEntradas || Number(ctx.perfil?.income_monthly || 0);
     const comprometido = previstoEntrada > 0 ? (previstoSaida / previstoEntrada) * 100 : 0;
     document.getElementById("orcamento").innerHTML = `
       <ul class="lista-resumo">
@@ -200,7 +130,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
       <p class="nota">${U.percentual(comprometido, 1)} da renda prevista já está comprometida com despesas fixas.</p>`;
 
-    /* metas */
     const metasHost = document.getElementById("metasResumo");
     metasHost.innerHTML = ctx.metas.length
       ? ctx.metas.slice(0, 3).map((m) => {
@@ -214,7 +143,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }).join("")
       : `<p class="vazio">Você ainda não criou metas. <a href="metas.html">Criar a primeira</a>.</p>`;
 
-    /* transações */
     const lista = document.getElementById("lista");
     const vazio = document.getElementById("vazio");
     const ultimas = ctx.transacoes.slice(0, 8);
@@ -229,6 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <strong class="${t.type === "entrada" ? "cor-verde" : "cor-vermelha"}">
             ${t.type === "entrada" ? "+" : "−"} ${U.moeda(t.amount)}
           </strong>
+          ${T.selo(t.amount, { classe: t.type === "entrada" ? "selo-tempo--entrada" : "" })}
           <button type="button" class="btn-excluir-item" data-excluir="${t.id}" aria-label="Excluir movimentação">✕</button>
         </div>
       </article>`).join("");
@@ -242,13 +171,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       })
     );
 
-    /* select de metas do modal */
     document.getElementById("metaSelecionada").innerHTML =
       `<option value="">Nenhuma meta</option>` +
       ctx.metas.map((m) => `<option value="${m.id}">${U.escapeHTML(m.name)}</option>`).join("");
   }
 
-  /* ---------- abrir modal ---------- */
   const abrir = (tipo) => {
     document.getElementById("tipoTransacao").value = tipo;
     document.getElementById("tituloModal").textContent = tipo === "entrada" ? "Nova entrada" : "Nova saída";
@@ -260,7 +187,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btnEntrada").addEventListener("click", () => abrir("entrada"));
   document.getElementById("btnSaida").addEventListener("click", () => abrir("saida"));
 
-  /* ---------- validação + confirmação ---------- */
   document.getElementById("formTransacao").addEventListener("submit", (e) => {
     e.preventDefault();
     const type = document.getElementById("tipoTransacao").value;
@@ -275,8 +201,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!description) return U.toast("Informe uma descrição.", "erro");
     if (!date) return U.toast("Informe a data.", "erro");
 
-    // account_id fica opcional: o histórico antigo não tem conta e
-    // continua valendo, como "Conta não informada"
     const contaSel = document.getElementById("contaSelecionada");
     const account_id = contaSel.value || null;
 
@@ -296,13 +220,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalConfirmacao");
   });
 
-  /* ---------- salvar ---------- */
   document.getElementById("btnConfirmarSalvar").addEventListener("click", async () => {
     if (!pendente) return;
     try {
       await S.inserir("transactions", pendente);
 
-      // meta vinculada: entrada aumenta o acumulado, saída reduz
       if (pendente.goal_id) {
         const metas = await S.listar("goals");
         const meta = metas.find((m) => String(m.id) === String(pendente.goal_id));

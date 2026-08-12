@@ -1,22 +1,15 @@
-/* ============================================================
-   FinCK of Reality — Configuração global
-   Preencha SUPABASE_URL e SUPABASE_ANON_KEY com os dados do
-   seu projeto. Se ficarem vazios, o app roda 100% offline
-   (localStorage) — útil para demonstração em sala.
-   ============================================================ */
+
 
 window.FINCK_CONFIG = {
   SUPABASE_URL: "https://iruqoghylxgopbopxjbi.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_zn_jngIj2xibO_VpzOi0Wg_gGG7Z8eS",
 
-  // Rótulos e parâmetros de produto
   APP_NOME: "FinCK of Reality",
   APP_NOME_CURTO: "FinCK",
   EMPRESA: "Conscious Knowledge",
   MOEDA: "BRL",
   LOCALE: "pt-BR",
 
-  // Valores padrão do perfil financeiro
   PADRAO: {
     work_days_month: 22,
     work_hours_day: 8,
@@ -24,7 +17,6 @@ window.FINCK_CONFIG = {
     payday: 5,
   },
 
-  // Categorias locais e familiares (item 4.2 do documento)
   CATEGORIAS: [
     "Alimentação",
     "Transporte",
@@ -37,12 +29,6 @@ window.FINCK_CONFIG = {
     "Outros",
   ],
 
-  /* Catálogo de instituições do FinCK Contas.
-     É catálogo estático de rótulos, como prevê a especificação
-     (5.1): nenhuma credencial, nenhum identificador de conexão.
-     Cadastrar "Inter" aqui não cria vínculo nenhum com o Inter —
-     é só o nome que o usuário escolheu para organizar o dinheiro
-     dele. "Outro" existe para quem usa instituição fora da lista. */
   INSTITUICOES: [
     { id: "inter",     nome: "Banco Inter",              curto: "Inter",     cor: "#ea7100", logo: "assets/bancos/inter.svg" },
     { id: "nubank",    nome: "Nubank",                   curto: "Nubank",    cor: "#820ad1", logo: "assets/bancos/nubank.svg" },
@@ -64,7 +50,6 @@ window.FINCK_CONFIG = {
     { id: "investimento", rotulo: "Investimento (manual)" },
   ],
 
-  // Decisões possíveis no FinCK of Reality (item 5.2)
   DECISOES: [
     { id: "comprar", label: "Comprar agora", xp: 5, consciente: false },
     { id: "adiar", label: "Adiar a compra", xp: 25, consciente: true },
@@ -74,7 +59,6 @@ window.FINCK_CONFIG = {
     { id: "desistir", label: "Desistir da compra", xp: 40, consciente: true },
   ],
 
-  // Perguntas de reflexão (item 5.3)
   REFLEXOES: [
     { id: "necessidade", dimensao: "Necessidade", pergunta: "Eu preciso deste produto agora ou estou respondendo a um impulso?" },
     { id: "uso", dimensao: "Uso", pergunta: "Com que frequência pretendo usar o item?" },
@@ -84,10 +68,6 @@ window.FINCK_CONFIG = {
     { id: "descarte", dimensao: "Descarte", pergunta: "Como o item será mantido, reutilizado ou descartado quando não servir mais?" },
   ],
 
-  /* ----------------------------------------------------------
-     GAMIFICAÇÃO — trilha de níveis (títulos + requisito de XP)
-     xp = XP acumulado necessário para ALCANÇAR o nível.
-     ---------------------------------------------------------- */
   NIVEIS: [
     { level: 1,  titulo: "CK Newbie",              xp: 0,     icone: "🆕", lema: "Você acabou de entrar no mundo do consumo consciente." },
     { level: 2,  titulo: "Conscious Planner",      xp: 100,   icone: "📝", lema: "Começou a registrar e planejar o próprio dinheiro." },
@@ -111,13 +91,9 @@ window.FINCK_CONFIG = {
     { level: 20, titulo: "THE TRUE CK ZEMO",       xp: 19000, icone: "⚔️", lema: "Consumo consciente virou identidade. Nível máximo." },
   ],
 
-  /* ----------------------------------------------------------
-     REGRAS ANTI-FARM DE XP
-     Cada ação tem valor, limite diário e chave de unicidade.
-     ---------------------------------------------------------- */
   XP: {
-    TETO_DIARIO: 260,        // XP máximo somado por dia, qualquer origem
-    INTERVALO_MIN_MS: 8000,  // tempo mínimo entre dois ganhos de XP
+    TETO_DIARIO: 260,        
+    INTERVALO_MIN_MS: 8000,  
     ACOES: {
       primeiro_acesso:  { xp:  5, rotulo: "Primeiro acesso do dia",            limiteDia: 1 },
       onboarding:       { xp: 30, rotulo: "Completar o perfil financeiro",     limiteDia: 1,  unico: true },
@@ -134,7 +110,7 @@ window.FINCK_CONFIG = {
       streak:           { xp: 10, rotulo: "Manter a sequência diária",         limiteDia: 1 },
       conquista:        { xp: 50, rotulo: "Desbloquear uma conquista",         limiteDia: 99, unico: true },
     },
-    // Um cálculo só vale XP se o item for economicamente relevante
+
     VALOR_MINIMO_CALCULO: 20,
   },
 };

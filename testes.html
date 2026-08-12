@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <style>
-    /* a página de testes é ferramenta interna: estilo mínimo, aqui mesmo */
+
     .placar{
       display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
       margin-block:1rem;
@@ -78,6 +78,7 @@
   <script src="js/contas-engine.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
   <script src="js/planejamento-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/testes.js"></script>
@@ -108,7 +109,7 @@
       elSelo.textContent = "Executando…";
       const r = await window.FinckTestes.rodar();
       pintar(r);
-      // deixa o resultado legível para automação externa
+
       window.__resultadoTestes = r;
       document.body.dataset.testes = r.falhou ? "falhou" : "ok";
     }

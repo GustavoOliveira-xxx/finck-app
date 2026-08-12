@@ -1,24 +1,4 @@
 @charset "UTF-8";
-/* ============================================================
-   FinCK — finck-fx.css
-   Duas camadas de espetáculo, sem custo de main thread:
-
-     1. .finck-carga  → tela de abertura da marca (splash)
-     2. .cena3d       → cena com profundidade real que responde
-                         ao ponteiro na página de entrada
-
-   Mesma regra do ui-fx.js: só `transform`, `opacity` e `filter`
-   entram nas animações — nada que force o navegador a recalcular
-   layout quadro a quadro. O JS apenas escreve duas variáveis
-   (--mx / --my); quem suaviza o movimento é a transition do CSS.
-
-   Depende das variáveis de tema já definidas em style-auth.css
-   e style-principal.css (--roxo, --amarelo, --ease-out, ...).
-   ============================================================ */
-
-/* ============================================================
-   1. TELA DE ABERTURA
-   ============================================================ */
 
 .finck-carga{
   position:fixed; inset:0; z-index:9999;
@@ -36,10 +16,8 @@
   will-change:opacity, transform;
 }
 
-/* trava a rolagem enquanto a abertura está no ar */
 body.finck-carregando{ overflow:hidden; }
 
-/* saída: a tela se afasta, desfoca e some */
 .finck-carga--saiu{
   opacity:0;
   transform:scale(1.09);
@@ -47,7 +25,6 @@ body.finck-carregando{ overflow:hidden; }
   pointer-events:none;
 }
 
-/* ---------- núcleo: órbitas + logo ---------- */
 .finck-carga__nucleo{
   position:relative;
   display:grid; place-items:center;
@@ -66,14 +43,14 @@ body.finck-carregando{ overflow:hidden; }
   stroke-linecap:round;
   transform-origin:50% 50%;
 }
-/* anel externo: tracejado que gira devagar no sentido horário */
+
 .finck-carga__anel--externo{
   stroke:rgba(180,92,240,.55);
   stroke-width:1.6;
   stroke-dasharray:34 22;
   animation:carga-gira 9s linear infinite;
 }
-/* anel médio: arco curto e brilhante girando ao contrário */
+
 .finck-carga__anel--medio{
   stroke:var(--amarelo, #fec800);
   stroke-width:2.4;
@@ -82,7 +59,6 @@ body.finck-carregando{ overflow:hidden; }
   animation:carga-gira-inv 2.4s cubic-bezier(.6,0,.35,1) infinite;
 }
 
-/* satélites: o "ponteiro" da marca — tempo virando dinheiro */
 .finck-carga__satelite-g{
   transform-origin:50% 50%;
   animation:carga-gira 3.2s linear infinite;
@@ -103,7 +79,6 @@ body.finck-carregando{ overflow:hidden; }
 @keyframes carga-gira{     to{ transform:rotate(360deg); } }
 @keyframes carga-gira-inv{ to{ transform:rotate(-360deg); } }
 
-/* logo pulsando no centro da órbita */
 .finck-carga__logo{
   position:relative;
   width:64%; height:auto;
@@ -122,7 +97,6 @@ body.finck-carregando{ overflow:hidden; }
   50%    { transform:translateY(-6px) scale(1.035); }
 }
 
-/* ---------- assinatura ---------- */
 .finck-carga__marca{
   font-family:var(--fonte-display, 'Space Grotesk', sans-serif);
   font-size:clamp(2rem, 1.4rem + 3vw, 3.1rem);
@@ -149,7 +123,6 @@ body.finck-carregando{ overflow:hidden; }
   to  { opacity:1; transform:translateY(0); }
 }
 
-/* ---------- barra de progresso ---------- */
 .finck-carga__barra{
   position:relative;
   width:min(230px, 62vw); height:3px;
@@ -165,10 +138,10 @@ body.finck-carregando{ overflow:hidden; }
   border-radius:inherit;
   background:linear-gradient(90deg, var(--roxo-claro, #9333c4), var(--roxo-neon, #b45cf0) 45%, var(--amarelo, #fec800));
   box-shadow:0 0 12px rgba(254,200,0,.5);
-  /* avanço "otimista": corre até 88% e espera o load real */
+
   animation:carga-avanca 2.6s cubic-bezier(.2,.85,.3,1) .35s both;
 }
-/* quando a página termina de carregar, completa em 260ms */
+
 .finck-carga--pronta .finck-carga__preenche{
   animation:none;
   transform:scaleX(1);
@@ -180,18 +153,13 @@ body.finck-carregando{ overflow:hidden; }
   100%{ transform:scaleX(.88); }
 }
 
-/* ============================================================
-   2. CENA 3D DA PÁGINA DE ENTRADA
-   ============================================================ */
-
 .cena3d{ perspective:1100px; perspective-origin:50% 45%; }
 
-/* o palco herda o empilhamento que a .auth-marca fazia antes */
 .cena3d__palco{
   position:relative;
   display:flex; flex-direction:column; align-items:flex-start; gap:.9rem;
   transform-style:preserve-3d;
-  /* --mx / --my chegam do JS no intervalo -1 .. 1 */
+
   transform:
     rotateX(calc(var(--my, 0) * -8deg))
     rotateY(calc(var(--mx, 0) *  11deg));
@@ -199,20 +167,14 @@ body.finck-carregando{ overflow:hidden; }
   will-change:transform;
 }
 
-/* No celular a página de entrada empilha e centraliza a marca.
-   Esta regra precisa morar aqui, e não em style-auth.css: este
-   arquivo é carregado depois, e como as duas têm a mesma
-   especificidade, a última é que vale. */
 @media (max-width: 900px){
   .cena3d__palco{ align-items:center; text-align:center; }
 }
 
-/* cada camada ganha uma altura diferente => paralaxe real */
 .cena3d__logo-caixa{ transform:translateZ(78px); }
 .cena3d__titulo    { transform:translateZ(52px); }
 .cena3d__tagline   { transform:translateZ(26px); }
 
-/* ---------- halo atrás do logo ---------- */
 .cena3d__halo{
   position:absolute;
   top:-14%; left:-16%;
@@ -229,11 +191,8 @@ body.finck-carregando{ overflow:hidden; }
   50%    { opacity:1;   transform:translateZ(-70px) scale(1.24); }
 }
 
-/* ---------- logo + brilho especular ---------- */
 .cena3d__logo-caixa{ position:relative; display:block; }
 
-/* o brilho usa o próprio PNG como máscara: a luz só acende
-   dentro da silhueta do logo, nunca no retângulo da imagem */
 .cena3d__brilho{
   position:absolute; inset:0;
   pointer-events:none;
@@ -251,7 +210,6 @@ body.finck-carregando{ overflow:hidden; }
 }
 .cena3d:hover .cena3d__brilho{ opacity:1; }
 
-/* ---------- moedas orbitando em profundidades diferentes ---------- */
 .cena3d__moedas{
   position:absolute; inset:-10% -6%;
   pointer-events:none;
@@ -269,7 +227,7 @@ body.finck-carregando{ overflow:hidden; }
   opacity:.85;
   animation:cena-moeda var(--t, 7s) var(--ease-suave, cubic-bezier(.4,0,.2,1)) var(--atraso, 0s) infinite;
 }
-/* duas ficam roxas, pra não virar um enxame dourado */
+
 .cena3d__moeda--roxa{
   background:
     radial-gradient(circle at 32% 28%, #f0d8ff, var(--roxo-neon, #b45cf0) 46%, #3d0a58 100%);
@@ -290,7 +248,6 @@ body.finck-carregando{ overflow:hidden; }
   66%    { translate:-10px 10px;rotate:250deg; }
 }
 
-/* ---------- o cartão de login inclina junto, mais discreto ---------- */
 .cena3d-eco{
   transform-style:preserve-3d;
   transform:
@@ -301,17 +258,8 @@ body.finck-carregando{ overflow:hidden; }
   will-change:transform;
 }
 
-/* ============================================================
-   3. PRISMA DA HOME
-   Um valor só, decomposto em quatro leituras — que é exatamente
-   o que o app faz com dinheiro. Girando, o prisma mostra o mesmo
-   número como reais, horas de trabalho, dias de vida e fatia da
-   meta. Parado, ele gira sozinho; sob o ponteiro, quem gira é
-   quem está olhando.
-   ============================================================ */
-
 .prisma-cena{
-  --s:clamp(148px, 25vw, 208px);   /* aresta do prisma */
+  --s:clamp(148px, 25vw, 208px);   
   position:relative;
   display:grid; place-items:center;
   height:calc(var(--s) * 1.85);
@@ -320,24 +268,20 @@ body.finck-carregando{ overflow:hidden; }
   perspective-origin:50% 45%;
 }
 
-/* órbita: giro lento e contínuo enquanto ninguém interage */
 .prisma-orbita{
   transform-style:preserve-3d;
   animation:prisma-orbita 26s linear infinite;
 }
 @keyframes prisma-orbita{ to{ transform:rotateY(360deg); } }
 
-/* o ponteiro assume o controle e o giro automático congela */
 .prisma-cena:hover .prisma-orbita,
 .prisma-cena:focus-within .prisma-orbita{ animation-play-state:paused; }
 
-/* corpo: recebe a inclinação do ponteiro (--px / --py, -1 a 1) */
 .prisma{
   position:relative;
   width:var(--s); height:var(--s);
   transform-style:preserve-3d;
-  /* --px vai de -0,5 a 0,5, então 360deg = meia volta para cada
-     lado: varrendo a largura da cena chega-se às quatro faces */
+
   transform:
     rotateX(calc(var(--py, 0) * 24deg))
     rotateY(calc(var(--px, 0) * 360deg));
@@ -363,7 +307,6 @@ body.finck-carregando{ overflow:hidden; }
   backface-visibility:hidden;
 }
 
-/* montagem do cubo: cada face empurrada meia aresta para fora */
 .prisma__face--frente  { transform:translateZ(calc(var(--s) / 2)); }
 .prisma__face--direita { transform:rotateY(90deg)  translateZ(calc(var(--s) / 2)); }
 .prisma__face--tras    { transform:rotateY(180deg) translateZ(calc(var(--s) / 2)); }
@@ -371,7 +314,6 @@ body.finck-carregando{ overflow:hidden; }
 .prisma__face--topo    { transform:rotateX(90deg)  translateZ(calc(var(--s) / 2)); }
 .prisma__face--base    { transform:rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
 
-/* as faces de tempo puxam para o dourado; as de dinheiro, para o roxo */
 .prisma__face--direita,
 .prisma__face--tras{
   background:
@@ -382,7 +324,6 @@ body.finck-carregando{ overflow:hidden; }
     0 0 34px -14px rgba(254,200,0,.5);
 }
 
-/* tampas: sem texto, só a marca em luz */
 .prisma__face--topo,
 .prisma__face--base{
   background:
@@ -419,7 +360,6 @@ body.finck-carregando{ overflow:hidden; }
   color:var(--texto-fraco, #a49bb2);
 }
 
-/* sombra projetada: ancora o prisma no chão do bloco */
 .prisma__sombra{
   position:absolute; bottom:6%; left:50%;
   width:calc(var(--s) * .82); height:14px;
@@ -436,7 +376,6 @@ body.finck-carregando{ overflow:hidden; }
 }
 .prisma-cena:hover .prisma__sombra{ animation-play-state:paused; }
 
-/* aviso de interação, some quando o ponteiro chega */
 .prisma-dica{
   position:absolute; bottom:0; left:50%; translate:-50% 0;
   display:inline-flex; align-items:center; gap:.45rem;
@@ -450,17 +389,8 @@ body.finck-carregando{ overflow:hidden; }
 }
 .prisma-cena:hover .prisma-dica{ opacity:0; }
 
-/* ============================================================
-   4. MEDALHA DO NÍVEL (Jornada)
-
-   O troféu da página: um disco metálico com o nível gravado de um
-   lado e o título conquistado do outro. Medalha existe para ser
-   girada na mão — aqui ela gira sozinha e obedece ao ponteiro,
-   com o reflexo acompanhando de onde vem a luz.
-   ============================================================ */
-
 .medalha-cena{
-  --d:clamp(132px, 30vw, 176px);   /* diâmetro */
+  --d:clamp(132px, 30vw, 176px);   
   position:relative;
   display:grid; place-items:center;
   width:var(--d); height:calc(var(--d) + 26px);
@@ -480,7 +410,7 @@ body.finck-carregando{ overflow:hidden; }
   position:relative;
   width:var(--d); height:var(--d);
   transform-style:preserve-3d;
-  /* --gx varre de -0,5 a 0,5 => volta inteira de cada lado */
+
   transform:
     rotateX(calc(var(--gy, 0) * 18deg))
     rotateY(calc(var(--gx, 0) * 360deg));
@@ -504,7 +434,6 @@ body.finck-carregando{ overflow:hidden; }
     0 18px 40px -18px rgba(0,0,0,.9);
 }
 
-/* frente: ouro escovado */
 .medalha__face--frente{
   transform:translateZ(7px);
   background:
@@ -512,7 +441,7 @@ body.finck-carregando{ overflow:hidden; }
       #6b4a00, #ffe9a8 12%, #b8860b 26%, #fff3c4 42%,
       #8a6100 58%, #ffdf6b 74%, #7a5200 88%, #6b4a00);
 }
-/* verso: mesma peça em roxo, para o giro ler como uma volta real */
+
 .medalha__face--verso{
   transform:rotateY(180deg) translateZ(7px);
   background:
@@ -521,7 +450,6 @@ body.finck-carregando{ overflow:hidden; }
       #3d0a58 58%, #b45cf0 74%, #35084b 88%, #2b0a3d);
 }
 
-/* canto da medalha: dá espessura ao disco */
 .medalha__borda{
   position:absolute; inset:-2px;
   border-radius:50%;
@@ -531,7 +459,6 @@ body.finck-carregando{ overflow:hidden; }
   pointer-events:none;
 }
 
-/* reflexo que acompanha o ponteiro: é o que faz o disco parecer metal */
 .medalha__brilho{
   position:absolute; inset:0;
   border-radius:50%;
@@ -591,7 +518,6 @@ body.finck-carregando{ overflow:hidden; }
 }
 .medalha-cena:hover .medalha-dica{ opacity:0; }
 
-/* a medalha divide espaço com o texto do nível */
 .nivel-com-medalha{
   display:grid; gap:1.1rem;
   justify-items:center;
@@ -601,21 +527,6 @@ body.finck-carregando{ overflow:hidden; }
 @media (min-width: 620px){
   .nivel-com-medalha{ grid-template-columns:auto minmax(0,1fr); gap:1.5rem; justify-items:start; }
 }
-
-/* ============================================================
-   5. ALVO DAS METAS
-
-   Identidade visual da página, sem número nenhum. A escolha é
-   deliberada: os dados de cada meta já aparecem logo abaixo, em
-   cartões que dizem quanto falta e quanto guardar por mês. Repetir
-   isso num objeto giratório competiria com a leitura em vez de
-   ajudá-la.
-
-   Os anéis ficam em profundidades diferentes, formando um funil
-   que aponta para quem olha. Girando, o paralaxe entre eles revela
-   o cone — e o dardo, cravado fora do centro, sugere o movimento
-   sem fingir que mediu alguma coisa.
-   ============================================================ */
 
 .bloco--alvo{
   display:grid; gap:1.2rem;
@@ -662,7 +573,6 @@ body.finck-carregando{ overflow:hidden; }
 }
 .alvo-cena:hover .alvo{ scale:1.04; }
 
-/* cada anel é um disco vazado, empurrado para fora em Z */
 .alvo-anel{
   position:absolute; inset:0;
   margin:auto;
@@ -706,7 +616,6 @@ body.finck-carregando{ overflow:hidden; }
   50%    { box-shadow:0 0 30px 2px rgba(254,200,0,.55); }
 }
 
-/* dardo cravado perto do centro, apontando para quem olha */
 .alvo-dardo{
   position:absolute; top:34%; left:52%;
   transform-style:preserve-3d;
@@ -739,14 +648,6 @@ body.finck-carregando{ overflow:hidden; }
   pointer-events:none;
 }
 
-
-/* ============================================================
-   6. ACESSIBILIDADE E TELAS SEM PONTEIRO
-   ============================================================ */
-
-/* sem hover (celular/tablet): a cena de entrada fica parada e reta.
-   O prisma continua girando sozinho e passa a aceitar arraste do
-   dedo — ver o bloco de toque mais abaixo. */
 @media (hover: none){
   .cena3d__palco,
   .cena3d-eco{ transform:none; transition:none; }
@@ -754,34 +655,20 @@ body.finck-carregando{ overflow:hidden; }
   .cena3d__brilho{ display:none; }
 }
 
-/* ============================================================
-   CELULAR — peso de renderização
-   ============================================================ */
 @media (max-width: 780px){
-  /* a saída da abertura desfocava a tela inteira: num aparelho
-     intermediário esse blur de tela cheia engasga justo no
-     primeiro quadro que o usuário vê. Sai só com opacidade e
-     escala, que a GPU resolve sem repintar. */
+
   .finck-carga{ transition:opacity 460ms var(--ease-suave), transform 460ms var(--ease-out); }
   .finck-carga--saiu{ filter:none; transform:scale(1.06); }
 
-  /* as tampas do prisma somavam um conic-gradient desfocado que
-     quase nunca aparece — no celular viram um brilho chapado */
   .prisma__face--topo::after,
   .prisma__face--base::after{ filter:none; opacity:.5; }
 
-  /* moedas orbitando: menos elementos animados sobre a marca */
   .cena3d__moeda--2,
   .cena3d__moeda--4{ display:none; }
 }
 
-/* ---------- prisma no toque ----------
-   Sem ponteiro o prisma girava sozinho e o usuário não tinha como
-   conduzir. Arrastar na horizontal passa a girar; pan-y mantém a
-   rolagem vertical da página funcionando por cima do bloco. */
 @media (hover: none){
-  /* o alvo é decorativo: no toque ele só balança sozinho, sem
-     roubar o gesto de rolagem para girar coisa nenhuma */
+
   .alvo{ transform:rotateY(-8deg); }
 
   .medalha-cena{ touch-action:pan-y; }
@@ -792,9 +679,7 @@ body.finck-carregando{ overflow:hidden; }
   .medalha__brilho{ display:none; }
 
   .prisma-cena{ touch-action:pan-y; }
-  /* sem ponteiro o --py fica sempre em zero e o prisma ficaria
-     de frente, chapado; uma inclinação fixa devolve o volume
-     sem atrapalhar o giro do arraste */
+
   .prisma{ transform:rotateX(-7deg) rotateY(calc(var(--px, 0) * 360deg)); }
   .prisma-cena.prisma-cena--conduzindo .prisma-orbita{ animation-play-state:paused; }
   .prisma-cena.prisma-cena--conduzindo .prisma__sombra{ animation-play-state:paused; }
@@ -829,7 +714,169 @@ body.finck-carregando{ overflow:hidden; }
   .cena3d__palco,
   .cena3d-eco{ transform:none !important; transition:none; }
   .cena3d__brilho{ display:none; }
-  /* prisma parado, mostrando a face de reais de frente */
+
   .prisma{ transform:rotateX(-8deg) rotateY(-18deg) !important; transition:none; }
   .prisma-cena:hover .prisma{ scale:1; }
+}
+
+.reality-cta__marca:has(.marca3d){
+  padding:0;
+  background:none;
+  perspective:900px;
+  perspective-origin:50% 45%;
+}
+
+.marca3d{
+  position:relative;
+  display:grid; place-items:center;
+  width:clamp(150px, 30vw, 210px);
+  aspect-ratio:1;
+  transform-style:preserve-3d;
+}
+
+.marca3d__palco{
+  position:relative;
+  display:grid; place-items:center;
+  width:100%; height:100%;
+  transform-style:preserve-3d;
+  transform:
+    rotateX(calc(var(--my, 0) * -14deg))
+    rotateY(calc(var(--mx, 0) *  24deg));
+  transition:transform 520ms var(--ease-out, cubic-bezier(.16,1,.3,1));
+  will-change:transform;
+  animation:marca3d-flutua 6s var(--ease-suave, cubic-bezier(.4,0,.2,1)) infinite;
+}
+@keyframes marca3d-flutua{
+  0%,100%{ translate:0 0; }
+  50%    { translate:0 -8px; }
+}
+
+.marca3d__peca{
+  position:relative;
+  display:grid; place-items:center;
+  width:78%; aspect-ratio:1;
+  transform-style:preserve-3d;
+}
+
+.marca3d__logo{
+  position:relative;
+  width:100%; height:auto;
+  object-fit:contain;
+  transform:translateZ(14px);
+  filter:drop-shadow(0 14px 30px rgba(104,12,144,.75));
+}
+
+.marca3d__sombra{
+  position:absolute; inset:0;
+  background:url("../assets/logo-reality-transparente.png") center/contain no-repeat;
+  pointer-events:none;
+}
+.marca3d__sombra--1{ transform:translateZ(9px);  filter:brightness(.42) saturate(.6); }
+.marca3d__sombra--2{ transform:translateZ(4px);  filter:brightness(.26) saturate(.4); }
+.marca3d__sombra--3{ transform:translateZ(0);    filter:brightness(.12) saturate(.2); }
+
+.marca3d__lustro{
+  position:absolute; inset:0;
+  transform:translateZ(15px);
+  background:linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255,255,255,.42) 46%,
+    rgba(255,236,168,.28) 52%,
+    transparent 66%);
+  background-size:260% 260%;
+  background-position:calc(50% - var(--mx, 0) * 60%) calc(50% - var(--my, 0) * 60%);
+  -webkit-mask-image:url("../assets/logo-reality-transparente.png");
+          mask-image:url("../assets/logo-reality-transparente.png");
+  -webkit-mask-size:contain; mask-size:contain;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center;  mask-position:center;
+  mix-blend-mode:screen;
+  opacity:0;
+  transition:opacity 360ms var(--ease-suave, cubic-bezier(.4,0,.2,1));
+  pointer-events:none;
+}
+.reality-cta:hover .marca3d__lustro{ opacity:1; }
+
+.marca3d__aura{
+  position:absolute; inset:6%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(147,51,196,.6), rgba(104,12,144,.18) 52%, transparent 74%);
+  filter:blur(22px);
+  transform:translateZ(-90px);
+  animation:marca3d-aura 5s var(--ease-suave, cubic-bezier(.4,0,.2,1)) infinite;
+  pointer-events:none;
+}
+@keyframes marca3d-aura{
+  0%,100%{ opacity:.7;  scale:1; }
+  50%    { opacity:1;   scale:1.14; }
+}
+
+.marca3d__anel{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+}
+.marca3d__anel--externo{
+  inset:-2%;
+  border:1.5px dashed rgba(180,92,240,.42);
+  transform:translateZ(-40px) rotateX(72deg);
+  animation:marca3d-gira 16s linear infinite;
+}
+.marca3d__anel--interno{
+  inset:12%;
+  border:1.5px solid rgba(254,200,0,.32);
+  transform:translateZ(-24px) rotateX(66deg) rotateZ(30deg);
+  animation:marca3d-gira 11s linear infinite reverse;
+}
+@keyframes marca3d-gira{
+  from{ rotate:0deg; }
+  to  { rotate:360deg; }
+}
+
+.marca3d__faisca{
+  position:absolute;
+  width:6px; height:6px;
+  border-radius:50%;
+  background:radial-gradient(circle, #fff6d2, var(--amarelo, #fec800) 60%, transparent);
+  box-shadow:0 0 10px 1px rgba(254,200,0,.8);
+  pointer-events:none;
+}
+.marca3d__faisca--a{ top:8%;  left:14%; transform:translateZ(70px);  animation:marca3d-faisca 7s   var(--ease-suave) infinite; }
+.marca3d__faisca--b{ top:66%; left:6%;  transform:translateZ(45px);  animation:marca3d-faisca 9s   var(--ease-suave) -2s infinite; }
+.marca3d__faisca--c{ top:20%; left:86%; transform:translateZ(96px);  animation:marca3d-faisca 8s   var(--ease-suave) -4s infinite; }
+.marca3d__faisca--d{ top:78%; left:80%; transform:translateZ(30px);  animation:marca3d-faisca 10s  var(--ease-suave) -6s infinite; }
+@keyframes marca3d-faisca{
+  0%,100%{ translate:0 0;        opacity:.35; }
+  50%    { translate:6px -14px;  opacity:1; }
+}
+
+.marca3d__chao{
+  position:absolute; bottom:2%; left:50%;
+  width:62%; height:14px;
+  translate:-50% 0;
+  border-radius:50%;
+  background:radial-gradient(ellipse, rgba(104,12,144,.7), transparent 70%);
+  filter:blur(9px);
+  animation:marca3d-chao 6s var(--ease-suave, cubic-bezier(.4,0,.2,1)) infinite;
+  pointer-events:none;
+}
+@keyframes marca3d-chao{
+  0%,100%{ opacity:.6; scale:1 1; }
+  50%    { opacity:.35; scale:.86 1; }
+}
+
+@media (hover: none){
+  .marca3d__palco{ transform:rotateY(-10deg) rotateX(4deg); transition:none; }
+  .marca3d__lustro{ display:none; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .marca3d__palco,
+  .marca3d__aura,
+  .marca3d__anel,
+  .marca3d__faisca,
+  .marca3d__chao{ animation:none !important; }
+  .marca3d__palco{ transform:rotateY(-10deg) !important; transition:none; }
+  .marca3d__lustro{ display:none; }
 }

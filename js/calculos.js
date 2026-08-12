@@ -1,8 +1,4 @@
-/* ============================================================
-   FinCK of Reality — Meus cálculos reais
-   Lista tudo que foi cadastrado em purchase_analyses, incluindo
-   o snapshot do salário base usado em cada cálculo.
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -10,7 +6,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const U = window.FinckUtils;
   const R = window.FinckReality;
 
-  // Esta tela agora vive como aba dentro do FinCK of Reality (reality.html).
   const embutido = document.body.dataset.page === "reality";
   const user = embutido
     ? await S.usuarioAtual()

@@ -1,12 +1,9 @@
-/* ============================================================
-   FinCK v2 — Autenticação (login, cadastro, captcha, demo)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;
 
-  /* ---------- mostrar/ocultar senha ---------- */
   const ICONE_OLHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
   const ICONE_OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.6A10.6 10.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a15.6 15.6 0 0 1-3.1 3.9M7.4 7.4A15.7 15.7 0 0 0 2.5 12S6 18.5 12 18.5a10.4 10.4 0 0 0 3.4-.6"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/></svg>';
   document.querySelectorAll(".toggle-senha").forEach((btn) => {
@@ -20,7 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  /* ---------- captcha de arraste ---------- */
   function initCaptcha(sliderId, textoId, btnId) {
     const slider = document.getElementById(sliderId);
     if (!slider) return;
@@ -72,7 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("mouseup", finalizar);
     document.addEventListener("touchend", finalizar);
 
-    /* equivalente por teclado: setas/Home/End movem, Enter/Espaço confirmam */
     slider.addEventListener("keydown", (e) => {
       if (["ArrowRight", "ArrowUp", "End"].includes(e.key)) {
         e.preventDefault();
@@ -85,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
         track.classList.contains("verificado") ? resetar() : validar();
       }
     });
-    // acessibilidade: teclado valida o captcha
+
     slider.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") { e.preventDefault(); validar(); }
     });
@@ -100,11 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     el.textContent = texto;
   };
 
-  /* ---------- já autenticado? vai direto ----------
-     Só nas telas de entrada. A página de nova senha é alcançada
-     pelo link do e-mail, e esse link já abre uma sessão válida —
-     redirecionar ali jogaria o usuário para a home antes de ele
-     conseguir trocar a senha, que é justamente o que foi pedir. */
   const TELAS_DE_ENTRADA = ["login", "cadastro"];
   if (TELAS_DE_ENTRADA.includes(document.body.dataset.page)) {
     S.usuarioAtual().then(async (user) => {
@@ -113,7 +103,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- login ---------- */
   const formLogin = document.getElementById("loginForm");
   if (formLogin) {
     const mensagemEl = document.getElementById("mensagem");
@@ -138,7 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- cadastro ---------- */
   const formCadastro = document.getElementById("cadastroForm");
   if (formCadastro) {
     const mensagemEl = document.getElementById("mensagemCad");
@@ -175,9 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- confirmação de e-mail pendente ----------
-     Sem isto o usuário via "confirme o e-mail" e ficava sem saída
-     se o e-mail não chegasse: nada de reenviar, nada de corrigir. */
   function mostrarConfirmacaoPendente(email, mensagemEl) {
     const card = document.querySelector(".auth-card");
     const form = document.getElementById("cadastroForm");
@@ -212,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         msg(msgReenvio, err.message, "erro");
       }
-      // o provedor limita reenvios; a contagem evita insistência inútil
+
       espera = 60;
       const tick = setInterval(() => {
         espera--;
@@ -223,7 +208,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- pedir redefinição de senha ---------- */
   const formRecuperar = document.getElementById("recuperarForm");
   if (formRecuperar) {
     const mensagemEl = document.getElementById("msgRecuperar");
@@ -237,9 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.disabled = true;
       try {
         await S.recuperarSenha(email);
-        /* Resposta igual existindo a conta ou não: dizer "este e-mail
-           não está cadastrado" entregaria a estranhos quais endereços
-           têm conta aqui. */
+
         msg(mensagemEl,
           "Se existir uma conta com esse e-mail, o link de redefinição já está a caminho. O link vale por 1 hora.",
           "sucesso");
@@ -252,10 +234,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- gravar a nova senha ----------
-     Esta página só é alcançada pelo link do e-mail. O Supabase troca
-     o token da URL por uma sessão temporária; sem ela, não há o que
-     atualizar. */
   const formNovaSenha = document.getElementById("novaSenhaForm");
   if (formNovaSenha) {
     const mensagemEl = document.getElementById("msgNovaSenha");
@@ -288,13 +266,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- modo demonstração ----------
-     Antes isto criava uma conta de verdade no Supabase, com e-mail
-     inventado em @finck.local: o provedor recusava o domínio e o
-     botão simplesmente não funcionava no site publicado — bem no
-     caminho de descoberta mais usado por quem chega. Agora a
-     demonstração é local: nenhuma conta, nenhuma chamada ao
-     servidor, e os dados ficam só neste aparelho. */
   const btnDemo = document.getElementById("btnDemo");
   if (btnDemo) {
     btnDemo.addEventListener("click", async () => {

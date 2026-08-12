@@ -1,25 +1,4 @@
-/* ============================================================
-   FinCK v2 — Camada de dados (Store)
-   Uma única API para todo o app.
 
-   Três modos de operação, decididos em tempo de execução:
-
-     online  Supabase configurado e sessão real. Tudo persiste no
-             banco, isolado por user_id (ver supabase/migrations).
-     demo    Sessão de visitante. Nada sai do aparelho e nada toca
-             o servidor, mesmo com o Supabase configurado. Serve
-             para conhecer o app sem criar conta.
-     local   Supabase não configurado. Só o modo demo funciona —
-             o app nunca guarda credencial real no navegador.
-
-   Sobre credenciais: o fallback antigo gravava e-mail e senha em
-   texto puro no localStorage. Isso foi removido. Autenticação
-   real acontece exclusivamente no Supabase; o que existe fora
-   dele é a identidade de demonstração, que não tem senha.
-
-   Tabelas: profiles, accounts, transactions, goals,
-   recurring_transactions, purchase_analyses, gamification
-   ============================================================ */
 
 window.FinckStore = (() => {
   const cfg = window.FINCK_CONFIG;
@@ -30,7 +9,6 @@ window.FinckStore = (() => {
     sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   }
 
-  /* ---------------- Chaves locais ---------------- */
   const KEYS = {
     session: "finck.session",
     profiles: "finck.profiles",
@@ -52,7 +30,6 @@ window.FinckStore = (() => {
   };
   const gravar = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-  /* ---------------- Modo de operação ---------------- */
   const USUARIO_DEMO = Object.freeze({
     id: "demo-local",
     email: "visitante@finck.local",
@@ -61,26 +38,21 @@ window.FinckStore = (() => {
 
   const emDemo = () => localStorage.getItem(KEYS.demo) === "1";
 
-  /** Banco ativo. Em demonstração ninguém fala com o servidor. */
   const bd = () => (emDemo() ? null : sb);
 
   const modo = () => (emDemo() ? "demo" : sb ? "online" : "local");
 
-  /* Limpeza única: versões anteriores gravavam usuários com senha
-     em texto puro sob "finck.users". Some com isso no primeiro
-     carregamento, no navegador de quem já usou o app. */
   (function removerCredenciaisAntigas() {
     try {
       if (localStorage.getItem("finck.users") !== null) {
         localStorage.removeItem("finck.users");
       }
-      // sessão local de conta antiga (sem demo) também não vale mais
+
       const s = ler(KEYS.session, null);
       if (s && !emDemo()) localStorage.removeItem(KEYS.session);
-    } catch { /* localStorage indisponível: nada a limpar */ }
+    } catch {  }
   })();
 
-  /* ---------------- Sessão / autenticação ---------------- */
   async function usuarioAtual() {
     if (emDemo()) return ler(KEYS.session, null) || { ...USUARIO_DEMO };
     if (sb) {
@@ -103,8 +75,6 @@ window.FinckStore = (() => {
     });
     if (error) throw new Error(traduzErro(error.message));
 
-    // Com confirmação de e-mail ligada, o Supabase devolve o usuário
-    // sem sessão. Nesse caso o perfil é criado no primeiro login.
     const precisaConfirmar = Boolean(data.user && !data.session);
     if (data.session && data.user) await salvarPerfil({ id: data.user.id, name: nome });
     return { id: data.user?.id, email, precisaConfirmar };
@@ -114,7 +84,7 @@ window.FinckStore = (() => {
     if (!sb) throw new Error(SEM_BANCO);
     const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
     if (error) throw new Error(traduzErro(error.message));
-    // garante o perfil de quem se cadastrou com confirmação por e-mail
+
     const nome = data.user?.user_metadata?.name;
     if (nome) {
       const existente = await obterPerfil();
@@ -123,7 +93,6 @@ window.FinckStore = (() => {
     return { id: data.user.id, email: data.user.email };
   }
 
-  /** Envia o link de redefinição de senha. */
   async function recuperarSenha(email) {
     if (!sb) throw new Error(SEM_BANCO);
     const { error } = await sb.auth.resetPasswordForEmail(email, {
@@ -133,7 +102,6 @@ window.FinckStore = (() => {
     return true;
   }
 
-  /** Grava a nova senha. Só funciona dentro da sessão criada pelo link. */
   async function definirNovaSenha(senha) {
     if (!sb) throw new Error(SEM_BANCO);
     const { error } = await sb.auth.updateUser({ password: senha });
@@ -141,7 +109,6 @@ window.FinckStore = (() => {
     return true;
   }
 
-  /** Reenvia a confirmação de e-mail de um cadastro pendente. */
   async function reenviarConfirmacao(email) {
     if (!sb) throw new Error(SEM_BANCO);
     const { error } = await sb.auth.resend({
@@ -153,15 +120,13 @@ window.FinckStore = (() => {
     return true;
   }
 
-  /** Abre a demonstração: sessão de visitante, sem conta e sem servidor. */
   async function entrarDemo() {
-    if (sb) { try { await sb.auth.signOut(); } catch { /* já estava fora */ } }
+    if (sb) { try { await sb.auth.signOut(); } catch {  } }
     localStorage.setItem(KEYS.demo, "1");
     gravar(KEYS.session, { ...USUARIO_DEMO });
     return { ...USUARIO_DEMO };
   }
 
-  /** Apaga tudo o que a demonstração criou neste aparelho. */
   function encerrarDemo() {
     Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
   }
@@ -184,14 +149,12 @@ window.FinckStore = (() => {
     return msg || "Não foi possível concluir a operação.";
   }
 
-  /** Redireciona para o login quando não há sessão. Use no topo de cada página interna. */
   async function exigirLogin(destino = "index.html") {
     const user = await usuarioAtual();
     if (!user) { location.href = destino; return null; }
     return user;
   }
 
-  /* ---------------- CRUD genérico ---------------- */
   async function listar(tabela, { ordem = "created_at", asc = false, filtro = {} } = {}) {
     const user = await usuarioAtual();
     if (!user) return [];
@@ -254,7 +217,6 @@ window.FinckStore = (() => {
     return true;
   }
 
-  /* ---------------- Perfil financeiro ---------------- */
   async function obterPerfil() {
     const user = await usuarioAtual();
     if (!user) return null;
@@ -286,13 +248,11 @@ window.FinckStore = (() => {
     return perfis.find((p) => p.id === id);
   }
 
-  /** true quando o usuário ainda não configurou renda/jornada (onboarding pendente). */
   async function precisaOnboarding() {
     const p = await obterPerfil();
     return !p || !p.income_monthly || !p.work_days_month || !p.work_hours_day;
   }
 
-  /* ---------------- Gamificação ---------------- */
   async function obterGamificacao() {
     const user = await usuarioAtual();
     if (!user) return null;
@@ -321,18 +281,12 @@ window.FinckStore = (() => {
     return registro;
   }
 
-  /* ---------------- Backup / restauração ---------------- */
-  /* Ordem importa no backup: accounts entra antes de transactions
-     e transfers, que apontam para ela. */
   const TABELAS = [
     "accounts", "transactions", "goals", "recurring_transactions",
     "purchase_analyses", "installment_purchases", "category_budgets",
     "transfers", "balance_adjustments",
   ];
 
-  /* Identidade de um registro para efeito de duplicata. Não usa id
-     nem created_at: um mesmo lançamento reimportado ganha id novo,
-     mas continua sendo o mesmo lançamento aos olhos do usuário. */
   const ASSINATURA = {
     accounts:               (r) => [r.name, r.institution_name, r.account_type].join("|"),
     transfers:              (r) => [r.from_account_id, r.to_account_id, Number(r.amount), String(r.date).slice(0, 10)].join("|"),
@@ -340,13 +294,10 @@ window.FinckStore = (() => {
     transactions:           (r) => [r.type, r.description, Number(r.amount), String(r.date).slice(0, 10)].join("|"),
     goals:                  (r) => [r.name, Number(r.target_amount)].join("|"),
     recurring_transactions: (r) => [r.description, r.type, Number(r.amount), r.day_of_month].join("|"),
-    /* analyzed_at vem no próprio registro; created_at só existe
-       depois de gravado. Comparar por created_at fazia o candidato
-       (ainda sem o campo) nunca casar com o que já estava salvo, e
-       o registro entrava de novo a cada importação. */
+
     purchase_analyses:      (r) => [r.item_name, Number(r.price), String(r.analyzed_at || r.created_at || "").slice(0, 10)].join("|"),
     installment_purchases:  (r) => [r.description, Number(r.total_amount), r.installments_count, String(r.first_due_date).slice(0, 10)].join("|"),
-    // um teto por categoria: a categoria é a identidade
+
     category_budgets:       (r) => String(r.category),
   };
 
@@ -355,7 +306,6 @@ window.FinckStore = (() => {
     return fn ? fn(linha) : JSON.stringify(linha);
   };
 
-  /** Insere só se ainda não existir um registro equivalente. */
   async function inserirSeNovo(tabela, registro, existentes = null) {
     const atuais = existentes || (await listar(tabela));
     const alvo = assinar(tabela, registro);
@@ -371,14 +321,6 @@ window.FinckStore = (() => {
     return dados;
   }
 
-  /**
-   * Restaura um backup.
-   * @param {object} dados  arquivo exportado por exportarTudo
-   * @param {object} opcoes modo "mesclar" (padrão) ignora o que já
-   *   existe; "substituir" apaga os dados atuais antes de importar.
-   * @returns {object} relatório com o que entrou, o que foi ignorado
-   *   e a lista de conflitos, para mostrar ao usuário.
-   */
   async function importarTudo(dados, { modo: modoImport = "mesclar" } = {}) {
     if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
       throw new Error("Arquivo inválido: não parece um backup do FinCK.");
@@ -408,7 +350,7 @@ window.FinckStore = (() => {
 
     for (const t of TABELAS) {
       const linhas = Array.isArray(dados[t]) ? dados[t] : [];
-      // uma leitura por tabela: evita ida ao banco a cada registro
+
       const existentes = modoImport === "substituir" ? [] : await listar(t);
       const vistos = new Set(existentes.map((r) => assinar(t, r)));
       let entraram = 0, pulados = 0;

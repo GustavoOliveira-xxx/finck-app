@@ -1,6 +1,5 @@
-/* ============================================================
-   FinCK of Reality — abas internas (novo cálculo / cadastrados)
-   ============================================================ */
+
+
 (() => {
   const PAINEIS = { calculo: "painelCalculo", calculos: "painelCalculos" };
 

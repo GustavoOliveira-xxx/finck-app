@@ -1,41 +1,4 @@
-/* ============================================================
-   FinCK v2 — ui-fx.js (v3 — fundo 100% "GPU-only")
-   Camada de vida da interface. Não altera regra de negócio.
 
-   Reescrita completa do sistema de fundo dinâmico: nada mais é
-   redesenhado quadro a quadro pelo JavaScript. Tudo o que se move
-   usa só `transform`/`opacity` (propriedades que o navegador anima
-   direto na GPU, sem repintar nada), então custa a mesma coisa
-   rodando ou parado:
-
-     • grade + orbes de luz            → como já era: translate3d/scale
-     • "ticker" de mercado             → SVG estático desenhado uma vez,
-                                          duplicado lado a lado; o
-                                          "movimento" é um translateX
-                                          contínuo (sem <canvas>, sem
-                                          redesenho, sem loop de JS)
-     • brilho que segue o ponteiro     → um círculo pronto que só
-                                          recebe translate3d; quem faz
-                                          o "arrasto com inércia" é a
-                                          transição do próprio CSS,
-                                          não um loop manual em JS
-     • revelação dos blocos em scroll  → IntersectionObserver (idem)
-     • contagem animada dos valores    → rAF só durante ~0,9s, quando
-                                          um número realmente muda
-     • ondinha nos cliques de botão    → transform+opacity, um elemento
-                                          curto (removido logo depois)
-     • paralaxe leve no cartão de saldo→ transform, só enquanto o
-                                          ponteiro está sobre o cartão
-     • header compacto ao rolar        → 1 classe no <body>, sem custo
-
-   Resultado: depois do carregamento inicial, não sobra nenhum loop
-   de JavaScript rodando pra decoração — a única coisa "viva" o
-   tempo todo são animações CSS compositadas, que o navegador
-   consegue tocar sem travar mesmo com a aba ocupada com outra coisa.
-
-   Respeita prefers-reduced-motion e não roda nada em telas de toque
-   que não fazem sentido pra hover (paralaxe/brilho do ponteiro).
-   ============================================================ */
 
 (() => {
   "use strict";
@@ -44,14 +7,6 @@
   const toque = window.matchMedia("(hover: none)").matches;
   const raf = window.requestAnimationFrame.bind(window);
 
-  /* ---------------------------------------------------------
-     1. Camadas do fundo
-     --------------------------------------------------------- */
-
-  // Um período do "ticker" de mercado, desenhado uma única vez em
-  // build-time (ver documento do projeto) e duplicado com <use> —
-  // dois períodos idênticos lado a lado + translateX(-50%) em loop
-  // = movimento perfeitamente contínuo, sem costura.
   const TICKER_SVG = `
     <svg class="fundo-finck__ticker-trilho" viewBox="0 0 3200 220" preserveAspectRatio="none" aria-hidden="true">
       <defs>
@@ -86,13 +41,6 @@
     return fundo;
   }
 
-  /* ---------------------------------------------------------
-     2. Brilho que segue o ponteiro
-     Nada de loop de interpolação em JS: o JS só entrega a posição
-     mais recente (no máximo 1x por quadro) e quem faz o "arrasto
-     suave" é a transition do CSS — trabalho de composição na GPU,
-     não de script no main thread.
-     --------------------------------------------------------- */
   function brilhoSeguePonteiro(el) {
     if (!el || reduzido || toque) return;
     let agendado = false;
@@ -110,9 +58,6 @@
     }, { passive: true });
   }
 
-  /* ---------------------------------------------------------
-     3. Revelação em scroll
-     --------------------------------------------------------- */
   const SELETOR_REVELAR = [
     ".hero", ".bloco", ".balance-card", ".reality-cta",
     ".cards-indicadores", ".acoes-rapidas", ".card-nivel",
@@ -140,14 +85,11 @@
     };
 
     marcar();
-    // conteúdo montado pelo JS das páginas entra depois
+
     setTimeout(marcar, 350);
     setTimeout(marcar, 1200);
   }
 
-  /* ---------------------------------------------------------
-     4. Valores: contagem na primeira pintura e pulso na troca
-     --------------------------------------------------------- */
   const SELETOR_VALOR = [
     "#saldoAtual", "#entradasMes", "#saidasMes", "#rendaLivre",
     "#valorHora", "#valorDia", "#totalDespesas",
@@ -169,13 +111,13 @@
       const s = casasBR
         ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : String(Math.round(v));
-      // devolve o número formatado no mesmo molde do texto original
+
       return molde.replace(/[\d.,]+/, s);
     };
 
     const passo = (agora) => {
       const p = Math.min(1, (agora - inicio) / dur);
-      const e = 1 - Math.pow(1 - p, 3); // ease-out cúbico
+      const e = 1 - Math.pow(1 - p, 3); 
       el.textContent = fmt(de + (destino - de) * e);
       if (p < 1) raf(passo);
       else { el.textContent = molde; el.dataset.fxValor = String(destino); }
@@ -213,9 +155,6 @@
     });
   }
 
-  /* ---------------------------------------------------------
-     5. Ondinha de clique
-     --------------------------------------------------------- */
   const CLICAVEIS = ".btn-primario,.btn-secundario,.btn-salvar,.btn-acao,.btn-perigo," +
                     ".card-opcao,.botao-decisao,.nav-item,.btn-mini";
 
@@ -237,13 +176,6 @@
     }, { passive: true });
   }
 
-  /* ---------------------------------------------------------
-     6. Chip do cartão de saldo — elemento decorativo (::before e
-     ::after já são usados pela textura e pela varredura de brilho
-     do cartão, então o chip precisa existir no DOM de verdade).
-     Roda sempre — não depende de hover nem de prefers-reduced-motion,
-     é só um detalhe visual estático do "cartão".
-     --------------------------------------------------------- */
   function cartaoChip() {
     const cartao = document.querySelector(".balance-card");
     if (!cartao || cartao.querySelector(".balance-card__chip")) return;
@@ -253,9 +185,6 @@
     cartao.prepend(chip);
   }
 
-  /* ---------------------------------------------------------
-     7. Paralaxe do cartão de saldo
-     --------------------------------------------------------- */
   function cartaoVivo() {
     if (reduzido || toque) return;
     const cartao = document.querySelector(".balance-card");
@@ -279,9 +208,6 @@
     });
   }
 
-  /* ---------------------------------------------------------
-     8. Header compacto ao rolar
-     --------------------------------------------------------- */
   function headerVivo() {
     let ticking = false;
     const atualizar = () => {
@@ -296,9 +222,6 @@
     atualizar();
   }
 
-  /* ---------------------------------------------------------
-     Bootstrap
-     --------------------------------------------------------- */
   function iniciar() {
     const fundo = montarFundo();
     if (fundo) brilhoSeguePonteiro(fundo.querySelector("[data-brilho]"));

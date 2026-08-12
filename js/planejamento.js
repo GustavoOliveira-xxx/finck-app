@@ -1,13 +1,4 @@
-/* ============================================================
-   FinCK — planejamento.js
-   Liga a página de Planejamento ao motor (FinckPlano).
 
-   Quatro blocos que respondem a perguntas diferentes:
-     projeção   -> o saldo vai furar? quando?
-     calendário -> em que dia cada coisa acontece?
-     parcelas   -> quanto do futuro já está comprometido?
-     orçamento  -> alguma categoria está saindo do controle?
-   ============================================================ */
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -26,7 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let tetos = [];
   let mesVisivel = P.chaveMes(new Date());
 
-  /* ---------------- carga ---------------- */
   async function carregar() {
     [ctx, parcelamentos, tetos] = await Promise.all([
       F.carregarContexto(),
@@ -39,9 +29,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrcamento();
   }
 
-  /* ============================================================
-     1. Projeção
-     ============================================================ */
   function renderProjecao() {
     const linhas = P.projecaoSaldo({
       saldo: ctx.saldo,
@@ -71,7 +58,6 @@ document.addEventListener("DOMContentLoaded", async () => {
            </div>
          </article>`;
 
-    // gráfico em barras, feito com divs: escala pelo maior valor absoluto
     const maior = Math.max(...linhas.map((l) => Math.abs(l.saldoFim)), 1);
     $("projecaoGrafico").innerHTML = linhas.map((l) => {
       const altura = Math.max(4, (Math.abs(l.saldoFim) / maior) * 100);
@@ -96,9 +82,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </tr>`).join("");
   }
 
-  /* ============================================================
-     2. Calendário
-     ============================================================ */
   const NOMES_DIA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   function renderCalendario() {
@@ -151,7 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       b.addEventListener("click", () => mostrarDia(Number(b.dataset.dia), eventos))
     );
 
-    // no mês corrente, já abre no dia de hoje se houver algo
     if (ehMesAtual && eventos.has(hoje.getDate())) mostrarDia(hoje.getDate(), eventos);
   }
 
@@ -185,9 +167,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderCalendario();
   });
 
-  /* ============================================================
-     3. Parcelas
-     ============================================================ */
   function renderParcelas() {
     const ativos = parcelamentos.filter((p) => p.active !== false);
     const devedor = ativos.reduce((s, p) => s + P.saldoDevedor(p), 0);
@@ -267,8 +246,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalParcela");
   }
 
-  /* mostra o valor da parcela enquanto a pessoa digita: sem isto
-     ela precisa fazer a divisão de cabeça para saber se cabe */
   function atualizarPrevia() {
     const total = U.lerMoeda("parcelaTotal");
     const qtd = Number($("parcelaQtd").value);
@@ -323,9 +300,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { U.toast(err.message, "erro"); }
   });
 
-  /* ============================================================
-     4. Orçamento por categoria
-     ============================================================ */
   function renderOrcamento() {
     const situacao = P.situacaoOrcamento(tetos, ctx.transacoes);
     $("vazioOrcamento").hidden = tetos.length > 0;
@@ -348,7 +322,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         </p>
       </article>`).join("");
 
-    // categorias com gasto e sem teto: convite para fechar o cerco
     const semTeto = P.categoriasSemTeto(tetos, ctx.transacoes);
     $("sugestaoTetos").innerHTML = semTeto.length
       ? `<p class="nota">Gastou este mês em <strong>${semTeto.map(U.escapeHTML).join(", ")}</strong> sem teto definido.
@@ -376,7 +349,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       .map((c) => `<option value="${c}"${c === categoria ? " selected" : ""}>${c}</option>`).join("");
     $("tetoCategoria").disabled = Boolean(t);
 
-    // quanto essa categoria costuma consumir, para o teto não sair do nada
     const gastoAtual = ctx.transacoes
       .filter((x) => x.type === "saida" && (x.category || "Outros") === categoria &&
                      String(x.date || "").slice(0, 7) === P.chaveMes(new Date()))

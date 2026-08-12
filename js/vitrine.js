@@ -1,13 +1,4 @@
-/* ============================================================
-   FinCK — vitrine.js
-   Exemplo interativo da tela de entrada.
 
-   O visitante entendia a proposta do FinCK só depois de criar
-   conta: a primeira tela era um formulário de login. Aqui ele
-   mexe nos números e vê o cálculo real acontecer — usando o
-   mesmo motor (FinckReality) que o app usa depois de logado,
-   para o que ele vê agora bater com o que vai encontrar dentro.
-   ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
   const vitrine = document.getElementById("vitrine");
@@ -38,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // mesmo motor da página de cálculo, com um perfil de exemplo
     const r = R.calcular(preco, {
       income_monthly: renda,
       work_days_month: DIAS,
@@ -56,11 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const pct = Math.min(100, r.income_percent);
     barra.style.width = `${pct}%`;
 
-    /* O semáforo do app pesa também saldo em conta e despesas fixas,
-       que aqui não existem: sem eles o saldo entra como zero e todo
-       preço cairia em "alerta". Nesta vitrine o nível vem só da
-       fatia da renda, com os mesmos limiares de 10% e 30% usados
-       pelo motor — assim a cor bate com o texto ao lado. */
     barra.dataset.nivel =
       r.income_percent >= 30 ? "alerta" : r.income_percent >= 10 ? "atencao" : "verde";
 
@@ -73,11 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
         : " Um impacto pequeno no mês.");
   }
 
-  // entrada por teclado dispara a cada tecla; sem debounce porque
-  // a conta é aritmética simples e não toca rede nem armazenamento
   [campoPreco, campoRenda].forEach((c) => {
     c.addEventListener("input", calcular);
-    // impede que o campo fique vazio ao sair, deixando a conta muda
+
     c.addEventListener("blur", () => {
       if (!c.value || Number(c.value) <= 0) c.value = c.id === "vitrinePreco" ? "800" : "3500";
       calcular();

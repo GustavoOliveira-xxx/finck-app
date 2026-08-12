@@ -1,8 +1,4 @@
-/* ============================================================
-   FinCK of Reality — Cabeçalho e navegação compartilhados
-   Injeta o header em [data-finck-header] e marca o item ativo
-   da navegação inferior a partir de data-page no <body>.
-   ============================================================ */
+
 
 window.FinckNav = (() => {
   const S = window.FinckStore;
@@ -23,10 +19,6 @@ window.FinckNav = (() => {
     { id: "perfil", href: "perfil.html", rotulo: "Perfil", icone: ICONES.perfil },
   ];
 
-  /* Como o app se apresenta em cada modo de operação. O visitante
-     precisa saber que está numa demonstração local — senão ele
-     cadastra a vida financeira inteira achando que está salvo numa
-     conta, e perde tudo ao limpar o navegador. */
   const MODOS = {
     online: {
       classe: "online", rotulo: "Online", ajuda: "Conectado ao banco de dados",
@@ -65,7 +57,7 @@ window.FinckNav = (() => {
     const btn = document.getElementById("btnSair");
     if (btn) {
       btn.addEventListener("click", async () => {
-        // a demonstração some do aparelho ao sair: vale avisar
+
         if (S.emDemo() &&
             !confirm("Sair da demonstração apaga os dados de exemplo deste aparelho. Continuar?")) return;
         await S.sair();
@@ -86,7 +78,6 @@ window.FinckNav = (() => {
       </a>`).join("");
   }
 
-  /** Bootstrap padrão das páginas internas: sessão, onboarding, header, nav e modais. */
   async function iniciarPagina({ titulo, subtitulo, exigirPerfil = true } = {}) {
     const user = await S.exigirLogin();
     if (!user) return null;
@@ -96,7 +87,10 @@ window.FinckNav = (() => {
     }
     montarHeader(titulo, subtitulo);
     montarNav();
-    // XP de presença: primeiro acesso do dia e manutenção da sequência
+
+    const T = window.FinckTempo;
+    if (T) T.definirPerfil(await S.obterPerfil());
+
     const G = window.FinckGame;
     if (G) {
       const hoje = U.hojeISO();

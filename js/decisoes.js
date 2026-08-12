@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK v2 — Histórico de decisões (purchase_analyses)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;

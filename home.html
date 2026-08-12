@@ -49,7 +49,6 @@
       <p id="fraseDia">Antes de comprar, veja quanto custa em tempo de trabalho.</p>
     </section>
 
-    <!-- Cartão de saldo -->
     <section class="balance-card" aria-labelledby="rotuloSaldo">
       <small id="rotuloSaldo">Saldo atual</small>
       <p id="saldoAtual">R$ 0,00</p>
@@ -69,17 +68,12 @@
       </div>
     </section>
 
-    <!-- Uma única recomendação, escolhida pela urgência real -->
-    <section id="proximaAcao" aria-live="polite"></section>
-
-    <!-- Resumo das contas (6.5): só o essencial; o detalhe vive em contas.html -->
     <section id="cardContas"></section>
 
-    <!-- Prisma: o mesmo valor lido de quatro ângulos -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h2>As faces do seu dinheiro</h2>
-        <a href="reality.html" class="link-mais">Calcular uma compra</a>
+
       </div>
       <p class="descricao">A sua renda livre, lida de quatro ângulos diferentes. É o mesmo valor — muda só a unidade em que ele é medido.</p>
 
@@ -115,10 +109,28 @@
       </div>
     </section>
 
-    <!-- Chamada principal do produto -->
     <section class="reality-cta">
       <div class="reality-cta__marca">
-        <img src="assets/logo-reality-transparente.png" alt="FinCK of Reality" loading="lazy" decoding="async">
+        <div class="marca3d" data-marca3d>
+          <div class="marca3d__aura" aria-hidden="true"></div>
+          <div class="marca3d__anel marca3d__anel--externo" aria-hidden="true"></div>
+          <div class="marca3d__anel marca3d__anel--interno" aria-hidden="true"></div>
+          <div class="marca3d__palco">
+            <div class="marca3d__peca">
+              <span class="marca3d__sombra marca3d__sombra--3" aria-hidden="true"></span>
+              <span class="marca3d__sombra marca3d__sombra--2" aria-hidden="true"></span>
+              <span class="marca3d__sombra marca3d__sombra--1" aria-hidden="true"></span>
+              <img class="marca3d__logo" src="assets/logo-reality-transparente.png"
+                   alt="FinCK of Reality" loading="lazy" decoding="async">
+              <span class="marca3d__lustro" aria-hidden="true"></span>
+            </div>
+            <span class="marca3d__faisca marca3d__faisca--a" aria-hidden="true"></span>
+            <span class="marca3d__faisca marca3d__faisca--b" aria-hidden="true"></span>
+            <span class="marca3d__faisca marca3d__faisca--c" aria-hidden="true"></span>
+            <span class="marca3d__faisca marca3d__faisca--d" aria-hidden="true"></span>
+          </div>
+          <div class="marca3d__chao" aria-hidden="true"></div>
+        </div>
       </div>
       <div class="reality-cta__texto">
         <h2>FinCK of Reality</h2>
@@ -132,6 +144,7 @@
     </section>
 
     <nav class="atalhos-secundarios" aria-label="Outras áreas">
+      <a href="cenarios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5"/><path d="M12 8 6 13v8"/><path d="M12 8l6 5v8"/><circle cx="12" cy="3" r="1.6"/><circle cx="6" cy="21" r="1.6"/><circle cx="18" cy="21" r="1.6"/></svg></span> Cenários</a>
       <a href="contas.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg></span> Contas</a>
       <a href="planejamento.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15h2M14 15h2"/></svg></span> Planejamento</a>
       <a href="relatorios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span> Relatórios</a>
@@ -140,7 +153,6 @@
       <a href="recorrentes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a3 3 0 0 1 3 3v1"/><path d="M15 4l3 3-3 3"/><path d="M20 17H9a3 3 0 0 1-3-3v-1"/><path d="M9 20l-3-3 3-3"/></svg></span> Recorrentes</a>
     </nav>
 
-    <!-- Indicadores de consumo consciente -->
     <section class="cards-indicadores">
       <article class="card-indicador">
         <span>Compras evitadas</span>
@@ -160,7 +172,6 @@
       </article>
     </section>
 
-    <!-- Orçamento previsto -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h2>Orçamento previsto do mês</h2>
@@ -169,7 +180,6 @@
       <div class="orcamento" id="orcamento"></div>
     </section>
 
-    <!-- Ações rápidas -->
     <section class="acoes-rapidas">
       <button type="button" id="btnEntrada" class="btn-acao entrada">
         <strong>+ Entrada</strong>
@@ -181,7 +191,6 @@
       </button>
     </section>
 
-    <!-- Metas em destaque -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h2>Suas metas</h2>
@@ -190,7 +199,6 @@
       <div id="metasResumo" class="metas-resumo"></div>
     </section>
 
-    <!-- Movimentações -->
     <section class="bloco lista-transacoes">
       <div class="bloco-cabecalho">
         <h2>Últimas movimentações</h2>
@@ -204,7 +212,6 @@
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
 
-  <!-- Modal de lançamento -->
   <div id="modalTransacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloModal">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalTransacao" aria-label="Fechar">✕</button>
@@ -234,7 +241,6 @@
     </div>
   </div>
 
-  <!-- Modal de confirmação -->
   <div id="modalConfirmacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConfirmacao">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalConfirmacao" aria-label="Fechar">✕</button>
@@ -254,6 +260,7 @@
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
   <script src="js/contas-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
