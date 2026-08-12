@@ -62,6 +62,14 @@ window.FinckStore = (() => {
     return null;
   }
 
+  // Token da sessão, para chamar as Edge Functions autenticado.
+  // No modo demo não existe sessão — quem chama trata o null.
+  async function tokenAcesso() {
+    if (!sb || emDemo()) return null;
+    const { data } = await sb.auth.getSession();
+    return data?.session?.access_token || null;
+  }
+
   const SEM_BANCO =
     "Cadastro e login precisam do banco de dados configurado. " +
     "Enquanto isso, use o modo demonstração para conhecer o app.";
@@ -404,7 +412,7 @@ window.FinckStore = (() => {
     get MODO() { return modo(); },
     get CONFIGURADO() { return CONFIGURADO; },
     emDemo, entrarDemo, encerrarDemo,
-    usuarioAtual, cadastrar, entrar, sair, exigirLogin,
+    usuarioAtual, tokenAcesso, cadastrar, entrar, sair, exigirLogin,
     recuperarSenha, definirNovaSenha, reenviarConfirmacao,
     listar, inserir, inserirSeNovo, atualizar, remover,
     obterPerfil, salvarPerfil, precisaOnboarding,
