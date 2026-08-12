@@ -92,78 +92,15 @@ body.pagina-auth::before{
     linear-gradient(180deg, var(--preto-fundo-2), var(--preto-fundo) 60%, #050409);
 }
 
-.fundo-finck{ position:fixed; inset:0; z-index:-2; pointer-events:none; overflow:hidden; }
-.fundo-finck__grade{
-  position:absolute; inset:-10%;
-  background-image:
-    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
-  background-size:58px 58px;
-  mask-image:radial-gradient(110% 90% at 50% 10%, #000 5%, transparent 76%);
-  -webkit-mask-image:radial-gradient(110% 90% at 50% 10%, #000 5%, transparent 76%);
-  animation: grade-desliza 34s linear infinite;
-}
-.fundo-finck__orbe{
-  position:absolute; border-radius:50%;
-  filter:blur(90px); opacity:.5;
-  mix-blend-mode:screen; will-change:transform;
-}
-.fundo-finck__orbe--roxo{
-  width:54vw; height:54vw; min-width:380px; min-height:380px;
-  top:-18vw; left:-14vw;
-  background:radial-gradient(circle at 35% 35%, rgba(147,51,196,.85), rgba(104,12,144,0) 68%);
-  animation: orbe-deriva-a 26s var(--ease-suave) infinite alternate;
-}
-.fundo-finck__orbe--roxo2{
-  width:44vw; height:44vw; min-width:320px; min-height:320px;
-  bottom:-20vw; right:-12vw;
-  background:radial-gradient(circle at 60% 40%, rgba(180,92,240,.5), rgba(104,12,144,0) 70%);
-}
-.fundo-finck__orbe--amarelo{
-  width:28vw; height:28vw; min-width:220px; min-height:220px;
-  top:56%; left:56%; opacity:.3;
-  background:radial-gradient(circle, rgba(254,200,0,.42), rgba(254,200,0,0) 68%);
-}
-.fundo-finck__ticker{
-  position:absolute; inset:0;
+.fundo-finck{
+  position:fixed; inset:0; z-index:-2; pointer-events:none;
   overflow:hidden;
-  opacity:.8;
-  mask-image:linear-gradient(180deg, transparent, #000 20%, #000 75%, transparent);
-  -webkit-mask-image:linear-gradient(180deg, transparent, #000 20%, #000 75%, transparent);
+  background:var(--preto-fundo, #07060a);
 }
-.fundo-finck__ticker-trilho{
-  position:absolute; left:0; top:8%;
-  width:200%; height:46%;
-  display:block;
-  animation: ticker-desliza 46s linear infinite;
-  will-change:transform;
-}
-.fundo-finck__ticker-linha{ fill:none; stroke-linejoin:round; stroke-linecap:round; }
-.fundo-finck__ticker-linha--a{ stroke:var(--roxo-neon); stroke-width:2.4; opacity:.55; filter:drop-shadow(0 0 6px rgba(180,92,240,.55)); }
-.fundo-finck__ticker-linha--b{ stroke:var(--roxo-claro); stroke-width:1.6; opacity:.34; }
-.fundo-finck__ticker-linha--c{ stroke:var(--amarelo); stroke-width:1.4; opacity:.24; }
 
-.fundo-finck__brilho{
-  position:absolute; top:0; left:0;
-  width:640px; height:640px;
-  margin:-320px 0 0 -320px;
-  border-radius:50%;
-  background:radial-gradient(circle, rgba(147,51,196,.22), rgba(147,51,196,.07) 42%, transparent 70%);
-  filter:blur(6px);
-  transform:translate3d(50vw,32vh,0);
-  transition:transform 900ms var(--ease-out);
-  will-change:transform;
-  opacity:.9;
-}
-.fundo-finck__grao{
-  position:absolute; inset:0; opacity:.045;
-  mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
-}
-.fundo-finck__fio{
-  position:absolute; top:0; left:0; right:0; height:1px;
-  background:var(--grad-linha);
-  opacity:.6;
+.fundo-finck__tela{
+  display:block;
+  width:100%; height:100%;
 }
 
 .auth-wrapper{
@@ -525,9 +462,6 @@ input:-webkit-autofill{
   animation: onda-expande .62s var(--ease-out) forwards;
 }
 
-@keyframes grade-desliza{ from{ transform:translate3d(0,0,0);} to{ transform:translate3d(-58px,-58px,0);} }
-@keyframes orbe-deriva-a{ 0%{ transform:translate3d(0,0,0) scale(1);} 100%{ transform:translate3d(9vw,6vh,0) scale(1.15);} }
-@keyframes ticker-desliza{ from{ transform:translate3d(0,0,0); } to{ transform:translate3d(-50%,0,0); } }
 @keyframes risco-entra{ from{ transform:scaleX(0); opacity:0; } to{ transform:scaleX(1); opacity:1; } }
 @keyframes respira{ 0%,100%{ transform:scale(1); opacity:.75; } 50%{ transform:scale(1.16); opacity:1; } }
 @keyframes logo-flutua{ 0%,100%{ transform:translateY(0) rotate(0); } 50%{ transform:translateY(-8px) rotate(-2deg); } }
@@ -571,7 +505,6 @@ input:-webkit-autofill{
     animation-iteration-count:1 !important;
     transition-duration:.001ms !important;
   }
-  .fundo-finck__ticker,.fundo-finck__grao,.fundo-finck__brilho{ display:none; }
 }
 
 @media (pointer: coarse){
