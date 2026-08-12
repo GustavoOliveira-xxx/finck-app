@@ -1,7 +1,4 @@
-/* ============================================================
-   FinCK v2 — Regras financeiras compartilhadas
-   Saldo, totais, orçamento, previsões de recorrentes e metas.
-   ============================================================ */
+
 
 window.FinckFinance = (() => {
   const U = window.FinckUtils;
@@ -13,7 +10,6 @@ window.FinckFinance = (() => {
   const ehSaida = (t) => t.type === "saida";
   const doMes = (t, mes = U.mesAtual()) => String(t.date || "").slice(0, 7) === mes;
 
-  /** Carrega tudo que o dashboard e o FinCK of Reality precisam. */
   async function carregarContexto() {
     const [perfil, transacoes, metas, recorrentes, analises] = await Promise.all([
       S.obterPerfil(),
@@ -47,7 +43,6 @@ window.FinckFinance = (() => {
     };
   }
 
-  /** Agrupa saídas por categoria (usado em análises e relatórios). */
   function porCategoria(transacoes) {
     const mapa = {};
     transacoes.filter(ehSaida).forEach((t) => {
@@ -59,7 +54,6 @@ window.FinckFinance = (() => {
       .sort((a, b) => b.valor - a.valor);
   }
 
-  /** Série dos últimos N meses: entradas, saídas e saldo do mês. */
   function serieMensal(transacoes, meses = 6) {
     const hoje = new Date();
     const saida = [];
@@ -78,7 +72,6 @@ window.FinckFinance = (() => {
     return saida;
   }
 
-  /** Aporte em meta: cria a transação e atualiza o acumulado. */
   async function aportarMeta(metaId, valor, descricao = "Aporte em meta") {
     const metas = await S.listar("goals");
     const meta = metas.find((m) => String(m.id) === String(metaId));
@@ -92,18 +85,6 @@ window.FinckFinance = (() => {
     });
   }
 
-  /**
-   * Dados demonstrativos (item 6 — Modo Demonstrativo).
-   *
-   * Idempotente: chamar duas vezes não duplica nada. Cada registro
-   * passa por inserirSeNovo, que compara pela assinatura do
-   * conteúdo — antes bastava clicar duas vezes em "carregar dados
-   * de exemplo" para ficar com dois salários e dois aluguéis, e o
-   * saldo saía errado.
-   *
-   * @param {object} opcoes  substituir: apaga os dados atuais antes
-   * @returns {object} quantos registros entraram de fato
-   */
   async function carregarDemo({ substituir = false } = {}) {
     if (substituir) await S.limparDados();
 
@@ -111,7 +92,6 @@ window.FinckFinance = (() => {
     const dia = (n) => new Date(hoje.getFullYear(), hoje.getMonth(), n).toISOString().slice(0, 10);
     const resumo = { inseridos: 0, jaExistiam: 0 };
 
-    // uma leitura por tabela, reaproveitada em todas as comparações
     const cache = {};
     const registrar = async (tabela, linha) => {
       if (!cache[tabela]) cache[tabela] = await S.listar(tabela);
@@ -165,9 +145,7 @@ window.FinckFinance = (() => {
       work_days: 5.03, work_hours: 40.22, income_percent: 22.86,
       impact_level: "atencao", decision: "adiar",
       reflections: { necessidade: "impulso", uso: "raro" },
-      // data fixa no mês corrente, como as demais linhas de exemplo:
-      // com new Date() a cada chamada, a assinatura mudava e o
-      // registro voltava a entrar toda vez
+
       note: "Vou reavaliar em 30 dias.", analyzed_at: `${dia(12)}T12:00:00.000Z`,
     });
 

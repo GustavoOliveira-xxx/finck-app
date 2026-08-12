@@ -59,7 +59,6 @@
 
     <div id="painelCalculo" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculo">
 
-    <!-- Passo 1: dados da compra -->
     <section class="bloco" id="passoDados">
       <h3>1. O que você quer comprar?</h3>
       <form id="formReality" novalidate>
@@ -87,7 +86,6 @@
       </form>
     </section>
 
-    <!-- Passo 2: resultado -->
     <section class="bloco resultado" id="passoResultado" hidden>
       <h3>2. O que essa compra significa</h3>
 
@@ -117,14 +115,12 @@
       <p class="nota" id="statusRegistro" aria-live="polite"></p>
     </section>
 
-    <!-- Passo 3: reflexão -->
     <section class="bloco" id="passoReflexao" hidden>
       <h3>3. Perguntas de reflexão</h3>
       <p class="descricao">Nenhuma resposta bloqueia a compra. O objetivo é dar clareza.</p>
       <form id="formReflexao" class="reflexoes"></form>
     </section>
 
-    <!-- Passo 4: decisão -->
     <section class="bloco" id="passoDecisao" hidden>
       <h3>4. Sua decisão</h3>
       <div class="opcoes-decisao" id="opcoesDecisao"></div>
@@ -143,7 +139,7 @@
       </p>
     </section>
 
-    </div><!-- /painelCalculo -->
+    </div>
 
     <div id="painelCalculos" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculos" hidden>
       <section class="cards-indicadores" id="resumoCalculos"></section>
@@ -177,7 +173,7 @@
           <button type="button" class="btn-primario" data-ir-aba="calculo">Novo cálculo real</button>
         </div>
       </section>
-    </div><!-- /painelCalculos -->
+    </div>
 
     <p class="link-rodape"><a href="decisoes.html">Histórico de decisões</a> · <a href="home.html">← Voltar ao início</a></p>
 
@@ -185,7 +181,6 @@
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
 
-  <!-- Detalhe completo do cálculo -->
   <div id="modalCalculo" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloCalculo">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalCalculo" aria-label="Fechar">✕</button>
@@ -201,6 +196,7 @@
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/reality-page.js"></script>

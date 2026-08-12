@@ -1,7 +1,4 @@
-/* ============================================================
-   FinCK v2 — Onboarding: Perfil Financeiro Inicial,
-   Configuração Manual e Modo Demonstrativo (item 6).
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
@@ -29,7 +26,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     b.addEventListener("click", () => mostrar(b.dataset.voltar))
   );
 
-  /* ---------- escolha do fluxo ---------- */
   document.querySelectorAll("[data-fluxo]").forEach((card) => {
     card.addEventListener("click", async () => {
       fluxo = card.dataset.fluxo;
@@ -49,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (fluxo === "manual") {
-        // Configuração Manual: pula despesas fixas, pede renda mínima e saldo.
+
         mostrar(1);
         return;
       }
@@ -58,7 +54,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  /* ---------- etapa 1: renda ---------- */
   const incomeEl = document.getElementById("incomeMonthly");
   const diasEl = document.getElementById("workDays");
   const horasEl = document.getElementById("workHours");
@@ -84,7 +79,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderResumo();
   });
 
-  /* ---------- etapa 2: despesas fixas ---------- */
   const listaDespesas = document.getElementById("listaDespesas");
   const totalDespesasEl = document.getElementById("totalDespesas");
 
@@ -120,7 +114,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("btnIrSaldo").addEventListener("click", () => { mostrar(3); renderResumo(); });
 
-  /* ---------- etapa 3: saldo e conclusão ---------- */
   const saldoEl = document.getElementById("initialBalance");
   saldoEl.addEventListener("input", renderResumo);
 
@@ -173,7 +166,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  /* ---------- perfil já existente: pré-preencher ---------- */
   const perfil = await S.obterPerfil();
   if (perfil?.income_monthly) {
     incomeEl.value = perfil.income_monthly;

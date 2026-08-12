@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK v2 — Análises (categorias, evolução, consciência)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const U = window.FinckUtils;
@@ -44,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const categorias = F.porCategoria(transacoes);
     C.rosca(document.getElementById("graficoCategorias"), categorias);
-    // o canvas não é legível por leitor de tela: mesma informação em tabela
+
     C.tabelaEquivalente(document.getElementById("graficoCategorias"), {
       colunas: ["Categoria", "Total", "% das saídas"],
       linhas: categorias.map((c) => [

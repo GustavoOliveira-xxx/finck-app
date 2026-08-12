@@ -1,15 +1,4 @@
-/* ============================================================
-   FinCK — suíte de testes
 
-   Roda no navegador, sem instalar nada: abra testes.html. A
-   escolha é deliberada — o projeto não tem build nem package.json,
-   e exigir Node para conferir uma regra de negócio afastaria o
-   teste do fluxo de quem mexe no código.
-
-   Cobre o que quebra em silêncio: o motor de cálculo, as regras
-   financeiras, o anti-farm de XP e a camada de dados (assinatura
-   de duplicatas e modos de importação).
-   ============================================================ */
 
 window.FinckTestes = (() => {
   const suites = [];
@@ -27,7 +16,6 @@ window.FinckTestes = (() => {
     suiteAtual.casos.push({ nome, fn });
   };
 
-  /* ---------------- asserções ---------------- */
   class FalhaDeTeste extends Error {}
 
   const falhar = (msg) => { throw new FalhaDeTeste(msg); };
@@ -65,9 +53,6 @@ window.FinckTestes = (() => {
     },
   });
 
-  /* ============================================================
-     Motor do FinCK of Reality
-     ============================================================ */
   descrever("Motor de cálculo (FinckReality)", () => {
     const perfilBase = { income_monthly: 3500, work_days_month: 22, work_hours_day: 8 };
 
@@ -80,8 +65,8 @@ window.FinckTestes = (() => {
 
     teste("valor da hora e do dia saem da jornada declarada", () => {
       const r = window.FinckReality.calcular(100, perfilBase);
-      esperar(r.valor_dia).aSerPerto(159.09, 2);   // 3500 / 22
-      esperar(r.valor_hora).aSerPerto(19.89, 2);   // 159.09 / 8
+      esperar(r.valor_dia).aSerPerto(159.09, 2);   
+      esperar(r.valor_hora).aSerPerto(19.89, 2);   
     });
 
     teste("renda zero não gera divisão por zero", () => {
@@ -162,9 +147,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Regras financeiras
-     ============================================================ */
   descrever("Regras financeiras (FinckFinance)", () => {
     const F = window.FinckFinance;
 
@@ -211,9 +193,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Gamificação: o teto e os limites são o que impede farm
-     ============================================================ */
   descrever("Gamificação (FinckGame)", () => {
     const G = window.FinckGame;
     const cfg = window.FINCK_CONFIG;
@@ -249,7 +228,7 @@ window.FinckTestes = (() => {
     });
 
     teste("teto diário é menor que a soma de todas as ações no limite", () => {
-      // se o teto fosse maior, ele não teria efeito nenhum
+
       const somaMaxima = Object.values(cfg.XP.ACOES)
         .reduce((s, r) => s + r.xp * r.limiteDia, 0);
       esperar(cfg.XP.TETO_DIARIO < somaMaxima).aSerVerdadeiro();
@@ -264,9 +243,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Camada de dados: duplicatas e importação
-     ============================================================ */
   descrever("Camada de dados (FinckStore)", () => {
     const S = window.FinckStore;
 
@@ -289,8 +265,7 @@ window.FinckTestes = (() => {
     });
 
     teste("assinatura de cálculo usa analyzed_at, não created_at", () => {
-      // o registro novo ainda não tem created_at; se a assinatura
-      // dependesse dele, o mesmo cálculo entraria de novo a cada import
+
       const novo = S.assinar("purchase_analyses", {
         item_name: "Fone", price: 800, analyzed_at: "2026-08-12T12:00:00.000Z",
       });
@@ -317,11 +292,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Importação e demo em sessão real de demonstração
-     Estes casos escrevem de verdade, então rodam isolados numa
-     sessão demo e limpam tudo ao final.
-     ============================================================ */
   descrever("Importação e demonstração (integração)", () => {
     const S = window.FinckStore;
     const F = window.FinckFinance;
@@ -369,11 +339,11 @@ window.FinckTestes = (() => {
           ],
         };
         const r1 = await S.importarTudo(backup, { modo: "mesclar" });
-        esperar(r1.inseridos).aSer(2);   // a linha repetida do arquivo entra uma vez
+        esperar(r1.inseridos).aSer(2);   
         esperar(r1.ignorados).aSer(1);
 
         const r2 = await S.importarTudo(backup, { modo: "mesclar" });
-        esperar(r2.inseridos).aSer(0);   // reimportar não duplica
+        esperar(r2.inseridos).aSer(0);   
         esperar((await S.listar("transactions")).length).aSer(2);
       });
     });
@@ -424,9 +394,9 @@ window.FinckTestes = (() => {
         await S.inserir("recurring_transactions", { description: "Aluguel", type: "saida", amount: 1000, day_of_month: 6, active: true });
 
         const ctx = await F.carregarContexto();
-        esperar(ctx.saldo).aSer(2500);          // 500 + 3000 - 1000
+        esperar(ctx.saldo).aSer(2500);          
         esperar(ctx.despesasFixas).aSer(1000);
-        esperar(ctx.rendaLivre).aSer(2000);     // 3000 - 1000
+        esperar(ctx.rendaLivre).aSer(2000);     
       });
     });
 
@@ -440,9 +410,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Planejamento: parcelas, orçamento, calendário e projeção
-     ============================================================ */
   descrever("Planejamento (FinckPlano)", () => {
     const P = window.FinckPlano;
 
@@ -484,8 +451,8 @@ window.FinckTestes = (() => {
         total_amount: 300, installments_count: 2,
         first_due_date: "2026-01-31", paid_count: 0,
       });
-      esperar(c[1].vencimento.getMonth()).aSer(1);      // fevereiro
-      esperar(c[1].vencimento.getDate()).aSer(28);      // último dia possível
+      esperar(c[1].vencimento.getMonth()).aSer(1);      
+      esperar(c[1].vencimento.getDate()).aSer(28);      
     });
 
     teste("saldo devedor ignora as parcelas já pagas", () => {
@@ -522,8 +489,8 @@ window.FinckTestes = (() => {
       const r = P.situacaoOrcamento(tetos, transacoes, "2026-08");
       const porCat = Object.fromEntries(r.map((x) => [x.categoria, x]));
       esperar(porCat["Alimentação"].situacao).aSer("tranquilo");
-      esperar(porCat["Lazer"].situacao).aSer("atencao");        // 80%
-      esperar(porCat["Transporte"].situacao).aSer("estourado"); // 130%
+      esperar(porCat["Lazer"].situacao).aSer("atencao");        
+      esperar(porCat["Transporte"].situacao).aSer("estourado"); 
       esperar(porCat["Transporte"].restante).aSer(-60);
     });
 
@@ -572,7 +539,7 @@ window.FinckTestes = (() => {
     });
 
     teste("dia fora do mês é encaixado no último dia", () => {
-      // recorrente no dia 31 num mês de 30 dias
+
       const eventos = P.eventosDoMes({
         recorrentes: [{ description: "Conta", type: "saida", amount: 90, day_of_month: 31, active: true }],
       }, "2026-09");
@@ -593,7 +560,7 @@ window.FinckTestes = (() => {
       }, base);
 
       esperar(linhas).aTerTamanho(3);
-      esperar(linhas[0].saldoFim).aSer(3000);   // 1000 + 2000
+      esperar(linhas[0].saldoFim).aSer(3000);   
       esperar(linhas[1].saldoFim).aSer(5000);
       esperar(linhas[2].saldoFim).aSer(7000);
     });
@@ -620,7 +587,7 @@ window.FinckTestes = (() => {
       }, base);
       const furo = P.primeiroMesNegativo(linhas);
       esperar(furo === null).aSerFalso();
-      // jan fecha em 100 (500-400); fev já fecha negativo (100-400)
+
       esperar(furo.mes).aSer("2026-02");
       esperar(linhas[0].saldoFim).aSer(100);
       esperar(furo.saldoFim).aSer(-300);
@@ -681,10 +648,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     FinCK Contas — saldo, transferência e isolamento
-     Cobre os critérios de aceite do MVP da especificação.
-     ============================================================ */
   descrever("Contas (FinckContas)", () => {
     const CT = window.FinckContas;
 
@@ -792,13 +755,9 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Campo de dinheiro: dígitos entram pela direita
-     ============================================================ */
   descrever("Campo de dinheiro (FinckMoeda)", () => {
     const M = window.FinckMoeda;
 
-    // campo de mentira, fora da tela, só para o teste
     const comCampo = (fn) => {
       const el = document.createElement("input");
       el.type = "text";
@@ -885,9 +844,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ============================================================
-     Formatação
-     ============================================================ */
   descrever("Formatação (FinckUtils)", () => {
     const U = window.FinckUtils;
 
@@ -918,7 +874,6 @@ window.FinckTestes = (() => {
     });
   });
 
-  /* ---------------- execução ---------------- */
   async function rodar(aoAtualizar) {
     const resultado = { total: 0, passou: 0, falhou: 0, suites: [] };
 

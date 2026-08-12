@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>FinCK | Relatórios</title>
-  <meta name="description" content="Relatório mensal do FinCK com movimentações, metas e decisões conscientes; exporte em CSV, JSON ou PDF.">
+  <title>FinCK | Cenários</title>
+  <meta name="description" content="Simule cenários de compra e veja o fluxograma de decisão, sem alterar seus dados reais.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
   <meta name="theme-color" content="#07060a">
   <link rel="manifest" href="manifest.json">
@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
 </head>
-<body data-page="relatorios">
+<body data-page="cenarios">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
   <div class="finck-carga" data-finck-carga aria-hidden="true">
     <div class="finck-carga__nucleo">
@@ -43,64 +43,53 @@
   <header data-finck-header></header>
 
   <main class="conteudo" id="conteudo" tabindex="-1">
+
     <section class="hero">
-      <h2>Relatórios</h2>
-      <p>Consolide o mês e leve seus dados com você.</p>
+      <h2>Cenários</h2>
+      <p>Simule sem mudar nada. Nenhum número daqui entra no seu histórico — são hipóteses lado a lado, para você escolher com o quadro inteiro à vista.</p>
     </section>
 
-    <section class="filtros">
-      <label>Mês de referência
-        <input type="month" id="filtroMes">
+    <section class="bloco">
+      <h3>O que você está pensando em comprar?</h3>
+      <div class="linha-dupla">
+        <label>Item
+          <input type="text" id="cenarioItem" maxlength="40" placeholder="Ex.: Fone de ouvido">
+        </label>
+        <label>Preço
+          <input type="text" inputmode="numeric" data-moeda id="cenarioPreco">
+        </label>
+      </div>
+      <label class="campo-parcelas">Se parcelasse, em quantas vezes?
+        <input type="number" id="cenarioParcelas" min="2" max="48" step="1" value="12">
       </label>
-      <div class="acoes-exportar">
-        <button type="button" class="btn-secundario" id="btnCSV">Exportar CSV</button>
-        <button type="button" class="btn-secundario" id="btnJSON">Backup JSON</button>
-        <button type="button" class="btn-secundario" id="btnPDF">Imprimir / PDF</button>
+
+      <fieldset class="campo-instituicoes">
+        <legend>Cenários para comparar</legend>
+        <div class="opcoes-cenarios" id="opcoesCenarios"></div>
+      </fieldset>
+
+      <div class="acoes-etapa">
+        <button type="button" class="btn-secundario" id="btnLimparCenario">Limpar</button>
+        <button type="button" class="btn-primario" id="btnLevarReality">Registrar de verdade no Reality</button>
       </div>
     </section>
 
-    <section class="cards-indicadores" id="resumoMes"></section>
+    <section class="bloco">
+      <h3>Comparação</h3>
+      <p class="vazio" id="vazioCenarios">Informe um preço para ver os cenários lado a lado.</p>
+      <div id="tabelaCenarios"></div>
+    </section>
 
-    <section class="bloco bloco--historico">
+    <section class="bloco" id="blocoFluxo" hidden>
       <div class="bloco-cabecalho">
-        <h3>Comparado com o seu próprio histórico</h3>
-        <span class="chip" id="chipHistorico"></span>
+        <h3>Revisão geral</h3>
+        <span class="chip">fluxograma</span>
       </div>
-      <p class="descricao">A régua aqui é você mesmo: cada categoria deste mês ao lado da sua média dos meses anteriores. Sem comparar com ninguém, sem definir o que é muito ou pouco.</p>
-      <div id="destaqueHistorico"></div>
-      <div id="listaHistorico" class="lista-historico"></div>
-      <p class="vazio" id="vazioHistorico" hidden>Ainda não há meses anteriores suficientes para comparar. A partir do segundo mês de uso, esta seção começa a fazer sentido.</p>
+      <p class="descricao">Todos os caminhos possíveis a partir desta compra, com o que cada um deixa de saldo, de tempo e de meta. Arraste para o lado se não couber na tela.</p>
+      <div class="fluxo-wrapper" id="fluxograma"></div>
     </section>
 
-    <section class="bloco">
-      <h3>Decisões conscientes do mês</h3>
-      <div id="decisoesMes"></div>
-    </section>
-
-    <section class="bloco">
-      <h3>Movimentações do mês</h3>
-      <div class="tabela-wrapper">
-        <table class="tabela" id="tabelaTransacoes">
-          <thead>
-            <tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col">Tipo</th><th scope="col">Valor</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="vazio" id="vazioRelatorio" hidden>Nenhuma movimentação neste mês.</p>
-    </section>
-
-    <section class="bloco">
-      <h3>Metas</h3>
-      <div class="tabela-wrapper">
-        <table class="tabela" id="tabelaMetas">
-          <thead>
-            <tr><th scope="col">Meta</th><th scope="col">Guardado</th><th scope="col">Objetivo</th><th scope="col">Progresso</th><th scope="col">Prazo</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+    <p class="link-rodape"><a href="home.html">← Voltar ao início</a></p>
   </main>
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
@@ -108,14 +97,15 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/moeda-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/tempo.js"></script>
-  <script src="js/historico-engine.js"></script>
+  <script src="js/cenarios-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
-  <script src="js/relatorios.js"></script>
+  <script src="js/cenarios.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>
 </body>

@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK v2 — Metas financeiras
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
@@ -16,8 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let recorrentes = [];
 
   async function carregar() {
-    // as recorrentes entram para saber quanto sobra por mês: sem elas
-    // o "aporte necessário" seria comparado com a renda bruta
+
     [metas, perfil, recorrentes] = await Promise.all([
       S.listar("goals", { ordem: "created_at", asc: false }),
       S.obterPerfil(),
@@ -33,7 +30,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return renda > 0 ? renda / dias : 0;
   };
 
-  /** Renda do mês menos as despesas fixas ativas. */
   const rendaLivre = () => {
     const renda = Number(perfil?.income_monthly || 0);
     const fixas = recorrentes
@@ -53,14 +49,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       <article class="card-indicador"><span>Objetivo total</span><strong>${U.moeda(alvo)}</strong></article>`;
   }
 
-  /**
-   * Quanto guardar por mês para chegar no prazo, e se isso cabe.
-   *
-   * "Faltam R$ 2.800" não diz o que fazer neste mês. O aporte
-   * mensal é o número acionável — e comparar com a renda livre
-   * revela cedo a meta que já nasceu impossível, em vez de deixar
-   * o usuário descobrir isso no último mês.
-   */
   function ritmoDaMeta(m, falta) {
     if (!m.deadline || falta <= 0) return "";
 
@@ -133,7 +121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  /* ---------- criar/editar ---------- */
   function abrirMeta(id) {
     const m = metas.find((x) => String(x.id) === String(id));
     document.getElementById("tituloMeta").textContent = m ? "Editar meta" : "Nova meta";
@@ -170,7 +157,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { U.toast(err.message, "erro"); }
   });
 
-  /* ---------- aporte ---------- */
   function abrirAporte(id) {
     const m = metas.find((x) => String(x.id) === String(id));
     if (!m) return;
@@ -200,7 +186,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { U.toast(err.message, "erro"); }
   });
 
-  /* ---------- detalhe ---------- */
   async function abrirDetalhe(id) {
     const m = metas.find((x) => String(x.id) === String(id));
     if (!m) return;

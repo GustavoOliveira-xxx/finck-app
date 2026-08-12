@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK of Reality — Jornada (níveis, títulos, conquistas)
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -19,9 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const nivel = G.nivelDe(estado.xp);
   const diario = await G.statusDiario();
 
-  /* A medalha é o troféu da página: um objeto que existe para ser
-     olhado de perto. Ela gira sozinha e responde ao ponteiro —
-     frente traz nível e XP, verso traz o título e o lema. */
   document.getElementById("cardNivel").innerHTML = `
     <div class="nivel-com-medalha">
       <div class="medalha-cena" data-medalha
@@ -65,7 +60,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
     </div>`;
 
-  // a medalha só existe agora; o finck-fx já rodou e não a viu
   window.FinckFX?.ligarMedalha?.();
 
   document.getElementById("resumoGame").innerHTML = `

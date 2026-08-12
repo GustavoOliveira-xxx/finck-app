@@ -1,11 +1,4 @@
 @charset "UTF-8";
-/* fontes carregadas via <link> no <head> de cada página (evita o
-   "waterfall" serial que o @import causa: HTML -> CSS -> fonts.css -> fontes) */
-
-/* ============================================================
-   FinCK v2 — style-auth.css  (index.html e cadastro.html)
-   Porta-cofre: preto profundo, luz roxa, sinal amarelo.
-   ============================================================ */
 
 :root{
   --preto-fundo:      #07060a;
@@ -89,7 +82,6 @@ button{ cursor:pointer; border:none; background:none; }
 :focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; border-radius:var(--raio-sm); }
 ::selection{ background:var(--roxo-claro); color:#fff; }
 
-/* ---------- fundo dinâmico ---------- */
 body.pagina-auth::before{
   content:"";
   position:fixed; inset:0; z-index:-3; pointer-events:none;
@@ -174,7 +166,6 @@ body.pagina-auth::before{
   opacity:.6;
 }
 
-/* ---------- layout ---------- */
 .auth-wrapper{
   position:relative;
   min-height:100dvh;
@@ -187,7 +178,6 @@ body.pagina-auth::before{
   padding-block:clamp(2rem,5vh,4rem);
 }
 
-/* ---------- marca ---------- */
 .auth-marca{
   display:flex; flex-direction:column; align-items:flex-start; gap:.9rem;
   animation: marca-entra .9s var(--ease-out) both;
@@ -223,7 +213,6 @@ body.pagina-auth::before{
   animation: risco-entra .6s var(--ease-out) .5s both;
 }
 
-/* ---------- card ---------- */
 .auth-card{
   position:relative;
   padding:clamp(1.6rem,1.3rem + 1.6vw,2.5rem);
@@ -342,7 +331,6 @@ input:-webkit-autofill{
   color:#fff; font-size:.72rem; font-weight:700;
 }
 
-/* ---------- captcha de arraste ---------- */
 .captcha{
   position:relative;
   display:flex; align-items:center;
@@ -404,7 +392,6 @@ input:-webkit-autofill{
 .captcha.verificado .captcha-slider::after{ animation:none; }
 .captcha.verificado .captcha-texto{ color:var(--verde); font-weight:600; }
 
-/* ---------- botões ---------- */
 .btn-primario{
   position:relative;
   display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
@@ -460,7 +447,6 @@ input:-webkit-autofill{
 .btn-texto:hover{ color:var(--amarelo); }
 .btn-texto:hover::after{ transform:scaleX(1); transform-origin:left; }
 
-/* ---------- mensagens e rodapé ---------- */
 .mensagem{
   font-size:.87rem;
   min-height:0;
@@ -500,7 +486,6 @@ input:-webkit-autofill{
 }
 .auth-rodape a:hover{ border-color:var(--amarelo); }
 
-/* ---------- toasts ---------- */
 .finck-toast-host{
   position:fixed; z-index:400;
   right:1rem; bottom:1rem;
@@ -532,7 +517,6 @@ input:-webkit-autofill{
 .finck-toast--erro::before{ background:var(--vermelho); box-shadow:0 0 14px var(--vermelho); }
 .finck-toast--info::before{ background:var(--amarelo); box-shadow:0 0 14px var(--amarelo); }
 
-/* ondinha de clique (js/ui-fx.js) */
 .fx-onda{
   position:absolute; border-radius:50%;
   transform:translate(-50%,-50%) scale(0);
@@ -541,7 +525,6 @@ input:-webkit-autofill{
   animation: onda-expande .62s var(--ease-out) forwards;
 }
 
-/* ---------- keyframes ---------- */
 @keyframes grade-desliza{ from{ transform:translate3d(0,0,0);} to{ transform:translate3d(-58px,-58px,0);} }
 @keyframes orbe-deriva-a{ 0%{ transform:translate3d(0,0,0) scale(1);} 100%{ transform:translate3d(9vw,6vh,0) scale(1.15);} }
 @keyframes ticker-desliza{ from{ transform:translate3d(0,0,0); } to{ transform:translate3d(-50%,0,0); } }
@@ -566,7 +549,6 @@ input:-webkit-autofill{
 @keyframes toast-entra{ from{ opacity:0; transform:translateX(30px) scale(.96); } to{ opacity:1; transform:none; } }
 @keyframes onda-expande{ to{ transform:translate(-50%,-50%) scale(1); opacity:0; } }
 
-/* ---------- responsivo e motion ---------- */
 @media (max-width: 900px){
   .auth-wrapper{
     grid-template-columns:1fr;
@@ -592,22 +574,12 @@ input:-webkit-autofill{
   .fundo-finck__ticker,.fundo-finck__grao,.fundo-finck__brilho{ display:none; }
 }
 
-/* ============================================================
-   APP EM CELULAR — entrada e cadastro
-   ============================================================ */
-
-/* Obs.: o alinhamento central da marca no celular mora em
-   finck-fx.css, que é carregado depois deste arquivo e venceria
-   qualquer regra equivalente escrita aqui. */
-
-/* o iOS amplia a página ao focar campo com fonte menor que 16px */
 @media (pointer: coarse){
   input[type="text"],input[type="email"],input[type="password"],
   input[type="number"],input[type="url"],input[type="search"],
   select,textarea{ font-size:16px; }
 }
 
-/* alvo de toque do olho de mostrar senha */
 @media (pointer: coarse){
   .toggle-senha{ width:44px; height:44px; }
   .campo-senha input{ padding-right:3.4rem; }
@@ -615,13 +587,11 @@ input:-webkit-autofill{
   .auth-rodape a{ display:inline-block; padding-block:.5rem; }
 }
 
-/* recorte da tela (depende de viewport-fit=cover no <meta viewport>) */
 .auth-wrapper{
   padding-top:max(clamp(2rem,5vh,4rem), env(safe-area-inset-top));
   padding-bottom:max(clamp(2rem,5vh,4rem), env(safe-area-inset-bottom));
 }
 
-/* vidro custa um passe extra de GPU; no celular vira opacidade */
 @media (max-width: 780px){
   .auth-card{
     backdrop-filter:none;
@@ -630,17 +600,10 @@ input:-webkit-autofill{
   }
 }
 
-/* o captcha é arrastado com o dedo: o gesto não pode rolar a página */
 .captcha{ touch-action:none; }
-
-/* ============================================================
-   VITRINE — exemplo interativo da primeira visita
-   Antes o visitante só entendia a proposta depois de criar conta.
-   ============================================================ */
 
 .auth-coluna{ display:grid; gap:clamp(1.4rem,3vw,2.2rem); align-content:center; }
 
-/* páginas sem coluna de marca (recuperar senha, nova senha) */
 .auth-wrapper--simples{
   grid-template-columns:minmax(0,1fr);
   justify-items:center;
@@ -670,7 +633,6 @@ input:-webkit-autofill{
   text-wrap:balance;
 }
 
-/* campo embutido na frase: o número faz parte do texto, não de um formulário */
 .vitrine__campo{
   display:inline-flex; align-items:baseline; gap:.15rem;
   padding:.1rem .45rem;
@@ -694,7 +656,7 @@ input:-webkit-autofill{
   border-color:var(--amarelo);
   box-shadow:0 0 0 3px rgba(254,200,0,.16);
 }
-/* as setinhas de number roubam espaço e não ajudam aqui */
+
 .vitrine__campo input::-webkit-outer-spin-button,
 .vitrine__campo input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
 .vitrine__campo input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
@@ -744,7 +706,6 @@ input:-webkit-autofill{
 }
 .vitrine__nota{ font-size:.78rem; color:var(--texto-fraquissimo); }
 
-/* ---------- confirmação de e-mail pendente ---------- */
 .aviso-confirmacao{
   display:grid; gap:.6rem;
   animation: marca-entra .5s var(--ease-out) both;

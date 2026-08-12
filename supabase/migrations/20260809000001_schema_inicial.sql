@@ -1,21 +1,5 @@
--- ============================================================
--- FinCK — schema inicial
---
--- Reconstruído a partir do que o aplicativo realmente grava
--- (js/store.js, js/reality.js, js/finance.js, js/metas.js).
--- Toda tabela de dados carrega user_id apontando para
--- auth.users, que é a base do isolamento definido na migration
--- 20260809000002_rls.sql.
---
--- Aplicar com:  supabase db push
--- ou colando no SQL Editor do projeto FinCK.
--- ============================================================
 
--- ------------------------------------------------------------
--- profiles — perfil financeiro, 1 por usuário
--- O id é o próprio id de auth.users: o perfil morre junto com a
--- conta e não existe perfil órfão.
--- ------------------------------------------------------------
+
 create table if not exists public.profiles (
   id               uuid primary key references auth.users (id) on delete cascade,
   name             text,
@@ -34,9 +18,6 @@ create table if not exists public.profiles (
 comment on table  public.profiles is 'Perfil financeiro do usuário: base de todo cálculo de valor-hora.';
 comment on column public.profiles.work_days_month is 'Dias trabalhados por mês; divide a renda para achar o valor do dia.';
 
--- ------------------------------------------------------------
--- accounts — contas/carteiras do usuário
--- ------------------------------------------------------------
 create table if not exists public.accounts (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
@@ -46,9 +27,6 @@ create table if not exists public.accounts (
   created_at timestamptz   not null default now()
 );
 
--- ------------------------------------------------------------
--- goals — metas financeiras
--- ------------------------------------------------------------
 create table if not exists public.goals (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid not null references auth.users (id) on delete cascade,
@@ -62,11 +40,6 @@ create table if not exists public.goals (
 
 comment on column public.goals.rate is 'Rendimento mensal estimado, em porcentagem.';
 
--- ------------------------------------------------------------
--- transactions — entradas e saídas
--- goal_id opcional: um aporte pode estar amarrado a uma meta.
--- on delete set null preserva o lançamento se a meta sumir.
--- ------------------------------------------------------------
 create table if not exists public.transactions (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users (id) on delete cascade,
@@ -79,9 +52,6 @@ create table if not exists public.transactions (
   created_at  timestamptz not null default now()
 );
 
--- ------------------------------------------------------------
--- recurring_transactions — previsões fixas do mês
--- ------------------------------------------------------------
 create table if not exists public.recurring_transactions (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references auth.users (id) on delete cascade,
@@ -93,15 +63,6 @@ create table if not exists public.recurring_transactions (
   created_at   timestamptz not null default now()
 );
 
--- ------------------------------------------------------------
--- purchase_analyses — o cálculo do FinCK of Reality
---
--- Guarda um retrato da realidade financeira no momento do
--- cálculo (income_base, hour_value, jornada). Sem isso, mudar a
--- renda no perfil reescreveria o passado: uma compra analisada
--- quando a hora valia R$ 20 passaria a "ter custado" outra
--- quantidade de horas.
--- ------------------------------------------------------------
 create table if not exists public.purchase_analyses (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users (id) on delete cascade,
@@ -132,11 +93,6 @@ create table if not exists public.purchase_analyses (
   created_at      timestamptz not null default now()
 );
 
--- ------------------------------------------------------------
--- gamification — XP, nível, sequência e conquistas
--- Uma linha por usuário: o app faz upsert com onConflict user_id,
--- então a unicidade precisa existir de verdade no banco.
--- ------------------------------------------------------------
 create table if not exists public.gamification (
   user_id      uuid primary key references auth.users (id) on delete cascade,
   xp           integer not null default 0 check (xp >= 0),
@@ -147,10 +103,6 @@ create table if not exists public.gamification (
   updated_at   timestamptz not null default now()
 );
 
--- ------------------------------------------------------------
--- Índices
--- Toda listagem do app filtra por user_id e ordena por data.
--- ------------------------------------------------------------
 create index if not exists transactions_user_date_idx
   on public.transactions (user_id, date desc);
 create index if not exists transactions_user_created_idx

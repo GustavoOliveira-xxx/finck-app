@@ -49,10 +49,8 @@
       <p>O que já está comprometido daqui para frente: parcelas, contas do mês, tetos por categoria e para onde o saldo caminha.</p>
     </section>
 
-    <!-- Alerta principal: o mês em que o saldo fura, se houver -->
     <section id="alertaProjecao" aria-live="polite"></section>
 
-    <!-- 1. Projeção de saldo futuro -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Projeção do saldo</h3>
@@ -71,7 +69,6 @@
       </div>
     </section>
 
-    <!-- 2. Calendário financeiro -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Calendário do mês</h3>
@@ -91,7 +88,6 @@
       <div id="detalheDia" class="detalhe-dia" aria-live="polite"></div>
     </section>
 
-    <!-- 3. Parcelamentos -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Compras parceladas</h3>
@@ -102,7 +98,6 @@
       <p class="vazio" id="vazioParcelas" hidden>Nenhuma compra parcelada cadastrada. As parcelas entram na projeção e no calendário automaticamente.</p>
     </section>
 
-    <!-- 4. Orçamento por categoria -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Orçamento por categoria</h3>
@@ -119,7 +114,6 @@
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
 
-  <!-- Cadastro de parcelamento -->
   <div id="modalParcela" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloParcela">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalParcela" aria-label="Fechar">✕</button>
@@ -154,7 +148,6 @@
     </div>
   </div>
 
-  <!-- Teto de categoria -->
   <div id="modalTeto" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloTeto">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalTeto" aria-label="Fechar">✕</button>
@@ -180,6 +173,7 @@
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
   <script src="js/planejamento-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>

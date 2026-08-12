@@ -1,8 +1,4 @@
-/* ============================================================
-   FinCK v2 — Gráficos em Canvas puro (sem bibliotecas)
-   O CSS controla cores via variáveis --finck-chart-1..n; se
-   não existirem, usa a paleta padrão abaixo.
-   ============================================================ */
+
 
 window.FinckCharts = (() => {
   const PALETA_PADRAO = ["#a78bfa", "#fbbf24", "#34d399", "#60a5fa", "#f87171", "#f472b6", "#22d3ee", "#c4b5fd", "#fcd34d"];
@@ -32,7 +28,6 @@ window.FinckCharts = (() => {
     return { ctx, largura, altura };
   }
 
-  /** Rosca de categorias. dados: [{ categoria, valor }] */
   function rosca(canvas, dados) {
     if (!canvas) return;
     const { ctx, largura, altura } = preparar(canvas);
@@ -61,7 +56,6 @@ window.FinckCharts = (() => {
       inicio += angulo;
     });
 
-    // furo central
     ctx.globalCompositeOperation = "destination-out";
     ctx.beginPath();
     ctx.arc(cx, cy, raio * 0.6, 0, Math.PI * 2);
@@ -74,7 +68,6 @@ window.FinckCharts = (() => {
     ctx.fillText(total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), cx, cy + 5);
   }
 
-  /** Barras agrupadas. serie: [{ rotulo, entradas, saidas }] */
   function barras(canvas, serie) {
     if (!canvas) return;
     const { ctx, largura, altura } = preparar(canvas);
@@ -113,7 +106,6 @@ window.FinckCharts = (() => {
     });
   }
 
-  /** Barra de progresso horizontal simples (0–100). */
   function progresso(canvas, percentual) {
     if (!canvas) return;
     const { ctx, largura, altura } = preparar(canvas);
@@ -127,23 +119,8 @@ window.FinckCharts = (() => {
     ctx.fillRect(0, (altura - h) / 2, (Math.max(0, Math.min(100, percentual)) / 100) * largura, h);
   }
 
-  /* ============================================================
-     Equivalente em tabela para os gráficos
-
-     O conteúdo de um <canvas> é opaco para leitor de tela: o
-     aria-label descreve que existe um gráfico, mas não diz um
-     único número. Aqui cada gráfico ganha uma tabela irmã com os
-     mesmos dados — visível para quem navega por teclado ou leitor,
-     e disponível para todos atrás de um botão, porque ler o valor
-     exato é útil para qualquer pessoa.
-     ============================================================ */
   const U = () => window.FinckUtils;
 
-  /**
-   * Publica a tabela equivalente logo depois do canvas.
-   * @param {HTMLCanvasElement} canvas
-   * @param {object} spec { colunas: string[], linhas: (string|number)[][], resumo?: string }
-   */
   function tabelaEquivalente(canvas, spec) {
     if (!canvas || !spec?.linhas?.length) return;
 
@@ -176,8 +153,6 @@ window.FinckCharts = (() => {
         </div>
       </details>`;
 
-    // o canvas vira decorativo: quem lê a tabela não precisa ouvir
-    // "imagem: gráfico de..." antes de chegar aos dados
     canvas.setAttribute("role", "img");
     if (spec.resumo) canvas.setAttribute("aria-label", spec.resumo);
     bloco.setAttribute("aria-live", "polite");

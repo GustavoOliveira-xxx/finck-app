@@ -1,6 +1,4 @@
-/* ============================================================
-   FinCK v2 — Relatórios mensais e exportação
-   ============================================================ */
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
@@ -8,6 +6,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const U = window.FinckUtils;
   const F = window.FinckFinance;
   const R = window.FinckReality;
+  const T = window.FinckTempo;
+  const H = window.FinckHistorico;
 
   const user = await window.FinckNav.iniciarPagina({ titulo: "Relatórios", subtitulo: "Consolidação mensal" });
   if (!user) return;
@@ -25,7 +25,61 @@ document.addEventListener("DOMContentLoaded", async () => {
     return { mes, transacoes, analises };
   }
 
+  function renderHistorico() {
+    const mes = filtroMes.value || U.mesAtual();
+    const p = H.panorama(ctx.transacoes, mes, 6);
+    const comHistorico = p.linhas.filter((l) => l.temHistorico);
+
+    document.getElementById("chipHistorico").textContent =
+      `${comHistorico.length} de ${p.linhas.length} categoria(s)`;
+    document.getElementById("vazioHistorico").hidden = comHistorico.length > 0;
+
+    const destaque = document.getElementById("destaqueHistorico");
+    if (!comHistorico.length) {
+      destaque.innerHTML = "";
+      document.getElementById("listaHistorico").innerHTML = "";
+      return;
+    }
+
+    const topo = comHistorico[0];
+    const obsGeral = H.observacao(p.geral);
+    destaque.innerHTML = `
+      <article class="destaque-historico destaque-historico--${H.tendencia(topo)}">
+        <span class="destaque-historico__etiqueta">O que mais mudou</span>
+        <h4>${U.escapeHTML(topo.categoria)}</h4>
+        <p class="destaque-historico__valor">
+          ${U.moeda(topo.atual)} ${T.selo(topo.atual, { classe: "selo-tempo--destaque" })}
+        </p>
+        <p class="destaque-historico__obs">${U.escapeHTML(H.observacao(topo) || "")}</p>
+        ${obsGeral ? `<p class="destaque-historico__geral">No total do mês: ${U.escapeHTML(obsGeral)}</p>` : ""}
+      </article>`;
+
+    document.getElementById("listaHistorico").innerHTML = comHistorico.map((l) => `
+      <article class="linha-historico linha-historico--${H.tendencia(l)}">
+        <div class="linha-historico__topo">
+          <strong>${U.escapeHTML(l.categoria)}</strong>
+          <span class="linha-historico__atual">
+            ${U.moeda(l.atual)} ${T.selo(l.atual)}
+          </span>
+        </div>
+        <div class="linha-historico__barras" role="img"
+             aria-label="${U.escapeHTML(l.categoria)}: ${l.serie.map((s) => `${s.rotulo} ${U.moeda(s.total)}`).join(", ")}">
+          ${l.serie.map((s) => `
+            <span class="mini-barra${s.atual ? " mini-barra--atual" : ""}"
+                  style="--altura:${Math.max(3, (s.total / l.maior) * 100)}%"
+                  title="${U.escapeHTML(s.rotulo)}: ${U.moeda(s.total)}">
+              <em>${U.escapeHTML(s.rotulo)}</em>
+            </span>`).join("")}
+        </div>
+        <p class="linha-historico__obs">
+          ${U.escapeHTML(H.observacao(l) || "")}
+          <span class="linha-historico__fatia">${U.percentual(l.fatia, 0)} das saídas do mês</span>
+        </p>
+      </article>`).join("");
+  }
+
   function render() {
+    renderHistorico();
     const { transacoes, analises } = dadosDoMes();
     const entradas = F.soma(transacoes.filter(F.ehEntrada));
     const saidas = F.soma(transacoes.filter(F.ehSaida));
@@ -77,7 +131,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<tr><td colspan="5" class="vazio">Nenhuma meta cadastrada.</td></tr>`;
   }
 
-  /* ---------- exportações ---------- */
   document.getElementById("btnCSV").addEventListener("click", () => {
     const { mes, transacoes } = dadosDoMes();
     const linhas = [["Data", "Descricao", "Categoria", "Tipo", "Valor"]].concat(

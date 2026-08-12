@@ -49,13 +49,11 @@
       <p>Organize onde seu dinheiro está.</p>
     </section>
 
-    <!-- Aviso de privacidade: exigido pela especificação (6.2 e 7) -->
     <p class="aviso-privacidade">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
       <span><strong>O FinCK não se conecta ao seu banco.</strong> Você informa os dados manualmente e pode alterá-los ou apagá-los quando quiser. Nunca pedimos senha, token, agência ou número completo de cartão.</span>
     </p>
 
-    <!-- 4.6 Visão consolidada -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Visão consolidada</h3>
@@ -70,7 +68,6 @@
       <button type="button" class="btn-secundario" id="btnAjustar">Ajustar saldo</button>
     </div>
 
-    <!-- Lista de contas -->
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Suas contas</h3>
@@ -89,20 +86,17 @@
       </p>
     </section>
 
-    <!-- Total por instituição -->
     <section class="bloco" id="blocoInstituicoes" hidden>
       <h3>Total por instituição</h3>
       <ul class="lista-instituicoes" id="listaInstituicoes"></ul>
     </section>
 
-    <!-- Lançamentos sem conta (legado) -->
     <section class="bloco" id="blocoSemConta" hidden>
       <h3>Lançamentos sem conta</h3>
       <p class="descricao" id="textoSemConta"></p>
       <div id="listaSemConta" class="itens-lista"></div>
     </section>
 
-    <!-- Histórico de transferências -->
     <section class="bloco" id="blocoTransferencias" hidden>
       <h3>Transferências internas</h3>
       <p class="descricao">Mover dinheiro entre suas contas não é entrada nem saída: o patrimônio consolidado não muda.</p>
@@ -114,7 +108,6 @@
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
 
-  <!-- 6.3 Modal de nova conta -->
   <div id="modalConta" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConta">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalConta" aria-label="Fechar">✕</button>
@@ -173,7 +166,6 @@
     </div>
   </div>
 
-  <!-- 4.4 Transferência interna -->
   <div id="modalTransferencia" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloTransferencia">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalTransferencia" aria-label="Fechar">✕</button>
@@ -204,7 +196,6 @@
     </div>
   </div>
 
-  <!-- 4.5 Ajuste de saldo -->
   <div id="modalAjuste" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloAjuste">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalAjuste" aria-label="Fechar">✕</button>
@@ -239,7 +230,6 @@
     </div>
   </div>
 
-  <!-- Exclusão de conta com dependências -->
   <div id="modalExcluirConta" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloExcluirConta">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalExcluirConta" aria-label="Fechar">✕</button>
@@ -272,6 +262,7 @@
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
   <script src="js/contas-engine.js"></script>
   <script src="js/planejamento-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
