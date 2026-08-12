@@ -246,9 +246,49 @@
     marcaReality();
   }
 
+  const ANEIS_ALVO = [
+    { w: "100%", z: 0,  cor: "rgba(180,92,240,.28)", fundo: "radial-gradient(circle, rgba(104,12,144,.20), transparent 72%)" },
+    { w: "80%",  z: 16, cor: "rgba(180,92,240,.42)" },
+    { w: "60%",  z: 32, cor: "rgba(180,92,240,.6)" },
+    { w: "40%",  z: 48, cor: "rgba(254,200,0,.5)" },
+    { w: "24%",  z: 62, cor: "rgba(254,200,0,.85)", brilho: "0 0 18px -2px rgba(254,200,0,.7)" },
+  ];
+
+  function montarAlvo(cena) {
+    if (cena.dataset.montado) return;
+    cena.dataset.montado = "1";
+
+    const aneis = ANEIS_ALVO.map((a) =>
+      `<span class="alvo-anel" style="--w:${a.w};--z:${a.z};--cor:${a.cor};${a.fundo ? `--fundo:${a.fundo};` : ""}${a.brilho ? `--brilho:${a.brilho};` : ""}"></span>`
+    ).join("");
+
+    cena.innerHTML = `
+      <div class="alvo-orbita">
+        <div class="alvo">
+          ${aneis}
+          <span class="alvo-marca" style="--w:90%;--z:8"></span>
+          <span class="alvo-marca" style="--w:50%;--z:40"></span>
+          <span class="alvo-centro"></span>
+          <span class="alvo-dardo">
+            <span class="alvo-dardo__impacto"></span>
+            <span class="alvo-dardo__haste"></span>
+            <span class="alvo-dardo__aleta"></span>
+            <span class="alvo-dardo__ponta"></span>
+          </span>
+        </div>
+      </div>
+      <div class="alvo-rotulo">
+        <span class="alvo-rotulo__pct" data-alvo-pct>—</span>
+        <span class="alvo-rotulo__nome" data-alvo-nome>sem metas ainda</span>
+      </div>`;
+  }
+
   function alvo() {
     const cena = document.querySelector("[data-alvo]");
-    if (!cena || reduzido || toque) return;
+    if (!cena) return;
+
+    montarAlvo(cena);
+    if (reduzido || toque) return;
 
     const corpo = cena.querySelector(".alvo");
     if (!corpo) return;
@@ -278,47 +318,110 @@
     cena.addEventListener("pointerleave", () => { px = 0; py = 0; agendar(); });
   }
 
-  function marcaReality() {
-    const marca = document.querySelector("[data-marca3d]");
-    if (!marca || reduzido || toque) return;
+  function mirarAlvo(progresso, nome) {
+    const cena = document.querySelector("[data-alvo]");
+    if (!cena) return;
+    montarAlvo(cena);
 
-    const palco = marca.querySelector(".marca3d__palco");
-    const lustro = marca.querySelector(".marca3d__lustro");
-    if (!palco) return;
+    const dardo = cena.querySelector(".alvo-dardo");
+    const pct = cena.querySelector("[data-alvo-pct]");
+    const rotulo = cena.querySelector("[data-alvo-nome]");
+    if (!dardo) return;
 
-    const area = marca.closest(".reality-cta") || marca;
-    let agendado = false;
-    let mx = 0, my = 0;
+    const p = Math.max(0, Math.min(100, Number(progresso) || 0));
+    const distancia = (1 - p / 100) * 34;
+    const angulo = 2.4 + (p / 100) * 3.1;
 
-    const aplicar = () => {
-      const sx = mx.toFixed(3);
-      const sy = my.toFixed(3);
-      palco.style.setProperty("--mx", sx);
-      palco.style.setProperty("--my", sy);
-      if (lustro) {
-        lustro.style.setProperty("--mx", sx);
-        lustro.style.setProperty("--my", sy);
-      }
-      agendado = false;
-    };
-    const agendar = () => {
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    };
+    dardo.style.left = `${(50 + Math.cos(angulo) * distancia).toFixed(2)}%`;
+    dardo.style.top = `${(50 + Math.sin(angulo) * distancia).toFixed(2)}%`;
 
-    area.addEventListener("pointermove", (e) => {
-      const r = area.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      mx = (e.clientX - r.left) / r.width - 0.5;
-      my = ((e.clientY - r.top) / r.height - 0.5) * -1;
-      agendar();
-    }, { passive: true });
-
-    area.addEventListener("pointerleave", () => { mx = 0; my = 0; agendar(); });
+    if (pct) pct.textContent = nome ? `${Math.round(p)}%` : "—";
+    if (rotulo) rotulo.textContent = nome || "sem metas ainda";
   }
 
-  window.FinckFX = { ligarMedalha: medalha };
+
+  const CAMADAS_EXTRUSAO = 16;
+
+  function montarMarca(cena) {
+    if (cena.dataset.montada) return;
+    cena.dataset.montada = "1";
+
+    const logo = cena.dataset.logo || "assets/logo-reality-transparente.png";
+    const nome = cena.dataset.nome || "FinCK of Reality";
+    cena.style.setProperty("--marca-logo", `url("${logo}")`);
+
+    const extrusao = Array.from({ length: CAMADAS_EXTRUSAO }, (_, i) => {
+      const z = (i + 1) * 1.6;
+      const forca = 1 - i / (CAMADAS_EXTRUSAO * 1.35);
+      return `<span class="marca3d__borda marca3d__extrusao" style="--z:${z};--forca:${forca.toFixed(3)}"></span>`;
+    }).join("");
+
+    const faiscas = Array.from({ length: 6 }, (_, i) =>
+      `<span class="marca3d__faisca marca3d__faisca--${i + 1}"></span>`).join("");
+
+    cena.innerHTML = `
+      <div class="marca3d">
+        <span class="marca3d__halo"></span>
+        <span class="marca3d__anel marca3d__anel--3"></span>
+        <span class="marca3d__anel marca3d__anel--1"></span>
+        <span class="marca3d__anel marca3d__anel--2"></span>
+        <div class="marca3d__flutua">
+          ${extrusao}
+          <img class="marca3d__logo" src="${logo}" alt="${nome}" decoding="async">
+          <span class="marca3d__borda marca3d__contorno"></span>
+          <span class="marca3d__borda marca3d__lustro"></span>
+        </div>
+        ${faiscas}
+        <span class="marca3d__chao"></span>
+      </div>`;
+  }
+
+  function marcaReality() {
+    const cenas = [...document.querySelectorAll("[data-marca3d]")];
+    if (!cenas.length) return;
+
+    cenas.forEach(montarMarca);
+    if (reduzido || toque) return;
+
+    cenas.forEach((cena) => {
+      const corpo = cena.querySelector(".marca3d");
+      const reativos = cena.querySelectorAll(".marca3d__lustro, .marca3d__contorno");
+      if (!corpo) return;
+
+      const area = cena.closest(".reality-cta") || cena.closest(".hero--reality") || cena;
+      let agendado = false;
+      let mx = 0, my = 0;
+
+      const aplicar = () => {
+        const sx = mx.toFixed(3);
+        const sy = my.toFixed(3);
+        corpo.style.setProperty("--mx", sx);
+        corpo.style.setProperty("--my", sy);
+        reativos.forEach((el) => {
+          el.style.setProperty("--mx", sx);
+          el.style.setProperty("--my", sy);
+        });
+        agendado = false;
+      };
+      const agendar = () => {
+        if (agendado) return;
+        agendado = true;
+        raf(aplicar);
+      };
+
+      area.addEventListener("pointermove", (e) => {
+        const r = area.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        mx = (e.clientX - r.left) / r.width - 0.5;
+        my = ((e.clientY - r.top) / r.height - 0.5) * -1;
+        agendar();
+      }, { passive: true });
+
+      area.addEventListener("pointerleave", () => { mx = 0; my = 0; agendar(); });
+    });
+  }
+
+  window.FinckFX = { ligarMedalha: medalha, mirarAlvo };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", iniciar, { once: true });

@@ -21,7 +21,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       S.listar("recurring_transactions"),
     ]);
     renderResumo();
+    renderAlvo();
     renderLista();
+  }
+
+  function renderAlvo() {
+    const abertas = metas.filter((m) => Number(m.target_amount) > 0);
+    const emAberto = abertas.filter((m) => Number(m.current_amount) < Number(m.target_amount));
+    const ordenadas = (emAberto.length ? emAberto : abertas)
+      .slice()
+      .sort((a, b) => U.progresso(b.current_amount, b.target_amount) - U.progresso(a.current_amount, a.target_amount));
+
+    const foco = ordenadas[0];
+    const progresso = foco ? U.progresso(foco.current_amount, foco.target_amount) : 0;
+    window.FinckFX?.mirarAlvo?.(progresso, foco ? foco.name : null);
+
+    const legenda = document.getElementById("alvoLegenda");
+    if (!legenda) return;
+
+    if (!abertas.length) {
+      legenda.innerHTML = "";
+      return;
+    }
+
+    const cores = ["var(--amarelo)", "var(--roxo-neon)", "var(--verde)"];
+    legenda.innerHTML = ordenadas.slice(0, 3).map((m, i) => {
+      const p = U.progresso(m.current_amount, m.target_amount);
+      return `
+        <li>
+          <span class="alvo-legenda__ponto" style="--cor:${cores[i]}"></span>
+          <span class="alvo-legenda__nome">${U.escapeHTML(m.name)}</span>
+          <span class="alvo-legenda__pct">${U.percentual(p, 0)}</span>
+        </li>`;
+    }).join("");
   }
 
   const valorDia = () => {
