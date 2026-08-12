@@ -321,6 +321,232 @@ export function extrairTitulo(html: string): string | null {
 }
 
 /* ------------------------------------------------------------------ *
+ * Preço riscado (o "de" da promoção)
+ *
+ * Procura em dois lugares: dentro de <del>/<s>, e em elementos cuja classe
+ * indica preço antigo. Cada plataforma usa um nome diferente para isso, daí
+ * a lista.
+ * ------------------------------------------------------------------ */
+const CLASSES_RISCADO =
+  /class=["'][^"']*(?:old-?price|price--old|price-old|preco-antigo|preco-de|precoDe|de-por__de|list-?price|compare-at|regular-price|line-through|riscado|was-price)[^"']*["']/gi;
+
+export function precoRiscado(html: string): number | null {
+  const achados: number[] = [];
+
+  const primeiroValor = (trecho: string) => {
+    const m = trecho.match(/R\$\s*([\d.,]+)/i);
+    return m ? paraNumero(m[1]) : null;
+  };
+
+  for (const m of html.matchAll(/<(?:del|s)\b[^>]*>/gi)) {
+    const v = primeiroValor(html.slice(m.index ?? 0, (m.index ?? 0) + 220));
+    if (v) achados.push(v);
+  }
+
+  for (const m of html.matchAll(CLASSES_RISCADO)) {
+    const v = primeiroValor(html.slice(m.index ?? 0, (m.index ?? 0) + 260));
+    if (v) achados.push(v);
+  }
+
+  return achados.length ? Math.max(...achados) : null;
+}
+
+/** Texto da página sem marcação, para as buscas que dependem de frase. */
+const semTags = (html: string) =>
+  html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ");
+
+/* ------------------------------------------------------------------ *
+ * Parcelamento
+ *
+ * "6x de R$ 58,32 sem juros". O que separa o parcelamento do produto de um
+ * banner de loja ("parcele em até 12x") é a conta fechar: vezes × valor tem
+ * que dar aproximadamente o preço da página.
+ * ------------------------------------------------------------------ */
+export function acharParcelamento(
+  html: string,
+  precoAtual: number,
+): { vezes: number; valor: number; semJuros: boolean; total: number } | null {
+  const texto = semTags(html);
+  let melhor: { vezes: number; valor: number; semJuros: boolean; total: number } | null = null;
+
+  for (const m of texto.matchAll(/(\d{1,2})\s*x\s*(?:de\s*)?R\$\s*([\d.,]+)/gi)) {
+    const vezes = Number(m[1]);
+    const valor = paraNumero(m[2]);
+    if (!valor || vezes < 2 || vezes > 24) continue;
+
+    const total = vezes * valor;
+    const depois = texto.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 40)
+      .toLowerCase();
+    const semJuros = /sem\s*juros/.test(depois);
+    const comJuros = /com\s*juros/.test(depois);
+
+    // sem juros: o total tem que bater com o preço (só arredondamento de centavo)
+    const bate = Math.abs(total - precoAtual) / precoAtual <= 0.03;
+    // com juros: o total passa do preço, mas dentro do razoável
+    const bateComJuros = comJuros && total > precoAtual && total <= precoAtual * 1.5;
+
+    if (!bate && !bateComJuros) continue;
+
+    if (!melhor || vezes > melhor.vezes) {
+      melhor = { vezes, valor, semJuros, total: Number(total.toFixed(2)) };
+    }
+  }
+
+  return melhor;
+}
+
+/* ------------------------------------------------------------------ *
+ * Preço à vista (Pix, boleto)
+ * ------------------------------------------------------------------ */
+export function acharAVista(
+  html: string,
+  precoAtual: number,
+): { valor: number; forma: string; percentual: number } | null {
+  const texto = semTags(html);
+  const FORMAS = /(no\s*pix|com\s*pix|via\s*pix|pix|à\s*vista|a\s*vista|no\s*boleto|boleto)/i;
+
+  const candidatos: { valor: number; forma: string }[] = [];
+
+  const registrar = (bruto: string | undefined, formaBruta: string | undefined) => {
+    const valor = paraNumero(bruto);
+    if (!valor || !formaBruta) return;
+    // tem que ser um desconto plausível sobre o preço, não outro produto
+    if (valor > precoAtual || valor < precoAtual * 0.5) return;
+    candidatos.push({
+      valor,
+      forma: /pix/i.test(formaBruta) ? "Pix" : /boleto/i.test(formaBruta) ? "boleto" : "à vista",
+    });
+  };
+
+  for (const m of texto.matchAll(
+    new RegExp(`R\\$\\s*([\\d.,]+)[^\\d]{0,25}?${FORMAS.source}`, "gi"),
+  )) registrar(m[1], m[2]);
+
+  for (const m of texto.matchAll(
+    new RegExp(`${FORMAS.source}[^\\d]{0,25}?R\\$\\s*([\\d.,]+)`, "gi"),
+  )) registrar(m[2], m[1]);
+
+  if (!candidatos.length) return null;
+
+  // o menor é o que de fato se paga à vista
+  const melhor = candidatos.sort((a, b) => a.valor - b.valor)[0];
+  return {
+    valor: melhor.valor,
+    forma: melhor.forma,
+    percentual: Number((((precoAtual - melhor.valor) / precoAtual) * 100).toFixed(1)),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Frete
+ *
+ * Só o que a página declara: frete grátis e, quando houver, o valor mínimo.
+ * Calcular frete por CEP não dá para fazer de forma genérica — cada
+ * plataforma tem seu próprio endereço de cálculo, com sessão e carrinho.
+ * ------------------------------------------------------------------ */
+export function acharFrete(html: string): { gratis: boolean; minimo?: number } | null {
+  const texto = semTags(html);
+
+  const comMinimo = texto.match(
+    /frete\s*gr[áa]tis[^.!?]{0,70}?(?:acima|a\s*partir)\s*de\s*R\$\s*([\d.,]+)/i,
+  );
+  if (comMinimo) {
+    const minimo = paraNumero(comMinimo[1]);
+    return minimo ? { gratis: true, minimo } : { gratis: true };
+  }
+
+  if (/frete\s*gr[áa]tis/i.test(texto)) return { gratis: true };
+  return null;
+}
+
+/* ------------------------------------------------------------------ *
+ * O panorama: junta tudo e resolve qual preço é o que vale
+ * ------------------------------------------------------------------ */
+export interface Panorama {
+  preco: number;
+  precoOriginal?: number;
+  desconto?: { valor: number; percentual: number };
+  aVista?: { valor: number; forma: string; percentual: number };
+  parcelamento?: { vezes: number; valor: number; semJuros: boolean; total: number };
+  frete?: { gratis: boolean; minimo?: number };
+  moeda: string;
+  titulo?: string | null;
+  metodo: string;
+  confianca: "alta" | "media" | "baixa";
+}
+
+export function montarPanorama(html: string): Panorama | null {
+  const cascata = [
+    ["json-ld", viaJsonLd],
+    ["meta", viaMeta],
+    ["microdata", viaMicrodata],
+  ] as const;
+
+  let estruturado: { preco: number; moeda?: string; titulo?: string } | null = null;
+  let metodo = "";
+  for (const [nome, fn] of cascata) {
+    estruturado = fn(html);
+    if (estruturado) { metodo = nome; break; }
+  }
+
+  const riscado = precoRiscado(html);
+  const doTexto = viaTexto(html);
+
+  let preco = estruturado?.preco ?? null;
+
+  // Ponto delicado: várias lojas publicam no dado estruturado o preço "de",
+  // não o "por". Quando o valor estruturado é igual ao riscado e o texto achou
+  // um menor, quem está certo é o texto — o estruturado é o preço cheio.
+  const igual = (a: number, b: number) => Math.abs(a - b) < 0.01;
+  if (preco !== null && riscado !== null && igual(preco, riscado) &&
+      doTexto && doTexto.preco < preco) {
+    preco = doTexto.preco;
+    metodo = "texto+riscado";
+  }
+
+  if (preco === null && doTexto) {
+    preco = doTexto.preco;
+    metodo = "texto";
+  }
+  if (preco === null) return null;
+
+  const panorama: Panorama = {
+    preco: Number(preco.toFixed(2)),
+    moeda: String(estruturado?.moeda ?? "BRL").toUpperCase(),
+    titulo: estruturado?.titulo ?? extrairTitulo(html),
+    metodo,
+    confianca: metodo === "texto" ? "baixa"
+      : metodo === "microdata" || metodo === "texto+riscado" ? "media"
+      : "alta",
+  };
+
+  if (riscado !== null && riscado > panorama.preco * 1.01) {
+    panorama.precoOriginal = Number(riscado.toFixed(2));
+    const valor = panorama.precoOriginal - panorama.preco;
+    panorama.desconto = {
+      valor: Number(valor.toFixed(2)),
+      percentual: Number(((valor / panorama.precoOriginal) * 100).toFixed(1)),
+    };
+  }
+
+  const aVista = acharAVista(html, panorama.preco);
+  if (aVista && aVista.percentual > 0) panorama.aVista = aVista;
+
+  const parcelamento = acharParcelamento(html, panorama.preco);
+  if (parcelamento) panorama.parcelamento = parcelamento;
+
+  const frete = acharFrete(html);
+  if (frete) panorama.frete = frete;
+
+  return panorama;
+}
+
+/* ------------------------------------------------------------------ *
  * Busca com redirecionamento manual
  * Cada salto é revalidado — senão um encurtador poderia levar para
  * endereço interno depois da checagem inicial.
@@ -495,22 +721,9 @@ export async function atender(req: Request): Promise<Response> {
   try {
     const { html, urlFinal } = await baixar(url, ctrl.signal);
 
-    // cascata: para no primeiro que encontrar
-    const tentativas = [
-      ["json-ld", viaJsonLd],
-      ["meta", viaMeta],
-      ["microdata", viaMicrodata],
-      ["texto", viaTexto],
-    ] as const;
+    const panorama = montarPanorama(html);
 
-    let metodo = "";
-    let achado: { preco: number; moeda?: string; titulo?: string } | null = null;
-    for (const [nome, fn] of tentativas) {
-      achado = fn(html);
-      if (achado) { metodo = nome; break; }
-    }
-
-    if (!achado) {
+    if (!panorama) {
       return responder({
         ok: false,
         codigo: "SEM_PRECO",
@@ -520,12 +733,8 @@ export async function atender(req: Request): Promise<Response> {
 
     const corpo = {
       ok: true,
-      preco: Number(achado.preco.toFixed(2)),
-      moeda: String(achado.moeda ?? "BRL").toUpperCase(),
-      titulo: achado.titulo ?? extrairTitulo(html),
+      ...panorama,
       loja: new URL(urlFinal).hostname.replace(/^www\./, ""),
-      metodo,
-      confianca: metodo === "texto" ? "baixa" : metodo === "microdata" ? "media" : "alta",
     };
 
     cache.set(url, { em: Date.now(), corpo });

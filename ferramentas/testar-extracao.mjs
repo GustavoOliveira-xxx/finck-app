@@ -9,6 +9,7 @@
 
 import {
   paraNumero, viaJsonLd, viaMeta, viaMicrodata, viaTexto, lojaBloqueada,
+  precoRiscado, acharParcelamento, acharAVista, acharFrete, montarPanorama,
 } from "../supabase/functions/buscar-preco/index.ts";
 
 let ok = 0, falhou = 0;
@@ -168,6 +169,113 @@ conferir("JSON-LD vence o texto bagunçado", viaJsonLd(`
   {"@type":"Product","name":"Fone Bluetooth XYZ",
    "offers":{"price":"599.00","priceCurrency":"BRL"}}</script>${PAGINA_REAL}`),
   { preco: 599, moeda: "BRL", titulo: "Fone Bluetooth XYZ" });
+
+/* ---------------------------------------------------------------- */
+console.log("Panorama: preço riscado, parcelas, à vista, frete");
+
+conferir("riscado dentro de <del>",
+  precoRiscado(`<del>R$ 439,90</del> <strong>R$ 349,90</strong>`), 439.90);
+
+conferir("riscado por classe",
+  precoRiscado(`<span class="old-price">R$ 2.000,00</span>`), 2000);
+
+conferir("riscado do Shopify (compare-at)",
+  precoRiscado(`<s class="compare-at-price">R$ 199,00</s>`), 199);
+
+conferir("sem riscado devolve null",
+  precoRiscado(`<span class="preco">R$ 100,00</span>`), null);
+
+conferir("parcelamento sem juros",
+  acharParcelamento(`<p>6 x de R$ 58,32 sem juros</p>`, 349.90),
+  { vezes: 6, valor: 58.32, semJuros: true, total: 349.92 });
+
+conferir("banner de outro valor é ignorado",
+  acharParcelamento(`<footer>parcele em até 12x de R$ 49,91</footer>`, 349.90), null);
+
+conferir("parcelamento com juros é aceito",
+  acharParcelamento(`<p>10x de R$ 40,00 com juros</p>`, 349.90),
+  { vezes: 10, valor: 40, semJuros: false, total: 400 });
+
+conferir("pix depois do valor",
+  acharAVista(`<p>R$ 339,40 com Pix</p>`, 349.90),
+  { valor: 339.40, forma: "Pix", percentual: 3 });
+
+conferir("pix antes do valor",
+  acharAVista(`<p>no Pix: R$ 320,00</p>`, 400),
+  { valor: 320, forma: "Pix", percentual: 20 });
+
+conferir("valor de outro produto é ignorado",
+  acharAVista(`<p>R$ 20,00 no pix</p>`, 400), null);
+
+conferir("frete grátis com mínimo",
+  acharFrete(`<span>Frete grátis acima de R$ 199,00</span>`), { gratis: true, minimo: 199 });
+
+conferir("frete grátis sem mínimo",
+  acharFrete(`<span>FRETE GRÁTIS para todo o Brasil</span>`), { gratis: true });
+
+conferir("sem menção a frete",
+  acharFrete(`<p>Produto novo</p>`), null);
+
+/* ---------------------------------------------------------------- */
+console.log("Panorama completo — reprodução da página que falhou (BAPPE)");
+
+// Estrutura da loja do print: banner de parcelamento no topo, preço riscado
+// coladinho no preço válido, preço do Pix e parcelamento.
+const bappe = (precoNoJsonLd) => `
+<html><head><title>AIR MAX TN PLUS TRIPLE WHITE</title>
+<meta property="og:title" content="AIR MAX TN PLUS TRIPLE WHITE">
+${precoNoJsonLd ? `<script type="application/ld+json">
+{"@type":"Product","name":"AIR MAX TN PLUS TRIPLE WHITE",
+ "offers":{"@type":"Offer","price":"${precoNoJsonLd}","priceCurrency":"BRL"}}
+</script>` : ""}
+</head><body>
+  <div class="barra-topo">PARCELE EM 6X SEM JUROS</div>
+  <h1>AIR MAX TN PLUS TRIPLE WHITE</h1>
+  <span class="badge">20% OFF</span>
+  <div class="precos">
+    <del class="old-price">R$439,90</del>
+    <strong class="preco-venda">R$349,90</strong>
+    <p class="pix">R$339,40 com Pix</p>
+    <small>6 x de R$58,32 sem juros</small>
+  </div>
+  <p>3% OFF no pix + Envio Prioritário</p>
+</body></html>`;
+
+// Cenário 1 — a loja publica o preço CHEIO no JSON-LD (a causa do erro do print)
+const p1 = montarPanorama(bappe("439.90"));
+conferir("preço atual (JSON-LD trazia o cheio)", p1?.preco, 349.90);
+conferir("preço original", p1?.precoOriginal, 439.90);
+conferir("desconto", p1?.desconto, { valor: 90, percentual: 20.5 });
+conferir("à vista no Pix", p1?.aVista, { valor: 339.40, forma: "Pix", percentual: 3 });
+conferir("parcelamento", p1?.parcelamento, { vezes: 6, valor: 58.32, semJuros: true, total: 349.92 });
+conferir("confiança rebaixada por reconciliação", p1?.confianca, "media");
+
+// Cenário 2 — a loja publica o preço promocional correto no JSON-LD
+const p2 = montarPanorama(bappe("349.90"));
+conferir("preço atual (JSON-LD correto)", p2?.preco, 349.90);
+conferir("preço original mesmo assim", p2?.precoOriginal, 439.90);
+conferir("confiança alta", p2?.confianca, "alta");
+
+// Cenário 3 — sem dado estruturado nenhum
+const p3 = montarPanorama(bappe(null));
+conferir("preço atual só pelo texto", p3?.preco, 349.90);
+conferir("original pelo texto", p3?.precoOriginal, 439.90);
+
+/* ---------------------------------------------------------------- */
+console.log("Panorama: campos ausentes não aparecem");
+
+const simples = montarPanorama(`
+  <script type="application/ld+json">
+  {"@type":"Product","name":"Caneca","offers":{"price":"29.90","priceCurrency":"BRL"}}
+  </script>
+  <span class="preco">R$ 29,90</span>`);
+
+conferir("preço", simples?.preco, 29.90);
+conferir("sem preço original", simples?.precoOriginal, undefined);
+conferir("sem desconto", simples?.desconto, undefined);
+conferir("sem à vista", simples?.aVista, undefined);
+conferir("sem parcelamento", simples?.parcelamento, undefined);
+conferir("sem frete", simples?.frete, undefined);
 
 /* ---------------------------------------------------------------- */
 console.log("Lojas bloqueadas");

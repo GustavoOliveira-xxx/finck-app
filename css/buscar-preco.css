@@ -104,6 +104,166 @@
   border-color:var(--superficie-borda);
 }
 
+/* ==========================================================================
+   Painel do que foi encontrado
+   ========================================================================== */
+
+.busca-preco__aviso--painel{
+  padding:0;
+  border-color:rgba(147,51,196,.32);
+  background:var(--superficie-alta);
+  overflow:hidden;
+}
+
+.panorama{ padding:.95rem 1.05rem 1rem; }
+
+.panorama__cabecalho{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.75rem;
+  margin-bottom:.55rem;
+}
+
+.panorama__item{
+  margin:0;
+  font-family:var(--fonte-display);
+  font-size:.92rem;
+  font-weight:600;
+  color:var(--texto);
+  line-height:1.35;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+}
+
+.panorama__loja{
+  flex:none;
+  font-size:.74rem;
+  color:var(--texto-fraquissimo);
+  font-family:var(--fonte-dados);
+}
+
+.panorama__valor{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  flex-wrap:wrap;
+}
+
+.panorama__valor strong{
+  font-family:var(--fonte-display);
+  font-size:1.75rem;
+  font-weight:700;
+  line-height:1.1;
+  color:var(--texto);
+  letter-spacing:-.01em;
+}
+
+.panorama__selo{
+  padding:.2rem .5rem;
+  border-radius:999px;
+  background:var(--verde-fraco);
+  border:1px solid rgba(31,209,143,.4);
+  color:var(--verde);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+
+.panorama__de{
+  margin:.28rem 0 0;
+  font-size:.83rem;
+  color:var(--texto-fraco);
+}
+.panorama__de s{ color:var(--texto-fraquissimo); }
+.panorama__de strong{ color:var(--verde); font-weight:600; }
+
+.panorama__linhas{
+  margin:.85rem 0 0;
+  padding:.7rem 0 0;
+  border-top:1px solid var(--superficie-borda);
+  display:grid;
+  gap:.45rem;
+}
+
+.panorama__linhas > div{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.9rem;
+}
+
+.panorama__linhas dt{
+  font-size:.82rem;
+  color:var(--texto-fraco);
+  flex:none;
+}
+
+.panorama__linhas dd{
+  margin:0;
+  font-size:.85rem;
+  color:var(--texto);
+  text-align:right;
+  font-family:var(--fonte-dados);
+}
+
+.panorama__off{
+  margin-left:.4rem;
+  color:var(--verde);
+  font-size:.76rem;
+  font-weight:600;
+}
+
+.panorama__juros{
+  display:block;
+  font-family:var(--fonte-corpo);
+  font-size:.74rem;
+  color:var(--texto-fraquissimo);
+}
+
+.panorama__acoes{ margin-top:.85rem; }
+
+.panorama__troca{
+  width:100%;
+  padding:.5rem .8rem;
+  border-radius:var(--raio-sm);
+  border:1px solid rgba(147,51,196,.4);
+  background:var(--roxo-vidro);
+  color:var(--texto);
+  font-family:var(--fonte-corpo);
+  font-size:.82rem;
+  cursor:pointer;
+  transition:border-color .18s ease, background .18s ease;
+}
+.panorama__troca:hover:not(:disabled){
+  border-color:var(--roxo-neon);
+  background:var(--roxo-fraco);
+}
+.panorama__troca:disabled{
+  opacity:.6;
+  cursor:default;
+  border-color:rgba(31,209,143,.4);
+  color:var(--verde);
+}
+
+.panorama__nota{
+  margin:.8rem 0 0;
+  padding-top:.65rem;
+  border-top:1px solid var(--superficie-borda);
+  font-size:.76rem;
+  line-height:1.45;
+  color:var(--texto-fraquissimo);
+}
+
+@media (max-width: 460px){
+  .panorama__cabecalho{ flex-direction:column; gap:.15rem; }
+  .panorama__valor strong{ font-size:1.5rem; }
+  .panorama__linhas > div{ flex-direction:column; gap:.05rem; }
+  .panorama__linhas dd{ text-align:left; }
+}
+
 /* ----- modal com a lista de lojas ----- */
 .lojas-intro,
 .lojas-rodape{

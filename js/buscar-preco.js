@@ -75,27 +75,106 @@ document.addEventListener("DOMContentLoaded", () => {
       ligado ? "Buscando…" : "Buscar preço do link";
   }
 
-  function mostrarResultado(dados) {
-    const partes = [];
-    partes.push(`Encontrei <strong>${U.escapeHTML(U.moeda(dados.preco))}</strong>`);
-    if (dados.loja) partes.push(`em ${U.escapeHTML(dados.loja)}`);
+  /**
+   * O painel do que foi encontrado.
+   *
+   * Só entra linha que existe: página sem parcelamento não mostra parcelamento,
+   * produto sem promoção não mostra preço riscado. Nada de "—" ou "não
+   * informado" ocupando espaço.
+   */
+  function montarPainel(d) {
+    const linhas = [];
 
-    let classe = "sucesso";
-    let extra = "";
-
-    if (dados.moeda && dados.moeda !== "BRL") {
-      classe = "instavel";
-      extra = ` O preço está em ${U.escapeHTML(dados.moeda)}, não em reais — confira antes de salvar.`;
-    } else if (dados.confianca === "baixa") {
-      classe = "instavel";
-      extra = " Li do texto da página, então pode ser parcela ou preço antigo. Confira antes de salvar.";
-    } else if (dados.confianca === "media") {
-      extra = " Confira se bate com o que a loja mostra.";
+    if (d.aVista) {
+      linhas.push([
+        `À vista${d.aVista.forma === "Pix" ? " no Pix" : d.aVista.forma === "boleto" ? " no boleto" : ""}`,
+        `${U.moeda(d.aVista.valor)}<span class="panorama__off">−${Math.floor(d.aVista.percentual)}%</span>`,
+      ]);
     }
 
+    if (d.parcelamento) {
+      const p = d.parcelamento;
+      linhas.push([
+        "Parcelado",
+        `${p.vezes}x de ${U.moeda(p.valor)}` +
+        `<span class="panorama__juros">${p.semJuros ? "sem juros" : `com juros · total ${U.moeda(p.total)}`}</span>`,
+      ]);
+    }
+
+    if (d.frete) {
+      linhas.push([
+        "Frete",
+        d.frete.minimo
+          ? `grátis acima de ${U.moeda(d.frete.minimo)}`
+          : "grátis, segundo a página",
+      ]);
+    }
+
+    // Trunca em vez de arredondar: é assim que as lojas anunciam o selo
+    // (439,90 → 349,90 dá 20,4%, e a loja estampa "20% OFF"). Arredondar
+    // mostraria 21% e brigaria com o que está na tela da loja.
+    const selo = d.desconto
+      ? `<span class="panorama__selo">${Math.floor(d.desconto.percentual)}% OFF</span>`
+      : "";
+
+    const de = d.precoOriginal
+      ? `<p class="panorama__de">de <s>${U.moeda(d.precoOriginal)}</s> · você economiza
+         <strong>${U.moeda(d.desconto.valor)}</strong></p>`
+      : "";
+
+    const trocarPix = d.aVista
+      ? `<button type="button" class="panorama__troca" data-preco="${d.aVista.valor}">
+           Usar o preço ${d.aVista.forma === "Pix" ? "do Pix" : "à vista"} (${U.moeda(d.aVista.valor)})
+         </button>`
+      : "";
+
+    return `
+      <div class="panorama">
+        <div class="panorama__cabecalho">
+          ${d.titulo ? `<p class="panorama__item">${U.escapeHTML(d.titulo)}</p>` : ""}
+          ${d.loja ? `<span class="panorama__loja">${U.escapeHTML(d.loja)}</span>` : ""}
+        </div>
+
+        <div class="panorama__valor">
+          <strong>${U.moeda(d.preco)}</strong>${selo}
+        </div>
+        ${de}
+
+        ${linhas.length ? `<dl class="panorama__linhas">${linhas.map(([rotulo, valor]) => `
+          <div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}
+
+        ${trocarPix ? `<div class="panorama__acoes">${trocarPix}</div>` : ""}
+        <p class="panorama__nota">${avisoConfianca(d)}</p>
+      </div>`;
+  }
+
+  function avisoConfianca(d) {
+    if (d.moeda && d.moeda !== "BRL") {
+      return `Atenção: o preço está em ${U.escapeHTML(d.moeda)}, não em reais. Converta antes de salvar.`;
+    }
+    if (d.confianca === "baixa") {
+      return "Li os valores do texto da página, então podem estar errados. Confira na loja antes de analisar.";
+    }
+    if (d.confianca === "media") {
+      return "A loja anunciava outro valor no código da página; usei o preço promocional que aparece na tela. Vale conferir.";
+    }
+    return "Preço lido do código da página. Confira se bate com o que a loja mostra.";
+  }
+
+  function mostrarResultado(dados) {
     aviso.hidden = false;
-    aviso.className = `busca-preco__aviso busca-preco__aviso--${classe}`;
-    aviso.innerHTML = `${partes.join(" ")}.${extra}`;
+    aviso.className = "busca-preco__aviso busca-preco__aviso--painel";
+    aviso.innerHTML = montarPainel(dados);
+
+    const troca = aviso.querySelector(".panorama__troca");
+    if (troca) {
+      troca.addEventListener("click", () => {
+        U.escreverMoeda("itemPrice", Number(troca.dataset.preco));
+        troca.disabled = true;
+        troca.textContent = "Preço trocado ✓";
+        U.toast("Campo atualizado com o preço à vista.", "sucesso");
+      });
+    }
   }
 
   function mostrarErro(motivo) {
