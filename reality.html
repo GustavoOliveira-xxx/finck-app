@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/buscar-preco.css">
 </head>
 <body data-page="reality">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -81,6 +82,17 @@
             <input type="url" id="itemLink" placeholder="Ex.: link do produto, do anúncio ou da loja">
           </span>
         </label>
+
+        <div class="busca-preco">
+          <button type="button" class="btn-secundario busca-preco__botao" id="btnBuscarPreco" disabled>
+            <span class="busca-preco__giro" aria-hidden="true"></span>
+            <span class="busca-preco__rotulo">Buscar preço do link</span>
+          </button>
+          <button type="button" class="busca-preco__ajuda" id="btnLojasSuportadas" aria-haspopup="dialog">
+            Quais lojas funcionam?
+          </button>
+        </div>
+        <p class="busca-preco__aviso" id="avisoLoja" role="status" hidden></p>
         <label>Observação (opcional)
           <input type="text" id="itemNote" placeholder="Ex.: promoção acaba amanhã">
         </label>
@@ -191,17 +203,27 @@
     </div>
   </div>
 
+  <div id="modalLojas" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloLojas">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalLojas" aria-label="Fechar">✕</button>
+      <h3 id="tituloLojas">Lojas e busca automática de preço</h3>
+      <div id="conteudoLojas"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/lojas-suporte.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/tempo.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/reality-page.js"></script>
+  <script src="js/buscar-preco.js"></script>
   <script src="js/calculos.js"></script>
   <script src="js/abas-reality.js"></script>
   <script src="js/ui-fx.js"></script>

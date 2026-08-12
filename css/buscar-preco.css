@@ -1,0 +1,180 @@
+/* ==========================================================================
+   FinCK — busca automática de preço pelo link
+   Usa as variáveis já definidas em style-principal.css
+   ========================================================================== */
+
+.busca-preco{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:var(--gap-xs);
+  margin:-.35rem 0 .2rem;
+}
+
+.busca-preco__botao{
+  display:inline-flex;
+  align-items:center;
+  gap:.55rem;
+  font-size:.86rem;
+  padding:.55rem 1rem;
+}
+
+.busca-preco__botao:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.busca-preco__botao--bloqueado{
+  border-color:rgba(255,77,94,.35);
+}
+
+/* anel de carregamento */
+.busca-preco__giro{
+  width:14px;
+  height:14px;
+  flex:none;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.18);
+  border-top-color:var(--roxo-neon);
+  display:none;
+}
+
+.busca-preco__botao--carregando .busca-preco__giro{
+  display:block;
+  animation:busca-preco-giro .7s linear infinite;
+}
+
+@keyframes busca-preco-giro{ to{ transform:rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce){
+  .busca-preco__botao--carregando .busca-preco__giro{ animation-duration:2.4s; }
+}
+
+.busca-preco__ajuda{
+  background:none;
+  border:none;
+  padding:.35rem .2rem;
+  font-family:var(--fonte-corpo);
+  font-size:.82rem;
+  color:var(--texto-fraco);
+  text-decoration:underline;
+  text-underline-offset:3px;
+  cursor:pointer;
+  transition:color .18s ease;
+}
+.busca-preco__ajuda:hover{ color:var(--roxo-neon); }
+
+/* ----- aviso abaixo do campo ----- */
+.busca-preco__aviso{
+  margin:.1rem 0 .9rem;
+  padding:.65rem .85rem;
+  border-radius:var(--raio-sm);
+  border:1px solid var(--superficie-borda);
+  background:var(--superficie);
+  font-size:.84rem;
+  line-height:1.45;
+  color:var(--texto-fraco);
+}
+.busca-preco__aviso strong{ color:var(--texto); }
+
+.busca-preco__aviso--bloqueada,
+.busca-preco__aviso--erro{
+  border-color:rgba(255,77,94,.3);
+  background:var(--vermelho-fraco);
+}
+.busca-preco__aviso--bloqueada strong,
+.busca-preco__aviso--erro strong{ color:var(--vermelho); }
+
+.busca-preco__aviso--instavel{
+  border-color:rgba(254,200,0,.3);
+  background:var(--amarelo-fraco);
+}
+.busca-preco__aviso--instavel strong{ color:var(--amarelo); }
+
+.busca-preco__aviso--provavel,
+.busca-preco__aviso--sucesso{
+  border-color:rgba(31,209,143,.3);
+  background:var(--verde-fraco);
+}
+.busca-preco__aviso--provavel strong,
+.busca-preco__aviso--sucesso strong{ color:var(--verde); }
+
+.busca-preco__aviso--desconhecida{
+  border-color:var(--superficie-borda);
+}
+
+/* ----- modal com a lista de lojas ----- */
+.lojas-intro,
+.lojas-rodape{
+  font-size:.88rem;
+  line-height:1.55;
+  color:var(--texto-fraco);
+}
+.lojas-rodape{
+  margin-top:var(--gap-md);
+  padding-top:var(--gap-sm);
+  border-top:1px solid var(--superficie-borda);
+}
+
+.lojas-grupo{ margin-top:var(--gap-md); }
+
+.lojas-grupo h4{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  margin:0 0 .2rem;
+  font-family:var(--fonte-display);
+  font-size:1rem;
+}
+
+.lojas-grupo h4::before{
+  content:"";
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  flex:none;
+}
+.lojas-grupo--bloqueada h4::before{ background:var(--vermelho); }
+.lojas-grupo--instavel  h4::before{ background:var(--amarelo); }
+.lojas-grupo--provavel  h4::before{ background:var(--verde); }
+
+.lojas-grupo__nota{
+  margin:0 0 .6rem;
+  font-size:.8rem;
+  color:var(--texto-fraquissimo);
+}
+
+.lojas-lista{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:.55rem;
+}
+
+.lojas-lista li{
+  padding:.7rem .85rem;
+  border-radius:var(--raio-sm);
+  border:1px solid var(--superficie-borda);
+  background:var(--superficie);
+}
+
+.lojas-lista strong{
+  display:block;
+  font-size:.92rem;
+  color:var(--texto);
+}
+
+.lojas-lista p{
+  margin:.3rem 0 0;
+  font-size:.82rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+
+@media (max-width: 560px){
+  .busca-preco{ gap:.4rem; }
+  .busca-preco__botao{ flex:1 1 100%; justify-content:center; }
+  .busca-preco__ajuda{ flex:1 1 100%; text-align:left; }
+}
