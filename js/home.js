@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                <span>${U.escapeHTML(c.name)}</span>
                <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>
              </div>`).join("")}
-           <a class="link-mais" href="contas.html">Ver contas →</a>
+           <a class="link-mais" href="contas.html">Ver contas</a>
          </article>`
       : `<article class="card-contas">
            <div class="card-contas__topo"><h2>Minhas contas</h2></div>
