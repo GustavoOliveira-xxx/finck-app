@@ -8,9 +8,35 @@
  */
 
 import {
-  paraNumero, viaJsonLd, viaMeta, viaMicrodata, viaTexto, lojaBloqueada,
-  precoRiscado, acharParcelamento, acharAVista, acharFrete, montarPanorama,
+  paraNumero, lojaBloqueada, montarPanorama,
+  valoresJsonLd, valoresMeta, valoresMicrodata, valoresRiscados,
+  candidatosTexto, parDePor, descontoAnunciado,
+  acharParcelamento, acharAVista, acharFrete,
 } from "../supabase/functions/buscar-preco/index.ts";
+
+// adaptadores: os testes antigos foram escritos para a API anterior
+const viaJsonLd = (h) => {
+  const r = valoresJsonLd(h);
+  return r.valores.length
+    ? { preco: r.valores[0], moeda: r.moeda ?? "BRL", titulo: r.titulo }
+    : null;
+};
+const viaMeta = (h) => {
+  const r = valoresMeta(h);
+  return r.valores.length ? { preco: r.valores[0], moeda: r.moeda ?? "BRL" } : null;
+};
+const viaMicrodata = (h) => {
+  const v = valoresMicrodata(h);
+  return v.length ? { preco: v[0] } : null;
+};
+const viaTexto = (h) => {
+  const c = candidatosTexto(h);
+  return c.length ? { preco: c[0].valor } : null;
+};
+const precoRiscado = (h) => {
+  const v = valoresRiscados(h);
+  return v.length ? Math.max(...v) : null;
+};
 
 let ok = 0, falhou = 0;
 
@@ -248,7 +274,9 @@ conferir("preço original", p1?.precoOriginal, 439.90);
 conferir("desconto", p1?.desconto, { valor: 90, percentual: 20.5 });
 conferir("à vista no Pix", p1?.aVista, { valor: 339.40, forma: "Pix", percentual: 3 });
 conferir("parcelamento", p1?.parcelamento, { vezes: 6, valor: 58.32, semJuros: true, total: 349.92 });
-conferir("confiança rebaixada por reconciliação", p1?.confianca, "media");
+// O selo "20% OFF" da página prova o par (439,90 → 349,90), então a
+// confiança é alta mesmo com o JSON-LD trazendo o valor errado.
+conferir("confiança alta pelo selo", p1?.confianca, "alta");
 
 // Cenário 2 — a loja publica o preço promocional correto no JSON-LD
 const p2 = montarPanorama(bappe("349.90"));
@@ -276,6 +304,73 @@ conferir("sem desconto", simples?.desconto, undefined);
 conferir("sem à vista", simples?.aVista, undefined);
 conferir("sem parcelamento", simples?.parcelamento, undefined);
 conferir("sem frete", simples?.frete, undefined);
+
+/* ---------------------------------------------------------------- */
+console.log("Modos de falha que derrubavam a versão anterior");
+
+// A versão anterior só corrigia quando reconhecia a CLASSE do preço riscado.
+// Cada caso abaixo usa uma marcação que não estava na lista — e antes disso
+// o preço cheio passava como se fosse o preço válido.
+
+// 1. Classe fora da lista, salvo pelo selo de desconto
+const f1 = montarPanorama(`
+  <script type="application/ld+json">
+  {"@type":"Product","name":"Tênis","offers":{"price":"439.90","priceCurrency":"BRL"}}
+  </script>
+  <span class="qualquerNomeEstranho">R$ 439,90</span>
+  <span class="destaque">R$ 349,90</span>
+  <span class="selo">20% OFF</span>`);
+conferir("classe desconhecida + selo → preço certo", f1?.preco, 349.90);
+conferir("classe desconhecida + selo → original", f1?.precoOriginal, 439.90);
+
+// 2. "De X por Y" sem nenhum dado estruturado nem classe
+const f2 = montarPanorama(`<p>De R$ 1.200,00 por R$ 899,00</p>`);
+conferir("de-por → preço certo", f2?.preco, 899);
+conferir("de-por → original", f2?.precoOriginal, 1200);
+conferir("de-por tem confiança alta", f2?.confianca, "alta");
+
+// 3. Riscado por estilo em vez de tag ou classe
+const f3 = montarPanorama(`
+  <span style="text-decoration: line-through">R$ 500,00</span>
+  <span class="atual">R$ 400,00</span>`);
+conferir("line-through no style → preço certo", f3?.preco, 400);
+conferir("line-through no style → original", f3?.precoOriginal, 500);
+
+// 4. JSON-LD com os dois preços: o menor é o promocional
+const f4 = montarPanorama(`
+  <script type="application/ld+json">
+  {"@type":"Product","name":"Mochila","offers":[
+    {"@type":"Offer","price":"259.00","priceCurrency":"BRL"},
+    {"@type":"Offer","price":"199.00","priceCurrency":"BRL"}]}
+  </script>`);
+conferir("dois preços no JSON-LD → menor vence", f4?.preco, 199);
+conferir("dois preços no JSON-LD → original", f4?.precoOriginal, 259);
+
+// 5. O selo do Pix não pode ser confundido com o selo do produto
+const f5 = montarPanorama(`
+  <span class="badge">25% OFF</span>
+  <del>R$ 200,00</del> <span>R$ 150,00</span>
+  <p>5% OFF no pix: R$ 142,50</p>`);
+conferir("usa o selo do produto, não o do pix", f5?.preco, 150);
+conferir("original pelo selo do produto", f5?.precoOriginal, 200);
+
+// 6. Sem promoção: não pode inventar preço original
+const f6 = montarPanorama(`
+  <script type="application/ld+json">
+  {"@type":"Product","name":"Caneta","offers":{"price":"12.90","priceCurrency":"BRL"}}
+  </script>
+  <span class="preco">R$ 12,90</span>`);
+conferir("sem promoção → preço", f6?.preco, 12.90);
+conferir("sem promoção → sem original", f6?.precoOriginal, undefined);
+conferir("sem promoção → sem desconto", f6?.desconto, undefined);
+
+// 7. O diagnóstico mostra o que foi visto
+const f7 = montarPanorama(`
+  <del>R$ 200,00</del><span>R$ 150,00</span><span>25% OFF</span>`, true);
+conferir("diagnóstico traz o selo", f7?.diagnostico?.seloDesconto, 25);
+conferir("diagnóstico traz os riscados", f7?.diagnostico?.riscados, [200]);
+conferir("sem diagnóstico por padrão",
+  montarPanorama(`<span>R$ 10,00</span>`)?.diagnostico, undefined);
 
 /* ---------------------------------------------------------------- */
 console.log("Lojas bloqueadas");

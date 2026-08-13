@@ -242,63 +242,80 @@
     cena3d();
     prisma();
     medalha();
-    alvo();
+    meta3d();
     marcaReality();
   }
 
-  const ANEIS_ALVO = [
-    { w: "100%", z: 0,  cor: "rgba(180,92,240,.28)", fundo: "radial-gradient(circle, rgba(104,12,144,.20), transparent 72%)" },
-    { w: "80%",  z: 16, cor: "rgba(180,92,240,.42)" },
-    { w: "60%",  z: 32, cor: "rgba(180,92,240,.6)" },
-    { w: "40%",  z: 48, cor: "rgba(254,200,0,.5)" },
-    { w: "24%",  z: 62, cor: "rgba(254,200,0,.85)", brilho: "0 0 18px -2px rgba(254,200,0,.7)" },
-  ];
+  /* ------------------------------------------------------------------ *
+   * Cena 3D de Metas
+   *
+   * A peça central é uma arte renderizada (assets/meta-3d.png). O que a faz
+   * parecer 3D de verdade não é a imagem: é o palco em volta dela.
+   *
+   *   - o palco inteiro inclina conforme o ponteiro, com perspectiva
+   *   - a arte flutua e fica à frente do anel, então há paralaxe entre elas
+   *   - o anel de progresso mostra a meta mais perto de fechar
+   *   - as fagulhas orbitam num plano deitado, passando por trás e por diante
+   *   - a sombra acompanha a flutuação, que é o que assenta a peça no chão
+   *
+   * O anel não é enfeite: é o mesmo dado que o dardo mostrava antes — só que
+   * legível como número, e não por dedução da posição.
+   * ------------------------------------------------------------------ */
 
-  function montarAlvo(cena) {
+  const RAIO_ANEL = 46;
+  const VOLTA_ANEL = 2 * Math.PI * RAIO_ANEL;
+
+  function montarMeta3d(cena) {
     if (cena.dataset.montado) return;
     cena.dataset.montado = "1";
 
-    const aneis = ANEIS_ALVO.map((a) =>
-      `<span class="alvo-anel" style="--w:${a.w};--z:${a.z};--cor:${a.cor};${a.fundo ? `--fundo:${a.fundo};` : ""}${a.brilho ? `--brilho:${a.brilho};` : ""}"></span>`
-    ).join("");
-
     cena.innerHTML = `
-      <div class="alvo-orbita">
-        <div class="alvo">
-          ${aneis}
-          <span class="alvo-marca" style="--w:90%;--z:8"></span>
-          <span class="alvo-marca" style="--w:50%;--z:40"></span>
-          <span class="alvo-centro"></span>
-          <span class="alvo-dardo">
-            <span class="alvo-dardo__impacto"></span>
-            <span class="alvo-dardo__haste"></span>
-            <span class="alvo-dardo__aleta"></span>
-            <span class="alvo-dardo__ponta"></span>
+      <div class="meta3d">
+        <div class="meta3d__palco">
+          <span class="meta3d__brilho"></span>
+
+          <svg class="meta3d__anel" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="meta3d__anel-base" cx="50" cy="50" r="${RAIO_ANEL}"></circle>
+            <circle class="meta3d__anel-arco" cx="50" cy="50" r="${RAIO_ANEL}"
+                    stroke-dasharray="${VOLTA_ANEL.toFixed(2)}"
+                    stroke-dashoffset="${VOLTA_ANEL.toFixed(2)}"></circle>
+          </svg>
+
+          <span class="meta3d__orbita">
+            <i class="meta3d__fagulha"></i>
+            <i class="meta3d__fagulha meta3d__fagulha--2"></i>
+            <i class="meta3d__fagulha meta3d__fagulha--3"></i>
           </span>
+
+          <img class="meta3d__arte" src="assets/meta-3d.png" alt="" decoding="async"
+               onerror="this.closest('.meta3d').classList.add('meta3d--sem-arte')">
+
+          <span class="meta3d__sombra"></span>
         </div>
-      </div>
-      <div class="alvo-rotulo">
-        <span class="alvo-rotulo__pct" data-alvo-pct>—</span>
-        <span class="alvo-rotulo__nome" data-alvo-nome>sem metas ainda</span>
+
+        <div class="meta3d__rotulo">
+          <strong class="meta3d__pct" data-alvo-pct>—</strong>
+          <span class="meta3d__nome" data-alvo-nome>sem metas ainda</span>
+        </div>
       </div>`;
   }
 
-  function alvo() {
+  function meta3d() {
     const cena = document.querySelector("[data-alvo]");
     if (!cena) return;
 
-    montarAlvo(cena);
+    montarMeta3d(cena);
     if (reduzido || toque) return;
 
-    const corpo = cena.querySelector(".alvo");
-    if (!corpo) return;
+    const palco = cena.querySelector(".meta3d__palco");
+    if (!palco) return;
 
     let agendado = false;
     let px = 0, py = 0;
 
     const aplicar = () => {
-      corpo.style.setProperty("--px", px.toFixed(3));
-      corpo.style.setProperty("--py", py.toFixed(3));
+      palco.style.setProperty("--px", px.toFixed(3));
+      palco.style.setProperty("--py", py.toFixed(3));
       agendado = false;
     };
     const agendar = () => {
@@ -318,22 +335,26 @@
     cena.addEventListener("pointerleave", () => { px = 0; py = 0; agendar(); });
   }
 
+  /**
+   * Recebe o progresso da meta mais perto de fechar.
+   * Mantém o nome antigo porque é assim que js/metas.js chama.
+   */
   function mirarAlvo(progresso, nome) {
     const cena = document.querySelector("[data-alvo]");
     if (!cena) return;
-    montarAlvo(cena);
-
-    const dardo = cena.querySelector(".alvo-dardo");
-    const pct = cena.querySelector("[data-alvo-pct]");
-    const rotulo = cena.querySelector("[data-alvo-nome]");
-    if (!dardo) return;
+    montarMeta3d(cena);
 
     const p = Math.max(0, Math.min(100, Number(progresso) || 0));
-    const distancia = (1 - p / 100) * 34;
-    const angulo = 2.4 + (p / 100) * 3.1;
+    const arco = cena.querySelector(".meta3d__anel-arco");
+    const pct = cena.querySelector("[data-alvo-pct]");
+    const rotulo = cena.querySelector("[data-alvo-nome]");
+    const meta = cena.querySelector(".meta3d");
 
-    dardo.style.left = `${(50 + Math.cos(angulo) * distancia).toFixed(2)}%`;
-    dardo.style.top = `${(50 + Math.sin(angulo) * distancia).toFixed(2)}%`;
+    if (arco) {
+      arco.style.strokeDashoffset = (VOLTA_ANEL * (1 - p / 100)).toFixed(2);
+    }
+    // quanto mais perto de fechar, mais acesa a cena
+    if (meta) meta.style.setProperty("--calor", (p / 100).toFixed(3));
 
     if (pct) pct.textContent = nome ? `${Math.round(p)}%` : "—";
     if (rotulo) rotulo.textContent = nome || "sem metas ainda";
