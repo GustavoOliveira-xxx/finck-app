@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("parcelaDescricao").value = p?.description || "";
     U.escreverMoeda("parcelaTotal", p?.total_amount || 0);
     $("parcelaQtd").value = p?.installments_count || "";
-    window.FinckData.ler("parcelaData") = p ? String(p.first_due_date).slice(0, 10) : U.hojeISO();
+    window.FinckData.escrever("parcelaData", p ? String(p.first_due_date).slice(0, 10) : U.hojeISO());
     $("parcelaPagas").value = p?.paid_count || 0;
     $("parcelaCategoria").innerHTML = cfg.CATEGORIAS
       .map((c) => `<option value="${c}"${p?.category === c ? " selected" : ""}>${c}</option>`).join("");

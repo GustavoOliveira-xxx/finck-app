@@ -205,8 +205,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("contaNome").value = c?.name || "";
     $("contaDigitos").value = c?.last_four_digits || "";
     $("contaNota").value = c?.notes || "";
-    window.FinckData.ler("contaData") = c?.initial_balance_date
-      ? String(c.initial_balance_date).slice(0, 10) : U.hojeISO();
+    window.FinckData.escrever("contaData", c?.initial_balance_date
+      ? String(c.initial_balance_date).slice(0, 10) : U.hojeISO());
     $("contaPadrao").checked = Boolean(c?.is_default);
 
     const saldo = Number(c?.initial_balance || 0);
@@ -351,7 +351,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("transferOrigem").innerHTML = opcoes(lista[0].id);
     $("transferDestino").innerHTML = opcoes(lista[1].id);
-    window.FinckData.ler("transferData") = U.hojeISO();
+    window.FinckData.escrever("transferData", U.hojeISO());
     $("transferDescricao").value = "";
     U.limparMoeda("transferValor");
     U.abrirModal("modalTransferencia");
@@ -390,7 +390,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("ajusteConta").innerHTML = lista
       .map((c) => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
-    window.FinckData.ler("ajusteData") = U.hojeISO();
+    window.FinckData.escrever("ajusteData", U.hojeISO());
     $("ajusteMotivo").value = "";
     $("ajusteConfirma").checked = false;
     $("ajusteNegativo").checked = false;

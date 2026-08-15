@@ -5,33 +5,144 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!host || !P) return;
 
   const JANELA = 60;
+  const MAX_TORRES = 9;
+  const ALTURA_MIN = 15;
+  const ALTURA_MAX = 74;
+  const MARGEM = 0.05;
+  const PAUSA_FOCO = 3000;
 
-  function montarCena() {
-    return `
-      <div class="prog3d" data-prog3d aria-hidden="true">
-        <div class="prog3d__palco">
-          <span class="prog3d__base"></span>
-          <span class="prog3d__bloco prog3d__bloco--1"></span>
-          <span class="prog3d__bloco prog3d__bloco--2"></span>
-          <span class="prog3d__bloco prog3d__bloco--3"></span>
-          <span class="prog3d__moeda"></span>
-        </div>
-      </div>`;
+  let cicloFoco = 0;
+
+  function agrupar(compromissos) {
+    const mapa = new Map();
+    for (const c of compromissos) {
+      const g = mapa.get(c.iso) || {
+        iso: c.iso, data: c.data, emDias: c.emDias,
+        descricao: c.descricao, itens: 0, valor: 0,
+        vencido: c.vencido, acumulado: 0,
+      };
+      g.itens += 1;
+      g.valor += c.valor;
+      g.acumulado = Math.max(g.acumulado, c.acumulado);
+      mapa.set(c.iso, g);
+    }
+    return [...mapa.values()];
+  }
+
+  const chaoHTML = () => `
+    <div class="pf3d__chao">
+      <span class="pf3d__grade"></span>
+      <span class="pf3d__cobertura"></span>
+      <span class="pf3d__descoberto"></span>
+      <span class="pf3d__varredura"></span>
+    </div>`;
+
+  const marcoHTML = () => `
+    <span class="pf3d__hoje"></span>
+    <span class="pf3d__feixe"></span>`;
+
+  const torreHTML = (t, altura, i, extra = "") => `
+    <div class="pf3d__torre ${extra}"
+         style="--t:${t.toFixed(4)};--h:${altura.toFixed(1)}px;--i:${i}">
+      <span class="pf3d__brasa"></span>
+      <span class="pf3d__face pf3d__face--n"></span>
+      <span class="pf3d__face pf3d__face--s"></span>
+      <span class="pf3d__face pf3d__face--o"></span>
+      <span class="pf3d__face pf3d__face--l"></span>
+      <span class="pf3d__face pf3d__face--topo"></span>
+      <span class="pf3d__moeda"></span>
+    </div>`;
+
+  function cenaVazia() {
+    const fantasmas = [0.2, 0.44, 0.67, 0.88]
+      .map((t, i) => torreHTML(t, 20 + i * 10, i, "pf3d__torre--fantasma"))
+      .join("");
+
+    return {
+      grupos: [],
+      html: `
+        <div class="pf3d pf3d--vazia" data-pf3d style="--cobertura:1;--t0:0.04">
+          <div class="pf3d__janela">
+            <div class="pf3d__camera">
+              <div class="pf3d__pista">
+                ${chaoHTML()}
+                ${marcoHTML()}
+                ${fantasmas}
+              </div>
+            </div>
+            <span class="pf3d__selo pf3d__selo--neutro">pista livre</span>
+            <p class="pf3d__foco">
+              <span class="pf3d__foco-nome">Nada programado para os próximos ${JANELA} dias.</span>
+            </p>
+          </div>
+        </div>`,
+    };
+  }
+
+  function montarCena(pan) {
+    const grupos = agrupar(pan.compromissos).slice(0, MAX_TORRES);
+    if (!grupos.length) return cenaVazia();
+
+    const menor = Math.min(0, ...grupos.map((g) => g.emDias));
+    const alcance = Math.max(1, JANELA - menor);
+    // margem nas pontas para nenhuma torre nascer fora da pista
+    const posicao = (dias) =>
+      MARGEM + (1 - MARGEM * 2) * Math.max(0, Math.min(1, (dias - menor) / alcance));
+
+    const maior = Math.max(...grupos.map((g) => g.valor));
+    const altura = (v) => ALTURA_MIN + (maior > 0 ? v / maior : 0) * (ALTURA_MAX - ALTURA_MIN);
+
+    const rompe = grupos.find((g) => g.acumulado > pan.saldo);
+    const cobertura = pan.saldo <= 0 ? 0 : rompe ? posicao(rompe.emDias) : 1;
+
+    const torres = grupos.map((g, i) => torreHTML(
+      posicao(g.emDias), altura(g.valor), i,
+      g.vencido ? "pf3d__torre--vencida" : g.acumulado > pan.saldo ? "pf3d__torre--fora" : ""
+    )).join("");
+
+    const selo = pan.saldo <= 0
+      ? ["pf3d__selo--risco", "sem saldo hoje"]
+      : rompe
+        ? ["pf3d__selo--risco", `descoberto em ${P.rotuloData(rompe.data)}`]
+        : ["", `saldo cobre os ${JANELA} dias`];
+
+    return {
+      grupos,
+      html: `
+        <div class="pf3d" data-pf3d
+             style="--cobertura:${cobertura.toFixed(4)};--t0:${posicao(0).toFixed(4)}">
+          <div class="pf3d__janela">
+            <div class="pf3d__camera">
+              <div class="pf3d__pista">
+                ${chaoHTML()}
+                ${cobertura < 1 ? '<span class="pf3d__ruptura"></span>' : ""}
+                ${marcoHTML()}
+                ${torres}
+              </div>
+            </div>
+            <span class="pf3d__selo ${selo[0]}">${selo[1]}</span>
+            <p class="pf3d__foco" data-pf3d-foco></p>
+          </div>
+        </div>`,
+    };
   }
 
   function render(pan) {
+    clearInterval(cicloFoco);
+    const cena = montarCena(pan);
+
     if (!pan.compromissos.length) {
       host.innerHTML = `
         <div class="prog-cabecalho">
           <h3>Programação financeira</h3>
         </div>
-        ${montarCena()}
+        ${cena.html}
         <p class="vazio">
           Você ainda não tem saídas recorrentes cadastradas.
           <a href="recorrentes.html">Cadastrar a primeira</a> para ver quanto do seu
           saldo já está comprometido e até quando.
         </p>`;
-      ligarCena();
+      ligarCena(cena.grupos, pan.saldo);
       return;
     }
 
@@ -45,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="prog-janela">próximos ${JANELA} dias</span>
       </div>
 
-      ${montarCena()}
+      ${cena.html}
 
       <p class="prog-chamada">
         ${p
@@ -92,7 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <button type="button" class="btn-secundario" id="btnVerProgramacao">Ver programação completa</button>`;
 
-    ligarCena();
+    ligarCena(cena.grupos, pan.saldo);
 
     const botao = document.getElementById("btnVerProgramacao");
     if (botao) botao.addEventListener("click", () => abrirLinha(pan));
@@ -125,16 +236,13 @@ document.addEventListener("DOMContentLoaded", () => {
     U.abrirModal("modalProgramacao");
   }
 
-  function ligarCena() {
-    const cena = host.querySelector("[data-prog3d]");
-    const palco = cena && cena.querySelector(".prog3d__palco");
-    if (!palco) return;
-
+  function ligarParallax(cena) {
     let px = 0, py = 0, pendente = 0;
+
     const aplicar = () => {
       pendente = 0;
-      palco.style.setProperty("--px", px.toFixed(3));
-      palco.style.setProperty("--py", py.toFixed(3));
+      cena.style.setProperty("--px", px.toFixed(3));
+      cena.style.setProperty("--py", py.toFixed(3));
     };
     const agendar = () => {
       if (pendente) cancelAnimationFrame(pendente);
@@ -155,7 +263,54 @@ document.addEventListener("DOMContentLoaded", () => {
     cena.addEventListener("touchmove", mover, { passive: true });
     ["pointerleave", "pointercancel", "touchend", "touchcancel"].forEach((ev) =>
       cena.addEventListener(ev, sair, { passive: true }));
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) sair(); });
+  }
+
+  function ligarCena(grupos, saldo) {
+    const cena = host.querySelector("[data-pf3d]");
+    if (!cena) return;
+
+    ligarParallax(cena);
+
+    const foco = cena.querySelector("[data-pf3d-foco]");
+    const torres = [...cena.querySelectorAll(".pf3d__torre:not(.pf3d__torre--fantasma)")];
+    if (!foco || !torres.length) return;
+
+    let atual = -1;
+    let pausado = false;
+
+    const mostrar = (i) => {
+      if (i === atual || !grupos[i]) return;
+      atual = i;
+      torres.forEach((t, n) => t.classList.toggle("pf3d__torre--foco", n === i));
+
+      const g = grupos[i];
+      const fora = !g.vencido && g.acumulado > saldo;
+      const quando = P.quandoTexto(g.emDias);
+
+      foco.className = "pf3d__foco" +
+        (g.vencido ? " pf3d__foco--vencida" : fora ? " pf3d__foco--fora" : "");
+      foco.innerHTML = `
+        <span class="pf3d__foco-data">${P.rotuloData(g.data)}</span>
+        <span class="pf3d__foco-nome">${g.itens > 1
+          ? `${g.itens} saídas · ${quando}`
+          : `${U.escapeHTML(g.descricao)} · ${quando}`}</span>
+        <strong class="pf3d__foco-valor">${U.moeda(g.valor)}</strong>`;
+    };
+
+    mostrar(0);
+
+    torres.forEach((t, n) => {
+      const fixar = () => { pausado = true; mostrar(n); };
+      t.addEventListener("pointerenter", fixar, { passive: true });
+      t.addEventListener("pointerdown", fixar, { passive: true });
+    });
+    cena.addEventListener("pointerleave", () => { pausado = false; }, { passive: true });
+
+    if (torres.length < 2) return;
+    cicloFoco = setInterval(() => {
+      if (document.hidden || pausado) return;
+      mostrar((atual + 1) % torres.length);
+    }, PAUSA_FOCO);
   }
 
   async function carregar() {
