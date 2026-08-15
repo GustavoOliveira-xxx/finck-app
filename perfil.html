@@ -94,6 +94,7 @@
           </label>
         </div>
         <p class="dica" id="perfilDica"></p>
+        <p class="nota nota--origem" id="perfilOrigemSaldo"></p>
         <button type="submit" class="btn-primario">Salvar alterações</button>
       </form>
     </section>
@@ -110,6 +111,101 @@
         <a class="btn-secundario" href="onboarding.html">Refazer configuração</a>
         <button type="button" class="btn-secundario" id="btnSairConta">Sair da conta</button>
       </div>
+    </section>
+
+    <section class="bloco bloco--diagnostico" id="diagnostico">
+      <div class="bloco-cabecalho">
+        <h3>Diagnóstico financeiro</h3>
+        <button type="button" class="btn-secundario btn-mini" id="btnReconciliar">Reconciliar agora</button>
+      </div>
+      <p class="descricao">
+        A conferência que precisa fechar é uma só:
+        <strong>saldo global = dinheiro nas contas + o que está fora delas</strong>.
+        Quando ela não fecha, o FinCK mostra a diferença — nunca dois números
+        diferentes sem explicação.
+      </p>
+
+      <!-- Balança 3D: o fiel inclina conforme a diferença entre os dois lados
+           e fica no nível quando a identidade fecha. -->
+      <div class="balanca-cena" data-balanca hidden>
+        <div class="balanca" style="--inclinacao:0deg">
+          <div class="balanca__mastro">
+            <span class="balanca__base"></span>
+            <span class="balanca__haste"></span>
+          </div>
+
+          <div class="balanca__viga">
+            <span class="balanca__eixo"></span>
+
+            <div class="balanca__lado balanca__lado--esq">
+              <span class="balanca__corda"></span>
+              <div class="balanca__prato">
+                <span class="balanca__rotulo">saldo global</span>
+                <strong data-balanca-esq>—</strong>
+              </div>
+            </div>
+
+            <div class="balanca__lado balanca__lado--dir">
+              <span class="balanca__corda"></span>
+              <div class="balanca__prato">
+                <span class="balanca__rotulo">contas + não alocado</span>
+                <strong data-balanca-dir>—</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="balanca__veredito" data-balanca-veredito>
+          <svg class="anel-integridade" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="anel-integridade__base" cx="60" cy="60" r="52"></circle>
+            <circle class="anel-integridade__arco" cx="60" cy="60" r="52"
+                    stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <div class="anel-integridade__centro">
+            <strong data-integridade-pct>0%</strong>
+            <span data-integridade-rotulo>conferindo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="diagnostico-estado" id="diagnosticoEstado">
+        <p class="descricao">Rode a reconciliação para conferir saldo, contas, metas e compromissos.</p>
+      </div>
+
+      <div class="grade-checagens" id="listaChecagens"></div>
+
+      <div class="bloco-interno" id="blocoPendencias" hidden>
+        <h4>Fila de reconciliação</h4>
+        <p class="nota">
+          Nada aqui foi alterado nem apagado. São itens que o sistema não pode
+          decidir sozinho — a decisão é sua.
+        </p>
+        <ul class="lista-pendencias" id="listaPendencias"></ul>
+      </div>
+
+      <div class="bloco-interno" id="blocoSaldoInicial" hidden>
+        <h4>Saldo inicial em duas fontes</h4>
+        <p class="nota" id="textoSaldoInicial"></p>
+        <div class="acoes-etapa">
+          <label class="campo-inline">Levar para a conta
+            <select id="contaSaldoInicial"></select>
+          </label>
+          <button type="button" class="btn-primario btn-mini" id="btnMigrarSaldo">Migrar saldo inicial</button>
+        </div>
+      </div>
+
+      <details class="bloco-interno registro-tecnico" id="blocoEventos">
+        <summary>Registro técnico <span class="chip" id="chipEventos">0</span></summary>
+        <p class="nota">
+          Erros de confirmação e divergências de reconciliação ficam aqui com o
+          contexto técnico. Serve para explicar o que aconteceu depois.
+        </p>
+        <ul class="lista-eventos" id="listaEventos"></ul>
+        <div class="acoes-etapa">
+          <button type="button" class="btn-secundario btn-mini" id="btnExportarEventos">Exportar registro</button>
+          <button type="button" class="btn-secundario btn-mini" id="btnLimparEventos">Limpar registro</button>
+        </div>
+      </details>
     </section>
 
     <section class="bloco">
@@ -168,7 +264,11 @@
   <script src="js/data-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
+  <script src="js/metas-engine.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/contas-engine.js"></script>
+  <script src="js/planejamento-engine.js"></script>
+  <script src="js/reconciliador.js"></script>
   <script src="js/tempo.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>

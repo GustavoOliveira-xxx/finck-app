@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function contexto() {
     const [ocorrencias, transacoes, perfil, fechamentos] = await Promise.all([
       S.listar("recurring_occurrences", { ordem: "due_date", asc: true }),
-      S.listar("transactions", { ordem: "date", asc: false }),
+      S.listar("transactions", { ordem: "date", asc: false }).then((l) => l.filter((t) => !t.reversed_at)),
       S.obterPerfil(),
       S.listar("monthly_closings", { ordem: "cycle", asc: false }),
     ]);

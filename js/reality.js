@@ -23,6 +23,15 @@ window.FinckReality = (() => {
     const semFolga = renda > 0 && sobraAposFixos <= 0;
     const percentualRendaLivre = rendaLivre > 0 ? (preco / rendaLivre) * 100 : 0;
 
+    // Compromissos futuros são parcelas em aberto e previsões ainda não pagas.
+    // Saldo atual menos compromissos é o disponível projetado — nome diferente
+    // porque é conceito diferente.
+    const compromissos = Number(ctx.compromissosAbertos) || 0;
+    const disponivelProjetado = saldo - compromissos;
+    const disponivelDepois = disponivelProjetado - preco;
+
+    const impacto_metas = impactoMetas(preco, ctx.metas || [], valorDia);
+
     return {
       price: preco,
       income_monthly: renda,
@@ -34,13 +43,28 @@ window.FinckReality = (() => {
       saldo_antes: saldo,
       saldo_depois: saldoDepois,
       compromete_saldo: saldoDepois < 0,
+      compromissos_futuros: compromissos,
+      disponivel_projetado: disponivelProjetado,
+      disponivel_depois: disponivelDepois,
+      compromete_projetado: disponivelDepois < 0,
       renda_livre: rendaLivre,
       sobra_apos_fixos: sobraAposFixos,
       deficit_fixos: Math.max(0, -sobraAposFixos),
       sem_folga: semFolga,
       percentual_renda_livre: percentualRendaLivre,
-      impacto_metas: impactoMetas(preco, ctx.metas || [], valorDia),
-      semaforo: semaforo(income_percent, saldoDepois, percentualRendaLivre, semFolga),
+      impacto_metas,
+      semaforo: semaforo({
+        incomePercent: income_percent,
+        saldoDepois,
+        disponivelDepois,
+        compromissos,
+        percentualRendaLivre,
+        semFolga,
+        deficitFixos: Math.max(0, -sobraAposFixos),
+        rendaLivre,
+        preco,
+        impactoMetas: impacto_metas,
+      }),
       alternativas: alternativas(preco),
     };
   }
@@ -66,36 +90,126 @@ window.FinckReality = (() => {
     });
   }
 
-  function semaforo(incomePercent, saldoDepois, percentualRendaLivre, semFolga = false) {
+  // O semáforo é orientação, não diagnóstico. Ele avalia as condições na ordem
+  // de gravidade definida no relatório de conclusão e devolve a PRIMEIRA que
+  // se aplica, dizendo qual é — em vez de misturar causas diferentes sob um
+  // mesmo rótulo. A ordem existe para impedir a falsa segurança de um verde
+  // baseado só em percentual quando a renda já está toda comprometida.
+  //
+  //   1. déficit de despesas fixas
+  //   2. saldo projetado negativo
+  //   3. comprometimento excessivo da renda livre
+  //   4. percentual da renda
+  //   5. impacto nas metas
+  const MOTIVOS = [
+    "deficit_fixos", "sem_caixa", "sem_projetado",
+    "renda_livre", "percentual_renda", "impacto_meta", "folga",
+  ];
 
+  function semaforo({
+    incomePercent = 0,
+    saldoDepois = 0,
+    disponivelDepois = 0,
+    compromissos = 0,
+    percentualRendaLivre = 0,
+    semFolga = false,
+    deficitFixos = 0,
+    rendaLivre = 0,
+    preco = 0,
+    impactoMetas = [],
+  } = {}) {
+    const U = window.FinckUtils;
+    const dinheiro = (v) => (U ? U.moeda(v) : `R$ ${Number(v || 0).toFixed(2)}`);
+
+    // 1. Déficit de despesas fixas — a renda recorrente já acabou.
     if (semFolga) {
       return {
         nivel: "alerta",
-        titulo: saldoDepois < 0 ? "Sem folga e sem caixa" : "Sem folga na renda do mês",
+        motivo: "deficit_fixos",
+        titulo: saldoDepois < 0 ? "Aumenta o déficit e zera o caixa" : "Cabe no caixa atual, mas não na renda recorrente",
         texto: saldoDepois < 0
-          ? "Suas despesas fixas já consomem toda a renda do mês e a compra ainda deixaria o saldo negativo. Aqui não é questão de tamanho da compra — não há de onde tirar."
-          : "Suas despesas fixas já consomem toda a renda do mês. Esta compra sairia do caixa acumulado, não do que entra agora. Pode ser uma escolha válida, mas ela reduz reserva em vez de usar sobra.",
+          ? `Suas despesas fixas superam a renda em ${dinheiro(deficitFixos)} por mês e esta compra ainda deixaria o saldo negativo. Aqui não é questão de tamanho da compra — não há de onde tirar.`
+          : `Suas despesas fixas já consomem toda a renda do mês (déficit de ${dinheiro(deficitFixos)}). Esta compra sairia do caixa acumulado, não do que entra agora: ela reduz reserva em vez de usar sobra.`,
       };
     }
 
-    if (saldoDepois < 0 || incomePercent >= 30 || percentualRendaLivre >= 60) {
+    // 2. Saldo projetado negativo — o caixa não cobre, ou não cobre depois dos
+    //    compromissos já assumidos.
+    if (saldoDepois < 0) {
       return {
         nivel: "alerta",
-        titulo: "Peso alto no mês",
-        texto: "Nesta faixa a compra ocupa boa parte do que entra no mês. Se ela for importante para você, esticar o prazo ou comparar alternativas costuma abrir espaço sem abrir mão do item.",
+        motivo: "sem_caixa",
+        titulo: "Não cabe no caixa atual",
+        texto: `Depois desta compra o saldo ficaria em ${dinheiro(saldoDepois)}. O dinheiro para pagá-la ainda não entrou.`,
       };
     }
-    if (incomePercent >= 10 || percentualRendaLivre >= 25) {
+
+    if (compromissos > 0 && disponivelDepois < 0) {
+      return {
+        nivel: "alerta",
+        motivo: "sem_projetado",
+        titulo: "Esta compra aumenta o déficit projetado",
+        texto: `Cabe no saldo de hoje, mas você já tem ${dinheiro(compromissos)} em parcelas e previsões em aberto. Descontando esses compromissos, o disponível projetado fica em ${dinheiro(disponivelDepois)}.`,
+      };
+    }
+
+    // 3. Comprometimento excessivo da renda livre — a sobra depois dos fixos.
+    if (percentualRendaLivre >= 60) {
+      return {
+        nivel: "alerta",
+        motivo: "renda_livre",
+        titulo: "Consome quase toda a sobra do mês",
+        texto: `A compra ocupa ${Math.round(percentualRendaLivre)}% da sua sobra após os fixos (${dinheiro(rendaLivre)}). O que sobra precisa cobrir o resto do mês inteiro.`,
+      };
+    }
+
+    // 4. Percentual da renda.
+    if (incomePercent >= 30) {
+      return {
+        nivel: "alerta",
+        motivo: "percentual_renda",
+        titulo: "Peso alto na renda do mês",
+        texto: `Equivale a ${Math.round(incomePercent)}% da sua renda mensal. Se ela for importante para você, esticar o prazo ou comparar alternativas costuma abrir espaço sem abrir mão do item.`,
+      };
+    }
+
+    if (percentualRendaLivre >= 25) {
       return {
         nivel: "atencao",
-        titulo: "Peso médio no mês",
-        texto: "A compra cabe no orçamento e reduz parte da folga do mês. Vale olhar ao lado das suas metas para decidir com o quadro completo.",
+        motivo: "renda_livre",
+        titulo: "Ocupa parte relevante da sobra",
+        texto: `A compra usa ${Math.round(percentualRendaLivre)}% da sua sobra após os fixos. Cabe, mas reduz a folga que você teria para o resto do mês.`,
       };
     }
+
+    if (incomePercent >= 10) {
+      return {
+        nivel: "atencao",
+        motivo: "percentual_renda",
+        titulo: "Peso médio na renda do mês",
+        texto: `Equivale a ${Math.round(incomePercent)}% da sua renda. Cabe no orçamento e reduz parte da folga — vale olhar ao lado das suas metas para decidir com o quadro completo.`,
+      };
+    }
+
+    // 5. Impacto nas metas — pequeno para a renda, grande para o que falta.
+    const metaAfetada = (impactoMetas || [])
+      .filter((m) => m.falta > 0 && m.percentual_do_restante >= 20)
+      .sort((a, b) => b.percentual_do_restante - a.percentual_do_restante)[0];
+
+    if (metaAfetada) {
+      return {
+        nivel: "atencao",
+        motivo: "impacto_meta",
+        titulo: "Pequena para a renda, grande para a meta",
+        texto: `A compra é leve no mês, mas equivale a ${Math.round(metaAfetada.percentual_do_restante)}% do que ainda falta para "${metaAfetada.nome}" — cerca de ${Math.round(metaAfetada.dias_trabalho_extra)} dia(s) de trabalho a mais até lá.`,
+      };
+    }
+
     return {
       nivel: "verde",
-      titulo: "Peso baixo no mês",
-      texto: "A compra ocupa uma fatia pequena da sua renda. Se quiser, dá para comparar durabilidade e uso antes de fechar.",
+      motivo: "folga",
+      titulo: "Cabe com folga no mês",
+      texto: "A compra ocupa uma fatia pequena da sua renda e não compromete o disponível projetado nem as metas. Se quiser, dá para comparar durabilidade e uso antes de fechar.",
     };
   }
 
@@ -152,5 +266,51 @@ window.FinckReality = (() => {
     };
   }
 
-  return { calcular, paraRegistro, resumoHistorico, alternativas };
+  // Glossário dos indicadores. Cada nome tem uma definição curta e, quando faz
+  // diferença, a data de referência — para "saldo", "renda livre" e "disponível"
+  // deixarem de ser sinônimos na cabeça de quem lê.
+  const GLOSSARIO = {
+    saldo_atual: {
+      rotulo: "Saldo atual",
+      definicao: "Caixa já realizado: saldo inicial mais o que entrou, menos o que saiu, até hoje.",
+      referencia: "até hoje",
+    },
+    sobra_apos_fixos: {
+      rotulo: "Sobra após fixos",
+      definicao: "Renda mensal menos as recorrências fixas de saída. É o que sobra por mês, não o que você tem.",
+      referencia: "por mês",
+    },
+    deficit_fixos: {
+      rotulo: "Déficit de fixos",
+      definicao: "Quanto as despesas fixas superam a renda mensal. Aparece quando a sobra ficaria negativa.",
+      referencia: "por mês",
+    },
+    compromissos_futuros: {
+      rotulo: "Compromissos futuros",
+      definicao: "Saídas previstas e parcelas em aberto que ainda vão acontecer.",
+      referencia: "daqui para frente",
+    },
+    disponivel_projetado: {
+      rotulo: "Disponível projetado",
+      definicao: "Saldo atual menos os compromissos futuros já assumidos.",
+      referencia: "até o fim dos compromissos",
+    },
+    nao_alocado: {
+      rotulo: "Não alocado",
+      definicao: "Dinheiro que entra no saldo geral mas não está em nenhuma conta cadastrada.",
+      referencia: "até hoje",
+    },
+    previsto: {
+      rotulo: "Previsto",
+      definicao: "O que a regra recorrente diz que deve acontecer no ciclo. Não move saldo.",
+      referencia: "no ciclo",
+    },
+    realizado: {
+      rotulo: "Realizado",
+      definicao: "O que você confirmou que aconteceu de verdade. Move saldo.",
+      referencia: "no ciclo",
+    },
+  };
+
+  return { calcular, paraRegistro, resumoHistorico, alternativas, semaforo, GLOSSARIO, MOTIVOS };
 })();

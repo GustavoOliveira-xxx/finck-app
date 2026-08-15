@@ -23,6 +23,10 @@ window.FinckStore = (() => {
     gamification: "finck.gamification",
     recurring_occurrences: "finck.ocorrencias",
     monthly_closings: "finck.fechamentos",
+    goal_movements: "finck.metas.movimentos",
+    reconciliation_queue: "finck.reconciliacao",
+    integrity_events: "finck.eventos",
+    operation_keys: "finck.chaves",
     demo: "finck.demo",
   };
 
@@ -279,6 +283,138 @@ window.FinckStore = (() => {
     return { suportado: true, dados: data };
   }
 
+  // Idempotência do lado de cá. No banco quem guarda o resultado é
+  // operation_keys; em demo e local o mesmo papel cabe ao localStorage.
+  //
+  // Ler-depois-gravar sozinho não basta: duas chamadas simultâneas com a mesma
+  // chave passam as duas pela verificação antes de qualquer uma gravar. `emVoo`
+  // resolve isso na origem — duplo clique, dois awaits em paralelo, handler
+  // disparado duas vezes: a segunda chamada recebe a promessa da primeira em
+  // vez de executar de novo.
+  //
+  // Entre abas diferentes (memória separada, localStorage compartilhado) esta
+  // trava não alcança. Quem garante lá é o banco: a chave primária de
+  // operation_keys e os índices únicos de transactions rejeitam o segundo
+  // lançamento. Ou seja, no modo online a garantia é do Postgres; nos modos
+  // demonstração e local ela vale por aba — e esses modos não são ambiente
+  // seguro de produção, como o próprio relatório diz.
+  const emVoo = new Map();
+
+  async function operacao(chave, executar, { operacao: nome = "operacao" } = {}) {
+    if (!chave) return executar();
+
+    const user = await usuarioAtual();
+    if (!user) throw new Error("Sessão expirada. Entre novamente.");
+
+    const registro = `${user.id}:${chave}`;
+    if (emVoo.has(registro)) return emVoo.get(registro);
+
+    const corpo = async () => {
+      const registradas = ler(KEYS.operation_keys, []);
+      const guardada = registradas.find(
+        (r) => r.user_id === user.id && r.key === chave);
+      if (guardada) return guardada.result;
+
+      const resultado = await executar();
+
+      // Relê antes de gravar: outra aba pode ter escrito enquanto isto rodava.
+      const atuais = ler(KEYS.operation_keys, []);
+      atuais.unshift({
+        user_id: user.id, key: chave, operation: nome,
+        result: resultado ?? null, created_at: new Date().toISOString(),
+      });
+      // O histórico de chaves não precisa crescer para sempre: o que protege
+      // contra retry é a janela recente, não o arquivo inteiro.
+      gravar(KEYS.operation_keys, atuais.slice(0, 200));
+      return resultado;
+    };
+
+    const promessa = corpo();
+    emVoo.set(registro, promessa);
+    try {
+      return await promessa;
+    } finally {
+      emVoo.delete(registro);
+    }
+  }
+
+  const chaveDeOperacao = (...partes) =>
+    `${partes.filter((p) => p !== null && p !== undefined).join(":")}`;
+
+  // Diário técnico dos fluxos críticos. Nunca lança: observabilidade que
+  // derruba a operação observada é pior do que não ter observabilidade.
+  // Grava sempre local (para o diagnóstico funcionar em demo e offline) e
+  // espelha no banco quando ele está disponível.
+  const LIMITE_EVENTOS = 200;
+
+  async function registrarEvento({ level = "erro", scope, message, context = {} }) {
+    const linha = {
+      id: window.FinckUtils?.uid?.() || `ev-${Date.now()}`,
+      level,
+      scope: scope || "geral",
+      message: String(message || "").slice(0, 500),
+      context,
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const user = await usuarioAtual();
+      if (!user) return linha;
+      linha.user_id = user.id;
+
+      const locais = ler(KEYS.integrity_events, []);
+      locais.unshift(linha);
+      gravar(KEYS.integrity_events, locais.slice(0, LIMITE_EVENTOS));
+
+      const banco = bd();
+      if (banco) {
+        const { id, ...semId } = linha;
+        await banco.from("integrity_events").insert(semId);
+      }
+    } catch {
+      // Um erro ao registrar o erro não pode virar o erro principal.
+    }
+    return linha;
+  }
+
+  async function listarEventos({ limite = 50 } = {}) {
+    const user = await usuarioAtual();
+    if (!user) return [];
+
+    const locais = ler(KEYS.integrity_events, [])
+      .filter((e) => !e.user_id || e.user_id === user.id);
+
+    const banco = bd();
+    if (!banco) return locais.slice(0, limite);
+
+    try {
+      const { data } = await banco
+        .from("integrity_events").select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(limite);
+
+      // O banco é a fonte; o local cobre o que ainda não subiu.
+      const vistos = new Set((data || []).map((e) => `${e.created_at}|${e.message}`));
+      const extras = locais.filter((e) => !vistos.has(`${e.created_at}|${e.message}`));
+      return [...(data || []), ...extras]
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, limite);
+    } catch {
+      return locais.slice(0, limite);
+    }
+  }
+
+  async function limparEventos() {
+    localStorage.removeItem(KEYS.integrity_events);
+    const banco = bd();
+    const user = await usuarioAtual();
+    if (banco && user) {
+      try { await banco.from("integrity_events").delete().eq("user_id", user.id); } catch {  }
+    }
+    return true;
+  }
+
   async function obter(tabela, id) {
     const user = await usuarioAtual();
     if (!user) return null;
@@ -362,6 +498,7 @@ window.FinckStore = (() => {
     "transactions", "recurring_transactions",
     "purchase_analyses", "installment_purchases", "category_budgets",
     "transfers", "balance_adjustments", "installment_payments",
+    "goal_movements",
   ];
 
   // Cada vínculo diz de qual tabela o ID vem e se ele é obrigatório.
@@ -378,6 +515,10 @@ window.FinckStore = (() => {
     transfers:           [["from_account_id", "accounts", true], ["to_account_id", "accounts", true]],
     installment_payments: [
       ["purchase_id", "installment_purchases", true],
+      ["transaction_id", "transactions", false],
+    ],
+    goal_movements: [
+      ["goal_id", "goals", true],
       ["transaction_id", "transactions", false],
     ],
   };
@@ -437,8 +578,18 @@ window.FinckStore = (() => {
     installment_payments: (r) =>
       !(Number(r.installment_no) >= 1) ? "parcela sem número válido"
       : !positivo(r.amount) ? "parcela com valor zerado ou negativo"
-      : !["aberta", "paga"].includes(r.status) ? "parcela com estado inválido"
+      : !["aberta", "paga", "estornada"].includes(r.status) ? "parcela com estado inválido"
       : r.status === "aberta" && r.transaction_id ? "parcela aberta não pode ter movimentação vinculada"
+      : null,
+
+    // O livro-razão da meta aceita valor negativo (retirada e estorno), mas
+    // nunca zero: movimento que não move nada não é fato, é ruído.
+    goal_movements: (r) =>
+      !["aporte", "retirada", "estorno", "ajuste"].includes(r.kind) ? "movimento de meta sem tipo válido"
+      : !Number.isFinite(Number(r.amount)) || Number(r.amount) === 0 ? "movimento de meta com valor zerado"
+      : !dataValida(r.date) ? "movimento de meta sem data válida"
+      : r.kind === "aporte" && Number(r.amount) < 0 ? "aporte não pode ter valor negativo"
+      : r.kind === "retirada" && Number(r.amount) > 0 ? "retirada precisa ter valor negativo"
       : null,
   };
 
@@ -537,6 +688,7 @@ window.FinckStore = (() => {
 
     category_budgets:       (r) => String(r.category),
     installment_payments:   (r) => [r.purchase_id, Number(r.installment_no)].join("|"),
+    goal_movements:         (r) => [r.goal_id, r.kind, Number(r.amount), String(r.date).slice(0, 10)].join("|"),
   };
 
   const assinar = (tabela, linha) => {
@@ -679,6 +831,8 @@ window.FinckStore = (() => {
     usuarioAtual, tokenAcesso, cadastrar, entrar, sair, exigirLogin,
     recuperarSenha, definirNovaSenha, reenviarConfirmacao,
     listar, obter, inserir, inserirSeNovo, upsert, atualizar, remover, rpc,
+    operacao, chaveDeOperacao,
+    registrarEvento, listarEventos, limparEventos,
     obterPerfil, salvarPerfil, precisaOnboarding,
     obterGamificacao, salvarGamificacao,
     exportarTudo, importarTudo, validarImportacao, limparDados,

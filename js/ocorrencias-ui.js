@@ -44,56 +44,83 @@ window.FinckRevisao = (() => {
     return { excluir, soltarVinculo, desvincular, revincular };
   }
 
+  // Só conta a movimentação que ainda vale. Uma estornada continua apontando
+  // para a ocorrência — é história — mas reaproveitá-la ressuscitaria dinheiro
+  // que já foi revertido.
   async function movimentacaoExistente(oc) {
     if (oc.transaction_id) {
       const direta = await S.obter("transactions", oc.transaction_id);
-      if (direta) return direta;
+      if (direta && !direta.reversed_at) return direta;
     }
     if (!oc.id) return null;
 
     const ligadas = await S.listar("transactions", { filtro: { source_occurrence_id: oc.id } });
-    return ligadas[0] || null;
+    return ligadas.find((t) => !t.reversed_at) || null;
   }
 
-  async function confirmar(oc, valorReal, { account_id } = {}) {
+  async function confirmar(oc, valorReal, { account_id, unallocated = false } = {}) {
     const valor = Number(valorReal);
     if (!(valor > 0)) throw new Error("Informe um valor maior que zero.");
     const status = O.estadoAposValor(oc, valor);
     const conta = account_id !== undefined ? (account_id || null) : (oc.account_id || null);
-    const campos = O.movimentacaoDe(oc, valor, conta);
+    const campos = O.movimentacaoDe(oc, valor, conta, { unallocated });
 
-    // Caminho preferido: uma única transação de banco, atômica de verdade.
-    const noBanco = await S.rpc("confirmar_ocorrencia", {
-      p_occurrence_id: oc.id, p_amount: valor, p_account_id: conta,
-    });
-    if (noBanco.suportado) {
-      const r = noBanco.dados || {};
-      return { status: r.status || status, transaction_id: r.transaction_id, atomica: true };
-    }
+    // Chave estável para a mesma decisão: retry depois de timeout, duplo
+    // clique e segunda aba caem todos no mesmo resultado.
+    const chave = S.chaveDeOperacao("confirmar_ocorrencia", oc.id, valor.toFixed(2), conta || "sem_conta");
 
-    const existente = await movimentacaoExistente(oc);
-    if (existente) {
-      await S.atualizar("transactions", existente.id, campos);
-      await S.atualizar(TABELA, oc.id, {
-        status, actual_amount: valor, account_id: conta,
-        transaction_id: existente.id, decided_at: new Date().toISOString(),
-      });
-      return { status, transaction_id: existente.id, reaproveitada: true };
-    }
-
-    const mov = await S.inserir("transactions", campos);
     try {
-      await S.atualizar(TABELA, oc.id, {
-        status, actual_amount: valor, account_id: conta,
-        transaction_id: mov.id, decided_at: new Date().toISOString(),
+      // Caminho preferido: uma única transação de banco, atômica de verdade.
+      const noBanco = await S.rpc("confirmar_ocorrencia", {
+        p_occurrence_id: oc.id, p_amount: valor, p_account_id: conta,
+        p_unallocated: !conta && unallocated, p_idem_key: chave,
       });
-    } catch (err) {
+      if (noBanco.suportado) {
+        const r = noBanco.dados || {};
+        return { status: r.status || status, transaction_id: r.transaction_id, atomica: true };
+      }
 
-      await S.remover("transactions", mov.id).catch(() => {});
+      return await S.operacao(chave, async () => {
+        const existente = await movimentacaoExistente(oc);
+        if (existente) {
+          await S.atualizar("transactions", existente.id, campos);
+          await S.atualizar(TABELA, oc.id, {
+            status, actual_amount: valor, account_id: conta,
+            transaction_id: existente.id, decided_at: new Date().toISOString(),
+          });
+          return { status, transaction_id: existente.id, reaproveitada: true };
+        }
+
+        const mov = await S.inserir("transactions", campos);
+        try {
+          await S.atualizar(TABELA, oc.id, {
+            status, actual_amount: valor, account_id: conta,
+            transaction_id: mov.id, decided_at: new Date().toISOString(),
+          });
+        } catch (err) {
+
+          await S.remover("transactions", mov.id).catch(() => {});
+          throw err;
+        }
+        return { status, transaction_id: mov.id, reaproveitada: false };
+      }, { operacao: "confirmar_ocorrencia" });
+    } catch (err) {
+      await S.registrarEvento({
+        scope: "confirmacao",
+        message: err.message,
+        context: {
+          ocorrencia: oc.id, ciclo: oc.cycle, valor,
+          conta: conta || null, modo: S.MODO,
+        },
+      });
       throw err;
     }
-    return { status, transaction_id: mov.id, reaproveitada: false };
   }
+
+  const MOTIVO_DESFAZER = {
+    nao_realizado: "Previsão marcada como não realizada",
+    nao_pago: "Previsão marcada como não paga",
+  };
 
   async function naoAconteceu(oc, motivo) {
     const status = motivo === "nao_pago" ? "nao_pago" : "nao_realizado";
@@ -110,8 +137,14 @@ window.FinckRevisao = (() => {
       decided_at: new Date().toISOString(),
     });
 
+    // Se havia movimentação, dinheiro se moveu: ela é estornada, não apagada.
     const existente = await movimentacaoExistente({ ...oc, transaction_id: oc.transaction_id });
-    if (existente) await S.remover("transactions", existente.id);
+    if (existente && !existente.reversed_at) {
+      await S.atualizar("transactions", existente.id, {
+        reversed_at: new Date().toISOString(),
+        reversal_reason: MOTIVO_DESFAZER[status],
+      });
+    }
   }
 
   async function adiar(oc) {
@@ -131,11 +164,13 @@ window.FinckRevisao = (() => {
       <label class="revisao__conta">Em qual conta isso entrou ou saiu?
         <select id="revisaoConta">
           ${opcoes}
-          <option value=""${preferida ? "" : " selected"}>Sem conta — só no saldo geral</option>
+          <option value="__sem_conta"${preferida ? "" : " selected"}>Fora das contas — só no saldo geral</option>
         </select>
       </label>
       <p class="revisao__dica revisao__dica--conta" data-aviso-conta hidden>
-        Sem conta, o lançamento entra no saldo geral mas não aparece em nenhuma conta cadastrada.
+        Escolha declarada: o lançamento entra no saldo geral e fica marcado como
+        não alocado. Ele não aparece em nenhuma conta cadastrada, e a
+        reconciliação vai contá-lo como fora delas de propósito.
       </p>`;
   }
 
@@ -241,19 +276,34 @@ window.FinckRevisao = (() => {
 
       const seletorConta = host.querySelector("#revisaoConta");
       const avisoConta = host.querySelector("[data-aviso-conta]");
-      const contaEscolhida = () => (seletorConta ? seletorConta.value || null : oc.account_id || null);
+      const foraDasContas = () => Boolean(seletorConta) && seletorConta.value === "__sem_conta";
+      const contaEscolhida = () => {
+        if (!seletorConta) return oc.account_id || null;
+        return foraDasContas() ? null : (seletorConta.value || null);
+      };
+      const alocacao = () => ({ account_id: contaEscolhida(), unallocated: foraDasContas() });
+
       if (seletorConta && avisoConta) {
-        const refletirAviso = () => { avisoConta.hidden = Boolean(seletorConta.value); };
+        const refletirAviso = () => { avisoConta.hidden = !foraDasContas(); };
         seletorConta.addEventListener("change", refletirAviso);
         refletirAviso();
       }
 
-      host.querySelector('[data-acao="confirmar"]').addEventListener("click", async () => {
-        try {
-          await confirmar(oc, oc.planned_amount, { account_id: contaEscolhida() });
-          contagem.confirmadas++;
-          avancar();
-        } catch (e) { erro(e); }
+      // Duplo clique no mesmo botão não vira dois lançamentos: a primeira
+      // chamada desabilita o botão e a chave de operação cobre o resto.
+      const umaVez = (botao, acao) => {
+        if (!botao) return;
+        botao.addEventListener("click", async () => {
+          if (botao.disabled) return;
+          botao.disabled = true;
+          try { await acao(); } catch (e) { erro(e); botao.disabled = false; }
+        });
+      };
+
+      umaVez(host.querySelector('[data-acao="confirmar"]'), async () => {
+        await confirmar(oc, oc.planned_amount, alocacao());
+        contagem.confirmadas++;
+        avancar();
       });
 
       host.querySelector('[data-acao="outro"]').addEventListener("click", () => {
@@ -261,39 +311,37 @@ window.FinckRevisao = (() => {
         host.querySelector("#revisaoValor")?.focus();
       });
 
-      host.querySelector("[data-outro]").addEventListener("submit", async (e) => {
+      const formOutro = host.querySelector("[data-outro]");
+      formOutro.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const enviar = formOutro.querySelector('button[type="submit"]');
+        if (enviar.disabled) return;
+        enviar.disabled = true;
         try {
           const valor = U.lerMoeda("revisaoValor");
-          const r = await confirmar(oc, valor, { account_id: contaEscolhida() });
+          const r = await confirmar(oc, valor, alocacao());
           if (r.status === "ajustado") contagem.ajustadas++;
           else contagem.confirmadas++;
           avancar();
-        } catch (err) { erro(err); }
+        } catch (err) { erro(err); enviar.disabled = false; }
       });
 
-      host.querySelector('[data-acao="nao_realizado"]').addEventListener("click", async () => {
-        try {
-          await naoAconteceu(oc, "nao_realizado");
-          contagem.naoRealizadas++;
-          avancar();
-        } catch (e) { erro(e); }
+      umaVez(host.querySelector('[data-acao="nao_realizado"]'), async () => {
+        await naoAconteceu(oc, "nao_realizado");
+        contagem.naoRealizadas++;
+        avancar();
       });
 
-      host.querySelector('[data-acao="nao_pago"]')?.addEventListener("click", async () => {
-        try {
-          await naoAconteceu(oc, "nao_pago");
-          contagem.naoPagas++;
-          avancar();
-        } catch (e) { erro(e); }
+      umaVez(host.querySelector('[data-acao="nao_pago"]'), async () => {
+        await naoAconteceu(oc, "nao_pago");
+        contagem.naoPagas++;
+        avancar();
       });
 
-      host.querySelector('[data-acao="adiar"]').addEventListener("click", async () => {
-        try {
-          await adiar(oc);
-          contagem.pendentes++;
-          avancar();
-        } catch (e) { erro(e); }
+      umaVez(host.querySelector('[data-acao="adiar"]'), async () => {
+        await adiar(oc);
+        contagem.pendentes++;
+        avancar();
       });
     };
 
