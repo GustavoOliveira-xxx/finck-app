@@ -143,6 +143,48 @@
           <input type="text" inputmode="numeric" data-moeda id="initialBalance">
         </label>
 
+        <fieldset class="plano-renda">
+          <legend>Como você pretende organizar sua renda</legend>
+          <p class="descricao">
+            É uma referência sua, não uma regra. Serve para o fechamento do mês
+            comparar o que você planejou com o que aconteceu. Pode deixar em branco.
+          </p>
+
+          <div class="plano-renda__item">
+            <span class="plano-renda__nome">Renda livre</span>
+            <div class="plano-renda__modo" role="group" aria-label="Como definir a renda livre">
+              <label><input type="radio" name="modoLivre" value="percentual" checked> Percentual</label>
+              <label><input type="radio" name="modoLivre" value="valor"> Valor fixo</label>
+            </div>
+            <div class="plano-renda__campos">
+              <label data-campo="percentual">%
+                <input type="number" id="livrePercent" min="0" max="100" step="1" placeholder="30">
+              </label>
+              <label data-campo="valor" hidden>R$
+                <input type="text" inputmode="numeric" data-moeda id="livreValor">
+              </label>
+            </div>
+          </div>
+
+          <div class="plano-renda__item">
+            <span class="plano-renda__nome">Economia</span>
+            <div class="plano-renda__modo" role="group" aria-label="Como definir a economia">
+              <label><input type="radio" name="modoEconomia" value="percentual" checked> Percentual</label>
+              <label><input type="radio" name="modoEconomia" value="valor"> Valor fixo</label>
+            </div>
+            <div class="plano-renda__campos">
+              <label data-campo="percentual">%
+                <input type="number" id="economiaPercent" min="0" max="100" step="1" placeholder="20">
+              </label>
+              <label data-campo="valor" hidden>R$
+                <input type="text" inputmode="numeric" data-moeda id="economiaValor">
+              </label>
+            </div>
+          </div>
+
+          <p class="plano-renda__previa" id="previaPlano"></p>
+        </fieldset>
+
         <section class="resumo-onboarding" id="resumoOnboarding"></section>
 
         <div class="acoes-etapa">
@@ -158,6 +200,7 @@
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>
+  <script src="js/data-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>

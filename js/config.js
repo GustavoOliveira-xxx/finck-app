@@ -1,5 +1,3 @@
-
-
 window.FINCK_CONFIG = {
   SUPABASE_URL: "https://iruqoghylxgopbopxjbi.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_zn_jngIj2xibO_VpzOi0Wg_gGG7Z8eS",
@@ -92,8 +90,8 @@ window.FINCK_CONFIG = {
   ],
 
   XP: {
-    TETO_DIARIO: 260,        
-    INTERVALO_MIN_MS: 8000,  
+    TETO_DIARIO: 260,
+    INTERVALO_MIN_MS: 8000,
     ACOES: {
       primeiro_acesso:  { xp:  5, rotulo: "Primeiro acesso do dia",            limiteDia: 1 },
       onboarding:       { xp: 30, rotulo: "Completar o perfil financeiro",     limiteDia: 1,  unico: true },

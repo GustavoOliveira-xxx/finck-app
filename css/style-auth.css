@@ -659,12 +659,6 @@ input:-webkit-autofill{
   .vitrine{ text-align:left; }
 }
 
-/* ==========================================================================
-   Console do Cofre — a UI de entrada sobre o fundo em perspectiva
-   Mesma decisão do app: afinar as superfícies e aprofundar o desfoque, para
-   a grade e as moedas atravessarem o cartão em vez de pararem atrás dele.
-   ========================================================================== */
-
 :root{
   --vidro: rgba(18,14,26,.5);
   --raio-xl: 22px;
@@ -675,9 +669,6 @@ input:-webkit-autofill{
   -webkit-backdrop-filter:blur(22px) saturate(130%);
 }
 
-/* No celular o desfoque de uma área grande custa caro a cada quadro. Fica
-   desligado, e o corpo do cartão sobe o suficiente para o texto continuar
-   nítido sobre a grade em movimento. */
 @media (max-width: 780px){
   :root{ --vidro: rgba(20,16,28,.78); }
   .auth-card{
@@ -688,4 +679,10 @@ input:-webkit-autofill{
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
   :root{ --vidro: rgba(18,14,26,.86); }
+}
+
+.cena3d__logo-caixa .marca3d-cena--auth{
+  display:block;
+  width:clamp(128px, 24vw, 176px);
+  aspect-ratio:1;
 }

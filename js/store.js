@@ -1,5 +1,3 @@
-
-
 window.FinckStore = (() => {
   const cfg = window.FINCK_CONFIG;
   const CONFIGURADO = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
@@ -22,6 +20,8 @@ window.FinckStore = (() => {
     transfers: "finck.transferencias",
     balance_adjustments: "finck.ajustes",
     gamification: "finck.gamification",
+    recurring_occurrences: "finck.ocorrencias",
+    monthly_closings: "finck.fechamentos",
     demo: "finck.demo",
   };
 
@@ -62,8 +62,6 @@ window.FinckStore = (() => {
     return null;
   }
 
-  // Token da sessão, para chamar as Edge Functions autenticado.
-  // No modo demo não existe sessão — quem chama trata o null.
   async function tokenAcesso() {
     if (!sb || emDemo()) return null;
     const { data } = await sb.auth.getSession();
@@ -197,6 +195,33 @@ window.FinckStore = (() => {
     linhas.unshift(nova);
     gravar(KEYS[tabela], linhas);
     return nova;
+  }
+
+  async function upsert(tabela, registros, chaves) {
+    const lista = Array.isArray(registros) ? registros : [registros];
+    if (!lista.length) return [];
+    const user = await usuarioAtual();
+    if (!user) throw new Error("Sessão expirada. Entre novamente.");
+    const linhas = lista.map((r) => ({ ...r, user_id: user.id }));
+    const banco = bd();
+
+    if (banco) {
+      const { data, error } = await banco
+        .from(tabela)
+        .upsert(linhas, { onConflict: chaves.join(","), ignoreDuplicates: true })
+        .select();
+      if (error) throw new Error(error.message);
+      return data || [];
+    }
+
+    const atuais = ler(KEYS[tabela], []);
+    const existe = (r) => atuais.some(
+      (a) => a.user_id === user.id && chaves.every((k) => String(a[k]) === String(r[k])));
+    const novas = linhas.filter((r) => !existe(r)).map((r) => ({
+      id: window.FinckUtils.uid(), created_at: new Date().toISOString(), ...r,
+    }));
+    if (novas.length) gravar(KEYS[tabela], [...novas, ...atuais]);
+    return novas;
   }
 
   async function atualizar(tabela, id, campos) {
@@ -414,7 +439,7 @@ window.FinckStore = (() => {
     emDemo, entrarDemo, encerrarDemo,
     usuarioAtual, tokenAcesso, cadastrar, entrar, sair, exigirLogin,
     recuperarSenha, definirNovaSenha, reenviarConfirmacao,
-    listar, inserir, inserirSeNovo, atualizar, remover,
+    listar, inserir, inserirSeNovo, upsert, atualizar, remover,
     obterPerfil, salvarPerfil, precisaOnboarding,
     obterGamificacao, salvarGamificacao,
     exportarTudo, importarTudo, limparDados,

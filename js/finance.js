@@ -1,5 +1,3 @@
-
-
 window.FinckFinance = (() => {
   const U = window.FinckUtils;
   const S = window.FinckStore;

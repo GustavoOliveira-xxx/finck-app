@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const U = window.FinckUtils;
   const F = window.FinckFinance;

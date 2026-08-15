@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -16,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("categoria").innerHTML =
     cfg.CATEGORIAS.map((c) => `<option value="${c}">${c}</option>`).join("");
-  document.getElementById("data").value = U.hojeISO();
+  window.FinckData.escrever("data", U.hojeISO());
 
   async function render() {
     const ctx = await F.carregarContexto();
@@ -107,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<article class="card-contas">
            <div class="card-contas__topo"><h2>Minhas contas</h2></div>
            <p class="descricao">Você ainda não cadastrou onde seu dinheiro está. O FinCK não acessa seu banco — você informa e edita quando quiser.</p>
-           <a class="link-mais" href="contas.html">Cadastrar minha primeira conta →</a>
+           <a class="link-mais" href="contas.html">Cadastrar minha primeira conta</a>
          </article>`;
 
     document.getElementById("contaSelecionada").innerHTML =
@@ -181,7 +179,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("tituloModal").textContent = tipo === "entrada" ? "Nova entrada" : "Nova saída";
     document.getElementById("formTransacao").reset();
     U.limparMoeda("valor");
-    document.getElementById("data").value = U.hojeISO();
+    window.FinckData.escrever("data", U.hojeISO());
+
+    const campoCategoria = document.getElementById("categoria").closest("label");
+    if (campoCategoria) campoCategoria.hidden = tipo === "entrada";
+
     U.abrirModal("modalTransacao");
   };
   document.getElementById("btnEntrada").addEventListener("click", () => abrir("entrada"));
@@ -192,8 +194,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const type = document.getElementById("tipoTransacao").value;
     const amount = U.lerMoeda("valor");
     const description = document.getElementById("descricao").value.trim();
-    const date = document.getElementById("data").value;
-    const category = document.getElementById("categoria").value;
+    const date = window.FinckData.ler("data");
+    const category = type === "entrada" ? null : document.getElementById("categoria").value;
     const goalSel = document.getElementById("metaSelecionada");
     const goal_id = goalSel.value || null;
 

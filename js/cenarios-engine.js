@@ -1,5 +1,3 @@
-
-
 window.FinckCenarios = (() => {
   const cfg = window.FINCK_CONFIG;
   const num = (v) => Number(v || 0);

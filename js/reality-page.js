@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -15,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let resultado = null;
   let entrada = null;
   let decisao = null;
-  let registroId = null;   
+  let registroId = null;
 
   document.getElementById("itemCategory").innerHTML =
     cfg.CATEGORIAS.map((c) => `<option value="${c}">${c}</option>`).join("");

@@ -9,9 +9,7 @@
   <meta name="theme-color" content="#07060a">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
-  <style>
-
-    .placar{
+  <style>    .placar{
       display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
       margin-block:1rem;
       font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
@@ -48,7 +46,7 @@
       color:var(--amarelo);
       overflow-wrap:anywhere;
     }
-  </style>
+</style>
 </head>
 <body data-page="testes">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -74,6 +72,7 @@
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>
+  <script src="js/data-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/contas-engine.js"></script>
   <script src="js/reality.js"></script>
@@ -82,8 +81,7 @@
   <script src="js/planejamento-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/testes.js"></script>
-  <script>
-    const elResultado = document.getElementById("resultado");
+  <script>    const elResultado = document.getElementById("resultado");
     const elSelo = document.getElementById("selo");
     const elContagem = document.getElementById("contagem");
 
@@ -116,7 +114,7 @@
 
     document.getElementById("btnRodar").addEventListener("click", rodar);
     rodar();
-  </script>
+</script>
   <script src="js/ui-fx.js"></script>
 </body>
 </html>

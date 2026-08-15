@@ -1,32 +1,8 @@
-/**
- * FinCK — busca automática do preço a partir do link do produto.
- *
- * Por que isto existe no servidor: o navegador não consegue ler a página de
- * outra loja (o CORS bloqueia). Esta função faz a leitura do lado de fora e
- * devolve só o número.
- *
- * O difícil não é achar um preço na página: é achar muitos e saber qual vale.
- * Uma página em promoção mostra o preço cheio riscado, o promocional, o do
- * Pix, o da parcela e o do frete — e o dado estruturado nem sempre traz o
- * certo (várias lojas publicam ali o preço de tabela).
- *
- * Por isso a leitura junta evidências em vez de seguir uma cascata fixa:
- *
- *   1. "De R$ X por R$ Y"  — a página declarando os dois papéis
- *   2. Selo de desconto    — "20% OFF" prova qual par de valores fecha
- *   3. Marcação de riscado — <del>, <s>, style com line-through
- *   4. Vários preços no dado estruturado — o menor é o promocional
- *   5. Texto com "R$"      — último recurso, descartando parcela e frete
- *
- * Mandar `{ "diagnostico": true }` no corpo devolve tudo que foi encontrado,
- * para quando uma loja específica continuar errando.
- */
-
-const LIMITE_BYTES = 2_500_000;   // não baixa página maior que ~2,5 MB
-const PRAZO_MS = 12_000;          // desiste depois de 12 s
+const LIMITE_BYTES = 2_500_000;
+const PRAZO_MS = 12_000;
 const MAX_REDIRECIONAMENTOS = 5;
-const CACHE_MS = 5 * 60 * 1000;   // 5 min: evita bater na loja a cada clique
-const LIMITE_POR_USUARIO = 30;    // buscas por hora
+const CACHE_MS = 5 * 60 * 1000;
+const LIMITE_POR_USUARIO = 30;
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -37,14 +13,6 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-/* ------------------------------------------------------------------ *
- * Lojas que não funcionam
- *
- * Repetido aqui de propósito. A tela já avisa antes de o usuário clicar,
- * mas um link encurtado (amzn.to, shp.ee) só revela o destino depois do
- * redirecionamento — e aí quem precisa barrar é o servidor.
- * Mantenha em sincronia com js/lojas-suporte.js.
- * ------------------------------------------------------------------ */
 const BLOQUEADAS: Record<string, string> = {
   "shopee.com.br": "Shopee", "shopee.com": "Shopee", "shp.ee": "Shopee",
   "amazon.com.br": "Amazon", "amazon.com": "Amazon", "amzn.to": "Amazon", "a.co": "Amazon",
@@ -66,13 +34,6 @@ export const lojaBloqueada = (host: string): string | null => {
   return null;
 };
 
-/* ------------------------------------------------------------------ *
- * Proteção contra SSRF
- *
- * A URL vem do usuário. Sem isto, alguém poderia apontar a função para
- * endereços internos da nuvem (169.254.169.254 devolve credenciais em
- * vários provedores) e usar o FinCK como ponte para dentro da rede.
- * ------------------------------------------------------------------ */
 const FAIXAS_PRIVADAS = [
   /^127\./, /^10\./, /^192\.168\./, /^169\.254\./, /^0\./,
   /^172\.(1[6-9]|2\d|3[01])\./,
@@ -93,26 +54,16 @@ async function hostPerigoso(host: string): Promise<boolean> {
   if (h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".lan")) return true;
   if (h === "metadata.google.internal" || h === "metadata") return true;
 
-  // Endereço IP escrito direto na URL
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h) || h.includes(":")) return ipPrivado(h);
 
-  // Domínio que aponta para IP interno (DNS rebinding).
-  // Best-effort: se o runtime não permitir resolver, seguimos com as
-  // checagens acima, que já cobrem o caso direto.
   try {
     const ips = await Deno.resolveDns(h, "A");
     if (ips.some(ipPrivado)) return true;
-  } catch { /* resolveDns indisponível — segue */ }
+  } catch {  }
 
   return false;
 }
 
-/* ------------------------------------------------------------------ *
- * Números em formato brasileiro
- * "R$ 1.234,56" → 1234.56   (ponto = milhar, vírgula = decimal)
- * "1299.90"     → 1299.90   (formato do JSON-LD, internacional)
- * "1.299"       → 1299      (milhar sem centavos)
- * ------------------------------------------------------------------ */
 export function paraNumero(bruto: unknown): number | null {
   if (typeof bruto === "number") return Number.isFinite(bruto) && bruto > 0 ? bruto : null;
   let s = String(bruto ?? "").trim().replace(/[^\d.,]/g, "");
@@ -122,7 +73,7 @@ export function paraNumero(bruto: unknown): number | null {
   const temPonto = s.includes(".");
 
   if (temVirgula && temPonto) {
-    // o separador que aparece por último é o decimal
+
     s = s.lastIndexOf(",") > s.lastIndexOf(".")
       ? s.replace(/\./g, "").replace(",", ".")
       : s.replace(/,/g, "");
@@ -131,7 +82,7 @@ export function paraNumero(bruto: unknown): number | null {
   } else if (temPonto) {
     const partes = s.split(".");
     const ultima = partes[partes.length - 1];
-    // "1.299" e "12.345.678" são milhar; "1299.90" é decimal
+
     if (partes.length > 2 || (partes.length === 2 && ultima.length === 3 && partes[0].length <= 3)) {
       s = partes.join("");
     }
@@ -141,26 +92,6 @@ export function paraNumero(bruto: unknown): number | null {
   return Number.isFinite(n) && n > 0 && n < 100_000_000 ? n : null;
 }
 
-/* ------------------------------------------------------------------ *
- * Leitura de preço
- *
- * A versão anterior decidia qual valor era o "de" e qual era o "por" pelo
- * nome da classe CSS do elemento. Isso quebra: cada loja nomeia como quer, e
- * quando o nome não estava na lista o preço riscado passava como se fosse o
- * preço válido.
- *
- * Agora a decisão vem de sinais que não dependem de classe:
- *
- *   1. "De R$ X por R$ Y"   — a própria página dizendo qual é qual
- *   2. O selo de desconto   — "20% OFF" prova qual par de valores fecha
- *   3. Vários preços no dado estruturado — o menor é o promocional
- *   4. Marcação de riscado  — <del>, <s> e style com line-through
- *   5. Classe CSS           — só como reforço, nunca sozinha
- *
- * Cada sinal encontrado vira uma evidência; a decisão pesa todas.
- * ------------------------------------------------------------------ */
-
-/** Texto da página sem marcação, para as buscas que dependem de frase. */
 const semTags = (html: string) =>
   html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -170,14 +101,6 @@ const semTags = (html: string) =>
     .replace(/&#3[69];|&quot;|&amp;/gi, " ")
     .replace(/\s+/g, " ");
 
-/* ---------- 1. Dado estruturado ---------- */
-
-/**
- * Todos os preços do JSON-LD, não só o primeiro.
- *
- * Muita loja publica dois: o de tabela e o promocional. Pegar o primeiro que
- * aparece é sorteio — e foi assim que o preço cheio virou o preço exibido.
- */
 export function valoresJsonLd(html: string): {
   valores: number[];
   moeda?: string;
@@ -264,12 +187,6 @@ export function valoresMicrodata(html: string): number[] {
   return [...new Set(valores)];
 }
 
-/* ---------- 2. "De X por Y" ---------- */
-
-/**
- * O sinal mais direto que existe: a página declarando os dois papéis.
- * Aceita "de R$ X por R$ Y" e "de R$ X por apenas R$ Y".
- */
 export function parDePor(html: string): { de: number; por: number } | null {
   const texto = semTags(html);
   const re = /\bde\s*:?\s*R\$\s*([\d.,]+)\s*(?:por|até)\s*(?:apenas\s*)?R\$\s*([\d.,]+)/gi;
@@ -281,42 +198,50 @@ export function parDePor(html: string): { de: number; por: number } | null {
   return null;
 }
 
-/* ---------- 3. Selo de desconto ---------- */
+const SELO_DE_OUTRO = /pix|boleto|à\s*vista|a\s*vista|cupom|primeira\s*compra|assinante|frete/i;
 
-/**
- * "20% OFF", "-20%", "20% de desconto".
- *
- * Sozinho não diz preço nenhum, mas prova qual par de valores está certo:
- * de 439,90 para 349,90 dá 20%; para 339,40 daria 23%. É o desempate que
- * não depende de como a loja nomeia as coisas.
- */
 export function descontoAnunciado(html: string): number | null {
   const texto = semTags(html);
   const achados: number[] = [];
+
+  const registrar = (bruto: string, i: number, tam: number) => {
+    const n = Number(bruto);
+    if (!(n >= 3 && n <= 95)) return;
+
+    const volta = texto.slice(Math.max(0, i - 45), i + tam + 45);
+    if (SELO_DE_OUTRO.test(volta)) return;
+    achados.push(n);
+  };
+
   for (const m of texto.matchAll(/(\d{1,2})\s*%\s*(?:off|de\s*desconto|desconto)/gi)) {
-    const n = Number(m[1]);
-    if (n >= 3 && n <= 95) achados.push(n);
+    registrar(m[1], m.index ?? 0, m[0].length);
   }
   for (const m of texto.matchAll(/-\s*(\d{1,2})\s*%/g)) {
-    const n = Number(m[1]);
-    if (n >= 3 && n <= 95) achados.push(n);
+    registrar(m[1], m.index ?? 0, m[0].length);
   }
-  if (!achados.length) return null;
-  // o maior selo costuma ser o do produto; os menores são de pix/cupom
-  return Math.max(...achados);
+
+  return achados.length ? Math.max(...achados) : null;
 }
 
-/* ---------- 4. Marcação de riscado ---------- */
+export function valoresAVista(html: string): number[] {
+  const texto = semTags(html);
+  const FORMAS = /(?:no\s*pix|com\s*pix|via\s*pix|pix|no\s*boleto|boleto)/i;
+  const achados: number[] = [];
+
+  for (const m of texto.matchAll(new RegExp(`R\\$\\s*([\\d.,]+)[^\\d]{0,25}?${FORMAS.source}`, "gi"))) {
+    const v = paraNumero(m[1]);
+    if (v) achados.push(v);
+  }
+  for (const m of texto.matchAll(new RegExp(`${FORMAS.source}[^\\d]{0,25}?R\\$\\s*([\\d.,]+)`, "gi"))) {
+    const v = paraNumero(m[1]);
+    if (v) achados.push(v);
+  }
+  return [...new Set(achados)];
+}
 
 const CLASSES_RISCADO =
   /(?:old-?price|price--old|price-old|preco-?antigo|preco-?de|de-por__de|list-?price|compare-at|regular-price|riscado|was-price|valor-?antigo|preco-?cheio|antes)/i;
 
-/**
- * Preços marcados como antigos.
- *
- * Três caminhos, do mais confiável ao menos: a tag <del>/<s>, o estilo
- * line-through escrito no próprio elemento, e por fim o nome da classe.
- */
 export function valoresRiscados(html: string): number[] {
   const achados: number[] = [];
 
@@ -344,8 +269,6 @@ export function valoresRiscados(html: string): number[] {
   return [...new Set(achados)];
 }
 
-/* ---------- 5. Candidatos do texto ---------- */
-
 function tagAnterior(antes: string): string {
   const i = antes.lastIndexOf("<");
   if (i === -1) return "";
@@ -362,18 +285,12 @@ function dentroDeRiscado(antes: string): boolean {
   return abre > fecha;
 }
 
-/**
- * Todo "R$" da página que pode ser o preço do produto, com um peso.
- *
- * Descarta o que sabidamente não é: parcela, frete, cashback, cupom e o que
- * está dentro de marcação de riscado.
- */
-export function candidatosTexto(html: string): { valor: number; peso: number }[] {
+export function ocorrenciasTexto(html: string): { valor: number; peso: number; pos: number }[] {
   const limpo = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
 
-  const pontos = new Map<number, number>();
+  const achados: { valor: number; peso: number; pos: number }[] = [];
   const re = /R\$\s*([\d.,]{3,20})/gi;
   let m: RegExpExecArray | null;
 
@@ -400,12 +317,37 @@ export function candidatosTexto(html: string): { valor: number; peso: number }[]
     if (/(à\s*vista|a\s*vista|no\s*pix|por\s*apenas|por:?)\s*$/.test(antesTexto.slice(-28))) peso += 4;
     if (/pric(e|ing)|pre[cç]o|valor|sale|best-?price|melhor\s*pre/i.test(tag)) peso += 2;
 
-    pontos.set(valor, (pontos.get(valor) ?? 0) + peso);
+    achados.push({ valor, peso, pos: m.index });
   }
 
+  return achados;
+}
+
+export function candidatosTexto(html: string): { valor: number; peso: number }[] {
+  const pontos = new Map<number, number>();
+  for (const o of ocorrenciasTexto(html)) {
+    pontos.set(o.valor, (pontos.get(o.valor) ?? 0) + o.peso);
+  }
   return [...pontos.entries()]
     .map(([valor, peso]) => ({ valor, peso }))
     .sort((a, b) => b.peso - a.peso);
+}
+
+export function parAdjacente(
+  html: string,
+  ignorar: (v: number) => boolean = () => false,
+): { de: number; por: number } | null {
+  const oc = ocorrenciasTexto(html).filter((o) => !ignorar(o.valor));
+
+  for (let i = 0; i + 1 < oc.length; i++) {
+    const a = oc[i], b = oc[i + 1];
+    if (b.pos - a.pos > 170) continue;
+    if (b.valor >= a.valor) continue;
+    const desconto = (a.valor - b.valor) / a.valor;
+    if (desconto < 0.05 || desconto > 0.85) continue;
+    return { de: a.valor, por: b.valor };
+  }
+  return null;
 }
 
 export function extrairTitulo(html: string): string | null {
@@ -415,7 +357,27 @@ export function extrairTitulo(html: string): string | null {
   return t ? t[1].replace(/\s+/g, " ").trim().slice(0, 160) : null;
 }
 
-/* ---------- Parcelamento, à vista e frete ---------- */
+export function parcelasAnunciadas(html: string): {
+  vezes: number; valor: number; total: number; semJuros: boolean;
+}[] {
+  const texto = semTags(html);
+  const achados: { vezes: number; valor: number; total: number; semJuros: boolean }[] = [];
+
+  for (const m of texto.matchAll(/(\d{1,2})\s*x\s*(?:de\s*)?R\$\s*([\d.,]+)/gi)) {
+    const vezes = Number(m[1]);
+    const valor = paraNumero(m[2]);
+    if (!valor || vezes < 2 || vezes > 24) continue;
+    const depois = texto.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 40)
+      .toLowerCase();
+    achados.push({
+      vezes,
+      valor,
+      total: Number((vezes * valor).toFixed(2)),
+      semJuros: /sem\s*juros/.test(depois),
+    });
+  }
+  return achados;
+}
 
 export function acharParcelamento(
   html: string,
@@ -493,8 +455,6 @@ export function acharFrete(html: string): { gratis: boolean; minimo?: number } |
   return null;
 }
 
-/* ---------- A decisão ---------- */
-
 export interface Panorama {
   preco: number;
   precoOriginal?: number;
@@ -526,23 +486,27 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
     : micro.length ? "microdata"
     : "texto";
 
-  // Todo valor plausível da página, para o selo de desconto poder cruzar.
-  const universo = [...new Set([...estruturados, ...riscados, ...texto.map((t) => t.valor)])]
-    .filter((v) => v > 0)
+  const parcelas = parcelasAnunciadas(html);
+  const ehParcela = (v: number) => parcelas.some((p) => perto(p.valor, v, 0.005));
+
+  const todos = [...new Set([...estruturados, ...riscados, ...texto.map((t) => t.valor)])]
+    .filter((v) => v > 0 && !ehParcela(v))
     .sort((a, b) => a - b);
+
+  const doPix = new Set(valoresAVista(html));
+  const semPix = todos.filter((v) => !doPix.has(v));
+  const universo = semPix.length ? semPix : todos;
 
   let atual: number | null = null;
   let original: number | null = null;
   let metodo = metodoBase;
 
-  // 1. A página diz explicitamente "de X por Y" — nada supera isso.
   if (par) {
     atual = par.por;
     original = par.de;
     metodo = "de-por";
   }
 
-  // 2. O selo de desconto aponta o par certo.
   if (atual === null && selo && universo.length >= 2) {
     let melhorPar: { de: number; por: number; erro: number } | null = null;
     for (const de of universo) {
@@ -561,8 +525,24 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
     }
   }
 
-  // 3. Há marcação de riscado: o riscado é o "de", e o "por" é o melhor
-  //    candidato que seja menor que ele.
+  if (atual === null && parcelas.length && universo.length) {
+    let achado: { valor: number; erro: number } | null = null;
+    for (const p of parcelas) {
+      if (!p.semJuros) continue;
+      for (const v of universo) {
+        const erro = Math.abs(v - p.total) / p.total;
+        if (erro > 0.02) continue;
+        if (!achado || erro < achado.erro) achado = { valor: v, erro };
+      }
+    }
+    if (achado) {
+      atual = achado.valor;
+      const acima = riscados.filter((r) => r > achado!.valor * 1.02);
+      if (acima.length) original = Math.max(...acima);
+      metodo = `${metodoBase}+parcela`;
+    }
+  }
+
   if (atual === null && riscados.length) {
     const maiorRiscado = Math.max(...riscados);
     const abaixo = universo.filter((v) => v < maiorRiscado);
@@ -575,25 +555,34 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
     }
   }
 
-  // 4. O dado estruturado trouxe mais de um preço: o menor é o promocional.
-  if (atual === null && estruturados.length > 1) {
-    const ordenado = [...estruturados].sort((a, b) => a - b);
-    atual = ordenado[0];
-    const maior = ordenado[ordenado.length - 1];
-    if (maior > atual * 1.02) original = maior;
-    metodo = `${metodoBase}+menor`;
+  if (atual === null) {
+    const vizinho = parAdjacente(html, (v) => ehParcela(v) || doPix.has(v));
+    if (vizinho) {
+      atual = vizinho.por;
+      original = vizinho.de;
+      metodo = `${metodoBase}+vizinho`;
+    }
   }
 
-  // 5. Caminho simples: um preço estruturado só, ou nada além do texto.
+  if (atual === null && estruturados.length > 1) {
+    const validos = estruturados.filter((v) => !ehParcela(v)).sort((a, b) => a - b);
+    if (validos.length) {
+      atual = validos[0];
+      const maior = validos[validos.length - 1];
+      if (maior > atual * 1.02) original = maior;
+      metodo = `${metodoBase}+menor`;
+    }
+  }
+
   if (atual === null) {
-    atual = estruturados[0] ?? texto[0]?.valor ?? null;
+    atual = estruturados.find((v) => !ehParcela(v))
+      ?? texto.find((t) => !ehParcela(t.valor))?.valor
+      ?? null;
   }
   if (atual === null) return null;
 
-  // Rede de segurança: se o valor escolhido está marcado como riscado e
-  // existe um candidato de texto menor, o escolhido era o preço cheio.
   if (riscados.some((r) => perto(r, atual as number))) {
-    const menor = texto.find((t) => t.valor < (atual as number));
+    const menor = texto.find((t) => t.valor < (atual as number) && !ehParcela(t.valor));
     if (menor) {
       original = atual;
       atual = menor.valor;
@@ -601,7 +590,25 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
     }
   }
 
+  const semJuros = parcelas.filter((p) => p.semJuros);
+  if (semJuros.length) {
+    const bate = (v: number) => semJuros.some((p) => perto(p.total, v, 0.02));
+    if (!bate(atual)) {
+      const melhor = universo.find(bate);
+      if (melhor) {
+        if (melhor < atual) original = atual;
+        atual = melhor;
+        metodo = `${metodoBase}+parcela`;
+      }
+    }
+  }
+
   if (original !== null && original <= atual * 1.01) original = null;
+
+  if (original !== null && selo !== null) {
+    const pct = ((original - atual) / original) * 100;
+    if (Math.abs(pct - selo) > 5) original = null;
+  }
 
   const panorama: Panorama = {
     preco: Number(atual.toFixed(2)),
@@ -611,7 +618,7 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
     confianca:
       metodo === "de-por" || metodo.includes("selo") ? "alta"
       : metodo === "texto" ? "baixa"
-      : metodo.includes("correcao") || metodo === "microdata" ? "media"
+      : metodo.includes("vizinho") || metodo.includes("correcao") || metodo === "microdata" ? "media"
       : metodo.includes("riscado") || metodo.includes("menor") ? "alta"
       : "alta",
   };
@@ -634,8 +641,6 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
   const frete = acharFrete(html);
   if (frete) panorama.frete = frete;
 
-  // Modo diagnóstico: quando um site continua errando, é isto que mostra o
-  // que a função enxergou, sem precisar adivinhar.
   if (comDiagnostico) {
     panorama.diagnostico = {
       jsonLd: ld.valores,
@@ -652,11 +657,6 @@ export function montarPanorama(html: string, comDiagnostico = false): Panorama |
   return panorama;
 }
 
-/* ------------------------------------------------------------------ *
- * Busca com redirecionamento manual
- * Cada salto é revalidado — senão um encurtador poderia levar para
- * endereço interno depois da checagem inicial.
- * ------------------------------------------------------------------ */
 async function baixar(urlInicial: string, sinal: AbortSignal) {
   let url = urlInicial;
 
@@ -714,7 +714,6 @@ async function baixar(urlInicial: string, sinal: AbortSignal) {
       throw { codigo: "SEM_PRECO", motivo: "O link não aponta para uma página de produto." };
     }
 
-    // lê em pedaços para não estourar memória com página gigante
     const leitor = r.body?.getReader();
     if (!leitor) throw { codigo: "SEM_PRECO", motivo: "A loja não devolveu conteúdo." };
 
@@ -724,7 +723,7 @@ async function baixar(urlInicial: string, sinal: AbortSignal) {
       const { done, value } = await leitor.read();
       if (done) break;
       if (total + value.length > LIMITE_BYTES) {
-        pedacos.push(value.subarray(0, LIMITE_BYTES - total)); // guarda só o que cabe
+        pedacos.push(value.subarray(0, LIMITE_BYTES - total));
         total = LIMITE_BYTES;
         await leitor.cancel();
         break;
@@ -746,10 +745,6 @@ async function baixar(urlInicial: string, sinal: AbortSignal) {
   throw { codigo: "SEM_PRECO", motivo: "O link tem redirecionamentos demais." };
 }
 
-/* ------------------------------------------------------------------ *
- * Cache e limite por usuário (memória do isolate — some no cold start;
- * é um freio, não uma contabilidade exata)
- * ------------------------------------------------------------------ */
 const cache = new Map<string, { em: number; corpo: unknown }>();
 const usos = new Map<string, number[]>();
 
@@ -767,13 +762,10 @@ const responder = (corpo: unknown, status = 200) =>
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 
-/* ------------------------------------------------------------------ */
 export async function atender(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return responder({ ok: false, motivo: "Método não suportado." }, 405);
 
-  // Quem está pedindo? A chave anônima é pública, então o que vale é o
-  // token do usuário logado.
   const auth = req.headers.get("Authorization") ?? "";
   const token = auth.replace(/^Bearer\s+/i, "").trim();
   if (!token) {
@@ -819,8 +811,6 @@ export async function atender(req: Request): Promise<Response> {
   }
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
 
-  // O diagnóstico ignora o cache de propósito: quem está investigando um site
-  // precisa do que a página devolve agora, não do que devolveu há cinco minutos.
   const emCache = cache.get(url);
   if (!diagnostico && emCache && Date.now() - emCache.em < CACHE_MS) {
     return responder(emCache.corpo);
@@ -870,10 +860,6 @@ export async function atender(req: Request): Promise<Response> {
   }
 }
 
-// Só liga o servidor quando roda no Deno (Supabase). Assim as funções de
-// leitura acima podem ser importadas e testadas fora dele —
-// veja ferramentas/testar-extracao.mjs
-// deno-lint-ignore no-explicit-any
 const runtime = (globalThis as any).Deno;
 if (runtime && typeof runtime.serve === "function") {
   runtime.serve(atender);

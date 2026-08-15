@@ -1,5 +1,3 @@
-
-
 window.FinckPlano = (() => {
   const cfg = window.FINCK_CONFIG;
 

@@ -259,7 +259,7 @@ body.finck-carregando{ overflow:hidden; }
 }
 
 .prisma-cena{
-  --s:clamp(148px, 25vw, 208px);   
+  --s:clamp(148px, 25vw, 208px);
   position:relative;
   display:grid; place-items:center;
   height:calc(var(--s) * 1.85);
@@ -390,7 +390,7 @@ body.finck-carregando{ overflow:hidden; }
 .prisma-cena:hover .prisma-dica{ opacity:0; }
 
 .medalha-cena{
-  --d:clamp(132px, 30vw, 176px);   
+  --d:clamp(132px, 30vw, 176px);
   position:relative;
   display:grid; place-items:center;
   width:var(--d); height:calc(var(--d) + 26px);
@@ -563,12 +563,6 @@ body.finck-carregando{ overflow:hidden; }
   font-weight:700; color:var(--texto);
 }
 
-/* ==========================================================================
-   Cena 3D de Metas
-   A arte é uma imagem plana. O que dá volume é o palco: perspectiva de
-   verdade, camadas em profundidades diferentes e uma sombra que reage.
-   ========================================================================== */
-
 .alvo-cena{
   position:relative;
   display:grid;
@@ -578,7 +572,7 @@ body.finck-carregando{ overflow:hidden; }
 }
 
 .meta3d{
-  --calor:0;            /* 0..1 — progresso da meta mais perto de fechar */
+  --calor:0;
   position:relative;
   display:grid;
   justify-items:center;
@@ -600,7 +594,6 @@ body.finck-carregando{ overflow:hidden; }
   transition:transform .5s cubic-bezier(.22,.61,.36,1);
 }
 
-/* ---- brilho de fundo, mais aceso conforme a meta avança ---- */
 .meta3d__brilho{
   position:absolute;
   width:104%; aspect-ratio:1;
@@ -614,7 +607,6 @@ body.finck-carregando{ overflow:hidden; }
   animation:meta3d-pulso 5.5s ease-in-out infinite;
 }
 
-/* ---- anel de progresso ---- */
 .meta3d__anel{
   position:absolute;
   width:100%; height:100%;
@@ -637,7 +629,6 @@ body.finck-carregando{ overflow:hidden; }
   transition:stroke-dashoffset 1.1s cubic-bezier(.22,.61,.36,1);
 }
 
-/* ---- fagulhas orbitando num plano deitado ---- */
 .meta3d__orbita{
   position:absolute;
   width:92%; aspect-ratio:1;
@@ -667,7 +658,6 @@ body.finck-carregando{ overflow:hidden; }
   opacity:.8;
 }
 
-/* ---- a arte ---- */
 .meta3d__arte{
   position:relative;
   width:82%;
@@ -678,11 +668,9 @@ body.finck-carregando{ overflow:hidden; }
   user-select:none;
 }
 
-/* Sem a imagem no lugar, a cena continua de pé: o anel e o brilho seguram. */
 .meta3d--sem-arte .meta3d__arte{ display:none; }
 .meta3d--sem-arte .meta3d__anel-base{ stroke:rgba(180,92,240,.34); }
 
-/* ---- sombra: é ela que assenta a peça no chão ---- */
 .meta3d__sombra{
   position:absolute;
   bottom:2%;
@@ -694,7 +682,6 @@ body.finck-carregando{ overflow:hidden; }
   animation:meta3d-sombra 6s ease-in-out infinite;
 }
 
-/* ---- rótulo ---- */
 .meta3d__rotulo{
   display:grid;
   justify-items:center;
@@ -753,7 +740,6 @@ body.finck-carregando{ overflow:hidden; }
   .meta3d__palco{ width:min(210px, 62vw); }
   .meta3d__pct{ font-size:1.45rem; }
 }
-
 
 .marca3d-cena{
   position:relative;
@@ -1059,4 +1045,327 @@ body.finck-carregando{ overflow:hidden; }
 }
 .medalha__nivel{
   text-shadow:0 1px 0 rgba(255,255,255,.55), 0 2px 3px rgba(0,0,0,.28);
+}
+
+.finck-carga--cofre{
+  --carga:0;
+  background:#07060a;
+  padding:0;
+  display:block;
+  overflow:hidden;
+}
+
+.cofre{
+  position:absolute; inset:0;
+  display:grid;
+  place-items:center;
+}
+
+.cofre__folha{
+  position:absolute; left:0; right:0;
+  height:50.6%;
+  background:
+    linear-gradient(180deg, #0b0910 0%, #120d1c 60%, #1a1128 100%),
+    #0b0910;
+  overflow:hidden;
+  will-change:transform;
+  transition:transform 820ms cubic-bezier(.72,0,.22,1);
+}
+.cofre__folha--topo{ top:0; }
+.cofre__folha--base{ bottom:0; transform:scaleY(-1); }
+
+.cofre__grade{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(180,92,240,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,92,240,.16) 1px, transparent 1px);
+  background-size:46px 46px;
+  mask-image:linear-gradient(180deg, transparent, #000 78%);
+  -webkit-mask-image:linear-gradient(180deg, transparent, #000 78%);
+  opacity:calc(.4 + var(--carga) * .6);
+  transition:opacity .5s linear;
+}
+
+.cofre__borda{
+  position:absolute; left:0; right:0; bottom:0;
+  height:2px;
+  background:linear-gradient(90deg,
+    transparent,
+    rgba(180,92,240,calc(.3 + var(--carga) * .7)) 22%,
+    rgba(254,200,0,calc(.35 + var(--carga) * .65)) 50%,
+    rgba(180,92,240,calc(.3 + var(--carga) * .7)) 78%,
+    transparent);
+  box-shadow:0 0 calc(6px + var(--carga) * 26px) rgba(254,200,0,calc(var(--carga) * .55));
+}
+
+.cofre__fresta{
+  position:absolute; left:0; right:0; top:50%;
+  height:1px;
+  transform:translateY(-50%) scaleX(calc(.12 + var(--carga) * .88));
+  background:linear-gradient(90deg, transparent, var(--amarelo, #fec800), transparent);
+  filter:blur(.5px);
+  box-shadow:0 0 calc(8px + var(--carga) * 34px) rgba(254,200,0,.7);
+  opacity:calc(.25 + var(--carga) * .75);
+  transition:transform .35s ease-out;
+}
+
+.cofre__nucleo{
+  position:relative; z-index:3;
+  display:grid; justify-items:center; gap:.75rem;
+  transition:opacity 300ms ease, transform 520ms cubic-bezier(.72,0,.22,1);
+}
+
+.cofre__selo{
+  position:relative;
+  width:clamp(116px, 30vw, 152px);
+  aspect-ratio:1;
+  display:grid; place-items:center;
+}
+
+.cofre__anel{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  transform:rotate(-90deg);
+  overflow:visible;
+}
+.cofre__anel-base{
+  fill:none; stroke:rgba(180,92,240,.2); stroke-width:3;
+}
+.cofre__anel-arco{
+  fill:none;
+  stroke:var(--amarelo, #fec800);
+  stroke-width:3.4;
+  stroke-linecap:round;
+  filter:drop-shadow(0 0 7px rgba(254,200,0,.7));
+  transition:stroke-dashoffset .25s linear;
+}
+
+.cofre__logo{
+  width:66%;
+  filter:drop-shadow(0 6px 18px rgba(0,0,0,.6));
+  animation:cofre-respira 3.4s ease-in-out infinite;
+}
+
+.cofre__marca{
+  margin:0;
+  font-family:var(--fonte-display, 'Space Grotesk', sans-serif);
+  font-size:1.15rem; font-weight:700; letter-spacing:.16em;
+  text-transform:uppercase;
+  background:linear-gradient(100deg, var(--roxo-neon, #b45cf0), var(--amarelo, #fec800));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+.cofre__pct{
+  margin:0;
+  font-family:var(--fonte-dados, ui-monospace, monospace);
+  font-size:.82rem;
+  color:var(--texto-fraquissimo, #6d6579);
+  font-variant-numeric:tabular-nums;
+}
+
+.cofre--destravado .cofre__fresta{
+  animation:cofre-clarao 320ms ease-out;
+}
+.cofre--destravado .cofre__nucleo{
+  opacity:0;
+  transform:scale(.92);
+}
+
+.cofre--aberto .cofre__folha--topo{ transform:translateY(-101%); }
+.cofre--aberto .cofre__folha--base{ transform:scaleY(-1) translateY(-101%); }
+.cofre--aberto .cofre__fresta{ opacity:0; transition:opacity .3s linear; }
+
+@keyframes cofre-respira{
+  0%,100%{ transform:translateY(0) scale(1); }
+  50%    { transform:translateY(-5px) scale(1.02); }
+}
+
+@keyframes cofre-clarao{
+  0%  { opacity:1; box-shadow:0 0 34px rgba(254,200,0,.7); }
+  45% { opacity:1; box-shadow:0 0 90px 14px rgba(255,240,190,.95); }
+  100%{ opacity:1; box-shadow:0 0 34px rgba(254,200,0,.7); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .cofre__logo{ animation:none; }
+  .cofre__folha{ transition-duration:1ms; }
+  .cofre__nucleo{ transition-duration:1ms; }
+}
+
+.marca3d{
+  --marca-metal-claro:rgba(214,178,255,.92);
+  --marca-metal:rgba(122,58,180,.85);
+  --marca-metal-fundo:rgba(38,14,62,.95);
+}
+
+.marca3d__extrusao{
+  background-color:var(--matiz, rgba(104,12,144,.9));
+}
+
+.marca3d__bisel{
+  transform:translateZ(3px);
+  background-color:var(--amarelo, #fec800);
+  opacity:.5;
+  mix-blend-mode:screen;
+  filter:blur(.6px);
+}
+
+.marca3d__varredura{
+  position:absolute; inset:-12%;
+  transform:translateZ(64px);
+  pointer-events:none;
+  background:linear-gradient(105deg,
+    transparent 38%,
+    rgba(255,255,255,.5) 47%,
+    rgba(255,244,214,.85) 50%,
+    rgba(255,255,255,.5) 53%,
+    transparent 62%);
+  -webkit-mask-image:var(--marca-logo);
+  mask-image:var(--marca-logo);
+  -webkit-mask-size:contain; mask-size:contain;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center; mask-position:center;
+  opacity:0;
+  animation:marca-varre 6.5s cubic-bezier(.5,0,.5,1) 1.4s infinite;
+}
+
+@keyframes marca-varre{
+  0%   { opacity:0; transform:translateZ(64px) translateX(-46%); }
+  8%   { opacity:.95; }
+  26%  { opacity:0; transform:translateZ(64px) translateX(46%); }
+  100% { opacity:0; transform:translateZ(64px) translateX(46%); }
+}
+
+.marca3d__anel--1{ animation-duration:16s; }
+.marca3d__anel--2{ animation-duration:23s; }
+.marca3d__anel--3{ animation-duration:31s; }
+
+.marca3d-cena{ animation:marca-assenta 1.1s cubic-bezier(.22,1.2,.36,1) both; }
+
+@keyframes marca-assenta{
+  0%  { opacity:0; transform:translateY(-16px) scale(.86) rotateX(28deg); }
+  100%{ opacity:1; transform:none; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .marca3d__varredura{ animation:none; }
+  .marca3d-cena{ animation:none; }
+}
+
+.marca3d-cena--auth{
+  width:clamp(132px, 22vw, 190px);
+  aspect-ratio:1;
+  margin-inline:auto;
+}
+.marca3d-cena--auth .marca3d__chao{ opacity:.5; }
+
+.meta3d__disco{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid rgba(180,92,240,.24);
+  transform-style:preserve-3d;
+  pointer-events:none;
+}
+.meta3d__disco--1{
+  width:78%; aspect-ratio:1;
+  transform:rotateX(78deg) translateZ(-6px);
+  border-color:rgba(254,200,0,calc(.12 + var(--calor) * .3));
+  box-shadow:0 0 20px -6px rgba(254,200,0,.5);
+  animation:meta3d-gira 22s linear infinite;
+}
+.meta3d__disco--2{
+  width:96%; aspect-ratio:1;
+  transform:rotateX(78deg) translateZ(-22px);
+  animation:meta3d-gira 34s linear reverse infinite;
+}
+.meta3d__disco--3{
+  width:112%; aspect-ratio:1;
+  transform:rotateX(78deg) translateZ(-40px);
+  border-style:dashed;
+  opacity:.5;
+  animation:meta3d-gira 48s linear infinite;
+}
+
+@keyframes meta3d-gira{
+  to{ transform:rotateX(78deg) translateZ(var(--z, 0)) rotateZ(360deg); }
+}
+
+.meta3d__orbita--interna{
+  width:62%;
+  transform:rotateX(62deg) rotateY(18deg);
+  animation-duration:9s;
+  animation-direction:reverse;
+}
+.meta3d__fagulha--4{
+  top:-2px; left:50%; width:5px; height:5px;
+  background:var(--roxo-neon, #b45cf0);
+  box-shadow:0 0 9px 2px rgba(180,92,240,.7);
+}
+.meta3d__fagulha--5{
+  top:auto; bottom:-2px; left:50%; width:4px; height:4px;
+  background:#fff2c4;
+  box-shadow:0 0 8px 2px rgba(255,242,196,.6);
+}
+
+.meta3d__degraus{
+  position:absolute;
+  bottom:22%; left:50%;
+  width:56%;
+  transform:translateX(-50%) translateZ(18px);
+  display:flex; align-items:flex-end; justify-content:center; gap:8%;
+  pointer-events:none;
+}
+.meta3d__degrau{
+  position:relative;
+  flex:1 1 0;
+  border-radius:3px 3px 1px 1px;
+  background:linear-gradient(170deg, rgba(120,72,180,.7), rgba(40,18,64,.85));
+  border:1px solid rgba(180,92,240,.45);
+  opacity:calc(.35 + var(--calor) * .65);
+  transition:opacity .8s ease;
+}
+.meta3d__degrau--1{ height:26px; }
+.meta3d__degrau--2{ height:40px; }
+.meta3d__degrau--3{ height:56px; }
+.meta3d__degrau b{
+  position:absolute; inset:auto 0 100% 0;
+  height:3px;
+  background:linear-gradient(90deg, transparent, var(--amarelo, #fec800), transparent);
+  opacity:calc(var(--calor) * .9);
+  box-shadow:0 0 8px rgba(254,200,0,.6);
+}
+
+.meta3d__bandeira{
+  position:absolute;
+  bottom:44%; left:64%;
+  width:22%; height:34%;
+  transform:translateZ(30px);
+  pointer-events:none;
+}
+.meta3d__mastro{
+  position:absolute; left:0; bottom:0; top:0;
+  width:2px;
+  background:linear-gradient(180deg, #cfc6dd, #6f6880);
+  border-radius:2px;
+}
+.meta3d__pano{
+  position:absolute; left:2px; top:4%;
+  width:78%; height:34%;
+  background:linear-gradient(120deg, var(--roxo-claro, #9333c4), var(--roxo-neon, #b45cf0));
+  clip-path:polygon(0 0, 100% 12%, 82% 50%, 100% 88%, 0 100%);
+  transform-origin:left center;
+  animation:meta3d-tremula 3.4s ease-in-out infinite;
+  box-shadow:0 0 14px -2px var(--roxo-glow);
+}
+
+@keyframes meta3d-tremula{
+  0%,100%{ transform:skewY(0deg) scaleX(1); }
+  50%    { transform:skewY(-3.5deg) scaleX(.94); }
+}
+
+.meta3d--sem-arte .meta3d__degraus,
+.meta3d--sem-arte .meta3d__bandeira{ opacity:1; }
+
+@media (prefers-reduced-motion: reduce){
+  .meta3d__disco, .meta3d__pano, .meta3d__orbita--interna{ animation:none; }
 }

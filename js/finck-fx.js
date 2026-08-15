@@ -1,5 +1,3 @@
-
-
 (() => {
   "use strict";
 
@@ -7,36 +5,114 @@
   const toque    = window.matchMedia("(hover: none)").matches;
   const raf      = window.requestAnimationFrame.bind(window);
 
-  const MIN_EM_TELA = 900;   
-  const TETO        = 5000;  
+  function criarAgendador(aplicar) {
+    let pendente = 0;
+    return () => {
+      if (pendente) cancelAnimationFrame(pendente);
+      pendente = raf(() => { pendente = 0; aplicar(); });
+    };
+  }
+
+  function ligarPonteiro(alvo, aoMover, aoSair) {
+    const mover = (e) => {
+      const p = e.touches && e.touches[0] ? e.touches[0] : e;
+      if (p && typeof p.clientX === "number") aoMover(p.clientX, p.clientY);
+    };
+    alvo.addEventListener("pointermove", mover, { passive: true });
+    alvo.addEventListener("touchmove", mover, { passive: true });
+    if (aoSair) {
+      ["pointerleave", "pointercancel", "touchend", "touchcancel"].forEach((ev) =>
+        alvo.addEventListener(ev, aoSair, { passive: true }));
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && aoSair) aoSair();
+    });
+  }
+
+  const MIN_EM_TELA = 1500;
+  const TETO        = 5000;
+
+  const COFRE_HTML = `
+    <div class="cofre">
+      <div class="cofre__folha cofre__folha--topo">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+      <div class="cofre__folha cofre__folha--base">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+
+      <div class="cofre__nucleo">
+        <div class="cofre__selo">
+          <svg class="cofre__anel" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="cofre__anel-base" cx="60" cy="60" r="52"></circle>
+            <circle class="cofre__anel-arco" cx="60" cy="60" r="52"
+                    stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <img class="cofre__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
+        </div>
+        <p class="cofre__marca">FinCK</p>
+        <p class="cofre__pct" data-cofre-pct>0%</p>
+      </div>
+
+      <span class="cofre__fresta"></span>
+    </div>`;
 
   function abertura() {
     const tela = document.querySelector("[data-finck-carga]");
     if (!tela) return;
 
+    tela.innerHTML = COFRE_HTML;
+    tela.classList.add("finck-carga--cofre");
     document.body.classList.add("finck-carregando");
+
+    const arco = tela.querySelector(".cofre__anel-arco");
+    const rotulo = tela.querySelector("[data-cofre-pct]");
+    const VOLTA = 326.7;
+
     const nasceu = performance.now();
     let saiu = false;
+    let progresso = 0;
+    let laco = 0;
+
+    const pintar = (p) => {
+      if (arco) arco.style.strokeDashoffset = (VOLTA * (1 - p)).toFixed(1);
+      if (rotulo) rotulo.textContent = `${Math.round(p * 100)}%`;
+      tela.style.setProperty("--carga", p.toFixed(3));
+    };
+
+    const correr = () => {
+      const decorrido = performance.now() - nasceu;
+      const alvo = document.readyState === "complete" ? 1 : 0.86;
+      progresso += (alvo - progresso) * 0.06;
+      if (decorrido > MIN_EM_TELA && alvo === 1) progresso += 0.02;
+      pintar(Math.min(1, progresso));
+      if (progresso < 0.999) laco = raf(correr);
+    };
 
     const encerrar = () => {
       if (saiu) return;
       saiu = true;
+      cancelAnimationFrame(laco);
+      pintar(1);
 
-      tela.classList.add("finck-carga--pronta");
+      tela.classList.add("cofre--destravado");
       document.body.classList.remove("finck-carregando");
 
       setTimeout(() => {
-        tela.classList.add("finck-carga--saiu");
-
-        setTimeout(() => tela.remove(), 700);
-      }, reduzido ? 0 : 240);
+        tela.classList.add("cofre--aberto");
+        setTimeout(() => tela.remove(), reduzido ? 0 : 900);
+      }, reduzido ? 0 : 320);
     };
 
     const agendarSaida = () => {
       const decorrido = performance.now() - nasceu;
-      const falta = Math.max(0, (reduzido ? 0 : MIN_EM_TELA) - decorrido);
-      setTimeout(encerrar, falta);
+      setTimeout(encerrar, Math.max(0, (reduzido ? 0 : MIN_EM_TELA) - decorrido));
     };
+
+    if (reduzido) pintar(1);
+    else laco = raf(correr);
 
     if (document.readyState === "complete") agendarSaida();
     else window.addEventListener("load", agendarSaida, { once: true });
@@ -46,15 +122,13 @@
 
   function cena3d() {
     const cena = document.querySelector("[data-cena3d]");
-    if (!cena || reduzido || toque) return;
+    if (!cena || reduzido) return;
 
     const ecos = [...document.querySelectorAll("[data-cena3d-eco]")];
     const alvos = [cena, ...ecos];
     const caixaLogo = cena.querySelector(".cena3d__logo-caixa");
-
-    let agendado = false;
-    let mx = 0, my = 0;      
-    let gx = 50, gy = 50;    
+    let mx = 0, my = 0;
+    let gx = 50, gy = 50;
 
     const aplicar = () => {
       const sx = mx.toFixed(3);
@@ -67,32 +141,24 @@
         caixaLogo.style.setProperty("--gx", gx.toFixed(1));
         caixaLogo.style.setProperty("--gy", gy.toFixed(1));
       }
-      agendado = false;
     };
 
-    window.addEventListener("pointermove", (e) => {
-      mx = (e.clientX / window.innerWidth  - 0.5) * 2;
-      my = (e.clientY / window.innerHeight - 0.5) * 2;
+    const agendar = criarAgendador(aplicar);
+
+    ligarPonteiro(window, (cx, cy) => {
+      mx = (cx / window.innerWidth  - 0.5) * 2;
+      my = (cy / window.innerHeight - 0.5) * 2;
 
       if (caixaLogo) {
         const r = caixaLogo.getBoundingClientRect();
         if (r.width && r.height) {
-          gx = ((e.clientX - r.left) / r.width)  * 100;
-          gy = ((e.clientY - r.top)  / r.height) * 100;
+          gx = ((cx - r.left) / r.width)  * 100;
+          gy = ((cy - r.top)  / r.height) * 100;
         }
       }
 
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    }, { passive: true });
-
-    document.addEventListener("pointerleave", () => {
-      mx = 0; my = 0;
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    });
+      agendar();
+    }, () => { mx = 0; my = 0; agendar(); });
   }
 
   function prisma() {
@@ -101,27 +167,20 @@
 
     const corpo = cena.querySelector(".prisma");
     if (!corpo) return;
-
-    let agendado = false;
     let px = 0, py = 0;
 
     const aplicar = () => {
       corpo.style.setProperty("--px", px.toFixed(3));
       corpo.style.setProperty("--py", py.toFixed(3));
-      agendado = false;
     };
 
-    const agendar = () => {
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    };
+    const agendar = criarAgendador(aplicar);
 
     if (!toque) {
       cena.addEventListener("pointermove", (e) => {
         const r = cena.getBoundingClientRect();
         if (!r.width || !r.height) return;
-        px = (e.clientX - r.left) / r.width  - 0.5;   
+        px = (e.clientX - r.left) / r.width  - 0.5;
         py = ((e.clientY - r.top) / r.height - 0.5) * -1;
         agendar();
       }, { passive: true });
@@ -168,8 +227,6 @@
     const corpo = cena.querySelector(".medalha");
     const brilhos = [...cena.querySelectorAll(".medalha__brilho")];
     if (!corpo) return;
-
-    let agendado = false;
     let gx = 0, gy = 0, lx = 50, ly = 50;
 
     const aplicar = () => {
@@ -179,13 +236,8 @@
         b.style.setProperty("--lx", lx.toFixed(1));
         b.style.setProperty("--ly", ly.toFixed(1));
       });
-      agendado = false;
     };
-    const agendar = () => {
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    };
+    const agendar = criarAgendador(aplicar);
 
     const luzDoPonteiro = (e) => {
       const r = corpo.getBoundingClientRect();
@@ -246,22 +298,6 @@
     marcaReality();
   }
 
-  /* ------------------------------------------------------------------ *
-   * Cena 3D de Metas
-   *
-   * A peça central é uma arte renderizada (assets/meta-3d.png). O que a faz
-   * parecer 3D de verdade não é a imagem: é o palco em volta dela.
-   *
-   *   - o palco inteiro inclina conforme o ponteiro, com perspectiva
-   *   - a arte flutua e fica à frente do anel, então há paralaxe entre elas
-   *   - o anel de progresso mostra a meta mais perto de fechar
-   *   - as fagulhas orbitam num plano deitado, passando por trás e por diante
-   *   - a sombra acompanha a flutuação, que é o que assenta a peça no chão
-   *
-   * O anel não é enfeite: é o mesmo dado que o dardo mostrava antes — só que
-   * legível como número, e não por dedução da posição.
-   * ------------------------------------------------------------------ */
-
   const RAIO_ANEL = 46;
   const VOLTA_ANEL = 2 * Math.PI * RAIO_ANEL;
 
@@ -274,6 +310,10 @@
         <div class="meta3d__palco">
           <span class="meta3d__brilho"></span>
 
+          <span class="meta3d__disco meta3d__disco--3"></span>
+          <span class="meta3d__disco meta3d__disco--2"></span>
+          <span class="meta3d__disco meta3d__disco--1"></span>
+
           <svg class="meta3d__anel" viewBox="0 0 100 100" aria-hidden="true">
             <circle class="meta3d__anel-base" cx="50" cy="50" r="${RAIO_ANEL}"></circle>
             <circle class="meta3d__anel-arco" cx="50" cy="50" r="${RAIO_ANEL}"
@@ -285,6 +325,22 @@
             <i class="meta3d__fagulha"></i>
             <i class="meta3d__fagulha meta3d__fagulha--2"></i>
             <i class="meta3d__fagulha meta3d__fagulha--3"></i>
+          </span>
+
+          <span class="meta3d__orbita meta3d__orbita--interna">
+            <i class="meta3d__fagulha meta3d__fagulha--4"></i>
+            <i class="meta3d__fagulha meta3d__fagulha--5"></i>
+          </span>
+
+          <span class="meta3d__degraus">
+            <i class="meta3d__degrau meta3d__degrau--1"><b></b></i>
+            <i class="meta3d__degrau meta3d__degrau--2"><b></b></i>
+            <i class="meta3d__degrau meta3d__degrau--3"><b></b></i>
+          </span>
+
+          <span class="meta3d__bandeira">
+            <i class="meta3d__mastro"></i>
+            <i class="meta3d__pano"></i>
           </span>
 
           <img class="meta3d__arte" src="assets/meta-3d.png" alt="" decoding="async"
@@ -305,40 +361,27 @@
     if (!cena) return;
 
     montarMeta3d(cena);
-    if (reduzido || toque) return;
+    if (reduzido) return;
 
     const palco = cena.querySelector(".meta3d__palco");
     if (!palco) return;
-
-    let agendado = false;
     let px = 0, py = 0;
 
     const aplicar = () => {
       palco.style.setProperty("--px", px.toFixed(3));
       palco.style.setProperty("--py", py.toFixed(3));
-      agendado = false;
     };
-    const agendar = () => {
-      if (agendado) return;
-      agendado = true;
-      raf(aplicar);
-    };
+    const agendar = criarAgendador(aplicar);
 
-    cena.addEventListener("pointermove", (e) => {
+    ligarPonteiro(cena, (cx, cy) => {
       const r = cena.getBoundingClientRect();
       if (!r.width || !r.height) return;
-      px = (e.clientX - r.left) / r.width - 0.5;
-      py = ((e.clientY - r.top) / r.height - 0.5) * -1;
+      px = (cx - r.left) / r.width - 0.5;
+      py = ((cy - r.top) / r.height - 0.5) * -1;
       agendar();
-    }, { passive: true });
-
-    cena.addEventListener("pointerleave", () => { px = 0; py = 0; agendar(); });
+    }, () => { px = 0; py = 0; agendar(); });
   }
 
-  /**
-   * Recebe o progresso da meta mais perto de fechar.
-   * Mantém o nome antigo porque é assim que js/metas.js chama.
-   */
   function mirarAlvo(progresso, nome) {
     const cena = document.querySelector("[data-alvo]");
     if (!cena) return;
@@ -353,15 +396,14 @@
     if (arco) {
       arco.style.strokeDashoffset = (VOLTA_ANEL * (1 - p / 100)).toFixed(2);
     }
-    // quanto mais perto de fechar, mais acesa a cena
+
     if (meta) meta.style.setProperty("--calor", (p / 100).toFixed(3));
 
     if (pct) pct.textContent = nome ? `${Math.round(p)}%` : "—";
     if (rotulo) rotulo.textContent = nome || "sem metas ainda";
   }
 
-
-  const CAMADAS_EXTRUSAO = 16;
+  const CAMADAS_EXTRUSAO = 26;
 
   function montarMarca(cena) {
     if (cena.dataset.montada) return;
@@ -369,12 +411,17 @@
 
     const logo = cena.dataset.logo || "assets/logo-reality-transparente.png";
     const nome = cena.dataset.nome || "FinCK of Reality";
-    cena.style.setProperty("--marca-logo", `url("${logo}")`);
+    const logoAbs = new URL(logo, document.baseURI).href;
+    cena.style.setProperty("--marca-logo", `url("${logoAbs}")`);
 
     const extrusao = Array.from({ length: CAMADAS_EXTRUSAO }, (_, i) => {
-      const z = (i + 1) * 1.6;
-      const forca = 1 - i / (CAMADAS_EXTRUSAO * 1.35);
-      return `<span class="marca3d__borda marca3d__extrusao" style="--z:${z};--forca:${forca.toFixed(3)}"></span>`;
+      const t = i / (CAMADAS_EXTRUSAO - 1);
+      const z = -(i + 1) * 1.5;
+      const forca = (1 - t) ** 1.25;
+      const matiz = t < 0.45 ? "var(--marca-metal-claro)"
+        : t < 0.8 ? "var(--marca-metal)" : "var(--marca-metal-fundo)";
+      return `<span class="marca3d__borda marca3d__extrusao"
+        style="--z:${z};--forca:${forca.toFixed(3)};--matiz:${matiz}"></span>`;
     }).join("");
 
     const faiscas = Array.from({ length: 6 }, (_, i) =>
@@ -390,7 +437,9 @@
           ${extrusao}
           <img class="marca3d__logo" src="${logo}" alt="${nome}" decoding="async">
           <span class="marca3d__borda marca3d__contorno"></span>
+          <span class="marca3d__borda marca3d__bisel"></span>
           <span class="marca3d__borda marca3d__lustro"></span>
+          <span class="marca3d__varredura"></span>
         </div>
         ${faiscas}
         <span class="marca3d__chao"></span>
@@ -402,7 +451,7 @@
     if (!cenas.length) return;
 
     cenas.forEach(montarMarca);
-    if (reduzido || toque) return;
+    if (reduzido) return;
 
     cenas.forEach((cena) => {
       const corpo = cena.querySelector(".marca3d");
@@ -410,7 +459,6 @@
       if (!corpo) return;
 
       const area = cena.closest(".reality-cta") || cena.closest(".hero--reality") || cena;
-      let agendado = false;
       let mx = 0, my = 0;
 
       const aplicar = () => {
@@ -422,13 +470,8 @@
           el.style.setProperty("--mx", sx);
           el.style.setProperty("--my", sy);
         });
-        agendado = false;
-      };
-      const agendar = () => {
-        if (agendado) return;
-        agendado = true;
-        raf(aplicar);
-      };
+        };
+      const agendar = criarAgendador(aplicar);
 
       area.addEventListener("pointermove", (e) => {
         const r = area.getBoundingClientRect();

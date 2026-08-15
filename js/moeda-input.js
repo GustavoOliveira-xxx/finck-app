@@ -1,5 +1,3 @@
-
-
 window.FinckMoeda = (() => {
   const cfg = window.FINCK_CONFIG;
 

@@ -1,5 +1,3 @@
-
-
 window.FinckTempo = (() => {
   const cfg = window.FINCK_CONFIG;
 

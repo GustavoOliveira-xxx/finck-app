@@ -1,5 +1,3 @@
-
-
 window.FinckTestes = (() => {
   const suites = [];
   let suiteAtual = null;
@@ -65,8 +63,8 @@ window.FinckTestes = (() => {
 
     teste("valor da hora e do dia saem da jornada declarada", () => {
       const r = window.FinckReality.calcular(100, perfilBase);
-      esperar(r.valor_dia).aSerPerto(159.09, 2);   
-      esperar(r.valor_hora).aSerPerto(19.89, 2);   
+      esperar(r.valor_dia).aSerPerto(159.09, 2);
+      esperar(r.valor_hora).aSerPerto(19.89, 2);
     });
 
     teste("renda zero não gera divisão por zero", () => {
@@ -339,11 +337,11 @@ window.FinckTestes = (() => {
           ],
         };
         const r1 = await S.importarTudo(backup, { modo: "mesclar" });
-        esperar(r1.inseridos).aSer(2);   
+        esperar(r1.inseridos).aSer(2);
         esperar(r1.ignorados).aSer(1);
 
         const r2 = await S.importarTudo(backup, { modo: "mesclar" });
-        esperar(r2.inseridos).aSer(0);   
+        esperar(r2.inseridos).aSer(0);
         esperar((await S.listar("transactions")).length).aSer(2);
       });
     });
@@ -394,9 +392,9 @@ window.FinckTestes = (() => {
         await S.inserir("recurring_transactions", { description: "Aluguel", type: "saida", amount: 1000, day_of_month: 6, active: true });
 
         const ctx = await F.carregarContexto();
-        esperar(ctx.saldo).aSer(2500);          
+        esperar(ctx.saldo).aSer(2500);
         esperar(ctx.despesasFixas).aSer(1000);
-        esperar(ctx.rendaLivre).aSer(2000);     
+        esperar(ctx.rendaLivre).aSer(2000);
       });
     });
 
@@ -451,8 +449,8 @@ window.FinckTestes = (() => {
         total_amount: 300, installments_count: 2,
         first_due_date: "2026-01-31", paid_count: 0,
       });
-      esperar(c[1].vencimento.getMonth()).aSer(1);      
-      esperar(c[1].vencimento.getDate()).aSer(28);      
+      esperar(c[1].vencimento.getMonth()).aSer(1);
+      esperar(c[1].vencimento.getDate()).aSer(28);
     });
 
     teste("saldo devedor ignora as parcelas já pagas", () => {
@@ -489,8 +487,8 @@ window.FinckTestes = (() => {
       const r = P.situacaoOrcamento(tetos, transacoes, "2026-08");
       const porCat = Object.fromEntries(r.map((x) => [x.categoria, x]));
       esperar(porCat["Alimentação"].situacao).aSer("tranquilo");
-      esperar(porCat["Lazer"].situacao).aSer("atencao");        
-      esperar(porCat["Transporte"].situacao).aSer("estourado"); 
+      esperar(porCat["Lazer"].situacao).aSer("atencao");
+      esperar(porCat["Transporte"].situacao).aSer("estourado");
       esperar(porCat["Transporte"].restante).aSer(-60);
     });
 
@@ -560,7 +558,7 @@ window.FinckTestes = (() => {
       }, base);
 
       esperar(linhas).aTerTamanho(3);
-      esperar(linhas[0].saldoFim).aSer(3000);   
+      esperar(linhas[0].saldoFim).aSer(3000);
       esperar(linhas[1].saldoFim).aSer(5000);
       esperar(linhas[2].saldoFim).aSer(7000);
     });

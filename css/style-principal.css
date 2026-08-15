@@ -2122,7 +2122,6 @@ body.rolando header[data-finck-header]{
   }
 }
 
-
 .tabela-wrapper{
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-x:contain;
@@ -2682,30 +2681,11 @@ body.rolando header[data-finck-header]{
 .fluxo-numero{ fill:var(--texto); font-family:var(--fonte-dados); font-weight:600; }
 .fluxo-assinatura{ fill:var(--roxo-neon); font-weight:600; font-family:var(--fonte-display); }
 
-/* ==========================================================================
-   Console do Cofre — a UI sobre o fundo em perspectiva
-   --------------------------------------------------------------------------
-   O fundo passou a ser uma grade que corre até o horizonte, com moedas e
-   pulsos. Antes desta camada ele existia mas quase não aparecia: as
-   superfícies cobriam a tela quase inteira, e só sobrava a grade nas frestas
-   entre um card e outro.
-
-   A ideia aqui é uma só — deixar o fundo atravessar a interface. Todo o
-   resto (raios, fios de luz, alinhamento de números) é acabamento discreto
-   em volta dessa decisão.
-
-   Fica no fim do arquivo de propósito: são ajustes que precisam vencer o que
-   foi declarado antes, sem que nada acima precise ser reescrito.
-   ========================================================================== */
-
 :root{
-  /* Baixar a opacidade sozinha deixaria o texto competindo com a grade em
-     movimento. O que devolve a legibilidade é o desfoque logo abaixo: ele
-     apaga o detalhe e deixa passar só a luz e a cor. */
+
   --vidro:      rgba(18,14,26,.46);
   --vidro-alto: rgba(26,20,38,.62);
 
-  /* A grade do fundo é geométrica; cantos muito arredondados brigam com ela. */
   --raio-lg: 16px;
   --raio-xl: 22px;
 }
@@ -2722,8 +2702,6 @@ body.rolando header[data-finck-header]{
   -webkit-backdrop-filter:blur(16px) saturate(120%);
 }
 
-/* O card de saldo era o único totalmente opaco — bem no meio da tela, era
-   ele que mais escondia o fundo. */
 .balance-card{
   background:
     linear-gradient(150deg,
@@ -2734,7 +2712,6 @@ body.rolando header[data-finck-header]{
   -webkit-backdrop-filter:blur(22px) saturate(130%);
 }
 
-/* O modal precisa de mais corpo: é leitura em primeiro plano, não ambiente. */
 .modal{
   background:
     linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)),
@@ -2749,9 +2726,6 @@ body.rolando header[data-finck-header]{
   -webkit-backdrop-filter:blur(3px);
 }
 
-/* Fio de luz na borda de cima dos blocos: o mesmo brilho que o fundo tem na
-   linha do horizonte, agora repetido no topo de cada card.
-   `.bloco` é o único destes seletores sem ::before ocupado. */
 .bloco::before{
   content:"";
   position:absolute;
@@ -2765,8 +2739,6 @@ body.rolando header[data-finck-header]{
   pointer-events:none;
 }
 
-/* Cabeçalho e barra inferior acompanham: se ficassem densos, virariam duas
-   tarjas opacas prendendo a tela em cima e embaixo. */
 header[data-finck-header]{
   background:linear-gradient(180deg, rgba(9,7,13,.82), rgba(9,7,13,.44));
   backdrop-filter:blur(18px) saturate(140%);
@@ -2778,8 +2750,6 @@ header[data-finck-header]{
   -webkit-backdrop-filter:blur(20px) saturate(150%);
 }
 
-/* Números em colunas precisam de dígitos de largura fixa, senão a vírgula
-   dança de linha para linha. */
 .card-indicador strong,
 .lista-resumo strong,
 .lista-resumo span,
@@ -2789,14 +2759,6 @@ table th{
   font-variant-numeric:tabular-nums;
 }
 
-/* --------------------------------------------------------------------------
-   Celular
-   O app já desligava o desfoque abaixo de 780px, e com razão: desfocar uma
-   área grande a cada quadro é caro no telefone. Mantemos desligado — mas as
-   superfícies deixam de ser quase opacas, para o fundo aparecer mesmo sem
-   desfoque. Sem esta parte, o Cofre sumiria justamente onde o app mais é
-   usado.
-   -------------------------------------------------------------------------- */
 @media (max-width: 780px){
   :root{
     --vidro:      rgba(20,16,28,.78);
@@ -2814,10 +2776,6 @@ table th{
     -webkit-backdrop-filter:none;
   }
 
-  /* O saldo é o maior número do app e fica bem sobre o ponto de fuga da
-     grade. Sem desfoque para amaciar, as linhas cruzavam os dígitos. Este
-     card é o único que fica quase opaco no celular: hierarquia, não recuo —
-     o fundo continua aparecendo nos demais blocos. */
   .balance-card{
     background:
       linear-gradient(150deg,
@@ -2833,14 +2791,6 @@ table th{
   }
 }
 
-/* --------------------------------------------------------------------------
-   Cabeçalho em tela estreita
-   A 390px os três itens do cabeçalho não cabem: o título era cortado no meio
-   da palavra e o "Sair da demo" quebrava em três linhas, porque em telas de
-   toque o botão tem altura mínima de 44px. O selo de modo passa a mostrar só
-   o ícone — o texto dele já está no atributo title — e sobra espaço para o
-   nome da página aparecer inteiro.
-   -------------------------------------------------------------------------- */
 @media (max-width: 480px){
   header[data-finck-header]{
     gap:.45rem;
@@ -2866,11 +2816,403 @@ table th{
   }
 }
 
-/* Navegador sem suporte a desfoque: sem ele, texto sobre a grade em
-   movimento fica cansativo. Devolve-se o corpo das superfícies. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
   :root{
     --vidro:      rgba(18,14,26,.84);
     --vidro-alto: rgba(26,20,38,.9);
   }
+}
+
+.btn-excluir-item{
+  flex:0 0 auto;
+  width:2.1rem; height:2.1rem;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:50%;
+  border:1px solid var(--superficie-borda);
+  background:rgba(255,255,255,.04);
+  color:var(--texto-fraquissimo);
+  font-family:var(--fonte-corpo);
+  font-size:.8rem; line-height:1;
+  cursor:pointer;
+  transition:color var(--dur-rapida), border-color var(--dur-rapida), background var(--dur-rapida);
+}
+.btn-excluir-item:hover,
+.btn-excluir-item:focus-visible{
+  color:var(--vermelho);
+  border-color:rgba(255,77,94,.42);
+  background:var(--vermelho-fraco);
+}
+
+@media (max-width: 620px){
+  .item-lista{
+    flex-wrap:wrap;
+    row-gap:.55rem;
+    column-gap:.5rem;
+  }
+  .item-lista > .item-desc{
+    order:0;
+    flex:1 1 calc(100% - 2.7rem);
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  .item-lista > .btn-excluir-item{ order:1; }
+  .item-lista > .item-dia{ order:2; }
+  .item-lista > strong{ order:3; margin-right:auto; }
+  .item-lista > .selo-tempo{ order:4; }
+  .item-lista > .switch{ order:5; }
+}
+
+@media (max-width: 620px){
+  .conta-card,
+  .item-conta{
+    flex-wrap:wrap;
+    row-gap:.5rem;
+  }
+  .conta-card > *,
+  .item-conta > *{ min-width:0; }
+}
+
+.bloco--programacao{ position:relative; }
+
+.prog-cabecalho{
+  display:flex; align-items:baseline; justify-content:space-between; gap:.75rem;
+}
+.prog-janela{
+  font-family:var(--fonte-dados); font-size:.7rem; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--texto-fraquissimo);
+}
+
+.prog3d{
+  align-self:center;
+  width:clamp(120px, 30vw, 168px);
+  aspect-ratio:1.4;
+  perspective:640px;
+  margin:.2rem 0 .1rem;
+}
+.prog3d__palco{
+  --px:0; --py:0;
+  position:relative; width:100%; height:100%;
+  transform-style:preserve-3d;
+  transform:rotateX(calc(56deg + var(--py) * 10deg)) rotateZ(calc(-38deg + var(--px) * 16deg));
+  transition:transform .45s cubic-bezier(.22,.61,.36,1);
+}
+.prog3d__base{
+  position:absolute; left:8%; top:26%;
+  width:84%; height:48%;
+  border-radius:12px;
+  border:1px solid rgba(180,92,240,.34);
+  background:linear-gradient(135deg, rgba(147,51,196,.16), rgba(104,12,144,.05));
+  box-shadow:0 0 24px -6px var(--roxo-glow);
+}
+.prog3d__bloco{
+  position:absolute; bottom:34%;
+  width:17%; aspect-ratio:1;
+  border-radius:5px;
+  background:linear-gradient(160deg, #3a3050, #221a34);
+  border:1px solid rgba(180,92,240,.5);
+  transform-style:preserve-3d;
+}
+.prog3d__bloco--1{ left:22%; transform:translateZ(14px); animation:prog-flutua 4.2s ease-in-out infinite; }
+.prog3d__bloco--2{ left:42%; transform:translateZ(26px); animation:prog-flutua 4.2s ease-in-out .5s infinite; }
+.prog3d__bloco--3{ left:62%; transform:translateZ(40px); animation:prog-flutua 4.2s ease-in-out 1s infinite; }
+.prog3d__moeda{
+  position:absolute; left:70%; bottom:64%;
+  width:15%; aspect-ratio:1; border-radius:50%;
+  background:linear-gradient(150deg, #ffe9a3, #fec800 45%, #b8790a);
+  box-shadow:0 0 16px rgba(254,200,0,.55);
+  transform:translateZ(62px);
+  animation:prog-flutua 3.6s ease-in-out .3s infinite;
+}
+
+@keyframes prog-flutua{
+  0%,100%{ filter:brightness(1); }
+  50%    { filter:brightness(1.22); }
+}
+
+.prog-chamada{ margin:.2rem 0 0; font-size:.95rem; color:var(--texto-fraco); }
+.prog-chamada strong{ color:var(--texto); }
+.prog-chamada__valor{ color:var(--amarelo) !important; }
+
+.prog-lista{ list-style:none; margin:.7rem 0 0; padding:.7rem 0 0; display:grid; gap:.5rem;
+  border-top:1px solid var(--superficie-borda); }
+.prog-lista li{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  grid-template-areas:
+    "data nome  valor"
+    "data quando valor";
+  gap:.1rem .6rem;
+  align-items:baseline;
+}
+.prog-lista__data{ grid-area:data; align-self:center; font-family:var(--fonte-dados); font-size:.78rem;
+  color:var(--texto-fraquissimo); font-variant-numeric:tabular-nums; }
+.prog-lista__nome{ grid-area:nome; font-size:.9rem; overflow-wrap:anywhere; }
+.prog-lista__quando{ grid-area:quando; font-size:.72rem; color:var(--texto-fraquissimo); }
+.prog-lista__valor{ grid-area:valor; align-self:center; font-family:var(--fonte-dados); font-size:.9rem;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+.prog-mais{ margin:.5rem 0 0; font-size:.78rem; color:var(--texto-fraquissimo); }
+.prog-lista li.prog-lista--vencido{ position:relative; padding-left:.6rem; }
+.prog-lista li.prog-lista--vencido::before{ content:""; position:absolute; left:0; top:.15rem; bottom:.15rem;
+  width:2px; border-radius:2px; background:var(--amarelo-quente); }
+.prog-lista--vencido .prog-lista__quando{ color:var(--amarelo-quente); }
+.prog-vencidos{ margin:.7rem 0 0; padding:.5rem .7rem; border-radius:.6rem;
+  background:var(--amarelo-fraco); border:1px solid rgba(254,200,0,.24);
+  font-size:.78rem; line-height:1.5; color:var(--texto-fraco); }
+.prog-linha li.prog-linha--vencido .prog-linha__ponto{ background:var(--amarelo-quente);
+  box-shadow:0 0 0 3px var(--amarelo-fraco); }
+
+.prog-contas{ margin:.85rem 0 0; padding:.75rem 0 0; border-top:1px solid var(--superficie-borda);
+  display:grid; gap:.4rem; }
+.prog-contas > div{ display:flex; justify-content:space-between; gap:.8rem; align-items:baseline; }
+.prog-contas dt{ font-size:.85rem; color:var(--texto-fraco); }
+.prog-contas dd{ margin:0; font-family:var(--fonte-dados); font-size:.9rem; font-variant-numeric:tabular-nums; }
+.prog-contas__preso dd, .prog-contas dd.prog-contas__preso{ color:var(--amarelo); }
+.prog-contas__sobra{ padding-top:.4rem; border-top:1px dashed var(--superficie-borda); }
+.prog-contas__sobra dt{ color:var(--texto); font-weight:600; }
+.prog-contas__sobra dd{ color:var(--verde); font-size:1.05rem; }
+
+.prog-nota{ margin:.7rem 0 0; font-size:.8rem; line-height:1.5; color:var(--texto-fraquissimo); }
+
+.prog-modal__intro{ font-size:.88rem; color:var(--texto-fraco); }
+.prog-linha{ list-style:none; margin:1rem 0 0; padding:0 0 0 1.1rem; display:grid; gap:1rem;
+  border-left:1px solid var(--superficie-borda); }
+.prog-linha li{ position:relative; display:flex; justify-content:space-between; gap:.8rem; align-items:flex-start; }
+.prog-linha__ponto{ position:absolute; left:-1.42rem; top:.32rem; width:9px; height:9px; border-radius:50%;
+  background:var(--roxo-neon); box-shadow:0 0 8px var(--roxo-glow); }
+.prog-linha__hoje .prog-linha__ponto{ background:var(--amarelo); box-shadow:0 0 10px rgba(254,200,0,.6); }
+.prog-linha strong{ display:block; font-size:.9rem; }
+.prog-linha span{ font-size:.78rem; color:var(--texto-fraquissimo); font-family:var(--fonte-dados); }
+.prog-linha em{ font-style:normal; font-size:.78rem; font-family:var(--fonte-dados); color:var(--texto-fraco);
+  white-space:nowrap; }
+
+@media (max-width: 560px){
+  .prog-linha li{ flex-direction:column; gap:.15rem; }
+  .prog-contas > div{ gap:.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .prog3d__bloco, .prog3d__moeda{ animation:none; }
+  .prog3d__palco{ transition:none; }
+}
+
+.finck-instalar{
+  position:fixed; z-index:70;
+  left:50%; bottom:calc(env(safe-area-inset-bottom) + 5.2rem);
+  transform:translate(-50%, 1.2rem);
+  width:min(100% - 1.6rem, 460px);
+  display:flex; align-items:center; gap:.6rem;
+  padding:.6rem .7rem .6rem .95rem;
+  border-radius:14px;
+  background:var(--vidro-alto);
+  backdrop-filter:blur(16px) saturate(140%);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);
+  border:1px solid rgba(147,51,196,.4);
+  box-shadow:var(--sombra-alta);
+  opacity:0;
+  transition:opacity .35s ease, transform .35s cubic-bezier(.22,.61,.36,1);
+}
+.finck-instalar--visivel{ opacity:1; transform:translate(-50%, 0); }
+.finck-instalar__texto{ flex:1 1 auto; font-size:.82rem; line-height:1.4; color:var(--texto-fraco); }
+.finck-instalar__acao{
+  flex:none; padding:.42rem .85rem; border-radius:99px;
+  border:1px solid rgba(147,51,196,.5); background:var(--roxo-vidro);
+  color:var(--texto); font-family:var(--fonte-corpo); font-size:.8rem; font-weight:600; cursor:pointer;
+}
+.finck-instalar__acao:hover{ border-color:var(--roxo-neon); }
+.finck-instalar__fechar{
+  flex:none; width:1.8rem; height:1.8rem; border-radius:50%;
+  border:1px solid var(--superficie-borda); background:none;
+  color:var(--texto-fraquissimo); font-size:.72rem; cursor:pointer;
+}
+
+.reality-cta--destaque{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  border-color:rgba(147,51,196,.42);
+}
+
+.reality-cta--destaque::before{
+  content:"";
+  position:absolute; inset:-2px;
+  z-index:-1;
+  border-radius:inherit;
+  background:conic-gradient(from var(--giro, 0deg),
+    transparent 0deg,
+    rgba(180,92,240,.55) 60deg,
+    rgba(254,200,0,.5) 120deg,
+    transparent 200deg,
+    transparent 360deg);
+  animation:reality-borda 9s linear infinite;
+}
+
+.reality-cta--destaque::after{
+  content:"";
+  position:absolute; inset:1px;
+  z-index:-1;
+  border-radius:inherit;
+  background:
+    radial-gradient(120% 100% at 12% 0%, rgba(147,51,196,.28), transparent 62%),
+    var(--superficie-alta);
+}
+
+@property --giro{
+  syntax:"<angle>";
+  initial-value:0deg;
+  inherits:false;
+}
+
+@keyframes reality-borda{
+  to{ --giro:360deg; }
+}
+
+.reality-cta__selo{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.24rem .62rem;
+  margin-bottom:.5rem;
+  border-radius:99px;
+  border:1px solid rgba(254,200,0,.4);
+  background:var(--amarelo-fraco);
+  color:var(--amarelo);
+  font-family:var(--fonte-dados);
+  font-size:.66rem; letter-spacing:.09em; text-transform:uppercase;
+}
+.reality-cta__selo::before{
+  content:"";
+  width:5px; height:5px; border-radius:50%;
+  background:var(--amarelo);
+  box-shadow:0 0 8px var(--amarelo);
+  animation:reality-pisca 2.4s ease-in-out infinite;
+}
+
+@keyframes reality-pisca{
+  0%,100%{ opacity:1; }
+  50%    { opacity:.35; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .reality-cta--destaque::before{ animation:none; }
+  .reality-cta__selo::before{ animation:none; }
+}
+
+.aviso-fechamento{
+  display:flex; align-items:center; justify-content:space-between; gap:.8rem;
+  flex-wrap:wrap;
+  padding:.85rem 1rem;
+  border-radius:var(--raio-md);
+  border:1px solid rgba(254,200,0,.34);
+  background:var(--amarelo-fraco);
+  font-size:.88rem;
+}
+.aviso-fechamento span{ flex:1 1 15rem; color:var(--texto); }
+
+.modal--revisao{ max-width:460px; }
+
+.revisao__passo{
+  margin:0 0 .8rem;
+  font-family:var(--fonte-dados); font-size:.72rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--texto-fraquissimo);
+}
+
+.revisao__cabeca{
+  padding:1rem;
+  border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda);
+  background:rgba(255,255,255,.03);
+  text-align:center;
+}
+.revisao__tipo{
+  display:inline-block; margin-bottom:.4rem;
+  font-family:var(--fonte-dados); font-size:.7rem; letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.revisao__tipo--entrada{ color:var(--verde); }
+.revisao__tipo--saida{ color:var(--vermelho); }
+.revisao__valor{
+  display:block;
+  font-family:var(--fonte-display); font-size:2rem; font-weight:700;
+  letter-spacing:-.02em; font-variant-numeric:tabular-nums;
+}
+.revisao__item{ margin:.35rem 0 0; font-size:.85rem; color:var(--texto-fraco); }
+
+.revisao__pergunta{ margin:1rem 0 .7rem; text-align:center; font-size:.95rem; color:var(--texto); }
+
+.revisao__acoes{ display:grid; gap:.5rem; }
+.revisao__adiar{
+  margin-top:.2rem;
+  background:none; border:none;
+  color:var(--texto-fraquissimo);
+  font-family:var(--fonte-corpo); font-size:.82rem;
+  text-decoration:underline; text-underline-offset:3px;
+  cursor:pointer;
+}
+.revisao__adiar:hover{ color:var(--texto-fraco); }
+
+.revisao__outro{ margin-top:.9rem; padding-top:.9rem; border-top:1px solid var(--superficie-borda); }
+.revisao__dica{ margin:.4rem 0 .7rem; font-size:.78rem; color:var(--texto-fraquissimo); }
+
+.revisao__placar{
+  list-style:none; margin:1rem 0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(5rem, 1fr)); gap:.6rem;
+}
+.revisao__placar li{
+  padding:.6rem .4rem; text-align:center;
+  border-radius:var(--raio-sm);
+  border:1px solid var(--superficie-borda);
+  background:rgba(255,255,255,.03);
+}
+.revisao__placar strong{ display:block; font-family:var(--fonte-display); font-size:1.3rem; }
+.revisao__placar span{ font-size:.7rem; color:var(--texto-fraquissimo); }
+.revisao__nota{ font-size:.8rem; color:var(--texto-fraquissimo); text-align:center; }
+
+.fech-titulo{
+  margin:0 0 .8rem;
+  font-family:var(--fonte-display); font-size:1.1rem; font-weight:700;
+  text-transform:capitalize;
+}
+.fech-aviso{
+  padding:.7rem .9rem; border-radius:var(--raio-sm);
+  border:1px solid rgba(254,200,0,.32); background:var(--amarelo-fraco);
+  font-size:.83rem; color:var(--texto-fraco);
+}
+.fech-bloco{ margin:1rem 0 0; }
+.fech-bloco h4{ margin:0 0 .5rem; font-size:.8rem; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--texto-fraquissimo); }
+
+.fech-linha{ padding:.55rem 0; border-top:1px solid var(--superficie-borda); }
+.fech-linha dt{ font-size:.88rem; margin-bottom:.25rem; }
+.fech-linha dd{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:.2rem 1rem; }
+.fech-linha__par{ display:flex; gap:.35rem; align-items:baseline; }
+.fech-linha__par em{ font-style:normal; font-size:.72rem; color:var(--texto-fraquissimo); }
+.fech-linha__par b{ font-family:var(--fonte-dados); font-size:.85rem; font-variant-numeric:tabular-nums; }
+.fech-linha__dif{ margin-left:auto; font-family:var(--fonte-dados); font-size:.82rem; }
+.fech-linha--simples dd{ justify-content:space-between; }
+
+.fech-resultado{
+  margin-top:.9rem; padding:.8rem 1rem;
+  border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda);
+  background:rgba(255,255,255,.03);
+  display:flex; justify-content:space-between; align-items:center; gap:.8rem;
+}
+.fech-resultado strong{ font-family:var(--fonte-display); font-size:1.3rem; font-variant-numeric:tabular-nums; }
+.fech-nota{ margin:.6rem 0 0; font-size:.78rem; color:var(--texto-fraquissimo); line-height:1.5; }
+.fech-acoes{ display:grid; gap:.5rem; margin-top:1.1rem; }
+
+.plano-renda{ border:1px solid var(--superficie-borda); border-radius:var(--raio-md);
+  padding:1rem; margin:.4rem 0; }
+.plano-renda legend{ padding:0 .4rem; font-size:.9rem; font-weight:600; }
+.plano-renda__item{ margin-top:.9rem; padding-top:.9rem; border-top:1px solid var(--superficie-borda); }
+.plano-renda__item:first-of-type{ border-top:none; padding-top:0; }
+.plano-renda__nome{ display:block; font-size:.88rem; font-weight:600; margin-bottom:.45rem; }
+.plano-renda__modo{ display:flex; gap:1rem; margin-bottom:.5rem; }
+.plano-renda__modo label{ display:flex; align-items:center; gap:.35rem; font-size:.82rem;
+  color:var(--texto-fraco); cursor:pointer; }
+.plano-renda__campos label{ display:flex; align-items:center; gap:.5rem; font-size:.85rem; }
+.plano-renda__campos input{ flex:1; }
+.plano-renda__previa{ margin:.9rem 0 0; font-size:.82rem; color:var(--amarelo); }
+
+@media (max-width: 560px){
+  .fech-linha dd{ flex-direction:column; align-items:flex-start; gap:.15rem; }
+  .fech-linha__dif{ margin-left:0; }
 }

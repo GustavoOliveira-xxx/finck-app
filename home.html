@@ -70,6 +70,10 @@
 
     <section id="cardContas"></section>
 
+    <div class="aviso-fechamento" id="avisoFechamento" hidden></div>
+
+    <section class="bloco bloco--programacao" id="programacaoFinanceira"></section>
+
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h2>As faces do seu dinheiro</h2>
@@ -109,11 +113,12 @@
       </div>
     </section>
 
-    <section class="reality-cta">
+    <section class="reality-cta reality-cta--destaque">
       <div class="reality-cta__marca">
         <div class="marca3d-cena" data-marca3d data-logo="assets/logo-reality-transparente.png" data-nome="FinCK of Reality"></div>
       </div>
       <div class="reality-cta__texto">
+        <span class="reality-cta__selo">o coração do FinCK</span>
         <h2>FinCK of Reality</h2>
         <p>Vai comprar algo? Descubra antes quantas horas de trabalho isso custa e o impacto nas suas metas.</p>
         <p class="reality-cta__hora">Sua hora vale <strong id="valorHora">R$ 0,00</strong> · seu dia vale <strong id="valorDia">R$ 0,00</strong></p>
@@ -234,10 +239,35 @@
     </div>
   </div>
 
+  <div id="modalRevisao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloRevisao">
+    <div class="modal modal--revisao">
+      <button type="button" class="fechar" data-fechar="modalRevisao" aria-label="Fechar">✕</button>
+      <h3 id="tituloRevisao">Movimentações previstas</h3>
+      <div id="conteudoRevisao"></div>
+    </div>
+  </div>
+
+  <div id="modalFechamento" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloFechamento">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalFechamento" aria-label="Fechar">✕</button>
+      <h3 id="tituloFechamento">Fechamento do ciclo</h3>
+      <div id="conteudoFechamento"></div>
+    </div>
+  </div>
+
+  <div id="modalProgramacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloProgramacao">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalProgramacao" aria-label="Fechar">✕</button>
+      <h3 id="tituloProgramacao">Programação completa</h3>
+      <div id="conteudoProgramacao"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>
+  <script src="js/data-input.js"></script>
   <script src="js/store.js"></script>
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
@@ -245,7 +275,13 @@
   <script src="js/contas-engine.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/ocorrencias.js"></script>
+  <script src="js/fechamento.js"></script>
+  <script src="js/ocorrencias-ui.js"></script>
+  <script src="js/programacao.js"></script>
+  <script src="js/programacao-home.js"></script>
   <script src="js/home.js"></script>
+  <script src="js/fechamento-ui.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>
 </body>

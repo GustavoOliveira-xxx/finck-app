@@ -1,12 +1,3 @@
-
-
-/**
- * Busca automática do preço a partir do link do produto.
- *
- * A ideia: o valor trazido é sempre uma sugestão. Ele preenche o campo de
- * preço, o usuário confere e pode corrigir. Nada é salvo automaticamente —
- * a decisão continua sendo dele, que é o ponto do FinCK of Reality.
- */
 document.addEventListener("DOMContentLoaded", () => {
   const U = window.FinckUtils;
   const S = window.FinckStore;
@@ -21,9 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const ENDPOINT = `${cfg.SUPABASE_URL}/functions/v1/buscar-preco`;
 
-  /* ---------------------------------------------------------------- *
-   * Aviso conforme a loja detectada no link
-   * ---------------------------------------------------------------- */
   const TEXTOS = {
     bloqueada: (c) =>
       `<strong>${U.escapeHTML(c.loja)} não permite busca automática.</strong> ` +
@@ -65,9 +53,6 @@ document.addEventListener("DOMContentLoaded", () => {
   campoLink.addEventListener("paste", () => setTimeout(avaliarLink, 0));
   avaliarLink();
 
-  /* ---------------------------------------------------------------- *
-   * A busca
-   * ---------------------------------------------------------------- */
   function carregando(ligado) {
     botao.disabled = ligado || classificacao.status === "bloqueada";
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
@@ -75,13 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ligado ? "Buscando…" : "Buscar preço do link";
   }
 
-  /**
-   * O painel do que foi encontrado.
-   *
-   * Só entra linha que existe: página sem parcelamento não mostra parcelamento,
-   * produto sem promoção não mostra preço riscado. Nada de "—" ou "não
-   * informado" ocupando espaço.
-   */
   function montarPainel(d) {
     const linhas = [];
 
@@ -110,9 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ]);
     }
 
-    // Trunca em vez de arredondar: é assim que as lojas anunciam o selo
-    // (439,90 → 349,90 dá 20,4%, e a loja estampa "20% OFF"). Arredondar
-    // mostraria 21% e brigaria com o que está na tela da loja.
     const selo = d.desconto
       ? `<span class="panorama__selo">${Math.floor(d.desconto.percentual)}% OFF</span>`
       : "";
@@ -223,7 +198,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       U.escreverMoeda("itemPrice", dados.preco);
 
-      // só preenche o nome se o usuário ainda não escreveu nada
       const campoNome = document.getElementById("itemName");
       if (campoNome && !campoNome.value.trim() && dados.titulo) {
         campoNome.value = String(dados.titulo).slice(0, 80);
@@ -238,9 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* ---------------------------------------------------------------- *
-   * Modal com a lista de lojas
-   * ---------------------------------------------------------------- */
   function montarModal() {
     const host = document.getElementById("conteudoLojas");
     if (!host) return;
@@ -296,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // fecha o modal mesmo se ligarModais() não tiver rodado nesta página
   document.querySelectorAll('[data-fechar="modalLojas"]').forEach((b) =>
     b.addEventListener("click", () => U.fecharModal("modalLojas")),
   );
