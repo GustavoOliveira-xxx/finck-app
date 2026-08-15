@@ -21,23 +21,32 @@
 </head>
 <body data-page="home">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
-  <div class="finck-carga" data-finck-carga aria-hidden="true">
-    <div class="finck-carga__nucleo">
-      <svg class="finck-carga__orbitas" viewBox="0 0 220 220" aria-hidden="true">
-        <circle class="finck-carga__anel finck-carga__anel--externo" cx="110" cy="110" r="104"/>
-        <circle class="finck-carga__anel finck-carga__anel--medio" cx="110" cy="110" r="88"/>
-        <g class="finck-carga__satelite-g">
-          <circle class="finck-carga__satelite" cx="110" cy="6" r="5"/>
-        </g>
-        <g class="finck-carga__satelite-g finck-carga__satelite-g--2">
-          <circle class="finck-carga__satelite finck-carga__satelite--roxo" cx="110" cy="22" r="3.5"/>
-        </g>
-      </svg>
-      <img class="finck-carga__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
+  <div class="finck-carga finck-carga--cofre" data-finck-carga aria-hidden="true">
+    <div class="cofre">
+      <div class="cofre__folha cofre__folha--topo">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+      <div class="cofre__folha cofre__folha--base">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+
+      <div class="cofre__nucleo">
+        <div class="cofre__selo">
+          <svg class="cofre__anel" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="cofre__anel-base" cx="60" cy="60" r="52"></circle>
+            <circle class="cofre__anel-arco" cx="60" cy="60" r="52"
+                    stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <img class="cofre__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
+        </div>
+        <p class="cofre__marca">FinCK</p>
+        <p class="cofre__pct" data-cofre-pct>0%</p>
+      </div>
+
+      <span class="cofre__fresta"></span>
     </div>
-    <p class="finck-carga__marca">FinCK</p>
-    <p class="finck-carga__frase">Traduzindo preço em tempo de vida…</p>
-    <div class="finck-carga__barra"><span class="finck-carga__preenche"></span></div>
   </div>
 
   <header data-finck-header></header>

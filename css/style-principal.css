@@ -2882,51 +2882,345 @@ table th{
   text-transform:uppercase; color:var(--texto-fraquissimo);
 }
 
-.prog3d{
-  align-self:center;
-  width:clamp(120px, 30vw, 168px);
-  aspect-ratio:1.4;
-  perspective:640px;
-  margin:.2rem 0 .1rem;
-}
-.prog3d__palco{
+/* ===============================================================
+   PROGRAMAÇÃO FINANCEIRA — pista 3D dos próximos 60 dias
+   Cada torre é um dia com saída marcada: a posição conta quando,
+   a altura conta quanto. A faixa acesa no chão vai até onde o
+   saldo de hoje ainda cobre.
+   =============================================================== */
+
+.pf3d{
+  --giro:-15deg;
+  --incl:63deg;
   --px:0; --py:0;
-  position:relative; width:100%; height:100%;
-  transform-style:preserve-3d;
-  transform:rotateX(calc(56deg + var(--py) * 10deg)) rotateZ(calc(-38deg + var(--px) * 16deg));
-  transition:transform .45s cubic-bezier(.22,.61,.36,1);
-}
-.prog3d__base{
-  position:absolute; left:8%; top:26%;
-  width:84%; height:48%;
-  border-radius:12px;
-  border:1px solid rgba(180,92,240,.34);
-  background:linear-gradient(135deg, rgba(147,51,196,.16), rgba(104,12,144,.05));
-  box-shadow:0 0 24px -6px var(--roxo-glow);
-}
-.prog3d__bloco{
-  position:absolute; bottom:34%;
-  width:17%; aspect-ratio:1;
-  border-radius:5px;
-  background:linear-gradient(160deg, #3a3050, #221a34);
-  border:1px solid rgba(180,92,240,.5);
-  transform-style:preserve-3d;
-}
-.prog3d__bloco--1{ left:22%; transform:translateZ(14px); animation:prog-flutua 4.2s ease-in-out infinite; }
-.prog3d__bloco--2{ left:42%; transform:translateZ(26px); animation:prog-flutua 4.2s ease-in-out .5s infinite; }
-.prog3d__bloco--3{ left:62%; transform:translateZ(40px); animation:prog-flutua 4.2s ease-in-out 1s infinite; }
-.prog3d__moeda{
-  position:absolute; left:70%; bottom:64%;
-  width:15%; aspect-ratio:1; border-radius:50%;
-  background:linear-gradient(150deg, #ffe9a3, #fec800 45%, #b8790a);
-  box-shadow:0 0 16px rgba(254,200,0,.55);
-  transform:translateZ(62px);
-  animation:prog-flutua 3.6s ease-in-out .3s infinite;
+  --cobertura:1;
+  --t0:0;
+  position:relative;
+  margin:.5rem 0 .2rem;
 }
 
-@keyframes prog-flutua{
-  0%,100%{ filter:brightness(1); }
-  50%    { filter:brightness(1.22); }
+.pf3d__janela{
+  position:relative;
+  height:clamp(162px, 42vw, 210px);
+  border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda);
+  background:
+    radial-gradient(100% 80% at 50% 118%, rgba(147,51,196,.20), transparent 62%),
+    radial-gradient(70% 60% at 10% -12%, rgba(254,200,0,.05), transparent 58%),
+    rgba(255,255,255,.014);
+  overflow:hidden;
+  isolation:isolate;
+  touch-action:pan-y;
+}
+
+.pf3d__camera{
+  position:absolute; inset:0;
+  perspective:660px;
+  perspective-origin:50% 30%;
+}
+
+.pf3d__pista{
+  position:absolute;
+  left:7%; right:7%;
+  top:41%; height:37%;
+  transform-style:preserve-3d;
+  transform:
+    rotateX(calc(var(--incl) + var(--py) * 6deg))
+    rotateZ(calc(var(--giro) + var(--px) * 8deg));
+  transition:transform .5s var(--ease-out);
+}
+
+/* ---- chão ---- */
+
+.pf3d__chao{
+  position:absolute; inset:0;
+  border-radius:10px;
+  overflow:hidden;
+  background:linear-gradient(180deg, rgba(147,51,196,.16), rgba(104,12,144,.05));
+  border:1px solid rgba(180,92,240,.30);
+  box-shadow:0 0 52px -14px var(--roxo-glow),
+             inset 0 0 30px -12px rgba(180,92,240,.65);
+}
+.pf3d__grade{
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(90deg, rgba(180,92,240,.30) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(180,92,240,.13) 1px, transparent 1px);
+  background-size:8.3333% 50%;
+  opacity:.72;
+}
+.pf3d__cobertura{
+  position:absolute; left:0; top:0; bottom:0;
+  width:calc(var(--cobertura) * 100%);
+  background:linear-gradient(90deg, rgba(31,209,143,.24), rgba(31,209,143,.06));
+  box-shadow:inset -1px 0 0 rgba(31,209,143,.55);
+  transition:width 1.1s var(--ease-out);
+}
+.pf3d__descoberto{
+  position:absolute; top:0; bottom:0; right:0;
+  left:calc(var(--cobertura) * 100%);
+  background:repeating-linear-gradient(-52deg,
+    rgba(255,77,94,.20) 0 5px, rgba(255,77,94,0) 5px 11px);
+  transition:left 1.1s var(--ease-out);
+}
+.pf3d__varredura{
+  position:absolute; top:-6%; bottom:-6%;
+  width:20%;
+  background:linear-gradient(90deg, transparent, rgba(226,196,255,.26), transparent);
+  animation:pf3d-varre 7.5s linear infinite;
+}
+
+/* ---- marco de hoje ---- */
+
+.pf3d__hoje{
+  position:absolute;
+  left:calc(var(--t0) * 100%); top:50%;
+  width:30px; height:30px;
+  margin:-15px 0 0 -15px;
+  border-radius:50%;
+  border:1px solid rgba(254,200,0,.65);
+  box-shadow:0 0 16px rgba(254,200,0,.4), inset 0 0 10px rgba(254,200,0,.22);
+  animation:pf3d-pulso 3s ease-out infinite;
+  pointer-events:none;
+}
+.pf3d__feixe{
+  position:absolute;
+  left:calc(var(--t0) * 100%); top:50%;
+  width:44px; height:2px;
+  margin:-1px 0 0 0;
+  transform-origin:0 50%;
+  transform:rotateY(-90deg);
+  background:linear-gradient(90deg, rgba(254,200,0,.9), transparent);
+  box-shadow:0 0 14px rgba(254,200,0,.5);
+  pointer-events:none;
+}
+
+/* ---- parede do rompimento: onde o saldo acaba ---- */
+
+.pf3d__ruptura{
+  position:absolute;
+  left:calc(var(--cobertura) * 100%);
+  top:-9%; height:118%;
+  width:56px;
+  transform-origin:0 50%;
+  transform:rotateY(-90deg);
+  background:linear-gradient(90deg,
+    rgba(255,77,94,.40), rgba(255,77,94,.14) 58%, transparent);
+  border-left:1px solid rgba(255,120,132,.75);
+  box-shadow:0 0 30px rgba(255,77,94,.4);
+  animation:pf3d-alerta 3.2s ease-in-out infinite;
+  transition:left 1.1s var(--ease-out);
+  pointer-events:none;
+}
+
+/* ---- torres ---- */
+
+.pf3d__torre{
+  --w:20px;
+  --h:30px;
+  --tom-base:rgba(38,16,62,.96);
+  --tom-topo:rgba(147,51,196,.88);
+  --tom-tampa:linear-gradient(140deg, #d6b2ff, #8c2fbc);
+  --tom-luz:rgba(180,92,240,.55);
+
+  position:absolute;
+  left:calc(var(--t) * 100%); top:50%;
+  width:var(--w); height:var(--w);
+  margin:calc(var(--w) / -2) 0 0 calc(var(--w) / -2);
+  transform-style:preserve-3d;
+  animation:pf3d-erguer 1s cubic-bezier(.2,1.06,.36,1) both;
+  animation-delay:calc(var(--i) * 90ms + 180ms);
+  cursor:pointer;
+}
+.pf3d__torre--fora{
+  --tom-base:rgba(72,12,26,.96);
+  --tom-topo:rgba(255,77,94,.82);
+  --tom-tampa:linear-gradient(140deg, #ffb3bc, #e63347);
+  --tom-luz:rgba(255,77,94,.5);
+}
+.pf3d__torre--vencida{
+  --tom-base:rgba(74,44,0,.96);
+  --tom-topo:rgba(255,176,32,.88);
+  --tom-tampa:linear-gradient(140deg, #ffe9a3, #e59400);
+  --tom-luz:rgba(255,176,32,.55);
+}
+
+.pf3d__face{
+  position:absolute; left:0; top:0;
+}
+.pf3d__face--n,
+.pf3d__face--s{
+  width:var(--w); height:var(--h);
+  transform-origin:50% 0;
+  background:linear-gradient(180deg, var(--tom-base), var(--tom-topo));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.pf3d__face--n{ transform:rotateX(90deg); }
+.pf3d__face--s{ transform:translateY(var(--w)) rotateX(90deg); }
+
+.pf3d__face--o,
+.pf3d__face--l{
+  width:var(--h); height:var(--w);
+  transform-origin:0 50%;
+  background:linear-gradient(90deg, var(--tom-base), var(--tom-topo));
+  filter:brightness(.82);
+}
+.pf3d__face--o{ transform:rotateY(-90deg); }
+.pf3d__face--l{ transform:translateX(var(--w)) rotateY(-90deg); }
+
+.pf3d__face--topo{
+  width:var(--w); height:var(--w);
+  border-radius:2px;
+  transform:translateZ(var(--h));
+  background:var(--tom-tampa);
+  box-shadow:0 0 18px var(--tom-luz);
+}
+
+.pf3d__brasa{
+  position:absolute; left:50%; top:50%;
+  width:calc(var(--w) * 2.5); height:calc(var(--w) * 2.5);
+  margin:calc(var(--w) * -1.25) 0 0 calc(var(--w) * -1.25);
+  border-radius:50%;
+  background:radial-gradient(circle, var(--tom-luz), transparent 66%);
+  filter:blur(4px);
+  transform:translateZ(.5px);
+  animation:pf3d-brasa 3.6s ease-in-out infinite;
+  animation-delay:calc(var(--i) * 230ms);
+  pointer-events:none;
+}
+
+.pf3d__moeda{
+  position:absolute; left:50%; top:50%;
+  width:9px; height:9px;
+  margin:-4.5px 0 0 -4.5px;
+  border-radius:50%;
+  background:linear-gradient(140deg, #ffe9a3, #fec800 46%, #b8790a);
+  box-shadow:0 0 12px rgba(254,200,0,.65);
+  transform:translateZ(var(--h));
+  opacity:0;
+  pointer-events:none;
+}
+
+.pf3d__torre--foco .pf3d__face--topo{
+  box-shadow:0 0 34px var(--tom-luz), inset 0 0 0 1px rgba(255,255,255,.55);
+  filter:brightness(1.3);
+}
+.pf3d__torre--foco .pf3d__brasa{ filter:blur(6px) brightness(1.45); }
+.pf3d__torre--foco .pf3d__moeda{ animation:pf3d-moeda 2s ease-out infinite; }
+
+.pf3d__torre--fantasma{
+  --tom-base:rgba(255,255,255,.05);
+  --tom-topo:rgba(180,92,240,.20);
+  --tom-tampa:rgba(180,92,240,.12);
+  --tom-luz:rgba(180,92,240,.18);
+  cursor:default;
+}
+.pf3d__torre--fantasma .pf3d__face--topo{
+  border:1px dashed rgba(180,92,240,.4);
+  box-shadow:none;
+}
+.pf3d__torre--fantasma .pf3d__brasa{ animation:none; opacity:.5; }
+
+/* ---- camada 2D sobre a cena ---- */
+
+.pf3d__selo{
+  position:absolute; right:.5rem; top:.5rem;
+  padding:.22rem .55rem;
+  border-radius:99px;
+  font-family:var(--fonte-dados);
+  font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  border:1px solid rgba(31,209,143,.42);
+  background:rgba(31,209,143,.12);
+  color:var(--verde);
+  max-width:calc(100% - 1rem);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pf3d__selo--risco{
+  border-color:rgba(255,77,94,.45);
+  background:rgba(255,77,94,.12);
+  color:var(--vermelho);
+}
+.pf3d__selo--neutro{
+  border-color:var(--superficie-borda-forte);
+  background:rgba(255,255,255,.05);
+  color:var(--texto-fraquissimo);
+}
+
+.pf3d__foco{
+  position:absolute;
+  left:.5rem; right:.5rem; bottom:.45rem;
+  display:flex; align-items:baseline; gap:.5rem;
+  padding:.36rem .6rem;
+  border-radius:10px;
+  background:rgba(10,8,16,.66);
+  backdrop-filter:blur(9px);
+  -webkit-backdrop-filter:blur(9px);
+  border:1px solid var(--superficie-borda);
+  font-size:.75rem;
+  color:var(--texto-fraco);
+  transition:opacity .28s var(--ease-suave);
+}
+.pf3d__foco-data{
+  font-family:var(--fonte-dados); font-size:.72rem;
+  color:var(--amarelo); font-variant-numeric:tabular-nums;
+}
+.pf3d__foco-nome{
+  flex:1 1 auto; min-width:0;
+  color:var(--texto);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pf3d__foco-valor{
+  font-family:var(--fonte-dados); font-size:.76rem;
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+  color:var(--texto);
+}
+.pf3d__foco--fora .pf3d__foco-valor{ color:var(--vermelho); }
+.pf3d__foco--vencida .pf3d__foco-data{ color:var(--amarelo-quente); }
+
+/* ---- animações ---- */
+
+@keyframes pf3d-erguer{
+  from{ transform:scaleZ(.02); }
+  to  { transform:scaleZ(1); }
+}
+@keyframes pf3d-varre{
+  from{ transform:translateX(-130%); }
+  to  { transform:translateX(620%); }
+}
+@keyframes pf3d-pulso{
+  0%  { transform:scale(.65); opacity:.9; }
+  70% { transform:scale(1.55); opacity:0; }
+  100%{ transform:scale(1.55); opacity:0; }
+}
+@keyframes pf3d-brasa{
+  0%,100%{ opacity:.5; }
+  50%    { opacity:.9; }
+}
+@keyframes pf3d-alerta{
+  0%,100%{ opacity:.62; }
+  50%    { opacity:1; }
+}
+@keyframes pf3d-moeda{
+  0%  { opacity:0; transform:translateZ(var(--h)); }
+  22% { opacity:1; }
+  100%{ opacity:0; transform:translateZ(calc(var(--h) + 48px)); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .pf3d__torre,
+  .pf3d__brasa,
+  .pf3d__moeda,
+  .pf3d__hoje,
+  .pf3d__ruptura,
+  .pf3d__varredura{ animation:none; }
+  .pf3d__pista{ transition:none; }
+  .pf3d__varredura{ display:none; }
+}
+
+@media (max-width: 480px){
+  .pf3d__janela{ height:clamp(150px, 46vw, 186px); }
+  .pf3d__torre{ --w:17px; }
+  .pf3d__foco{ font-size:.72rem; }
 }
 
 .prog-chamada{ margin:.2rem 0 0; font-size:.95rem; color:var(--texto-fraco); }
@@ -2988,11 +3282,6 @@ table th{
 @media (max-width: 560px){
   .prog-linha li{ flex-direction:column; gap:.15rem; }
   .prog-contas > div{ gap:.5rem; }
-}
-
-@media (prefers-reduced-motion: reduce){
-  .prog3d__bloco, .prog3d__moeda{ animation:none; }
-  .prog3d__palco{ transition:none; }
 }
 
 .finck-instalar{

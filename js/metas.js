@@ -32,7 +32,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const foco = ordenadas[0];
     const progresso = foco ? U.progresso(foco.current_amount, foco.target_amount) : 0;
-    window.FinckFX?.mirarAlvo?.(progresso, foco ? foco.name : null);
+    const falta = foco ? Math.max(0, Number(foco.target_amount) - Number(foco.current_amount)) : 0;
+    window.FinckFX?.mirarAlvo?.(
+      progresso,
+      foco ? foco.name : null,
+      foco ? (falta > 0 ? `faltam ${U.moeda(falta)}` : "meta concluída") : null);
 
     const legenda = document.getElementById("alvoLegenda");
     if (!legenda) return;
@@ -158,7 +162,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("metaNome").value = m?.name || "";
     U.escreverMoeda("metaAlvo", m?.target_amount || 0);
     U.escreverMoeda("metaAtual", m?.current_amount || 0);
-    window.FinckData.ler("metaPrazo") = m?.deadline ? String(m.deadline).slice(0, 10) : "";
+    window.FinckData.escrever("metaPrazo", m?.deadline ? String(m.deadline).slice(0, 10) : "");
     document.getElementById("metaTaxa").value = m?.rate || 0;
     U.abrirModal("modalMeta");
   }

@@ -63,7 +63,8 @@
     const tela = document.querySelector("[data-finck-carga]");
     if (!tela) return;
 
-    tela.innerHTML = COFRE_HTML;
+    // o cofre já vem no HTML da página; só monta se faltar
+    if (!tela.querySelector(".cofre")) tela.innerHTML = COFRE_HTML;
     tela.classList.add("finck-carga--cofre");
     document.body.classList.add("finck-carregando");
 
@@ -294,76 +295,73 @@
     cena3d();
     prisma();
     medalha();
-    meta3d();
+    cristalMeta();
     marcaReality();
   }
 
-  const RAIO_ANEL = 46;
-  const VOLTA_ANEL = 2 * Math.PI * RAIO_ANEL;
+  const RAIO_ARCO = 54;
+  const VOLTA_ARCO = 2 * Math.PI * RAIO_ARCO;
+  const FACES_CRISTAL = 6;
 
-  function montarMeta3d(cena) {
+  function montarCristal(cena) {
     if (cena.dataset.montado) return;
     cena.dataset.montado = "1";
 
+    const faces = (classe) => Array.from({ length: FACES_CRISTAL }, (_, i) =>
+      `<span class="${classe}" style="--i:${i}"></span>`).join("");
+
+    const repetir = (classe, quantas) => Array.from({ length: quantas }, (_, i) =>
+      `<i class="${classe}" style="--i:${i}"></i>`).join("");
+
     cena.innerHTML = `
-      <div class="meta3d">
-        <div class="meta3d__palco">
-          <span class="meta3d__brilho"></span>
+      <div class="cristal cristal--vazio">
+        <div class="cristal__palco">
+          <span class="cristal__halo"></span>
+          <span class="cristal__aro cristal__aro--3"></span>
+          <span class="cristal__aro cristal__aro--2"></span>
 
-          <span class="meta3d__disco meta3d__disco--3"></span>
-          <span class="meta3d__disco meta3d__disco--2"></span>
-          <span class="meta3d__disco meta3d__disco--1"></span>
-
-          <svg class="meta3d__anel" viewBox="0 0 100 100" aria-hidden="true">
-            <circle class="meta3d__anel-base" cx="50" cy="50" r="${RAIO_ANEL}"></circle>
-            <circle class="meta3d__anel-arco" cx="50" cy="50" r="${RAIO_ANEL}"
-                    stroke-dasharray="${VOLTA_ANEL.toFixed(2)}"
-                    stroke-dashoffset="${VOLTA_ANEL.toFixed(2)}"></circle>
+          <svg class="cristal__arco" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="cristal__arco-base" cx="60" cy="60" r="${RAIO_ARCO}"></circle>
+            <circle class="cristal__arco-luz" cx="60" cy="60" r="${RAIO_ARCO}"
+                    stroke-dasharray="${VOLTA_ARCO.toFixed(2)}"
+                    stroke-dashoffset="${VOLTA_ARCO.toFixed(2)}"></circle>
           </svg>
 
-          <span class="meta3d__orbita">
-            <i class="meta3d__fagulha"></i>
-            <i class="meta3d__fagulha meta3d__fagulha--2"></i>
-            <i class="meta3d__fagulha meta3d__fagulha--3"></i>
-          </span>
+          <span class="cristal__orbita">${repetir("cristal__fagulha", 4)}</span>
 
-          <span class="meta3d__orbita meta3d__orbita--interna">
-            <i class="meta3d__fagulha meta3d__fagulha--4"></i>
-            <i class="meta3d__fagulha meta3d__fagulha--5"></i>
-          </span>
+          <div class="cristal__flutua">
+            <div class="cristal__prisma">
+              ${faces("cristal__parede")}
+              <span class="cristal__fundo"></span>
+              <div class="cristal__nucleo">
+                ${faces("cristal__onda")}
+                ${repetir("cristal__bolha", 3)}
+                <span class="cristal__superficie"></span>
+              </div>
+              <span class="cristal__tampa"></span>
+            </div>
+          </div>
 
-          <span class="meta3d__degraus">
-            <i class="meta3d__degrau meta3d__degrau--1"><b></b></i>
-            <i class="meta3d__degrau meta3d__degrau--2"><b></b></i>
-            <i class="meta3d__degrau meta3d__degrau--3"><b></b></i>
-          </span>
-
-          <span class="meta3d__bandeira">
-            <i class="meta3d__mastro"></i>
-            <i class="meta3d__pano"></i>
-          </span>
-
-          <img class="meta3d__arte" src="assets/meta-3d.png" alt="" decoding="async"
-               onerror="this.closest('.meta3d').classList.add('meta3d--sem-arte')">
-
-          <span class="meta3d__sombra"></span>
+          <span class="cristal__base"></span>
+          <span class="cristal__sombra"></span>
         </div>
 
-        <div class="meta3d__rotulo">
-          <strong class="meta3d__pct" data-alvo-pct>—</strong>
-          <span class="meta3d__nome" data-alvo-nome>sem metas ainda</span>
+        <div class="cristal__rotulo">
+          <strong class="cristal__pct" data-alvo-pct>—</strong>
+          <span class="cristal__nome" data-alvo-nome>sem metas ainda</span>
+          <span class="cristal__falta" data-alvo-falta></span>
         </div>
       </div>`;
   }
 
-  function meta3d() {
+  function cristalMeta() {
     const cena = document.querySelector("[data-alvo]");
     if (!cena) return;
 
-    montarMeta3d(cena);
+    montarCristal(cena);
     if (reduzido) return;
 
-    const palco = cena.querySelector(".meta3d__palco");
+    const palco = cena.querySelector(".cristal__palco");
     if (!palco) return;
     let px = 0, py = 0;
 
@@ -382,25 +380,30 @@
     }, () => { px = 0; py = 0; agendar(); });
   }
 
-  function mirarAlvo(progresso, nome) {
+  function mirarAlvo(progresso, nome, nota) {
     const cena = document.querySelector("[data-alvo]");
     if (!cena) return;
-    montarMeta3d(cena);
+    montarCristal(cena);
 
     const p = Math.max(0, Math.min(100, Number(progresso) || 0));
-    const arco = cena.querySelector(".meta3d__anel-arco");
+    const fracao = (p / 100).toFixed(4);
+    const corpo = cena.querySelector(".cristal");
+    const arco = cena.querySelector(".cristal__arco-luz");
     const pct = cena.querySelector("[data-alvo-pct]");
     const rotulo = cena.querySelector("[data-alvo-nome]");
-    const meta = cena.querySelector(".meta3d");
+    const falta = cena.querySelector("[data-alvo-falta]");
 
-    if (arco) {
-      arco.style.strokeDashoffset = (VOLTA_ANEL * (1 - p / 100)).toFixed(2);
+    if (corpo) {
+      corpo.style.setProperty("--meta-p", fracao);
+      corpo.style.setProperty("--meta-calor", fracao);
+      corpo.classList.toggle("cristal--vazio", !nome);
+      corpo.classList.toggle("cristal--cheio", Boolean(nome) && p >= 100);
     }
 
-    if (meta) meta.style.setProperty("--calor", (p / 100).toFixed(3));
-
+    if (arco) arco.style.strokeDashoffset = (VOLTA_ARCO * (1 - p / 100)).toFixed(2);
     if (pct) pct.textContent = nome ? `${Math.round(p)}%` : "—";
     if (rotulo) rotulo.textContent = nome || "sem metas ainda";
+    if (falta) falta.textContent = nome ? (nota || "") : "";
   }
 
   const CAMADAS_EXTRUSAO = 26;
