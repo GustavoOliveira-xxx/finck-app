@@ -1049,11 +1049,23 @@ body.finck-carregando{ overflow:hidden; }
 
 .finck-carga--cofre{
   --carga:0;
-  background:#07060a;
+  background:transparent;
   padding:0;
   display:block;
   overflow:hidden;
 }
+
+.finck-carga--cofre::before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgba(104,12,144,.32), transparent 68%),
+    #07060a;
+  opacity:1;
+  transition:opacity 620ms var(--ease-suave);
+  pointer-events:none;
+}
+.finck-carga--cofre.cofre--destravado::before{ opacity:0; }
 
 .cofre{
   position:absolute; inset:0;
