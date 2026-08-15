@@ -103,3 +103,79 @@ esquema do PostgREST: em *Settings → API*, use **Reload schema cache**
 
 A migration é idempotente: rodar de novo não quebra nada. Ela termina
 com um backfill que amarra transações e ocorrências já existentes.
+
+## Fundação de dados (20260816000007)
+
+Fecha os três buracos que sobraram: o progresso da meta era um número
+independente, estornar apagava o histórico, e um retry depois de timeout
+não tinha como se reconhecer.
+
+| Tabela | Papel |
+|---|---|
+| `goal_movements` | Livro-razão da meta. `goals.current_amount` vira **cache**: o valor verdadeiro é a soma assinada destes movimentos |
+| `operation_keys` | Resultado já entregue para uma chave de operação. Repetir a chamada devolve isto em vez de gravar de novo |
+| `reconciliation_queue` | Pendências que o sistema não decide sozinho: transação sem conta, meta sem histórico, parcela paga só por contador |
+| `integrity_events` | Diário técnico de erros de confirmação e divergências de reconciliação |
+
+Colunas novas em `transactions`: `reversed_at`, `reversal_reason`,
+`reversed_by` (estorno preserva o histórico) e `unallocated` (a
+movimentação declara que fica fora das contas, em vez de simplesmente
+não ter conta). A constraint `alocacao_explicita` impede estar em uma
+conta e fora de todas ao mesmo tempo.
+
+`installment_purchases.account_id` finalmente existe — o app já lia essa
+coluna, mas ela nunca tinha sido criada: toda parcela paga caía no saldo
+global sem aparecer em conta nenhuma.
+
+O backfill reconstrói o livro-razão a partir das transações que já
+apontavam para metas, declara como não alocado só o que não tem como ser
+outra coisa (usuário sem nenhuma conta cadastrada) e manda o resto para a
+fila de reconciliação. **Nenhum dado ambíguo é apagado ou corrigido por
+adivinhação.**
+
+## Operações atômicas (20260816000008)
+
+Alterar dinheiro passa a ter porta única. Cada função valida a
+propriedade, grava tudo numa transação de banco e devolve o estado final
+completo — o front-end substitui o estado local pelo retorno do servidor
+em vez de adivinhar o resultado.
+
+| Função | O que garante |
+|---|---|
+| `aportar_meta` / `retirar_meta` | Movimentação + movimento de meta + recálculo do progresso, tudo junto |
+| `estornar_transacao` | Marca a movimentação, libera ocorrência e parcela, escreve o estorno no livro da meta. **Nada é apagado** |
+| `confirmar_parcela` / `desfazer_parcela` | Estado próprio da parcela, vínculo com a transação e `paid_count` derivado |
+| `transferir_contas` | As duas pontas mudam juntas; o patrimônio total não muda |
+| `confirmar_ocorrencia` | Idempotente pelo vínculo **e** pela chave de operação |
+| `desfazer_ocorrencia` | Estorna o lançamento vinculado em vez de apagá-lo |
+| `recalcular_meta` | Reescreve o cache a partir da soma dos movimentos |
+| `garantir_historico_meta` | Semeia o livro-razão com o que a meta já tinha, antes do primeiro movimento novo |
+| `migrar_saldo_inicial` | Leva o saldo do perfil para uma conta e marca o perfil como migrado |
+
+Todas aceitam `p_idem_key`. Repetir a chamada com a mesma chave devolve o
+resultado da primeira, sem criar um segundo lançamento — é isso que torna
+seguro o retry depois de timeout, o duplo clique e a segunda aba.
+
+O app continua degradando com elegância: sem estas funções, o
+`FinckStore.operacao()` faz o mesmo controle de idempotência no cliente e
+o caminho em JavaScript reproduz o comportamento (com compensação em caso
+de falha no meio).
+
+### Por que `garantir_historico_meta` existe
+
+Uma meta criada antes do livro-razão tem valor guardado e zero
+movimentos. Sem essa função, o primeiro aporte recalcularia o progresso,
+veria zero movimentos, e **apagaria** o valor que o usuário já tinha. A
+função transforma esse valor num movimento de ajuste antes de qualquer
+coisa nova entrar. É idempotente e existe nas duas camadas (SQL e JS).
+
+## Como validar
+
+```bash
+bash ferramentas/testar-migration.sh
+```
+
+Sobe um Postgres descartável, aplica as migrations na ordem e exercita as
+invariantes: aporte idempotente, estorno que preserva histórico, parcela
+com estado próprio, transferência que não muda patrimônio e saldo inicial
+que não migra duas vezes.

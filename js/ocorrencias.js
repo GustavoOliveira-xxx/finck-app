@@ -86,7 +86,7 @@ window.FinckOcorrencias = (() => {
     return iso(referencia) > ultima;
   }
 
-  function movimentacaoDe(oc, valorReal, contaEscolhida) {
+  function movimentacaoDe(oc, valorReal, contaEscolhida, { unallocated = false } = {}) {
     const conta = contaEscolhida !== undefined ? contaEscolhida : oc.account_id;
     return {
       type: oc.type,
@@ -96,6 +96,9 @@ window.FinckOcorrencias = (() => {
       category: oc.type === "saida" ? (oc.category || "Outros") : null,
 
       account_id: conta || null,
+      // Sem conta, a movimentação precisa dizer que ficou fora delas de
+      // propósito. O que o produto não pode é esconder a diferença.
+      unallocated: !conta && unallocated,
       source: "recorrente",
       source_occurrence_id: oc.id || null,
     };
@@ -107,6 +110,9 @@ window.FinckOcorrencias = (() => {
     const porOcorrencia = new Map();
     (transacoes || []).forEach((t) => {
       if (!t.source_occurrence_id) return;
+      // Estornada é história, não sobra de gravação parcial: ela mantém o
+      // ponteiro para a previsão de origem e não pode ser varrida daqui.
+      if (t.reversed_at) return;
       const chave = String(t.source_occurrence_id);
       if (!porOcorrencia.has(chave)) porOcorrencia.set(chave, []);
       porOcorrencia.get(chave).push(t);
@@ -137,10 +143,13 @@ window.FinckOcorrencias = (() => {
       if (String(oc.transaction_id) !== String(boa.id)) revincular.push({ id: oc.id, transaction_id: boa.id });
     });
 
+    // Ocorrência apontando para lançamento que sumiu — ou que foi estornado —
+    // volta a ser previsão em aberto: o compromisso existe de novo.
     (ocorrencias || []).forEach((oc) => {
       if (!oc.transaction_id) return;
-      const existe = (transacoes || []).some((t) => String(t.id) === String(oc.transaction_id));
-      if (!existe) desvincular.push(oc.id);
+      const vale = (transacoes || []).some(
+        (t) => String(t.id) === String(oc.transaction_id) && !t.reversed_at);
+      if (!vale) desvincular.push(oc.id);
     });
 
     return { excluir, soltarVinculo, desvincular, revincular };

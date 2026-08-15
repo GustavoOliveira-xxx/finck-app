@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     resultado = R.calcular(price, ctx.perfil, {
       saldo: ctx.saldo,
       despesasFixas: ctx.despesasFixas,
+      compromissosAbertos: ctx.compromissosAbertos,
       metas: ctx.metas,
     });
 
@@ -75,16 +76,44 @@ document.addEventListener("DOMContentLoaded", async () => {
       <article class="card-indicador"><span>Dias de trabalho</span><strong>${U.numero(r.work_days)} dias</strong></article>
       <article class="card-indicador"><span>Horas de trabalho</span><strong>${U.numero(r.work_hours)} horas</strong></article>`;
 
+    // Cada indicador tem nome próprio, definição e data de referência: saldo,
+    // sobra e disponível são coisas diferentes e não podem parecer sinônimos.
+    const G = R.GLOSSARIO;
+    const linha = (chave, valor, classe = "") => `
+      <li title="${U.escapeHTML(G[chave].definicao)}">
+        <span>${U.escapeHTML(G[chave].rotulo)}
+          <small class="indicador-quando">${U.escapeHTML(G[chave].referencia)}</small>
+        </span>
+        <strong class="${classe}">${valor}</strong>
+      </li>`;
+
     document.getElementById("impactoOrcamento").innerHTML = `
-      <ul class="lista-resumo">
-        <li><span>Saldo hoje</span><strong>${U.moeda(r.saldo_antes)}</strong></li>
-        <li><span>Saldo após a compra</span>
-            <strong class="${r.compromete_saldo ? "cor-vermelha" : ""}">${U.moeda(r.saldo_depois)}</strong></li>
-        <li><span>Renda livre (após despesas fixas)</span><strong>${U.moeda(r.renda_livre)}</strong></li>
-        <li><span>% da renda livre comprometida</span><strong>${U.percentual(r.percentual_renda_livre)}</strong></li>
+      <ul class="lista-resumo lista-resumo--glossario">
+        ${linha("saldo_atual", U.moeda(r.saldo_antes))}
+        <li title="Saldo atual menos o preço desta compra.">
+          <span>Saldo após a compra <small class="indicador-quando">se comprar hoje</small></span>
+          <strong class="${r.compromete_saldo ? "cor-vermelha" : ""}">${U.moeda(r.saldo_depois)}</strong>
+        </li>
+        ${r.deficit_fixos > 0
+          ? linha("deficit_fixos", `− ${U.moeda(r.deficit_fixos)}`, "cor-vermelha")
+          : linha("sobra_apos_fixos", U.moeda(r.sobra_apos_fixos))}
+        ${r.compromissos_futuros > 0 ? linha("compromissos_futuros", U.moeda(r.compromissos_futuros)) : ""}
+        ${linha("disponivel_projetado", U.moeda(r.disponivel_projetado),
+                r.disponivel_projetado < 0 ? "cor-vermelha" : "")}
+        <li title="Fatia da sobra após os fixos que esta compra consome.">
+          <span>Fatia da sobra comprometida <small class="indicador-quando">neste mês</small></span>
+          <strong>${r.renda_livre > 0 ? U.percentual(r.percentual_renda_livre) : "sem sobra"}</strong>
+        </li>
         <li><span>Valor do seu dia / hora</span><strong>${U.moeda(r.valor_dia)} / ${U.moeda(r.valor_hora)}</strong></li>
       </ul>
-      ${r.compromete_saldo ? `<p class="alerta">Esta compra deixa seu saldo negativo em ${U.moeda(Math.abs(r.saldo_depois))}.</p>` : ""}`;
+      ${r.compromete_saldo
+        ? `<p class="alerta">Esta compra deixa seu saldo negativo em ${U.moeda(Math.abs(r.saldo_depois))}.</p>`
+        : r.compromete_projetado
+          ? `<p class="alerta">Cabe no saldo de hoje, mas não no disponível projetado: faltariam ${U.moeda(Math.abs(r.disponivel_depois))} para cobrir os compromissos já assumidos.</p>`
+          : ""}
+      ${r.deficit_fixos > 0
+        ? `<p class="alerta">Suas despesas fixas superam a renda em ${U.moeda(r.deficit_fixos)} por mês. Enquanto isso durar, toda compra sai da reserva.</p>`
+        : ""}`;
 
     const metasHost = document.getElementById("impactoMetas");
     metasHost.innerHTML = r.impacto_metas.length

@@ -126,7 +126,8 @@ window.FinckGame = (() => {
   async function sincronizarConquistas() {
     const [estado, perfil, transacoes, metas, analises] = await Promise.all([
       S.obterGamificacao(), S.obterPerfil(),
-      S.listar("transactions"), S.listar("goals"), S.listar("purchase_analyses"),
+      S.listar("transactions").then((l) => l.filter((t) => !t.reversed_at)),
+      S.listar("goals"), S.listar("purchase_analyses"),
     ]);
     const resumo = window.FinckReality.resumoHistorico(analises);
 

@@ -137,11 +137,14 @@ document.addEventListener("DOMContentLoaded", async () => {
            <a class="link-mais" href="contas.html">Cadastrar minha primeira conta</a>
          </article>`;
 
+    // "Fora das contas" é uma escolha declarada, não a ausência de escolha:
+    // sem isso, a movimentação fica ambígua e cai na fila de reconciliação.
     document.getElementById("contaSelecionada").innerHTML =
-      `<option value="">Conta não informada</option>` +
+      `<option value="">Escolha a conta…</option>` +
       contas.filter((c) => c.active !== false)
         .map((c) => `<option value="${c.id}"${c.is_default ? " selected" : ""}>${U.escapeHTML(c.name)}</option>`)
-        .join("");
+        .join("") +
+      `<option value="__sem_conta">Fora das contas — só no saldo geral</option>`;
 
     const previstoSaida = ctx.despesasFixas;
     const previstoEntrada = ctx.previstoEntradas || Number(ctx.perfil?.income_monthly || 0);
@@ -189,23 +192,49 @@ document.addEventListener("DOMContentLoaded", async () => {
             ${t.type === "entrada" ? "+" : "−"} ${U.moeda(t.amount)}
           </strong>
           ${T.selo(t.amount, { classe: t.type === "entrada" ? "selo-tempo--entrada" : "" })}
-          <button type="button" class="btn-excluir-item" data-excluir="${t.id}" aria-label="Excluir movimentação">✕</button>
+          ${!t.account_id && !t.unallocated
+            ? `<span class="selo-alocacao" title="Sem conta vinculada e sem declaração de que fica fora das contas.">sem conta</span>`
+            : ""}
+          <button type="button" class="btn-excluir-item" data-estornar="${t.id}"
+                  aria-label="Estornar movimentação" title="Estornar">↺</button>
         </div>
       </article>`).join("");
 
-    lista.querySelectorAll("[data-excluir]").forEach((b) =>
+    // Movimentação não é apagada: ela é estornada, com motivo e data. O
+    // histórico continua no lugar e o progresso da meta volta uma única vez.
+    lista.querySelectorAll("[data-estornar]").forEach((b) =>
       b.addEventListener("click", async () => {
-        const alvo = ctx.transacoes.find((t) => String(t.id) === String(b.dataset.excluir));
-        const aviso = alvo?.goal_id
-          ? "Esta movimentação está vinculada a uma meta. Excluir também devolve o valor ao progresso da meta. Continuar?"
-          : "Excluir esta movimentação?";
-        if (!confirm(aviso)) return;
+        const id = b.dataset.estornar;
+        const alvo = ctx.transacoes.find((t) => String(t.id) === String(id));
+
+        const contexto = alvo?.goal_id
+          ? "Ela está vinculada a uma meta: o progresso volta exatamente uma vez."
+          : alvo?.source_occurrence_id
+            ? "Ela veio de uma previsão confirmada: a previsão volta a ficar em aberto."
+            : "O lançamento sai do saldo, mas continua no histórico.";
+
+        const motivo = prompt(
+          `Estornar "${alvo?.description || "movimentação"}"?\n${contexto}\n\nMotivo do estorno:`,
+          "Lançamento incorreto");
+        if (motivo === null) return;
+
+        b.disabled = true;
         try {
-          const r = await F.estornarTransacao(b.dataset.excluir);
-          U.toast(r.estornouMeta ? "Movimentação excluída e meta estornada." : "Movimentação excluída.", "info");
+          const r = await F.estornarTransacao(id, {
+            motivo: motivo.trim() || "Estorno solicitado pelo usuário",
+            chave: S.chaveDeOperacao("estorno", id),
+          });
+          U.toast(
+            r.repetida ? "Esta movimentação já estava estornada."
+            : r.estornouMeta ? "Movimentação estornada e progresso da meta revertido."
+            : "Movimentação estornada. O histórico foi preservado.",
+            r.repetida ? "info" : "sucesso");
           render();
         } catch (err) {
-          U.toast(err.message || "Não foi possível excluir.", "erro");
+          await S.registrarEvento({ scope: "estorno", message: err.message, context: { transacao: id } });
+          U.toast(err.message || "Não foi possível estornar.", "erro");
+        } finally {
+          b.disabled = false;
         }
       })
     );
@@ -245,9 +274,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!date) return U.toast("Informe a data.", "erro");
 
     const contaSel = document.getElementById("contaSelecionada");
-    const account_id = contaSel.value || null;
+    const semConta = contaSel.value === "__sem_conta";
+    const account_id = semConta ? null : (contaSel.value || null);
+    const temContas = contaSel.options.length > 2;
 
-    pendente = { type, amount, description, date, category, goal_id, account_id };
+    if (temContas && !account_id && !semConta) {
+      return U.toast("Escolha a conta ou marque que a movimentação fica fora das contas.", "erro");
+    }
+
+    pendente = {
+      type, amount, description, date, category, goal_id, account_id,
+      unallocated: !account_id,
+    };
 
     document.getElementById("resumoConfirmacao").innerHTML = `
       <ul class="lista-resumo">
@@ -256,7 +294,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <li><span>Descrição</span><strong>${U.escapeHTML(description)}</strong></li>
         <li><span>Categoria</span><strong>${U.escapeHTML(category)}</strong></li>
         <li><span>Data</span><strong>${U.dataBR(date)}</strong></li>
-        <li><span>Conta</span><strong>${U.escapeHTML(contaSel.selectedOptions[0].textContent)}</strong></li>
+        <li><span>Conta</span><strong>${U.escapeHTML(
+          account_id ? contaSel.selectedOptions[0].textContent : "Fora das contas — só no saldo geral")}</strong></li>
         ${goal_id ? `<li><span>Meta</span><strong>${U.escapeHTML(goalSel.selectedOptions[0].textContent)}</strong></li>` : ""}
       </ul>`;
     U.fecharModal("modalTransacao");

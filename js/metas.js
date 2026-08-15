@@ -7,16 +7,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = await window.FinckNav.iniciarPagina({ titulo: "Metas", subtitulo: "Planejamento" });
   if (!user) return;
 
+  const M = window.FinckMetas;
+
   let metas = [];
   let perfil = null;
   let recorrentes = [];
+  let movimentos = [];
 
   async function carregar() {
 
-    [metas, perfil, recorrentes] = await Promise.all([
+    [metas, perfil, recorrentes, movimentos] = await Promise.all([
       S.listar("goals", { ordem: "created_at", asc: false }),
       S.obterPerfil(),
       S.listar("recurring_transactions"),
+      S.listar("goal_movements", { ordem: "date", asc: false }),
     ]);
     renderResumo();
     renderAlvo();
@@ -135,6 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${m.deadline ? `<small>Prazo: ${U.dataBR(m.deadline)}</small>` : ""}
           <div class="acoes-card">
             <button type="button" class="btn-secundario btn-mini" data-aporte="${m.id}">Aportar</button>
+            <button type="button" class="btn-secundario btn-mini" data-retirar="${m.id}">Retirar</button>
             <button type="button" class="btn-secundario btn-mini" data-detalhe="${m.id}">Detalhes</button>
             <button type="button" class="btn-secundario btn-mini" data-editar="${m.id}">Editar</button>
             <button type="button" class="btn-excluir-item" data-excluir="${m.id}" aria-label="Excluir meta">✕</button>
@@ -142,7 +147,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         </article>`;
     }).join("");
 
-    host.querySelectorAll("[data-aporte]").forEach((b) => b.addEventListener("click", () => abrirAporte(b.dataset.aporte)));
+    host.querySelectorAll("[data-aporte]").forEach((b) => b.addEventListener("click", () => abrirAporte(b.dataset.aporte, "aporte")));
+    host.querySelectorAll("[data-retirar]").forEach((b) => b.addEventListener("click", () => abrirAporte(b.dataset.retirar, "retirada")));
     host.querySelectorAll("[data-detalhe]").forEach((b) => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
     host.querySelectorAll("[data-editar]").forEach((b) => b.addEventListener("click", () => abrirMeta(b.dataset.editar)));
     host.querySelectorAll("[data-excluir]").forEach((b) =>
@@ -182,8 +188,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!(dados.target_amount > 0)) return U.toast("Informe um valor total maior que zero.", "erro");
 
     try {
-      if (id) await S.atualizar("goals", id, dados);
-      else { await S.inserir("goals", dados); await G.premiar("meta_criada", { motivo: "nova meta criada" }); }
+      // O valor guardado nunca é escrito direto: ele vira um movimento de
+      // ajuste no livro-razão e volta como cache recalculado. Assim uma meta
+      // criada já com dinheiro continua sendo derivável do histórico.
+      const { current_amount, ...semSaldo } = dados;
+
+      if (id) {
+        await S.atualizar("goals", id, semSaldo);
+        await F.ajustarMeta(id, current_amount, "Saldo informado na edição da meta");
+      } else {
+        const nova = await S.inserir("goals", { ...semSaldo, current_amount: 0 });
+        if (current_amount > 0) {
+          await F.ajustarMeta(nova.id, current_amount, "Saldo informado na criação da meta");
+        }
+        await G.premiar("meta_criada", { motivo: "nova meta criada" });
+      }
       await G.sincronizarConquistas();
       U.fecharModal("modalMeta");
       U.toast("Meta salva.", "sucesso");
@@ -191,62 +210,166 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { U.toast(err.message, "erro"); }
   });
 
-  function abrirAporte(id) {
+  let modoAporte = "aporte";
+
+  function abrirAporte(id, modo = "aporte") {
     const m = metas.find((x) => String(x.id) === String(id));
     if (!m) return;
+    modoAporte = modo;
+    const guardado = Number(m.current_amount || 0);
+
     document.getElementById("aporteMetaId").value = m.id;
-    document.getElementById("aporteInfo").textContent =
-      `${m.name} — faltam ${U.moeda(Math.max(0, Number(m.target_amount) - Number(m.current_amount)))}.`;
+    document.getElementById("tituloAporte").textContent =
+      modo === "retirada" ? "Retirar da meta" : "Aportar na meta";
+    document.getElementById("aporteInfo").textContent = modo === "retirada"
+      ? `${m.name} — você tem ${U.moeda(guardado)} guardados. A retirada volta para o caixa.`
+      : `${m.name} — faltam ${U.moeda(Math.max(0, Number(m.target_amount) - guardado))}.`;
+    document.getElementById("btnConfirmarAporte").textContent =
+      modo === "retirada" ? "Registrar retirada" : "Registrar aporte";
+
     U.limparMoeda("aporteValor");
     U.abrirModal("modalAporte");
   }
 
   document.getElementById("formAporte").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const botao = document.getElementById("btnConfirmarAporte");
     const id = document.getElementById("aporteMetaId").value;
     const valor = U.lerMoeda("aporteValor");
     if (!(valor > 0)) return U.toast("Informe um valor maior que zero.", "erro");
+
+    const meta = metas.find((x) => String(x.id) === String(id));
+    const guardado = Number(meta?.current_amount || 0);
+    if (modoAporte === "retirada" && valor > guardado + 0.005) {
+      return U.toast(`Você tem ${U.moeda(guardado)} guardados nesta meta.`, "erro");
+    }
+
+    // Dois cliques rápidos e duas abas abertas mandam a mesma chave: a segunda
+    // chamada devolve o resultado da primeira em vez de lançar de novo.
+    const chave = S.chaveDeOperacao(modoAporte, id, valor.toFixed(2), Date.now().toString().slice(0, -4));
+    botao.disabled = true;
+
     try {
-      const meta = metas.find((x) => String(x.id) === String(id));
-      await F.aportarMeta(id, valor, `Aporte — ${meta?.name || "meta"}`);
-      await G.premiar("meta_aporte", { motivo: "aporte em meta" });
-      const alvo = Number(meta?.target_amount || 0);
-      const atingiu = alvo > 0 && Number(meta?.current_amount || 0) + valor >= alvo;
-      if (atingiu) await G.premiar("meta_concluida", { chave: String(id), motivo: "meta concluída" });
+      if (modoAporte === "retirada") {
+        await F.retirarMeta(id, valor, `Retirada — ${meta?.name || "meta"}`, { chave });
+        U.toast("Retirada registrada.", "sucesso");
+      } else {
+        await F.aportarMeta(id, valor, `Aporte — ${meta?.name || "meta"}`, { chave });
+        await G.premiar("meta_aporte", { motivo: "aporte em meta" });
+        const alvo = Number(meta?.target_amount || 0);
+        if (alvo > 0 && guardado + valor >= alvo) {
+          await G.premiar("meta_concluida", { chave: String(id), motivo: "meta concluída" });
+        }
+        U.toast("Aporte registrado.", "sucesso");
+      }
       await G.sincronizarConquistas();
       U.fecharModal("modalAporte");
-      U.toast("Aporte registrado.", "sucesso");
       carregar();
-    } catch (err) { U.toast(err.message, "erro"); }
+    } catch (err) {
+      await S.registrarEvento({
+        scope: "aporte",
+        message: err.message,
+        context: { meta: id, valor, modo: modoAporte },
+      });
+      U.toast(err.message, "erro");
+    } finally {
+      botao.disabled = false;
+    }
   });
+
+  const ROTULO_MOVIMENTO = {
+    aporte: "Aporte", retirada: "Retirada", estorno: "Estorno", ajuste: "Ajuste",
+  };
 
   async function abrirDetalhe(id) {
     const m = metas.find((x) => String(x.id) === String(id));
     if (!m) return;
+
     const transacoes = await S.listar("transactions", { ordem: "date", asc: false });
-    const vinculadas = transacoes.filter((t) => String(t.goal_id) === String(m.id));
-    const p = U.progresso(m.current_amount, m.target_amount);
-    const falta = Math.max(0, Number(m.target_amount) - Number(m.current_amount));
+    const porTransacao = new Map(transacoes.map((t) => [String(t.id), t]));
+
+    const livro = M.historico(movimentos, m.id);
+    const derivado = M.progresso(livro);
+    const cache = Number(m.current_amount || 0);
+    const bate = Math.abs(cache - derivado) <= M.TOLERANCIA;
+
+    const p = U.progresso(cache, m.target_amount);
+    const falta = Math.max(0, Number(m.target_amount) - cache);
+
+    const linhas = livro.map((mv) => {
+      const t = mv.transaction_id ? porTransacao.get(String(mv.transaction_id)) : null;
+      const estornado = Boolean(mv.reversed_at) || (t && t.reversed_at);
+      const positivo = Number(mv.amount) > 0;
+      const podeEstornar = !estornado && mv.kind !== "estorno" && t && !t.reversed_at;
+
+      return `
+        <li class="livro-linha${estornado ? " livro-linha--estornada" : ""}">
+          <span class="livro-linha__selo livro-linha__selo--${mv.kind}">${ROTULO_MOVIMENTO[mv.kind] || mv.kind}</span>
+          <span class="livro-linha__desc">
+            ${U.escapeHTML(mv.note || ROTULO_MOVIMENTO[mv.kind] || "Movimento")}
+            <small>${U.dataBR(mv.date)}${estornado ? " · estornado" : ""}</small>
+          </span>
+          <strong class="${positivo ? "cor-verde" : "cor-vermelha"}">
+            ${positivo ? "+" : "−"} ${U.moeda(Math.abs(Number(mv.amount)))}
+          </strong>
+          ${podeEstornar
+            ? `<button type="button" class="btn-secundario btn-mini" data-estornar="${t.id}" data-meta="${m.id}">Estornar</button>`
+            : `<span class="livro-linha__vazio" aria-hidden="true"></span>`}
+        </li>`;
+    }).join("");
 
     document.getElementById("conteudoDetalheMeta").innerHTML = `
       <ul class="lista-resumo">
         <li><span>Meta</span><strong>${U.escapeHTML(m.name)}</strong></li>
         <li><span>Progresso</span><strong>${U.percentual(p, 1)}</strong></li>
-        <li><span>Guardado</span><strong class="cor-verde">${U.moeda(m.current_amount)}</strong></li>
+        <li><span>Guardado</span><strong class="cor-verde">${U.moeda(cache)}</strong></li>
         <li><span>Falta</span><strong>${U.moeda(falta)}</strong></li>
         <li><span>Equivale a</span><strong>${U.numero(valorDia() > 0 ? falta / valorDia() : 0, 1)} dias de trabalho</strong></li>
         <li><span>Prazo</span><strong>${m.deadline ? U.dataBR(m.deadline) : "sem prazo"}</strong></li>
       </ul>
-      <h4>Movimentações vinculadas</h4>
-      ${vinculadas.length
-        ? `<ul class="lista-simples">${vinculadas.map((t) => `
-            <li class="item-lista">
-              <span>${U.escapeHTML(t.description)}</span>
-              <span>${U.dataBR(t.date)}</span>
-              <strong class="${t.type === "entrada" ? "cor-verde" : "cor-vermelha"}">${U.moeda(t.amount)}</strong>
-            </li>`).join("")}</ul>`
-        : `<p class="vazio">Nenhuma movimentação vinculada.</p>`}`;
+
+      <div class="livro-conferencia${bate ? " livro-conferencia--ok" : " livro-conferencia--divergente"}">
+        <span class="livro-conferencia__icone" aria-hidden="true">${bate ? "✓" : "!"}</span>
+        <div>
+          <strong>${bate ? "Progresso confere com o histórico" : "Progresso não confere com o histórico"}</strong>
+          <small>
+            Soma dos ${livro.length} movimento(s): ${U.moeda(derivado)} ·
+            valor guardado: ${U.moeda(cache)}${bate ? "" : ` · diferença de ${U.moeda(Math.abs(cache - derivado))}`}
+          </small>
+        </div>
+      </div>
+
+      <h4>Livro-razão da meta</h4>
+      ${livro.length
+        ? `<ul class="livro-lista">${linhas}</ul>`
+        : `<p class="vazio">Nenhum movimento registrado. Aportes feitos daqui para frente aparecem aqui.</p>`}`;
+
+    document.querySelectorAll("#conteudoDetalheMeta [data-estornar]").forEach((b) =>
+      b.addEventListener("click", () => estornarDaMeta(b.dataset.estornar, b.dataset.meta)));
+
     U.abrirModal("modalDetalheMeta");
+  }
+
+  // Movimentação vinculada a meta não é excluída: ela é estornada, com motivo,
+  // e o progresso volta exatamente uma vez.
+  async function estornarDaMeta(transacaoId, metaId) {
+    const motivo = prompt("Por que este movimento está sendo estornado?", "Lançamento incorreto");
+    if (motivo === null) return;
+
+    try {
+      const r = await F.estornarTransacao(transacaoId, {
+        motivo: motivo.trim() || "Estorno solicitado pelo usuário",
+        chave: S.chaveDeOperacao("estorno", transacaoId),
+      });
+      U.toast(r.repetida ? "Este movimento já estava estornado." : "Movimento estornado. O histórico foi preservado.",
+              r.repetida ? "info" : "sucesso");
+      U.fecharModal("modalDetalheMeta");
+      await carregar();
+      abrirDetalhe(metaId);
+    } catch (err) {
+      await S.registrarEvento({ scope: "estorno", message: err.message, context: { transacao: transacaoId } });
+      U.toast(err.message, "erro");
+    }
   }
 
   carregar();

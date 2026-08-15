@@ -1035,10 +1035,18 @@ window.FinckTestes = (() => {
         esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1500);
 
         const mov = (await S.listar("transactions"))[0];
-        await F.estornarTransacao(mov.id);
+        await F.estornarTransacao(mov.id, { motivo: "Aporte indevido" });
 
         esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
-        esperar((await S.listar("transactions")).length).aSer(0);
+
+        // O relatório pede estorno que preserva o histórico: a linha continua
+        // na tabela, marcada e com motivo, mas fora de todo cálculo de saldo.
+        const todas = await S.listar("transactions");
+        esperar(todas).aTerTamanho(1);
+        esperar(Boolean(todas[0].reversed_at)).aSerVerdadeiro();
+        esperar(todas[0].reversal_reason).aSer("Aporte indevido");
+        esperar(F.vigentes(todas)).aTerTamanho(0);
+        esperar((await F.carregarContexto()).saldo).aSer(0);
       });
     });
 
@@ -1051,8 +1059,12 @@ window.FinckTestes = (() => {
         await F.estornarTransacao(mov.id);
         const r = await F.estornarTransacao(mov.id);
 
-        esperar(r.removida).aSerFalso();
+        esperar(r.repetida).aSerVerdadeiro();
         esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
+
+        // Um estorno, um movimento de contrapartida — nunca dois.
+        const livro = await S.listar("goal_movements", { filtro: { goal_id: meta.id } });
+        esperar(livro.filter((m) => m.kind === "estorno")).aTerTamanho(1);
       });
     });
 
@@ -1138,6 +1150,10 @@ window.FinckTestes = (() => {
         const ctx = await F.carregarContexto();
         esperar(ctx.compromissosAbertos).aSer(3000);
         esperar(ctx.transacoes.length).aSer(0);
+        esperar(ctx.saldo).aSer(0);
+
+        // O pagamento existiu: ele fica no histórico, estornado.
+        esperar(ctx.transacoesEstornadas).aTerTamanho(1);
       });
     });
 
@@ -1438,6 +1454,926 @@ window.FinckTestes = (() => {
         esperar(Number(alheia.amount)).aSer(99);
         esperar(depois.some((r) => String(r.id) === String(minha.id))).aSerVerdadeiro();
       });
+    });
+  });
+
+  // ==========================================================================
+  // Testes obrigatórios do relatório de conclusão (seção 6)
+  // ==========================================================================
+
+  descrever("Livro-razão das metas (6.1)", () => {
+    const M = window.FinckMetas;
+
+    teste("progresso é a soma assinada dos movimentos", () => {
+      const livro = [
+        { goal_id: "g", kind: "aporte", amount: 500 },
+        { goal_id: "g", kind: "aporte", amount: 300 },
+        { goal_id: "g", kind: "retirada", amount: -200 },
+      ];
+      esperar(M.progresso(livro)).aSer(600);
+    });
+
+    teste("estorno entra com o sinal oposto ao do movimento original", () => {
+      const original = { id: "m1", goal_id: "g", amount: 500, transaction_id: "t1" };
+      const estorno = M.movimentoDoEstorno(original, { date: "2026-08-16" });
+      esperar(estorno.amount).aSer(-500);
+      esperar(estorno.reverses_id).aSer("m1");
+      esperar(M.progresso([original, estorno])).aSer(0);
+    });
+
+    teste("saída vinculada guarda dinheiro; entrada vinculada devolve", () => {
+      esperar(M.valorAssinado("saida", 100)).aSer(100);
+      esperar(M.valorAssinado("entrada", 100)).aSer(-100);
+      esperar(M.kindDoTipo("saida")).aSer("aporte");
+      esperar(M.kindDoTipo("entrada")).aSer("retirada");
+    });
+
+    teste("divergência entre cache e histórico é medida, não escondida", () => {
+      const metas = [{ id: "g", name: "Reserva", current_amount: 1500 }];
+      const livro = [{ goal_id: "g", kind: "aporte", amount: 1000 }];
+      const [d] = M.divergencias(metas, livro);
+      esperar(d.cache).aSer(1500);
+      esperar(d.historico).aSer(1000);
+      esperar(d.diferenca).aSer(500);
+    });
+
+    teste("cache igual ao histórico não vira divergência", () => {
+      const metas = [{ id: "g", name: "Reserva", current_amount: 1000 }];
+      const livro = [{ goal_id: "g", kind: "aporte", amount: 1000 }];
+      esperar(M.conferem(metas, livro)).aSerVerdadeiro();
+    });
+
+    teste("progresso exibido nunca fica negativo", () => {
+      esperar(M.progressoExibido([{ goal_id: "g", amount: -50 }])).aSer(0);
+    });
+
+    teste("estorno duas vezes é barrado pelo próprio livro", () => {
+      const original = { id: "m1", goal_id: "g", amount: 500 };
+      const estorno = { id: "m2", goal_id: "g", amount: -500, kind: "estorno", reverses_id: "m1" };
+      esperar(M.jaEstornado([original, estorno], "m1")).aSerVerdadeiro();
+      esperar(M.jaEstornado([original], "m1")).aSerFalso();
+    });
+  });
+
+  descrever("Invariantes contábeis do relatório (6.1)", () => {
+    const S = window.FinckStore;
+    const F = window.FinckFinance;
+    const CT = window.FinckContas;
+
+    const comSessaoLimpa = async (fn) => {
+      const antes = {};
+      Object.entries(S.KEYS).forEach(([, v]) => { antes[v] = localStorage.getItem(v); });
+      Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+      await S.entrarDemo();
+      try { await fn(); } finally {
+        Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+        Object.entries(antes).forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+      }
+    };
+
+    teste("aporte move o progresso exatamente uma vez", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        await F.aportarMeta(meta.id, 500, "Aporte");
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(500);
+        esperar(await S.listar("goal_movements", { filtro: { goal_id: meta.id } })).aTerTamanho(1);
+      });
+    });
+
+    teste("aporte repetido com a mesma chave não lança duas vezes", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        const chave = "aporte-idem-1";
+
+        await F.aportarMeta(meta.id, 500, "Aporte", { chave });
+        await F.aportarMeta(meta.id, 500, "Aporte", { chave });
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(500);
+        esperar(await S.listar("transactions")).aTerTamanho(1);
+      });
+    });
+
+    teste("retirada devolve o dinheiro da meta ao caixa", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        await F.aportarMeta(meta.id, 800, "Aporte");
+        await F.retirarMeta(meta.id, 300, "Retirada");
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(500);
+        esperar((await F.carregarContexto()).saldo).aSer(-500);
+      });
+    });
+
+    teste("progresso da meta é recalculável a partir do histórico", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        await F.aportarMeta(meta.id, 500, "Aporte");
+        await F.aportarMeta(meta.id, 250, "Aporte");
+
+        // Corrompe o cache de propósito: o recálculo tem de consertar sozinho.
+        await S.atualizar("goals", meta.id, { current_amount: 99999 });
+        await F.recalcularMeta(meta.id);
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(750);
+      });
+    });
+
+    // Regressão: o recálculo não pode apagar o que ele ainda não sabe explicar.
+    teste("meta antiga não perde o progresso no primeiro aporte", async () => {
+      await comSessaoLimpa(async () => {
+        // Meta de antes do livro-razão: valor guardado, zero movimentos.
+        const meta = await S.inserir("goals", {
+          name: "Reserva", target_amount: 6000, current_amount: 1000,
+        });
+        esperar(await S.listar("goal_movements", { filtro: { goal_id: meta.id } })).aTerTamanho(0);
+
+        await F.aportarMeta(meta.id, 500, "Aporte");
+
+        // O valor antigo virou histórico em vez de sumir no recálculo.
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1500);
+        const livro = await S.listar("goal_movements", { filtro: { goal_id: meta.id } });
+        esperar(livro).aTerTamanho(2);
+        esperar(livro.filter((m) => m.kind === "ajuste")).aTerTamanho(1);
+      });
+    });
+
+    teste("semear o histórico duas vezes não duplica o valor antigo", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", {
+          name: "Reserva", target_amount: 6000, current_amount: 1000,
+        });
+        await F.garantirHistorico(meta.id);
+        await F.garantirHistorico(meta.id);
+
+        esperar(await S.listar("goal_movements", { filtro: { goal_id: meta.id } })).aTerTamanho(1);
+
+        await F.recalcularMeta(meta.id);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
+      });
+    });
+
+    teste("meta criada com valor guardado nasce com histórico", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        await F.ajustarMeta(meta.id, 1500, "Saldo informado na criação");
+
+        const livro = await S.listar("goal_movements", { filtro: { goal_id: meta.id } });
+        esperar(livro).aTerTamanho(1);
+        esperar(livro[0].kind).aSer("ajuste");
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1500);
+      });
+    });
+
+    teste("transferência não muda o patrimônio total", async () => {
+      await comSessaoLimpa(async () => {
+        const a = await S.inserir("accounts", { name: "Corrente", initial_balance: 1000, active: true });
+        const b = await S.inserir("accounts", { name: "Poupança", initial_balance: 0, active: true });
+
+        const antes = await F.carregarContexto();
+        await F.transferir({ from_account_id: a.id, to_account_id: b.id, amount: 300, date: "2026-08-16" });
+        const depois = await F.carregarContexto();
+
+        esperar(depois.saldo).aSer(antes.saldo);
+
+        const mov = { transacoes: depois.transacoes, transferencias: depois.transferencias, ajustes: depois.ajustes };
+        esperar(CT.saldoDaConta(a, mov)).aSer(700);
+        esperar(CT.saldoDaConta(b, mov)).aSer(300);
+      });
+    });
+
+    teste("transferência repetida com a mesma chave não duplica", async () => {
+      await comSessaoLimpa(async () => {
+        const a = await S.inserir("accounts", { name: "Corrente", initial_balance: 1000, active: true });
+        const b = await S.inserir("accounts", { name: "Poupança", initial_balance: 0, active: true });
+
+        await F.transferir({ from_account_id: a.id, to_account_id: b.id, amount: 300, chave: "t-1" });
+        await F.transferir({ from_account_id: a.id, to_account_id: b.id, amount: 300, chave: "t-1" });
+
+        esperar(await S.listar("transfers")).aTerTamanho(1);
+      });
+    });
+
+    teste("confirmar com conta muda saldo global e saldo da conta juntos", async () => {
+      await comSessaoLimpa(async () => {
+        const conta = await S.inserir("accounts", { name: "Corrente", initial_balance: 0, active: true });
+        await F.registrarTransacao({
+          type: "saida", description: "Mercado", amount: 200,
+          date: "2026-08-10", category: "Alimentação", account_id: conta.id,
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.saldo).aSer(-200);
+        esperar(CT.saldoDaConta(conta, { transacoes: ctx.transacoes })).aSer(-200);
+        esperar(ctx.naoAlocado).aSer(0);
+      });
+    });
+
+    teste("confirmar sem conta é declarado e aparece como não alocado", async () => {
+      await comSessaoLimpa(async () => {
+        await S.inserir("accounts", { name: "Corrente", initial_balance: 0, active: true });
+        await F.registrarTransacao({
+          type: "saida", description: "Feira", amount: 80,
+          date: "2026-08-10", category: "Alimentação", account_id: null, unallocated: true,
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.naoAlocado).aSer(-80);
+        esperar(ctx.semContaVinculada).aSer(1);
+      });
+    });
+
+    teste("ajuste de conta entra no saldo global, senão as duas visões divergem", async () => {
+      await comSessaoLimpa(async () => {
+        const conta = await S.inserir("accounts", { name: "Corrente", initial_balance: 100, active: true });
+        await S.inserir("balance_adjustments", {
+          account_id: conta.id, amount: 50, new_balance: 150, date: "2026-08-10", reason: "Conferência",
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.saldo).aSer(150);
+        esperar(CT.saldoDaConta(conta, { transacoes: ctx.transacoes, ajustes: ctx.ajustes })).aSer(150);
+      });
+    });
+  });
+
+  descrever("Reconciliador financeiro (fase 3)", () => {
+    const RC = window.FinckReconciliador;
+
+    const base = {
+      perfil: { id: "u", initial_balance: 0 },
+      contas: [], transacoes: [], transferencias: [], ajustes: [],
+      metas: [], movimentosMeta: [], parcelamentos: [], pagamentos: [], ocorrencias: [],
+      hoje: "2026-08-16",
+    };
+
+    teste("identidade fecha quando tudo está alocado", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [{ id: "a", name: "Corrente", initial_balance: 1000, active: true }],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 200, date: "2026-08-10", account_id: "a", category: "Casa" },
+        ],
+      });
+      esperar(r.caixa.saldoGlobal).aSer(800);
+      esperar(r.caixa.somaContas).aSer(800);
+      esperar(r.caixa.naoAlocado).aSer(0);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("saldo global = contas + não alocado, mesmo com lançamento fora das contas", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [{ id: "a", name: "Corrente", initial_balance: 1000, active: true }],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 200, date: "2026-08-10", account_id: "a", category: "Casa" },
+          { id: "t2", type: "saida", amount: 50, date: "2026-08-11", account_id: null, unallocated: true, category: "Outros" },
+        ],
+      });
+      esperar(r.caixa.somaContas).aSer(800);
+      esperar(r.caixa.naoAlocado).aSer(-50);
+      esperar(r.caixa.saldoGlobal).aSer(750);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("sem conta cadastrada o saldo inicial do perfil é não alocado", () => {
+      const r = RC.conferir({
+        ...base,
+        perfil: { id: "u", initial_balance: 500 },
+        transacoes: [{ id: "t1", type: "entrada", amount: 100, date: "2026-08-10" }],
+      });
+      esperar(r.caixa.somaContas).aSer(0);
+      esperar(r.caixa.naoAlocado).aSer(600);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("movimentação estornada sai do saldo e continua no histórico", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [{ id: "a", name: "Corrente", initial_balance: 1000, active: true }],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 200, date: "2026-08-10", account_id: "a",
+            reversed_at: "2026-08-12T10:00:00Z", category: "Casa" },
+        ],
+      });
+      esperar(r.caixa.saldoGlobal).aSer(1000);
+      esperar(r.historico.estornadas).aSer(1);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("lançamento sem conta e sem declaração vira pendência", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [{ id: "a", name: "Corrente", initial_balance: 0, active: true }],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 50, date: "2026-08-10", account_id: null, description: "Feira" },
+        ],
+      });
+      const check = r.checagens.find((c) => c.id === "nao_alocado");
+      esperar(check.ok).aSerFalso();
+      esperar(r.pendencias.some((p) => p.kind === "transacao_sem_conta")).aSerVerdadeiro();
+    });
+
+    teste("declarar fora das contas resolve a ambiguidade", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [{ id: "a", name: "Corrente", initial_balance: 0, active: true }],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 50, date: "2026-08-10", account_id: null, unallocated: true, description: "Feira" },
+        ],
+      });
+      esperar(r.checagens.find((c) => c.id === "nao_alocado").ok).aSerVerdadeiro();
+    });
+
+    teste("meta com cache fora do histórico é acusada", () => {
+      const r = RC.conferir({
+        ...base,
+        metas: [{ id: "g", name: "Reserva", current_amount: 1500 }],
+        movimentosMeta: [{ goal_id: "g", kind: "aporte", amount: 1000 }],
+      });
+      const check = r.checagens.find((c) => c.id === "metas");
+      esperar(check.ok).aSerFalso();
+      esperar(check.diferenca).aSer(500);
+    });
+
+    teste("previsão em aberto com movimentação viva é divergência", () => {
+      const r = RC.conferir({
+        ...base,
+        transacoes: [{ id: "t1", type: "saida", amount: 100, date: "2026-08-10", unallocated: true, category: "Casa" }],
+        ocorrencias: [
+          { id: "o1", status: "pendente", type: "saida", planned_amount: 100,
+            transaction_id: "t1", description: "Aluguel", cycle: "2026-08", category: "Casa" },
+        ],
+      });
+      esperar(r.checagens.find((c) => c.id === "compromissos").ok).aSerFalso();
+      esperar(r.pendencias.some((p) => p.kind === "previsao_com_movimento")).aSerVerdadeiro();
+    });
+
+    teste("totais por categoria reproduzem o total de saídas", () => {
+      const r = RC.conferir({
+        ...base,
+        transacoes: [
+          { id: "t1", type: "saida", amount: 100, date: "2026-08-10", category: "Casa", unallocated: true },
+          { id: "t2", type: "saida", amount: 60, date: "2026-08-11", category: "Lazer", unallocated: true },
+          { id: "t3", type: "entrada", amount: 500, date: "2026-08-05", unallocated: true },
+        ],
+      });
+      const check = r.checagens.find((c) => c.id === "categorias");
+      esperar(check.ok).aSerVerdadeiro();
+      esperar(check.encontrado).aSer(160);
+    });
+
+    // Arquivar uma conta some com ela da visão consolidada, mas o dinheiro que
+    // passou por ali continua no saldo global. Sem o terceiro balde, isso
+    // viraria um alarme falso permanente.
+    teste("conta arquivada com movimentação não quebra a identidade", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [
+          { id: "a", name: "Corrente", initial_balance: 1000, active: true },
+          { id: "b", name: "Antiga", initial_balance: 0, active: false },
+        ],
+        transacoes: [
+          { id: "t1", type: "saida", amount: 200, date: "2026-08-10", account_id: "a", category: "Casa" },
+          { id: "t2", type: "saida", amount: 100, date: "2026-08-11", account_id: "b", category: "Casa" },
+        ],
+      });
+      esperar(r.caixa.saldoGlobal).aSer(700);
+      esperar(r.caixa.somaContas).aSer(800);
+      esperar(r.caixa.somaArquivadas).aSer(-100);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("transferência para conta arquivada não vira divergência", () => {
+      const r = RC.conferir({
+        ...base,
+        contas: [
+          { id: "a", name: "Corrente", initial_balance: 1000, active: true },
+          { id: "b", name: "Antiga", initial_balance: 0, active: false },
+        ],
+        transferencias: [{ id: "tr1", from_account_id: "a", to_account_id: "b", amount: 300, date: "2026-08-12" }],
+      });
+      esperar(r.caixa.somaContas).aSer(700);
+      esperar(r.caixa.somaArquivadas).aSer(300);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("lançamentos idênticos no mesmo dia viram pendência de duplicata", () => {
+      const linha = (id) => ({ id, type: "saida", amount: 40, date: "2026-08-10",
+                               description: "Café", unallocated: true, category: "Alimentação" });
+      const r = RC.conferir({ ...base, transacoes: [linha("t1"), linha("t2")] });
+
+      esperar(r.duplicatas.grupos).aSer(1);
+      esperar(r.duplicatas.lancamentos).aSer(2);
+      esperar(r.pendencias.some((p) => p.kind === "possivel_duplicata")).aSerVerdadeiro();
+      // Duplicata é decisão do usuário, não erro contábil: o caixa continua fechando.
+      esperar(r.contabilOk).aSerVerdadeiro();
+    });
+
+    teste("confirmações de ciclos diferentes não viram duplicata falsa", () => {
+      const r = RC.conferir({
+        ...base,
+        transacoes: [
+          { id: "t1", type: "saida", amount: 1200, date: "2026-08-06", description: "Aluguel",
+            source_occurrence_id: "o1", unallocated: true, category: "Moradia" },
+          { id: "t2", type: "saida", amount: 1200, date: "2026-08-06", description: "Aluguel",
+            source_occurrence_id: "o2", unallocated: true, category: "Moradia" },
+        ],
+      });
+      esperar(r.duplicatas.grupos).aSer(0);
+    });
+
+    teste("estado limpo passa em todas as checagens", () => {
+      const r = RC.conferir(base);
+      esperar(r.ok).aSerVerdadeiro();
+      esperar(r.falhas).aTerTamanho(0);
+    });
+  });
+
+  descrever("Recorrências e parcelas (6.2)", () => {
+    const O = window.FinckOcorrencias;
+    const P = window.FinckPlano;
+
+    const regra = (dia) => ({
+      id: "r1", description: "Assinatura", type: "saida", amount: 50,
+      day_of_month: dia, active: true, category: "Lazer", account_id: "a1",
+    });
+
+    teste("dia 31 encaixa no último dia de fevereiro comum (28)", () => {
+      const [oc] = O.gerar([regra(31)], { ciclos: ["2027-02"] });
+      esperar(oc.due_date).aSer("2027-02-28");
+    });
+
+    teste("dia 31 encaixa no último dia de fevereiro bissexto (29)", () => {
+      const [oc] = O.gerar([regra(31)], { ciclos: ["2028-02"] });
+      esperar(oc.due_date).aSer("2028-02-29");
+    });
+
+    teste("dia 31 encaixa em mês de 30 dias", () => {
+      const [oc] = O.gerar([regra(31)], { ciclos: ["2026-09"] });
+      esperar(oc.due_date).aSer("2026-09-30");
+    });
+
+    teste("dia 31 se mantém em mês de 31 dias", () => {
+      const [oc] = O.gerar([regra(31)], { ciclos: ["2026-08"] });
+      esperar(oc.due_date).aSer("2026-08-31");
+    });
+
+    teste("gerar duas vezes o mesmo ciclo produz a mesma linha", () => {
+      const a = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      const b = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      esperar(JSON.stringify(a)).aSer(JSON.stringify(b));
+    });
+
+    teste("ocorrência congela conta e categoria da regra", () => {
+      const [oc] = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      esperar(oc.account_id).aSer("a1");
+      esperar(oc.category).aSer("Lazer");
+    });
+
+    teste("mudar a conta no ciclo não reescreve a regra", () => {
+      const [oc] = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      const mov = O.movimentacaoDe({ ...oc, id: "o1" }, 50, "a2");
+      esperar(mov.account_id).aSer("a2");
+      esperar(oc.account_id).aSer("a1");
+    });
+
+    teste("confirmar sem conta marca a movimentação como não alocada", () => {
+      const [oc] = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      const mov = O.movimentacaoDe({ ...oc, id: "o1" }, 50, null, { unallocated: true });
+      esperar(mov.account_id).aSer(null);
+      esperar(mov.unallocated).aSerVerdadeiro();
+    });
+
+    teste("movimentação estornada não é varrida como órfã", () => {
+      const ocorrencias = [{ id: "o1", status: "pendente", transaction_id: null }];
+      const transacoes = [
+        { id: "t1", source_occurrence_id: "o1", reversed_at: "2026-08-12T10:00:00Z" },
+      ];
+      const r = O.orfas(ocorrencias, transacoes);
+      esperar(r.excluir).aTerTamanho(0);
+    });
+
+    teste("ocorrência apontando para lançamento estornado volta a ficar aberta", () => {
+      const ocorrencias = [{ id: "o1", status: "confirmado", transaction_id: "t1" }];
+      const transacoes = [
+        { id: "t1", source_occurrence_id: "o1", reversed_at: "2026-08-12T10:00:00Z" },
+      ];
+      const r = O.orfas(ocorrencias, transacoes);
+      esperar(r.desvincular).aTerTamanho(1);
+      esperar(r.desvincular[0]).aSer("o1");
+    });
+
+    teste("mudar a categoria da regra não reescreve o ciclo já gerado", () => {
+      const [oc] = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      esperar(oc.category).aSer("Lazer");
+
+      // A regra muda depois que o ciclo já foi congelado.
+      const nova = { ...regra(10), category: "Assinaturas" };
+      const [proximo] = O.gerar([nova], { ciclos: ["2026-09"] });
+
+      esperar(oc.category).aSer("Lazer");
+      esperar(proximo.category).aSer("Assinaturas");
+    });
+
+    teste("a transação confirmada herda a categoria da ocorrência, não da regra", () => {
+      const [oc] = O.gerar([regra(10)], { ciclos: ["2026-08"] });
+      const mov = O.movimentacaoDe({ ...oc, id: "o1" }, 50, "a1");
+      esperar(mov.category).aSer("Lazer");
+    });
+
+    teste("entrada não recebe categoria nem no ciclo nem na transação", () => {
+      const entrada = { ...regra(5), type: "entrada", description: "Salário" };
+      const [oc] = O.gerar([entrada], { ciclos: ["2026-08"] });
+      esperar(oc.category).aSer(null);
+      esperar(O.movimentacaoDe({ ...oc, id: "o1" }, 3000, "a1").category).aSer(null);
+    });
+
+    teste("cronograma soma só as parcelas em aberto", () => {
+      const compra = {
+        id: "c1", description: "Notebook", total_amount: 3000,
+        installments_count: 3, first_due_date: "2026-08-10", paid_count: 0,
+      };
+      const pagas = [{ purchase_id: "c1", installment_no: 1, status: "paga", transaction_id: "t1" }];
+      esperar(P.saldoDevedor(compra, pagas)).aSer(2000);
+    });
+
+    // Parcela lançada à mão: o usuário registra a saída direto, sem passar pelo
+    // fluxo de pagamento. A parcela continua aberta — e é isso que o
+    // reconciliador precisa apontar, em vez de fingir que foi quitada.
+    teste("parcela lançada manualmente não quita a parcela sozinha", () => {
+      const compra = {
+        id: "c1", description: "Notebook", total_amount: 3000,
+        installments_count: 3, first_due_date: "2026-08-10", paid_count: 0, active: true,
+      };
+      // Saída lançada à mão, com a mesma cara da parcela, mas sem vínculo.
+      const manual = [{
+        id: "t-manual", type: "saida", description: "Notebook (1/3)",
+        amount: 1000, date: "2026-08-10", category: "Eletrônicos", unallocated: true,
+      }];
+
+      esperar(P.saldoDevedor(compra, [])).aSer(3000);
+
+      const r = window.FinckReconciliador.conferir({
+        perfil: { id: "u", initial_balance: 0 },
+        contas: [], transacoes: manual, transferencias: [], ajustes: [],
+        metas: [], movimentosMeta: [], parcelamentos: [compra], pagamentos: [],
+        ocorrencias: [], hoje: "2026-08-16",
+      });
+
+      // O dinheiro saiu do caixa e o compromisso continua de pé: o produto
+      // mostra os dois, em vez de esconder um deles.
+      esperar(r.caixa.saldoGlobal).aSer(-1000);
+      esperar(r.compromissos.parcelas).aSer(3000);
+      esperar(r.caixa.fecha).aSerVerdadeiro();
+    });
+
+    teste("parcela lançada à mão e depois quitada não conta duas vezes", () => {
+      const compra = {
+        id: "c1", description: "Notebook", total_amount: 3000,
+        installments_count: 3, first_due_date: "2026-08-10", paid_count: 0, active: true,
+      };
+      const manual = { id: "t-manual", type: "saida", description: "Notebook (1/3)",
+                       amount: 1000, date: "2026-08-10", unallocated: true, category: "Eletrônicos" };
+      const pelaParcela = { id: "t-parcela", type: "saida", description: "Notebook (1/3)",
+                            amount: 1000, date: "2026-08-10", unallocated: true,
+                            category: "Eletrônicos", source: "parcela" };
+
+      const r = window.FinckReconciliador.conferir({
+        perfil: { id: "u", initial_balance: 0 },
+        contas: [], transacoes: [manual, pelaParcela], transferencias: [], ajustes: [],
+        metas: [], movimentosMeta: [], parcelamentos: [compra],
+        pagamentos: [{ id: "p1", purchase_id: "c1", installment_no: 1, status: "paga",
+                       transaction_id: "t-parcela", amount: 1000 }],
+        ocorrencias: [], hoje: "2026-08-16",
+      });
+
+      // O mesmo gasto aparece duas vezes: o reconciliador acusa em vez de somar calado.
+      esperar(r.duplicatas.grupos).aSer(1);
+      esperar(r.pendencias.some((p) => p.kind === "possivel_duplicata")).aSerVerdadeiro();
+    });
+
+    teste("parcela estornada volta a contar como compromisso", () => {
+      const compra = {
+        id: "c1", description: "Notebook", total_amount: 3000,
+        installments_count: 3, first_due_date: "2026-08-10", paid_count: 1,
+      };
+      // O registro explícito vence o contador agregado: a parcela reaberta
+      // volta para o saldo devedor mesmo com paid_count antigo.
+      const pagos = [{ purchase_id: "c1", installment_no: 1, status: "aberta", transaction_id: null }];
+      esperar(P.saldoDevedor(compra, pagos)).aSer(3000);
+    });
+  });
+
+  descrever("Concorrência e falha (6.3)", () => {
+    const S = window.FinckStore;
+    const F = window.FinckFinance;
+
+    const comSessaoLimpa = async (fn) => {
+      const antes = {};
+      Object.entries(S.KEYS).forEach(([, v]) => { antes[v] = localStorage.getItem(v); });
+      Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+      await S.entrarDemo();
+      try { await fn(); } finally {
+        Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+        Object.entries(antes).forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+      }
+    };
+
+    teste("dois cliques rápidos no mesmo aporte geram um lançamento só", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        const chave = "clique-duplo";
+
+        // Sequencial, como o navegador entrega dois cliques no mesmo botão.
+        await F.aportarMeta(meta.id, 500, "Aporte", { chave });
+        await F.aportarMeta(meta.id, 500, "Aporte", { chave });
+
+        esperar(await S.listar("transactions")).aTerTamanho(1);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(500);
+      });
+    });
+
+    teste("retry depois de timeout devolve o resultado da primeira chamada", async () => {
+      await comSessaoLimpa(async () => {
+        let execucoes = 0;
+        const primeiro = await S.operacao("k1", async () => { execucoes++; return { id: "abc" }; });
+        const segundo = await S.operacao("k1", async () => { execucoes++; return { id: "xyz" }; });
+
+        esperar(execucoes).aSer(1);
+        esperar(segundo.id).aSer(primeiro.id);
+      });
+    });
+
+    teste("operação sem chave nunca é deduplicada", async () => {
+      await comSessaoLimpa(async () => {
+        let execucoes = 0;
+        await S.operacao(null, async () => { execucoes++; });
+        await S.operacao(null, async () => { execucoes++; });
+        esperar(execucoes).aSer(2);
+      });
+    });
+
+    teste("falha ao gravar o movimento não deixa a saída no caixa", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+
+        const original = S.inserir;
+        S.inserir = async (tabela, registro) => {
+          if (tabela === "goal_movements") throw new Error("queda de rede simulada");
+          return original(tabela, registro);
+        };
+
+        try {
+          await esperar(() => F.aportarMeta(meta.id, 500, "Aporte")).aFalharCom("queda de rede simulada");
+        } finally { S.inserir = original; }
+
+        // Compensação: a operação não completou, então nada dela sobrou.
+        esperar(await S.listar("transactions")).aTerTamanho(0);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(0);
+      });
+    });
+
+    // Duas abas compartilham o localStorage; a chave de operação é o que impede
+    // a segunda de lançar de novo o que a primeira já lançou.
+    teste("duas abas confirmando ao mesmo tempo geram um lançamento só", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+        const chave = "duas-abas";
+
+        // Disparadas em paralelo, como duas abas realmente fariam.
+        await Promise.all([
+          F.aportarMeta(meta.id, 400, "Aporte", { chave }),
+          F.aportarMeta(meta.id, 400, "Aporte", { chave }),
+        ]).catch(() => {});
+
+        const vivas = F.vigentes(await S.listar("transactions"));
+        esperar(vivas.length <= 1).aSerVerdadeiro();
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(400);
+      });
+    });
+
+    teste("refresh no meio da confirmação não duplica ao recarregar", async () => {
+      await comSessaoLimpa(async () => {
+        const rec = await S.inserir("recurring_transactions", {
+          description: "Aluguel", type: "saida", amount: 1200,
+          day_of_month: 6, active: true, category: "Moradia",
+        });
+        const [linha] = window.FinckOcorrencias.gerar([rec], { ciclos: ["2026-08"] });
+        const oc = await S.inserir("recurring_occurrences", linha);
+
+        await window.FinckRevisao.confirmar(oc, 1200, { unallocated: true });
+
+        // O "refresh": a página recarrega e roda a sincronização de novo.
+        await window.FinckRevisao.sincronizar([rec]);
+        await window.FinckRevisao.sincronizar([rec]);
+
+        esperar(F.vigentes(await S.listar("transactions"))).aTerTamanho(1);
+        const depois = await S.obter("recurring_occurrences", oc.id);
+        esperar(depois.status).aSer("confirmado");
+      });
+    });
+
+    teste("resposta lenta do banco não vira lançamento duplicado", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+
+        const original = S.inserir;
+        S.inserir = async (tabela, registro) => {
+          if (tabela === "transactions") await new Promise((r) => setTimeout(r, 60));
+          return original(tabela, registro);
+        };
+
+        try {
+          await F.aportarMeta(meta.id, 300, "Aporte", { chave: "lento" });
+          await F.aportarMeta(meta.id, 300, "Aporte", { chave: "lento" });
+        } finally { S.inserir = original; }
+
+        esperar(F.vigentes(await S.listar("transactions"))).aTerTamanho(1);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(300);
+      });
+    });
+
+    // Erro de RLS chega ao cliente como falha na gravação. O resultado esperado
+    // não é sucesso: é um único estado válido, sem meio-lançamento no caixa.
+    teste("erro de permissão não deixa meio-lançamento no caixa", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 0 });
+
+        const original = S.inserir;
+        S.inserir = async (tabela, registro) => {
+          if (tabela === "goal_movements") {
+            throw new Error('new row violates row-level security policy for table "goal_movements"');
+          }
+          return original(tabela, registro);
+        };
+
+        try {
+          await esperar(() => F.aportarMeta(meta.id, 500, "Aporte")).aFalharCom("row-level security");
+        } finally { S.inserir = original; }
+
+        esperar(await S.listar("transactions")).aTerTamanho(0);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(0);
+      });
+    });
+
+    teste("erro de confirmação deixa rastro técnico com contexto", async () => {
+      await comSessaoLimpa(async () => {
+        await S.registrarEvento({
+          scope: "confirmacao",
+          message: "timeout simulado",
+          context: { ocorrencia: "o1", ciclo: "2026-08" },
+        });
+
+        const eventos = await S.listarEventos({ limite: 5 });
+        esperar(eventos.length >= 1).aSerVerdadeiro();
+        esperar(eventos[0].scope).aSer("confirmacao");
+        esperar(eventos[0].context.ciclo).aSer("2026-08");
+      });
+    });
+
+    teste("registrar evento nunca derruba a operação observada", async () => {
+      await comSessaoLimpa(async () => {
+        const evento = await S.registrarEvento({ scope: "teste", message: null, context: undefined });
+        esperar(typeof evento.created_at).aSer("string");
+      });
+    });
+  });
+
+  descrever("Importação hostil (6.4)", () => {
+    const S = window.FinckStore;
+
+    teste("movimento de meta apontando para meta ausente é descartado", () => {
+      const r = S.validarImportacao({
+        goals: [],
+        goal_movements: [{ id: "m1", goal_id: "inexistente", kind: "aporte", amount: 100, date: "2026-08-10" }],
+      });
+      esperar(r.linhas.goal_movements).aTerTamanho(0);
+      esperar(r.avisos.some((a) => a.includes("goal_id"))).aSerVerdadeiro();
+    });
+
+    teste("movimento de meta com valor zerado é descartado", () => {
+      const r = S.validarImportacao({
+        goals: [{ id: "g1", name: "Reserva", target_amount: 1000 }],
+        goal_movements: [{ id: "m1", goal_id: "g1", kind: "aporte", amount: 0, date: "2026-08-10" }],
+      });
+      esperar(r.linhas.goal_movements).aTerTamanho(0);
+    });
+
+    teste("aporte com sinal invertido é recusado", () => {
+      const r = S.validarImportacao({
+        goals: [{ id: "g1", name: "Reserva", target_amount: 1000 }],
+        goal_movements: [{ id: "m1", goal_id: "g1", kind: "aporte", amount: -100, date: "2026-08-10" }],
+      });
+      esperar(r.linhas.goal_movements).aTerTamanho(0);
+    });
+
+    teste("retirada com sinal positivo é recusada", () => {
+      const r = S.validarImportacao({
+        goals: [{ id: "g1", name: "Reserva", target_amount: 1000 }],
+        goal_movements: [{ id: "m1", goal_id: "g1", kind: "retirada", amount: 100, date: "2026-08-10" }],
+      });
+      esperar(r.linhas.goal_movements).aTerTamanho(0);
+    });
+
+    teste("movimento de meta válido passa e mantém o vínculo", () => {
+      const r = S.validarImportacao({
+        goals: [{ id: "g1", name: "Reserva", target_amount: 1000 }],
+        goal_movements: [{ id: "m1", goal_id: "g1", kind: "aporte", amount: 100, date: "2026-08-10" }],
+      });
+      esperar(r.linhas.goal_movements).aTerTamanho(1);
+    });
+
+    teste("parcela com estado desconhecido é descartada", () => {
+      const r = S.validarImportacao({
+        installment_purchases: [{ id: "c1", total_amount: 300, installments_count: 3, first_due_date: "2026-08-10" }],
+        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, amount: 100, status: "sei_la" }],
+      });
+      esperar(r.linhas.installment_payments).aTerTamanho(0);
+    });
+
+    teste("parcela estornada é estado válido", () => {
+      const r = S.validarImportacao({
+        installment_purchases: [{ id: "c1", total_amount: 300, installments_count: 3, first_due_date: "2026-08-10" }],
+        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, amount: 100, status: "estornada" }],
+      });
+      esperar(r.linhas.installment_payments).aTerTamanho(1);
+    });
+
+    teste("arquivo inválido é recusado antes de gravar qualquer coisa", async () => {
+      await esperar(() => S.importarTudo({ lixo: true })).aFalharCom("Arquivo inválido");
+    });
+  });
+
+  descrever("Semáforo por prioridade (4.2)", () => {
+    const R = window.FinckReality;
+    const perfil = { income_monthly: 3500, work_days_month: 22, work_hours_day: 8 };
+
+    teste("déficit de fixos vem antes de qualquer percentual", () => {
+      const r = R.calcular(10, perfil, { saldo: 50000, despesasFixas: 4000 });
+      esperar(r.semaforo.motivo).aSer("deficit_fixos");
+      esperar(r.semaforo.nivel).aSer("alerta");
+    });
+
+    teste("déficit aparece com sinal, não zerado", () => {
+      const r = R.calcular(10, perfil, { despesasFixas: 4000 });
+      esperar(r.sobra_apos_fixos).aSer(-500);
+      esperar(r.deficit_fixos).aSer(500);
+      esperar(r.renda_livre).aSer(0);
+    });
+
+    teste("saldo negativo vem antes do comprometimento da renda livre", () => {
+      const r = R.calcular(50, perfil, { saldo: 10 });
+      esperar(r.semaforo.motivo).aSer("sem_caixa");
+    });
+
+    teste("compra que cabe no caixa mas não no projetado é sinalizada", () => {
+      const r = R.calcular(200, perfil, { saldo: 1000, compromissosAbertos: 900 });
+      esperar(r.semaforo.motivo).aSer("sem_projetado");
+      esperar(r.semaforo.titulo).aConter("déficit projetado");
+      esperar(r.disponivel_projetado).aSer(100);
+    });
+
+    teste("comprometimento da renda livre vem antes do percentual da renda", () => {
+      // 500 é 14% da renda, mas 71% da sobra depois dos fixos.
+      const r = R.calcular(500, perfil, { saldo: 50000, despesasFixas: 2800 });
+      esperar(r.semaforo.motivo).aSer("renda_livre");
+      esperar(r.semaforo.nivel).aSer("alerta");
+    });
+
+    teste("percentual alto da renda ainda é alerta", () => {
+      const r = R.calcular(1500, perfil, { saldo: 50000 });
+      esperar(r.semaforo.motivo).aSer("percentual_renda");
+      esperar(r.semaforo.nivel).aSer("alerta");
+    });
+
+    teste("compra pequena que pesa na meta recebe atenção, não verde", () => {
+      const r = R.calcular(200, perfil, {
+        saldo: 50000,
+        metas: [{ id: "g", name: "Notebook", target_amount: 1000, current_amount: 500 }],
+      });
+      esperar(r.semaforo.motivo).aSer("impacto_meta");
+      esperar(r.semaforo.nivel).aSer("atencao");
+    });
+
+    teste("compra leve sem impacto nenhum fica verde", () => {
+      const r = R.calcular(100, perfil, { saldo: 50000 });
+      esperar(r.semaforo.motivo).aSer("folga");
+      esperar(r.semaforo.nivel).aSer("verde");
+    });
+
+    teste("cada indicador do glossário tem definição e referência", () => {
+      Object.entries(R.GLOSSARIO).forEach(([chave, g]) => {
+        if (!g.rotulo || !g.definicao || !g.referencia) {
+          throw new Error(`indicador "${chave}" está sem rótulo, definição ou referência`);
+        }
+      });
+      esperar(Object.keys(R.GLOSSARIO).length >= 8).aSerVerdadeiro();
+    });
+
+    teste("saldo, sobra e disponível têm nomes diferentes", () => {
+      const nomes = Object.values(R.GLOSSARIO).map((g) => g.rotulo);
+      esperar(new Set(nomes).size).aSer(nomes.length);
     });
   });
 

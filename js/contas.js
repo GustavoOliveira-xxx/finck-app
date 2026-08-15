@@ -18,7 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function carregar() {
     [contas, transacoes, transferencias, ajustes] = await Promise.all([
       S.listar("accounts", { ordem: "created_at", asc: true }),
-      S.listar("transactions", { ordem: "date", asc: false }),
+      // Estornada continua no histórico, mas fora do saldo de qualquer conta.
+      S.listar("transactions", { ordem: "date", asc: false }).then((l) => l.filter((t) => !t.reversed_at)),
       S.listar("transfers", { ordem: "date", asc: false }),
       S.listar("balance_adjustments", { ordem: "date", asc: false }),
     ]);
@@ -34,13 +35,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     const resumo = C.consolidado(contas, movimentos());
     $("chipContas").textContent = `${resumo.quantidade} ativa${resumo.quantidade === 1 ? "" : "s"}`;
 
+    // A identidade que precisa fechar, escrita na tela:
+    //   saldo global = contas alocadas + não alocado
+    // Quando ela não fecha, o produto avisa em vez de mostrar dois números
+    // diferentes e deixar o usuário adivinhar qual é o certo.
+    const semConta = transacoes.filter((t) => !t.account_id);
+    const naoAlocado =
+      semConta.filter((t) => t.type === "entrada").reduce((s, t) => s + Number(t.amount || 0), 0) -
+      semConta.filter((t) => t.type === "saida").reduce((s, t) => s + Number(t.amount || 0), 0);
+    const ambiguas = semConta.filter((t) => !t.unallocated).length;
+
     $("consolidado").innerHTML = `
       <li><span>Dinheiro em contas</span>
           <strong class="${resumo.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(resumo.disponivel)}</strong></li>
-      <li><span>Lançamentos sem conta</span>
-          <strong>${C.semConta(transacoes)}</strong></li>
+      <li><span>Fora das contas (não alocado)</span>
+          <strong class="${naoAlocado < 0 ? "cor-vermelha" : ""}">${U.moeda(naoAlocado)}</strong></li>
+      <li class="linha-identidade"><span>Saldo global</span>
+          <strong>${U.moeda(resumo.disponivel + naoAlocado)}</strong></li>
       <li><span>Transferências registradas</span>
           <strong>${transferencias.length}</strong></li>`;
+
+    const aviso = $("avisoReconciliacao");
+    if (aviso) {
+      aviso.hidden = ambiguas === 0;
+      aviso.innerHTML = ambiguas
+        ? `<strong>${ambiguas} lançamento(s) sem conta definida.</strong>
+           Eles entram no saldo global, mas não aparecem em nenhuma conta — e você
+           ainda não disse que devem ficar de fora. Enquanto isso, os dois números
+           acima contam histórias diferentes.
+           <a href="perfil.html#diagnostico">Resolver no diagnóstico</a>`
+        : "";
+    }
 
     renderContas();
     renderInstituicoes(resumo.contas);
@@ -369,19 +394,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (erro) return U.toast(erro, "erro");
     if (!window.FinckData.ler("transferData")) return U.toast("Informe a data.", "erro");
 
-    try {
+    const data = window.FinckData.ler("transferData");
+    const botao = e.submitter || $("formTransferencia").querySelector('button[type="submit"]');
+    if (botao) botao.disabled = true;
 
-      await S.inserir("transfers", {
+    try {
+      // As duas pontas mudam juntas ou não mudam. A chave cobre duplo clique e
+      // retry depois de timeout.
+      await window.FinckFinance.transferir({
         from_account_id: origem,
         to_account_id: destino,
         amount: valor,
-        date: window.FinckData.ler("transferData"),
+        date: data,
         description: $("transferDescricao").value.trim() || null,
+        chave: S.chaveDeOperacao("transferencia", origem, destino, valor.toFixed(2), data),
       });
       U.fecharModal("modalTransferencia");
-      U.toast("Transferência registrada. O saldo consolidado não mudou.", "sucesso");
+      U.toast("Transferência registrada. O patrimônio total não mudou.", "sucesso");
       carregar();
-    } catch (err) { U.toast(err.message, "erro"); }
+    } catch (err) {
+      await S.registrarEvento({
+        scope: "transferencia", message: err.message,
+        context: { origem, destino, valor },
+      });
+      U.toast(err.message, "erro");
+    } finally {
+      if (botao) botao.disabled = false;
+    }
   });
 
   function abrirAjuste() {
