@@ -3505,3 +3505,42 @@ table th{
   .fech-linha dd{ flex-direction:column; align-items:flex-start; gap:.15rem; }
   .fech-linha__dif{ margin-left:0; }
 }
+
+/* ---- Conciliação e semântica de saldo (análise lógica 15.08) ---- */
+.nota-saldo{
+  margin:.35rem 0 0;
+  font-size:.78rem;
+  line-height:1.45;
+  color:var(--texto-fraquissimo);
+}
+.nota-saldo--alerta{ color:var(--amarelo); }
+
+.nota--conciliacao{
+  border-left:2px solid var(--amarelo);
+  padding-left:.6rem;
+  margin:.5rem 0;
+}
+.nota--conciliacao a{ color:var(--roxo-neon); }
+
+.teto--no_limite{ border-left-color:var(--amarelo); }
+.teto--no_limite .teto__nota{ color:var(--amarelo); }
+
+.revisao__conta{
+  display:flex;
+  flex-direction:column;
+  gap:.3rem;
+  margin:.8rem 0 .2rem;
+  font-size:.82rem;
+  text-align:left;
+}
+.revisao__dica--conta{ color:var(--amarelo); }
+
+.selo-previsto,.selo-realizado{
+  font-size:.66rem;
+  padding:.1rem .4rem;
+  border-radius:.4rem;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.selo-previsto{  background:var(--superficie-topo); color:var(--texto-fraquissimo); }
+.selo-realizado{ background:var(--verde-fraco);  color:var(--verde); }

@@ -153,7 +153,23 @@ document.addEventListener("DOMContentLoaded", async () => {
          </div>`
       : "";
 
+    const avisos = (rel.avisos || []).length
+      ? `<div class="bloco-interno">
+           <h4>Descartados por inconsistência</h4>
+           <p class="nota">Registros com valor inválido, sem data ou apontando para algo que não veio no arquivo não foram gravados.</p>
+           <ul class="lista-simples">
+             ${rel.avisos.slice(0, 25).map((a) => `
+               <li class="item-lista"><span class="item-desc">${U.escapeHTML(a)}</span></li>`).join("")}
+           </ul>
+           ${rel.avisos.length > 25
+             ? `<p class="nota">…e mais ${rel.avisos.length - 25} aviso(s).</p>` : ""}
+         </div>`
+      : "";
+
     $("conteudoRelatorio").innerHTML = `
+      ${rel.deDemo
+        ? `<p class="nota nota--conciliacao">Atenção: este arquivo saiu do modo demonstração. Os dados são de exemplo, não do seu histórico real.</p>`
+        : ""}
       <p class="descricao">
         ${rel.modo === "substituir"
           ? "Seus dados foram substituídos pelo conteúdo do arquivo."
@@ -165,8 +181,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p class="total-linha">
         <span>Importados</span> <strong>${rel.inseridos}</strong>
         ${rel.ignorados ? `· <span>ignorados</span> <strong>${rel.ignorados}</strong>` : ""}
+        ${rel.descartados ? `· <span>descartados</span> <strong>${rel.descartados}</strong>` : ""}
       </p>
-      ${conflitos}`;
+      ${conflitos}
+      ${avisos}`;
     U.abrirModal("modalRelatorio");
   }
 

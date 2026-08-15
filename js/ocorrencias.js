@@ -45,6 +45,9 @@ window.FinckOcorrencias = (() => {
           due_date: iso(quando),
           description: r.description,
           type: r.type,
+
+          category: r.type === "saida" ? (r.category || "Outros") : null,
+          account_id: r.account_id || null,
           planned_amount: Number(r.amount) || 0,
           status: "previsto",
         });
@@ -83,15 +86,64 @@ window.FinckOcorrencias = (() => {
     return iso(referencia) > ultima;
   }
 
-  function movimentacaoDe(oc, valorReal) {
+  function movimentacaoDe(oc, valorReal, contaEscolhida) {
+    const conta = contaEscolhida !== undefined ? contaEscolhida : oc.account_id;
     return {
       type: oc.type,
       description: oc.description,
       amount: Number(valorReal),
       date: oc.due_date,
       category: oc.type === "saida" ? (oc.category || "Outros") : null,
+
+      account_id: conta || null,
       source: "recorrente",
+      source_occurrence_id: oc.id || null,
     };
+  }
+
+  const realizada = (oc) => REALIZADOS.includes(oc?.status);
+
+  function orfas(ocorrencias, transacoes) {
+    const porOcorrencia = new Map();
+    (transacoes || []).forEach((t) => {
+      if (!t.source_occurrence_id) return;
+      const chave = String(t.source_occurrence_id);
+      if (!porOcorrencia.has(chave)) porOcorrencia.set(chave, []);
+      porOcorrencia.get(chave).push(t);
+    });
+
+    const porId = new Map((ocorrencias || []).map((o) => [String(o.id), o]));
+    const excluir = [];
+    const soltarVinculo = [];
+    const desvincular = [];
+    const revincular = [];
+
+    porOcorrencia.forEach((lista, chave) => {
+      const oc = porId.get(chave);
+
+      // Ocorrência sumiu (o recorrente foi apagado e o banco fez cascade).
+      // O dinheiro se moveu de verdade: o lançamento fica, só perde o ponteiro.
+      if (!oc) { lista.forEach((t) => soltarVinculo.push(t.id)); return; }
+
+      // Ocorrência existe mas não está realizada: previsão não move saldo,
+      // então este lançamento é sobra de uma gravação parcial.
+      if (!realizada(oc)) { lista.forEach((t) => excluir.push(t.id)); return; }
+
+      const ordenadas = [...lista].sort((a, b) =>
+        String(a.created_at || "").localeCompare(String(b.created_at || "")));
+      const boa = ordenadas.find((t) => String(t.id) === String(oc.transaction_id)) || ordenadas[0];
+
+      ordenadas.filter((t) => String(t.id) !== String(boa.id)).forEach((t) => excluir.push(t.id));
+      if (String(oc.transaction_id) !== String(boa.id)) revincular.push({ id: oc.id, transaction_id: boa.id });
+    });
+
+    (ocorrencias || []).forEach((oc) => {
+      if (!oc.transaction_id) return;
+      const existe = (transacoes || []).some((t) => String(t.id) === String(oc.transaction_id));
+      if (!existe) desvincular.push(oc.id);
+    });
+
+    return { excluir, soltarVinculo, desvincular, revincular };
   }
 
   function estadoAposValor(oc, valorReal) {
@@ -115,6 +167,6 @@ window.FinckOcorrencias = (() => {
     ESTADOS, ABERTOS, REALIZADOS,
     iso, cicloDe, dataDoCiclo, ciclosAoRedor,
     gerar, venceu, paraPendente, pendentes, futuras, cicloPronto,
-    movimentacaoDe, estadoAposValor, resumoDecisoes,
+    movimentacaoDe, estadoAposValor, resumoDecisoes, realizada, orfas,
   };
 })();

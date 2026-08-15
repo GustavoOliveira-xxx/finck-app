@@ -16,6 +16,7 @@ window.FinckStore = (() => {
     recurring_transactions: "finck.recurring",
     purchase_analyses: "finck.analyses",
     installment_purchases: "finck.parcelas",
+    installment_payments: "finck.parcelas.pagas",
     category_budgets: "finck.orcamentos",
     transfers: "finck.transferencias",
     balance_adjustments: "finck.ajustes",
@@ -224,8 +225,11 @@ window.FinckStore = (() => {
     return novas;
   }
 
+  const meu = (registro, user) => registro && String(registro.user_id) === String(user.id);
+
   async function atualizar(tabela, id, campos) {
     const user = await usuarioAtual();
+    if (!user) throw new Error("Sessão expirada. Entre novamente.");
     const banco = bd();
     if (banco) {
       const { data, error } = await banco.from(tabela).update(campos).eq("id", id).eq("user_id", user.id).select().single();
@@ -233,21 +237,58 @@ window.FinckStore = (() => {
       return data;
     }
     const linhas = ler(KEYS[tabela], []);
-    const i = linhas.findIndex((r) => String(r.id) === String(id));
+
+    const i = linhas.findIndex((r) => String(r.id) === String(id) && meu(r, user));
     if (i >= 0) { linhas[i] = { ...linhas[i], ...campos }; gravar(KEYS[tabela], linhas); return linhas[i]; }
     return null;
   }
 
   async function remover(tabela, id) {
     const user = await usuarioAtual();
+    if (!user) throw new Error("Sessão expirada. Entre novamente.");
     const banco = bd();
     if (banco) {
       const { error } = await banco.from(tabela).delete().eq("id", id).eq("user_id", user.id);
       if (error) throw new Error(error.message);
       return true;
     }
-    gravar(KEYS[tabela], ler(KEYS[tabela], []).filter((r) => String(r.id) !== String(id)));
+    const linhas = ler(KEYS[tabela], []);
+
+    const restantes = linhas.filter((r) => !(String(r.id) === String(id) && meu(r, user)));
+    if (restantes.length === linhas.length) return false;
+    gravar(KEYS[tabela], restantes);
     return true;
+  }
+
+  // Chama uma função transacional do banco. Devolve { suportado: false }
+  // quando não há banco (demo/local) ou quando a migration de integridade
+  // ainda não foi aplicada — nesses casos o chamador usa o caminho em JS.
+  const SEM_FUNCAO = /does not exist|could not find the function|schema cache|PGRST202|42883/i;
+
+  async function rpc(nome, parametros = {}) {
+    const banco = bd();
+    if (!banco) return { suportado: false, dados: null };
+
+    const { data, error } = await banco.rpc(nome, parametros);
+    if (error) {
+      if (SEM_FUNCAO.test(`${error.code || ""} ${error.message || ""}`)) {
+        return { suportado: false, dados: null };
+      }
+      throw new Error(error.message);
+    }
+    return { suportado: true, dados: data };
+  }
+
+  async function obter(tabela, id) {
+    const user = await usuarioAtual();
+    if (!user) return null;
+    const banco = bd();
+    if (banco) {
+      const { data, error } = await banco.from(tabela).select("*").eq("id", id).eq("user_id", user.id).maybeSingle();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    return ler(KEYS[tabela], []).find((r) => String(r.id) === String(id) && meu(r, user)) || null;
   }
 
   async function obterPerfil() {
@@ -314,11 +355,174 @@ window.FinckStore = (() => {
     return registro;
   }
 
+  // Ordem de gravação: quem é referenciado entra antes de quem referencia,
+  // para que os vínculos possam ser reapontados para os novos IDs.
   const TABELAS = [
-    "accounts", "transactions", "goals", "recurring_transactions",
+    "accounts", "goals",
+    "transactions", "recurring_transactions",
     "purchase_analyses", "installment_purchases", "category_budgets",
-    "transfers", "balance_adjustments",
+    "transfers", "balance_adjustments", "installment_payments",
   ];
+
+  // Cada vínculo diz de qual tabela o ID vem e se ele é obrigatório.
+  // Alvo fora de TABELAS nunca resolve: o vínculo é limpo em vez de virar órfão.
+  const VINCULOS = {
+    transactions: [
+      ["account_id", "accounts", false],
+      ["goal_id", "goals", false],
+      ["source_occurrence_id", "recurring_occurrences", false],
+    ],
+    recurring_transactions: [["account_id", "accounts", false]],
+    installment_purchases:  [["account_id", "accounts", false]],
+    balance_adjustments: [["account_id", "accounts", true]],
+    transfers:           [["from_account_id", "accounts", true], ["to_account_id", "accounts", true]],
+    installment_payments: [
+      ["purchase_id", "installment_purchases", true],
+      ["transaction_id", "transactions", false],
+    ],
+  };
+
+  const positivo = (v) => Number.isFinite(Number(v)) && Number(v) > 0;
+  const naoNegativo = (v) => v === null || v === undefined || v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0);
+  const dataValida = (v) => /^\d{4}-\d{2}-\d{2}/.test(String(v || ""));
+
+  // Regras por tabela. Devolve o motivo da rejeição ou null quando a linha é válida.
+  const INVARIANTES = {
+    accounts: (r) => (!String(r.name || "").trim() ? "conta sem nome" : null),
+
+    goals: (r) =>
+      !String(r.name || "").trim() ? "meta sem nome"
+      : !positivo(r.target_amount) ? "meta com alvo zerado ou negativo"
+      : !naoNegativo(r.current_amount) ? "meta com valor guardado negativo"
+      : null,
+
+    transactions: (r) =>
+      !["entrada", "saida"].includes(r.type) ? "movimentação sem tipo válido"
+      : !positivo(r.amount) ? "movimentação com valor zerado ou negativo"
+      : !dataValida(r.date) ? "movimentação sem data válida"
+      : !String(r.description || "").trim() ? "movimentação sem descrição"
+      : null,
+
+    recurring_transactions: (r) =>
+      !["entrada", "saida"].includes(r.type) ? "recorrente sem tipo válido"
+      : !positivo(r.amount) ? "recorrente com valor zerado ou negativo"
+      : !(Number(r.day_of_month) >= 1 && Number(r.day_of_month) <= 31) ? "recorrente com dia fora de 1 a 31"
+      : null,
+
+    installment_purchases: (r) =>
+      !positivo(r.total_amount) ? "parcelamento com total zerado ou negativo"
+      : !(Number(r.installments_count) >= 1) ? "parcelamento sem número de parcelas"
+      : !dataValida(r.first_due_date) ? "parcelamento sem primeiro vencimento válido"
+      : Number(r.paid_count || 0) > Number(r.installments_count) ? "parcelamento com mais parcelas pagas que o total"
+      : null,
+
+    category_budgets: (r) =>
+      !String(r.category || "").trim() ? "teto sem categoria"
+      : !positivo(r.limit_amount) ? "teto com limite zerado ou negativo"
+      : null,
+
+    transfers: (r) =>
+      !positivo(r.amount) ? "transferência com valor zerado ou negativo"
+      : String(r.from_account_id) === String(r.to_account_id) ? "transferência entre a mesma conta"
+      : null,
+
+    balance_adjustments: (r) =>
+      !dataValida(r.date) ? "ajuste sem data válida" : null,
+
+    purchase_analyses: (r) =>
+      !String(r.item_name || "").trim() ? "análise sem item"
+      : !positivo(r.price) ? "análise com preço zerado ou negativo"
+      : null,
+
+    installment_payments: (r) =>
+      !(Number(r.installment_no) >= 1) ? "parcela sem número válido"
+      : !positivo(r.amount) ? "parcela com valor zerado ou negativo"
+      : !["aberta", "paga"].includes(r.status) ? "parcela com estado inválido"
+      : r.status === "aberta" && r.transaction_id ? "parcela aberta não pode ter movimentação vinculada"
+      : null,
+  };
+
+  // Fase 1: valida esquema, invariantes e referências. Não grava nada.
+  function validarImportacao(dados) {
+    const erros = [];
+    const avisos = [];
+
+    if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
+      return { valido: false, erros: ["Arquivo inválido: não parece um backup do FinCK."], avisos, linhas: {} };
+    }
+
+    const temAlgo = TABELAS.some((t) => Array.isArray(dados[t])) || dados.profile;
+    if (!temAlgo) {
+      return { valido: false, erros: ["Arquivo inválido: nenhum dado reconhecido."], avisos, linhas: {} };
+    }
+
+    // IDs presentes no próprio arquivo, por tabela — base para checar referências.
+    const idsNoArquivo = {};
+    TABELAS.forEach((t) => {
+      idsNoArquivo[t] = new Set(
+        (Array.isArray(dados[t]) ? dados[t] : [])
+          .map((r) => (r && r.id !== undefined && r.id !== null ? String(r.id) : null))
+          .filter(Boolean)
+      );
+    });
+    const conhecidos = (alvo) => idsNoArquivo[alvo] || new Set();
+
+    const linhas = {};
+
+    for (const tabela of TABELAS) {
+      const bruto = dados[tabela];
+      if (bruto !== undefined && !Array.isArray(bruto)) {
+        erros.push(`"${tabela}" deveria ser uma lista.`);
+        linhas[tabela] = [];
+        continue;
+      }
+
+      const aceitas = [];
+      (bruto || []).forEach((linha, i) => {
+        const posicao = `${tabela}[${i}]`;
+        if (!linha || typeof linha !== "object" || Array.isArray(linha)) {
+          avisos.push(`${posicao}: registro ignorado por não ser um objeto.`);
+          return;
+        }
+
+        const regra = INVARIANTES[tabela];
+        const motivo = regra ? regra(linha) : null;
+        if (motivo) { avisos.push(`${posicao}: ${motivo} — registro descartado.`); return; }
+
+        // Referências: obrigatórias derrubam a linha; opcionais só perdem o vínculo.
+        let descartar = false;
+        (VINCULOS[tabela] || []).forEach(([campo, alvo, obrigatorio]) => {
+          const valor = linha[campo];
+          if (valor === null || valor === undefined || valor === "") {
+            if (obrigatorio) {
+              avisos.push(`${posicao}: sem ${campo} — registro descartado.`);
+              descartar = true;
+            }
+            return;
+          }
+          // Tabela que o backup nunca leva (ocorrências são regeradas a partir
+          // das regras): soltar o vínculo é o comportamento previsto, não um
+          // defeito do arquivo — não vira aviso.
+          const exportada = TABELAS.includes(alvo);
+
+          if (!conhecidos(alvo).has(String(valor))) {
+            if (obrigatorio) {
+              avisos.push(`${posicao}: ${campo} aponta para ${alvo} que não veio no arquivo — registro descartado.`);
+              descartar = true;
+            } else if (exportada) {
+              avisos.push(`${posicao}: ${campo} aponta para ${alvo} que não veio no arquivo — vínculo removido.`);
+            }
+          }
+        });
+
+        if (!descartar) aceitas.push(linha);
+      });
+
+      linhas[tabela] = aceitas;
+    }
+
+    return { valido: erros.length === 0, erros, avisos, linhas };
+  }
 
   const ASSINATURA = {
     accounts:               (r) => [r.name, r.institution_name, r.account_type].join("|"),
@@ -332,6 +536,7 @@ window.FinckStore = (() => {
     installment_purchases:  (r) => [r.description, Number(r.total_amount), r.installments_count, String(r.first_due_date).slice(0, 10)].join("|"),
 
     category_budgets:       (r) => String(r.category),
+    installment_payments:   (r) => [r.purchase_id, Number(r.installment_no)].join("|"),
   };
 
   const assinar = (tabela, linha) => {
@@ -349,40 +554,69 @@ window.FinckStore = (() => {
   async function exportarTudo() {
     const perfil = await obterPerfil();
     const gamificacao = await obterGamificacao();
-    const dados = { versao: 2, exportado_em: new Date().toISOString(), profile: perfil, gamification: gamificacao };
+    // Marca a origem: um arquivo tirado da demonstração carrega dados de
+    // exemplo e não deve entrar numa conta real sem o usuário saber.
+    const dados = {
+      versao: 3,
+      exportado_em: new Date().toISOString(),
+      origem: emDemo() ? "demo" : "conta",
+      profile: perfil,
+      gamification: gamificacao,
+    };
     for (const t of TABELAS) dados[t] = await listar(t);
     return dados;
   }
 
   async function importarTudo(dados, { modo: modoImport = "mesclar" } = {}) {
-    if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
-      throw new Error("Arquivo inválido: não parece um backup do FinCK.");
-    }
-    const temAlgo = TABELAS.some((t) => Array.isArray(dados[t])) || dados.profile;
-    if (!temAlgo) throw new Error("Arquivo inválido: nenhum dado reconhecido.");
     if (!["mesclar", "substituir"].includes(modoImport)) {
       throw new Error("Modo de importação desconhecido.");
     }
 
+    // Fase 1: valida tudo antes de tocar no banco.
+    const exame = validarImportacao(dados);
+    if (!exame.valido) throw new Error(exame.erros[0]);
+
+    // Fase 2: grava. IDs antigos são reapontados para os novos conforme a
+    // gravação avança — importar nunca reaproveita ID de outro usuário.
     if (modoImport === "substituir") await limparDados();
+
+    const deDemo = dados.origem === "demo" && !emDemo();
 
     const relatorio = {
       modo: modoImport,
+      origem: dados.origem || "desconhecida",
+      deDemo,
       inseridos: 0,
       ignorados: 0,
+      descartados: exame.avisos.length,
       porTabela: {},
       conflitos: [],
+      avisos: exame.avisos,
       perfilAtualizado: false,
     };
 
     if (dados.profile) {
-      const { id, created_at, ...perfil } = dados.profile;
+      const { id, created_at, user_id, ...perfil } = dados.profile;
       await salvarPerfil(perfil);
       relatorio.perfilAtualizado = true;
     }
 
+    const mapaDeIds = {};
+    TABELAS.forEach((t) => { mapaDeIds[t] = new Map(); });
+
+    const reapontar = (tabela, linha) => {
+      const ajustada = { ...linha };
+      (VINCULOS[tabela] || []).forEach(([campo, alvo]) => {
+        const valor = ajustada[campo];
+        if (valor === null || valor === undefined || valor === "") return;
+        const novo = mapaDeIds[alvo]?.get(String(valor));
+        ajustada[campo] = novo !== undefined ? novo : null;
+      });
+      return ajustada;
+    };
+
     for (const t of TABELAS) {
-      const linhas = Array.isArray(dados[t]) ? dados[t] : [];
+      const linhas = exame.linhas[t] || [];
 
       const existentes = modoImport === "substituir" ? [] : await listar(t);
       const vistos = new Set(existentes.map((r) => assinar(t, r)));
@@ -390,16 +624,21 @@ window.FinckStore = (() => {
 
       for (const linha of linhas) {
         const { id, user_id, created_at, ...resto } = linha;
-        const chave = assinar(t, resto);
+        const preparada = reapontar(t, resto);
+        const chave = assinar(t, preparada);
+
         if (vistos.has(chave)) {
           pulados++;
           if (relatorio.conflitos.length < 25) {
-            relatorio.conflitos.push({ tabela: t, descricao: descreverLinha(t, resto) });
+            relatorio.conflitos.push({ tabela: t, descricao: descreverLinha(t, preparada) });
           }
           continue;
         }
         vistos.add(chave);
-        await inserir(t, resto);
+        const criada = await inserir(t, preparada);
+        if (id !== undefined && id !== null && criada?.id !== undefined) {
+          mapaDeIds[t].set(String(id), criada.id);
+        }
         entraram++;
       }
 
@@ -439,10 +678,10 @@ window.FinckStore = (() => {
     emDemo, entrarDemo, encerrarDemo,
     usuarioAtual, tokenAcesso, cadastrar, entrar, sair, exigirLogin,
     recuperarSenha, definirNovaSenha, reenviarConfirmacao,
-    listar, inserir, inserirSeNovo, upsert, atualizar, remover,
+    listar, obter, inserir, inserirSeNovo, upsert, atualizar, remover, rpc,
     obterPerfil, salvarPerfil, precisaOnboarding,
     obterGamificacao, salvarGamificacao,
-    exportarTudo, importarTudo, limparDados,
-    assinar,
+    exportarTudo, importarTudo, validarImportacao, limparDados,
+    assinar, TABELAS,
   };
 })();

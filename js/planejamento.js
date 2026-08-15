@@ -12,13 +12,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let ctx = null;
   let parcelamentos = [];
+  let pagamentos = [];
+  let ocorrencias = [];
   let tetos = [];
   let mesVisivel = P.chaveMes(new Date());
 
   async function carregar() {
-    [ctx, parcelamentos, tetos] = await Promise.all([
+    [ctx, parcelamentos, pagamentos, ocorrencias, tetos] = await Promise.all([
       F.carregarContexto(),
       S.listar("installment_purchases", { ordem: "first_due_date", asc: true }),
+      S.listar("installment_payments"),
+      S.listar("recurring_occurrences"),
       S.listar("category_budgets", { ordem: "category", asc: true }),
     ]);
     renderProjecao();
@@ -32,6 +36,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       saldo: ctx.saldo,
       recorrentes: ctx.recorrentes,
       parcelamentos,
+      pagamentos,
+      ocorrencias,
+      transacoesFuturas: ctx.transacoesFuturas,
       meses: 6,
     });
 
@@ -94,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       primeiro.toLocaleDateString(cfg.LOCALE, { month: "long", year: "numeric" });
 
     const eventos = P.eventosDoMes(
-      { recorrentes: ctx.recorrentes, parcelamentos, transacoes: ctx.transacoes },
+      { recorrentes: ctx.recorrentes, parcelamentos, pagamentos, transacoes: ctx.transacoes },
       mesVisivel
     );
 
@@ -144,14 +151,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         ${lista.map((e) => `
           <li class="item-lista">
             <span class="item-desc">${U.escapeHTML(e.titulo)}</span>
-            <span class="item-dia">${e.tipo === "parcela" ? "parcela" : e.tipo === "recorrente" ? "fixa" : "lançada"}</span>
+            <span class="item-dia">
+              ${e.tipo === "parcela" ? "parcela" : e.tipo === "recorrente" ? "fixa" : "lançada"}
+              <span class="${e.estado === "realizado" ? "selo-realizado" : "selo-previsto"}">${e.estado === "realizado" ? "realizado" : "previsto"}</span>
+            </span>
             <span class="item-valor ${e.sinal > 0 ? "cor-verde" : "cor-vermelha"}">
               ${e.sinal > 0 ? "+" : "−"} ${U.moeda(e.valor)}
             </span>
           </li>`).join("")}
       </ul>
       <p class="total-linha"><span>Resultado do dia</span>
-        <strong class="${total < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(total)}</strong></p>`;
+        <strong class="${total < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(total)}</strong></p>
+      <p class="nota">Previsto é compromisso que ainda não moveu dinheiro. Realizado já está no saldo.</p>`;
   }
 
   $("mesAnterior").addEventListener("click", () => {
@@ -167,8 +178,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderParcelas() {
     const ativos = parcelamentos.filter((p) => p.active !== false);
-    const devedor = ativos.reduce((s, p) => s + P.saldoDevedor(p), 0);
-    const porMes = P.parcelasPorMes(ativos, 12);
+    const porCompra = P.pagamentosPorCompra(pagamentos);
+    const devedor = ativos.reduce((s, p) => s + P.saldoDevedor(p, porCompra.get(String(p.id)) || []), 0);
+    const porMes = P.parcelasPorMes(ativos, 12, new Date(), pagamentos);
     const esteMes = porMes[P.chaveMes(new Date())] || 0;
     const comprometeRendaLivre = ctx.rendaLivre > 0 ? (esteMes / ctx.rendaLivre) * 100 : 0;
 
@@ -181,9 +193,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("vazioParcelas").hidden = parcelamentos.length > 0;
     $("listaParcelas").innerHTML = parcelamentos.map((p) => {
-      const crono = P.cronograma(p);
+      const doParcelamento = porCompra.get(String(p.id)) || [];
+      const crono = P.cronograma(p, doParcelamento);
       const pagas = crono.filter((c) => c.paga).length;
-      const restante = P.saldoDevedor(p);
+      const restante = P.saldoDevedor(p, doParcelamento);
+      const ultimaPaga = [...crono].reverse().find((c) => c.paga);
       const proxima = crono.find((c) => !c.paga);
       const pct = (pagas / crono.length) * 100;
       return `
@@ -198,7 +212,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             <strong>${U.moeda(P.valorParcela(p.total_amount, p.installments_count))}/mês</strong>
             <small class="item-dia">falta ${U.moeda(restante)}</small>
             <div class="acoes-card">
-              ${proxima ? `<button type="button" class="btn-secundario btn-mini" data-pagar="${p.id}">Marcar 1 paga</button>` : ""}
+              ${proxima ? `<button type="button" class="btn-secundario btn-mini" data-pagar="${p.id}" data-numero="${proxima.numero}">Registrar pagamento</button>` : ""}
+              ${ultimaPaga ? `<button type="button" class="btn-secundario btn-mini" data-desfazer-parcela="${p.id}" data-numero="${ultimaPaga.numero}">Desfazer última</button>` : ""}
               <button type="button" class="btn-secundario btn-mini" data-editar-parcela="${p.id}">Editar</button>
               <button type="button" class="btn-excluir-item" data-excluir-parcela="${p.id}" aria-label="Excluir parcelamento">✕</button>
             </div>
@@ -209,11 +224,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("listaParcelas").querySelectorAll("[data-pagar]").forEach((b) =>
       b.addEventListener("click", async () => {
         const p = parcelamentos.find((x) => String(x.id) === b.dataset.pagar);
-        await S.atualizar("installment_purchases", p.id, {
-          paid_count: Math.min(Number(p.paid_count || 0) + 1, Number(p.installments_count)),
-        });
-        U.toast("Parcela marcada como paga.", "sucesso");
-        carregar();
+        try {
+          // Pagar cria o lançamento e tira a parcela da projeção na mesma ação,
+          // para que ela nunca apareça como compromisso e como gasto ao mesmo tempo.
+          const r = await F.pagarParcela(p, Number(b.dataset.numero));
+          U.toast(r.jaPaga
+            ? "Esta parcela já estava paga."
+            : "Parcela paga e lançada no seu saldo.", "sucesso");
+          carregar();
+        } catch (err) { U.toast(err.message, "erro"); }
+      })
+    );
+    $("listaParcelas").querySelectorAll("[data-desfazer-parcela]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const p = parcelamentos.find((x) => String(x.id) === b.dataset.desfazerParcela);
+        if (!confirm("Desfazer este pagamento? A movimentação correspondente será removida e a parcela volta a ser compromisso.")) return;
+        try {
+          await F.desfazerPagamentoParcela(p, Number(b.dataset.numero));
+          U.toast("Pagamento desfeito.", "info");
+          carregar();
+        } catch (err) { U.toast(err.message, "erro"); }
       })
     );
     $("listaParcelas").querySelectorAll("[data-editar-parcela]").forEach((b) =>
@@ -299,7 +329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   function renderOrcamento() {
-    const situacao = P.situacaoOrcamento(tetos, ctx.transacoes);
+    const situacao = P.situacaoOrcamento(tetos, ctx.transacoesRealizadas);
     $("vazioOrcamento").hidden = tetos.length > 0;
 
     $("listaOrcamento").innerHTML = situacao.map((s) => `
@@ -312,6 +342,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p class="teto__nota">
           ${s.situacao === "estourado"
             ? `Passou ${U.moeda(-s.restante)} do teto.`
+            : s.situacao === "no_limite"
+            ? `Exatamente no limite: usou 100% do teto, sem estourar.`
             : s.situacao === "atencao"
             ? `Restam ${U.moeda(s.restante)} — ${U.percentual(s.percentual, 0)} usado.`
             : `Restam ${U.moeda(s.restante)}.`}
@@ -320,7 +352,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         </p>
       </article>`).join("");
 
-    const semTeto = P.categoriasSemTeto(tetos, ctx.transacoes);
+    const semTeto = P.categoriasSemTeto(tetos, ctx.transacoesRealizadas);
     $("sugestaoTetos").innerHTML = semTeto.length
       ? `<p class="nota">Gastou este mês em <strong>${semTeto.map(U.escapeHTML).join(", ")}</strong> sem teto definido.
            ${semTeto.map((c) => `<button type="button" class="chip chip--acao" data-teto-rapido="${U.escapeHTML(c)}">definir ${U.escapeHTML(c)}</button>`).join(" ")}</p>`
