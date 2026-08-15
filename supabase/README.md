@@ -75,3 +75,31 @@ de criar o perfil.
 `js/config.js` aponta para o projeto `iruqoghylxgopbopxjbi`. Confirme
 que é nele que você está aplicando: rodar estas migrations em outro
 projeto cria as tabelas do FinCK onde elas não deveriam existir.
+
+## Migration de integridade (20260815000006)
+
+Fecha as invariantes de contabilidade apontadas na análise lógica de
+15.08. Além de colunas e índices, ela cria três funções que o app usa
+quando estão disponíveis:
+
+- `confirmar_ocorrencia(p_occurrence_id, p_amount, p_account_id)` —
+  cria **ou reaproveita** a transação da ocorrência e atualiza o
+  estado, tudo numa transação de banco. Repetir a chamada nunca gera um
+  segundo lançamento.
+- `desfazer_ocorrencia(p_occurrence_id, p_status)` — solta o vínculo e
+  apaga a transação na mesma operação.
+- `estornar_transacao(p_transaction_id)` — remove a movimentação e
+  reverte o progresso da meta de uma vez só.
+
+O app **degrada com elegância**: `FinckStore.rpc()` detecta a ausência
+das funções (banco antigo, modo demonstração ou modo local) e cai para
+o caminho equivalente em JavaScript, que reconcilia e compensa no
+cliente. Ou seja, o app funciona com ou sem esta migration — com ela, a
+garantia passa a ser do Postgres.
+
+Se, logo após aplicar, o app parecer ignorar as funções, é o cache de
+esquema do PostgREST: em *Settings → API*, use **Reload schema cache**
+(ou espere alguns segundos).
+
+A migration é idempotente: rodar de novo não quebra nada. Ela termina
+com um backfill que amarra transações e ocorrências já existentes.

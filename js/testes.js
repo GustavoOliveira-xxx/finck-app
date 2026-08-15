@@ -872,6 +872,575 @@ window.FinckTestes = (() => {
     });
   });
 
+  // Os dez cenários que a análise lógica de 15.08 apontou como descobertos.
+  // Não são funções puras: cada um percorre o caminho inteiro do dado e checa
+  // se as visões continuam concordando entre si depois da operação.
+  descrever("Invariantes de contabilidade (ponta a ponta)", () => {
+    const S = window.FinckStore;
+    const F = window.FinckFinance;
+    const R = window.FinckRevisao;
+    const O = window.FinckOcorrencias;
+    const P = window.FinckPlano;
+    const CT = window.FinckContas;
+
+    const comSessaoLimpa = async (fn) => {
+      const antes = {};
+      Object.values(S.KEYS).forEach((v) => { antes[v] = localStorage.getItem(v); });
+      Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+      await S.entrarDemo();
+      try { await fn(); } finally {
+        Object.values(S.KEYS).forEach((v) => localStorage.removeItem(v));
+        Object.entries(antes).forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+      }
+    };
+
+    const ocorrenciaDeTeste = async ({ category = "Moradia", account_id = null } = {}) => {
+      const rec = await S.inserir("recurring_transactions", {
+        description: "Aluguel", type: "saida", amount: 1200,
+        day_of_month: 6, active: true, category, account_id,
+      });
+      const [linha] = O.gerar([rec], { ciclos: ["2026-08"] });
+      return S.inserir("recurring_occurrences", linha);
+    };
+
+    // 1. Confirmar duas vezes, inclusive depois de uma gravação parcial.
+    teste("confirmar a mesma ocorrência duas vezes não cria duas transações", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+
+        const a = await R.confirmar(oc, 1200);
+        const atualizada = await S.obter("recurring_occurrences", oc.id);
+        const b = await R.confirmar(atualizada, 1200);
+
+        esperar(a.transaction_id).aSer(b.transaction_id);
+        esperar((await S.listar("transactions")).length).aSer(1);
+      });
+    });
+
+    teste("retry depois de falha entre as duas gravações reaproveita o lançamento", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+
+        // Simula a falha exata do relatório: a transação entrou, a ocorrência não.
+        await S.inserir("transactions", O.movimentacaoDe(oc, 1200, null));
+        esperar((await S.listar("transactions")).length).aSer(1);
+
+        await R.confirmar(oc, 1200);
+        esperar((await S.listar("transactions")).length).aSer(1);
+
+        const depois = await S.obter("recurring_occurrences", oc.id);
+        esperar(depois.status).aSer("confirmado");
+        esperar(Boolean(depois.transaction_id)).aSerVerdadeiro();
+      });
+    });
+
+    teste("transação órfã de ocorrência não confirmada é varrida na sincronização", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+        await S.inserir("transactions", O.movimentacaoDe(oc, 1200, null));
+
+        const todas = await S.listar("recurring_occurrences");
+        await R.reconciliar(todas);
+
+        esperar((await S.listar("transactions")).length).aSer(0);
+      });
+    });
+
+    // A varredura não pode confundir "previsão que não aconteceu" com
+    // "dinheiro que se moveu e cuja previsão foi apagada depois".
+    teste("apagar o recorrente não apaga o dinheiro que já se moveu", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+        await R.confirmar(oc, 1200);
+        esperar((await S.listar("transactions")).length).aSer(1);
+
+        // Simula o cascade do banco: a ocorrência some, o lançamento fica.
+        await S.remover("recurring_occurrences", oc.id);
+        await R.reconciliar(await S.listar("recurring_occurrences"));
+
+        const restantes = await S.listar("transactions");
+        esperar(restantes.length).aSer(1);
+        esperar(restantes[0].source_occurrence_id).aSer(null);
+        esperar(Number(restantes[0].amount)).aSer(1200);
+      });
+    });
+
+    teste("varredura separa órfã de previsão e órfã de ocorrência apagada", () => {
+      const ocorrencias = [{ id: "oc-viva", status: "pendente", transaction_id: null }];
+      const transacoes = [
+        { id: "t-sobra", source_occurrence_id: "oc-viva" },
+        { id: "t-real", source_occurrence_id: "oc-apagada" },
+      ];
+
+      const r = O.orfas(ocorrencias, transacoes);
+      esperar(r.excluir).aTerTamanho(1);
+      esperar(r.excluir[0]).aSer("t-sobra");
+      esperar(r.soltarVinculo).aTerTamanho(1);
+      esperar(r.soltarVinculo[0]).aSer("t-real");
+    });
+
+    // 2 e 10. Conta, categoria, saldo global e saldo da conta ao mesmo tempo.
+    teste("ocorrência confirmada com conta bate no saldo global e no saldo da conta", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3500, work_days_month: 22, work_hours_day: 8 });
+        const conta = await S.inserir("accounts", {
+          name: "Conta corrente", institution_name: "nubank",
+          account_type: "corrente", initial_balance: 5000, active: true,
+        });
+        const oc = await ocorrenciaDeTeste({ category: "Moradia", account_id: conta.id });
+
+        await R.confirmar(oc, 1200);
+
+        const ctx = await F.carregarContexto();
+        const mov = ctx.transacoes[0];
+
+        // Herdou conta e categoria da regra, como o relatório exige.
+        esperar(String(mov.account_id)).aSer(String(conta.id));
+        esperar(mov.category).aSer("Moradia");
+
+        // As duas visões contam a mesma coisa.
+        esperar(ctx.saldo).aSer(3800);
+        const consolidado = CT.consolidado([conta], { transacoes: ctx.transacoes });
+        esperar(consolidado.disponivel).aSer(3800);
+        esperar(CT.semConta(ctx.transacoes)).aSer(0);
+      });
+    });
+
+    teste("confirmação sem conta é declarada, não silenciosa", async () => {
+      await comSessaoLimpa(async () => {
+        const conta = await S.inserir("accounts", {
+          name: "Carteira", institution_name: "outro",
+          account_type: "corrente", initial_balance: 0, active: true,
+        });
+        const oc = await ocorrenciaDeTeste({ account_id: null });
+        await R.confirmar(oc, 1200, { account_id: null });
+
+        const ctx = await F.carregarContexto();
+        esperar(CT.semConta(ctx.transacoes)).aSer(1);
+
+        // A divergência entre as visões é mensurável em vez de invisível.
+        const consolidado = CT.consolidado([conta], { transacoes: ctx.transacoes });
+        esperar(ctx.saldo - consolidado.disponivel).aSer(-1200);
+      });
+    });
+
+    // 3. Excluir uma saída vinculada a meta reverte o progresso.
+    teste("excluir aporte devolve o valor à meta exatamente uma vez", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", {
+          name: "Reserva", target_amount: 6000, current_amount: 1000,
+        });
+        await F.aportarMeta(meta.id, 500, "Aporte — Reserva");
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1500);
+
+        const mov = (await S.listar("transactions"))[0];
+        await F.estornarTransacao(mov.id);
+
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
+        esperar((await S.listar("transactions")).length).aSer(0);
+      });
+    });
+
+    teste("estornar duas vezes não reverte a meta duas vezes", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 1000 });
+        await F.aportarMeta(meta.id, 500, "Aporte");
+        const mov = (await S.listar("transactions"))[0];
+
+        await F.estornarTransacao(mov.id);
+        const r = await F.estornarTransacao(mov.id);
+
+        esperar(r.removida).aSerFalso();
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
+      });
+    });
+
+    // 4. Aporte com falha na segunda persistência não deixa caixa reduzido.
+    teste("aporte que falha ao atualizar a meta não deixa a saída no caixa", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 1000 });
+
+        const original = S.atualizar;
+        let falhou = false;
+        S.atualizar = async (tabela, id, campos) => {
+          if (tabela === "goals") { falhou = true; throw new Error("timeout simulado"); }
+          return original(tabela, id, campos);
+        };
+
+        try {
+          await esperar(() => F.aportarMeta(meta.id, 500, "Aporte")).aFalharCom("timeout simulado");
+        } finally { S.atualizar = original; }
+
+        esperar(falhou).aSerVerdadeiro();
+        // Compensação: nem a saída ficou, nem a meta subiu.
+        esperar((await S.listar("transactions")).length).aSer(0);
+        esperar(Number((await S.obter("goals", meta.id)).current_amount)).aSer(1000);
+      });
+    });
+
+    // 5. Saldo inicial do perfil e da conta não podem somar duas vezes.
+    teste("cadastrar conta com o mesmo saldo do perfil não duplica patrimônio", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3000, work_days_month: 22, work_hours_day: 8, initial_balance: 2000 });
+
+        const semContas = await F.carregarContexto();
+        esperar(semContas.saldo).aSer(2000);
+        esperar(semContas.origemSaldo.fonte).aSer("perfil");
+
+        await S.inserir("accounts", {
+          name: "Conta", institution_name: "nubank", account_type: "corrente",
+          initial_balance: 2000, active: true,
+        });
+
+        const comConta = await F.carregarContexto();
+        esperar(comConta.saldo).aSer(2000);
+        esperar(comConta.origemSaldo.fonte).aSer("contas");
+        esperar(comConta.origemSaldo.duplicaria).aSer(2000);
+      });
+    });
+
+    // 6. Parcela paga vira lançamento e deixa de ser compromisso.
+    teste("parcela paga sai da projeção e entra no saldo uma única vez", async () => {
+      await comSessaoLimpa(async () => {
+        const compra = await S.inserir("installment_purchases", {
+          description: "Notebook", total_amount: 3000, installments_count: 3,
+          first_due_date: "2026-08-10", paid_count: 0, category: "Eletrônicos", active: true,
+        });
+
+        const antes = await F.carregarContexto();
+        esperar(antes.compromissosAbertos).aSer(3000);
+
+        await F.pagarParcela(compra, 1);
+
+        const depois = await F.carregarContexto();
+        esperar(depois.compromissosAbertos).aSer(2000);
+        esperar(depois.transacoes.length).aSer(1);
+        esperar(Number(depois.transacoes[0].amount)).aSer(1000);
+
+        // Pagar de novo é inofensivo: não duplica o lançamento.
+        const compraAtual = await S.obter("installment_purchases", compra.id);
+        const r = await F.pagarParcela(compraAtual, 1);
+        esperar(r.jaPaga).aSerVerdadeiro();
+        esperar((await S.listar("transactions")).length).aSer(1);
+      });
+    });
+
+    teste("desfazer pagamento devolve a parcela ao compromisso e remove o lançamento", async () => {
+      await comSessaoLimpa(async () => {
+        const compra = await S.inserir("installment_purchases", {
+          description: "Notebook", total_amount: 3000, installments_count: 3,
+          first_due_date: "2026-08-10", paid_count: 0, category: "Eletrônicos", active: true,
+        });
+        await F.pagarParcela(compra, 1);
+        await F.desfazerPagamentoParcela(await S.obter("installment_purchases", compra.id), 1);
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.compromissosAbertos).aSer(3000);
+        esperar(ctx.transacoes.length).aSer(0);
+      });
+    });
+
+    teste("parcela em aberto não aparece como previsto e realizado ao mesmo tempo", async () => {
+      const compra = {
+        id: "c1", description: "Notebook", total_amount: 3000, installments_count: 3,
+        first_due_date: "2026-08-10", paid_count: 0, active: true,
+      };
+      const pagamentos = [{ purchase_id: "c1", installment_no: 1, status: "paga", transaction_id: "t1" }];
+      const transacoes = [{ description: "Notebook (1/3)", amount: 1000, type: "saida", date: "2026-08-10" }];
+
+      const eventos = P.eventosDoMes({ parcelamentos: [compra], pagamentos, transacoes }, "2026-08");
+      const doDia = eventos.get(10) || [];
+
+      esperar(doDia.filter((e) => e.tipo === "parcela").length).aSer(0);
+      esperar(doDia.filter((e) => e.tipo === "lancamento").length).aSer(1);
+      esperar(doDia[0].estado).aSer("realizado");
+    });
+
+    // 7. Editar a regra depois do ciclo gerado.
+    teste("editar recorrente não reescreve ciclo já confirmado", async () => {
+      await comSessaoLimpa(async () => {
+        const rec = await S.inserir("recurring_transactions", {
+          description: "Aluguel", type: "saida", amount: 1200,
+          day_of_month: 6, active: true, category: "Moradia",
+        });
+        const [linha] = O.gerar([rec], { ciclos: ["2026-08"] });
+        const oc = await S.inserir("recurring_occurrences", linha);
+        await R.confirmar(oc, 1200);
+
+        await S.atualizar("recurring_transactions", rec.id, { amount: 1300 });
+
+        const congelada = await S.obter("recurring_occurrences", oc.id);
+        esperar(Number(congelada.planned_amount)).aSer(1200);
+        esperar(Number(congelada.actual_amount)).aSer(1200);
+      });
+    });
+
+    teste("ocorrência gerada herda categoria e conta da regra", () => {
+      const rec = {
+        id: "r1", description: "Internet", type: "saida", amount: 99,
+        day_of_month: 10, active: true, category: "Casa", account_id: "conta-1",
+      };
+      const [linha] = O.gerar([rec], { ciclos: ["2026-08"] });
+      esperar(linha.category).aSer("Casa");
+      esperar(linha.account_id).aSer("conta-1");
+
+      const mov = O.movimentacaoDe({ ...linha, id: "oc-1" }, 99);
+      esperar(mov.category).aSer("Casa");
+      esperar(mov.account_id).aSer("conta-1");
+      esperar(mov.source_occurrence_id).aSer("oc-1");
+    });
+
+    // 8. Importar arquivo com vínculos inconsistentes.
+    teste("importação recusa valores inválidos e limpa vínculos órfãos", async () => {
+      await comSessaoLimpa(async () => {
+        const exame = S.validarImportacao({
+          goals: [
+            { id: "g1", name: "Viagem", target_amount: 5000, current_amount: 0 },
+            { id: "g2", name: "Zerada", target_amount: 0, current_amount: 0 },
+            { id: "g3", name: "Negativa", target_amount: 100, current_amount: -50 },
+          ],
+          transactions: [
+            { id: "t1", type: "saida", description: "Aporte", amount: 100, date: "2026-08-01", goal_id: "g1" },
+            { id: "t2", type: "saida", description: "Órfã", amount: 100, date: "2026-08-01", goal_id: "inexistente" },
+            { id: "t3", type: "saida", description: "Negativa", amount: -5, date: "2026-08-01" },
+            { id: "t4", type: "compra", description: "Tipo errado", amount: 10, date: "2026-08-01" },
+          ],
+          transfers: [
+            { id: "x1", from_account_id: "a1", to_account_id: "a1", amount: 50, date: "2026-08-01" },
+            { id: "x2", from_account_id: "a1", to_account_id: "a2", amount: 50, date: "2026-08-01" },
+          ],
+        });
+
+        esperar(exame.linhas.goals).aTerTamanho(1);
+        esperar(exame.linhas.transactions).aTerTamanho(2);
+        esperar(exame.linhas.transfers).aTerTamanho(0);
+      });
+    });
+
+    teste("importação reaponta o vínculo com a meta para o novo ID", async () => {
+      await comSessaoLimpa(async () => {
+        await S.importarTudo({
+          goals: [{ id: "antigo-g1", name: "Viagem", target_amount: 5000, current_amount: 0 }],
+          transactions: [{
+            id: "antigo-t1", type: "saida", description: "Aporte",
+            amount: 100, date: "2026-08-01", goal_id: "antigo-g1",
+          }],
+        }, { modo: "substituir" });
+
+        const meta = (await S.listar("goals"))[0];
+        const mov = (await S.listar("transactions"))[0];
+
+        esperar(String(mov.goal_id)).aSer(String(meta.id));
+        esperar(mov.goal_id === "antigo-g1").aSerFalso();
+      });
+    });
+
+    teste("importação não deixa user_id de outra pessoa passar", async () => {
+      await comSessaoLimpa(async () => {
+        await S.importarTudo({
+          transactions: [{
+            id: "t1", user_id: "outro-usuario", type: "saida",
+            description: "Alheia", amount: 10, date: "2026-08-01",
+          }],
+        }, { modo: "substituir" });
+
+        const eu = await S.usuarioAtual();
+        const mov = (await S.listar("transactions"))[0];
+        esperar(mov.user_id).aSer(eu.id);
+      });
+    });
+
+    // 9. Renda comprometida: caixa, orçamento e projeção não se confundem.
+    teste("renda totalmente comprometida aparece como déficit, não como folga", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3500, work_days_month: 22, work_hours_day: 8, initial_balance: 4000 });
+        await S.inserir("recurring_transactions", {
+          description: "Fixas", type: "saida", amount: 3500, day_of_month: 5, active: true,
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.rendaLivre).aSer(0);
+        esperar(ctx.sobraAposFixos).aSer(0);
+        esperar(ctx.semFolga).aSerVerdadeiro();
+
+        // O caixa ainda tem dinheiro antigo, mas isso não é folga de renda.
+        esperar(ctx.saldo).aSer(4000);
+      });
+    });
+
+    teste("compra pequena sem folga não recebe semáforo verde", () => {
+      const perfil = { income_monthly: 3500, work_days_month: 22, work_hours_day: 8 };
+      const r = window.FinckReality.calcular(100, perfil, { saldo: 4000, despesasFixas: 3500 });
+
+      esperar(r.income_percent).aSerPerto(2.86, 2);
+      esperar(r.sem_folga).aSerVerdadeiro();
+      esperar(r.semaforo.nivel).aSer("alerta");
+    });
+
+    teste("déficit de renda fixa aparece com sinal, não zerado", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3000, work_days_month: 22, work_hours_day: 8 });
+        await S.inserir("recurring_transactions", {
+          description: "Fixas", type: "saida", amount: 3800, day_of_month: 5, active: true,
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.sobraAposFixos).aSer(-800);
+        esperar(ctx.deficitFixos).aSer(800);
+        esperar(ctx.rendaLivre).aSer(0);
+      });
+    });
+
+    teste("lançamento com data futura não conta como caixa de hoje", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3000, work_days_month: 22, work_hours_day: 8, initial_balance: 1000 });
+        const hoje = new Date();
+        const daquiATresMeses = new Date(hoje.getFullYear(), hoje.getMonth() + 3, 10)
+          .toISOString().slice(0, 10);
+
+        await S.inserir("transactions", { type: "saida", description: "Seguro anual", amount: 600, date: daquiATresMeses });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.saldo).aSer(1000);
+        esperar(ctx.transacoesFuturas).aTerTamanho(1);
+        esperar(ctx.agendado).aSer(-600);
+
+        // Mas ele aparece no mês dele na projeção.
+        const linhas = P.projecaoSaldo({
+          saldo: ctx.saldo, recorrentes: [], transacoesFuturas: ctx.transacoesFuturas, meses: 6,
+        });
+        esperar(linhas[3].saidas).aSer(600);
+        esperar(linhas[5].saldoFim).aSer(400);
+      });
+    });
+
+    teste("ciclo já decidido não volta como previsão na projeção", () => {
+      const recorrentes = [{ id: "r1", description: "Aluguel", type: "saida", amount: 1200, day_of_month: 6, active: true }];
+      const mesAtual = P.chaveMes(new Date());
+
+      const semDecisao = P.projecaoSaldo({ saldo: 5000, recorrentes, meses: 1 }, new Date(`${mesAtual}-01T12:00:00`));
+      esperar(semDecisao[0].saidas).aSer(1200);
+
+      const comDecisao = P.projecaoSaldo({
+        saldo: 5000, recorrentes, meses: 1,
+        ocorrencias: [{ recurring_id: "r1", cycle: mesAtual, status: "confirmado" }],
+      }, new Date(`${mesAtual}-01T12:00:00`));
+      esperar(comDecisao[0].saidas).aSer(0);
+    });
+
+    teste("ocorrência não realizada continua prevista na projeção", () => {
+      const recorrentes = [{ id: "r1", type: "saida", amount: 1200, day_of_month: 6, active: true }];
+      const mesAtual = P.chaveMes(new Date());
+      const linhas = P.projecaoSaldo({
+        saldo: 5000, recorrentes, meses: 1,
+        ocorrencias: [{ recurring_id: "r1", cycle: mesAtual, status: "pendente" }],
+      }, new Date(`${mesAtual}-01T12:00:00`));
+      esperar(linhas[0].saidas).aSer(1200);
+    });
+
+    teste("disponível projetado desconta parcelas em aberto do saldo", async () => {
+      await comSessaoLimpa(async () => {
+        await S.salvarPerfil({ income_monthly: 3000, work_days_month: 22, work_hours_day: 8, initial_balance: 5000 });
+        await S.inserir("installment_purchases", {
+          description: "Notebook", total_amount: 3000, installments_count: 3,
+          first_due_date: "2026-08-10", paid_count: 0, active: true,
+        });
+
+        const ctx = await F.carregarContexto();
+        esperar(ctx.saldo).aSer(5000);
+        esperar(ctx.disponivelProjetado).aSer(2000);
+      });
+    });
+
+    // Com a migration aplicada, a operação tem que ir para o banco em vez de
+    // ser montada no cliente. Sem ela, tem que continuar funcionando.
+    teste("confirmação usa a função do banco quando ela existe", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+        const original = S.rpc;
+        const chamadas = [];
+
+        S.rpc = async (nome, params) => {
+          chamadas.push({ nome, params });
+          return { suportado: true, dados: { status: "confirmado", transaction_id: "tx-do-banco" } };
+        };
+
+        try {
+          const r = await R.confirmar(oc, 1200, { account_id: null });
+          esperar(r.atomica).aSerVerdadeiro();
+          esperar(r.transaction_id).aSer("tx-do-banco");
+        } finally { S.rpc = original; }
+
+        esperar(chamadas).aTerTamanho(1);
+        esperar(chamadas[0].nome).aSer("confirmar_ocorrencia");
+        esperar(chamadas[0].params.p_amount).aSer(1200);
+
+        // O cliente não duplicou o trabalho do banco.
+        esperar((await S.listar("transactions")).length).aSer(0);
+      });
+    });
+
+    teste("confirmação cai para o caminho local quando a função não existe", async () => {
+      await comSessaoLimpa(async () => {
+        const oc = await ocorrenciaDeTeste();
+        const original = S.rpc;
+        S.rpc = async () => ({ suportado: false, dados: null });
+
+        try {
+          const r = await R.confirmar(oc, 1200, { account_id: null });
+          esperar(r.atomica).aSer(undefined);
+          esperar(Boolean(r.transaction_id)).aSerVerdadeiro();
+        } finally { S.rpc = original; }
+
+        esperar((await S.listar("transactions")).length).aSer(1);
+      });
+    });
+
+    teste("estorno usa a função do banco quando ela existe", async () => {
+      await comSessaoLimpa(async () => {
+        const meta = await S.inserir("goals", { name: "Reserva", target_amount: 6000, current_amount: 1000 });
+        await F.aportarMeta(meta.id, 500, "Aporte");
+        const mov = (await S.listar("transactions"))[0];
+
+        const original = S.rpc;
+        const chamadas = [];
+        S.rpc = async (nome, params) => { chamadas.push({ nome, params }); return { suportado: true, dados: null }; };
+
+        try {
+          const r = await F.estornarTransacao(mov.id);
+          esperar(r.atomica).aSerVerdadeiro();
+          esperar(r.estornouMeta).aSerVerdadeiro();
+        } finally { S.rpc = original; }
+
+        esperar(chamadas[0].nome).aSer("estornar_transacao");
+        esperar(chamadas[0].params.p_transaction_id).aSer(mov.id);
+      });
+    });
+
+    // Isolamento do modo local (P2).
+    teste("mutação local não alcança registro de outro usuário", async () => {
+      await comSessaoLimpa(async () => {
+        const minha = await S.inserir("transactions", {
+          type: "saida", description: "Minha", amount: 10, date: "2026-08-01",
+        });
+
+        const linhas = JSON.parse(localStorage.getItem(S.KEYS.transactions));
+        linhas.push({ id: "alheia", user_id: "outro-usuario", type: "saida",
+                      description: "Alheia", amount: 99, date: "2026-08-01" });
+        localStorage.setItem(S.KEYS.transactions, JSON.stringify(linhas));
+
+        esperar(await S.atualizar("transactions", "alheia", { amount: 1 })).aSer(null);
+        esperar(await S.remover("transactions", "alheia")).aSerFalso();
+
+        const depois = JSON.parse(localStorage.getItem(S.KEYS.transactions));
+        const alheia = depois.find((r) => r.id === "alheia");
+        esperar(Number(alheia.amount)).aSer(99);
+        esperar(depois.some((r) => String(r.id) === String(minha.id))).aSerVerdadeiro();
+      });
+    });
+  });
+
   async function rodar(aoAtualizar) {
     const resultado = { total: 0, passou: 0, falhou: 0, suites: [] };
 

@@ -60,8 +60,10 @@
     <section class="cards-indicadores" id="resumoRecorrentes"></section>
 
     <section class="bloco">
-      <h3>Novo recorrente</h3>
+      <h3 id="tituloFormRecorrente">Novo recorrente</h3>
+      <p class="descricao">A categoria e a conta ficam guardadas na regra e são copiadas para cada mês. Assim, quando você confirmar o lançamento, ele cai na conta e na categoria certas.</p>
       <form id="formRecorrente" class="form-inline" novalidate>
+        <input type="hidden" id="recId">
         <label>Descrição
           <input type="text" id="recDescricao" required placeholder="Ex.: Internet">
         </label>
@@ -77,9 +79,29 @@
         <label>Dia do mês
           <input type="number" id="recDia" min="1" max="31" value="10">
         </label>
-        <button type="submit" class="btn-primario">Adicionar</button>
+        <label id="campoRecCategoria">Categoria
+          <select id="recCategoria"></select>
+        </label>
+        <label>Conta
+          <select id="recConta"><option value="">Sem conta — só no saldo geral</option></select>
+        </label>
+        <button type="submit" class="btn-primario" id="btnSalvarRecorrente">Adicionar</button>
+        <button type="button" class="btn-secundario" id="btnCancelarRecorrente" hidden>Cancelar</button>
       </form>
     </section>
+
+    <div id="modalPropagar" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloPropagar">
+      <div class="modal">
+        <button type="button" class="fechar" data-fechar="modalPropagar" aria-label="Fechar">✕</button>
+        <h3 id="tituloPropagar">Esta mudança vale para quais meses?</h3>
+        <p class="descricao" id="textoPropagar"></p>
+        <div class="acoes-card">
+          <button type="button" class="btn-primario" data-propagar="abertas">Atualizar também os meses em aberto</button>
+          <button type="button" class="btn-secundario" data-propagar="futuras">Só dos próximos meses em diante</button>
+        </div>
+        <p class="nota">Meses já confirmados nunca são alterados — eles guardam o que realmente aconteceu.</p>
+      </div>
+    </div>
 
     <section class="bloco">
       <h3>Previsão mensal</h3>
@@ -101,6 +123,7 @@
   <script src="js/reality.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/tempo.js"></script>
+  <script src="js/ocorrencias.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/recorrentes.js"></script>

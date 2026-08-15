@@ -92,8 +92,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           <article class="card-impacto-meta">
             <h5>${U.escapeHTML(m.nome)}</h5>
             <p>Faltam ${U.moeda(m.falta)} para concluir.</p>
-            <p>Esta compra equivale a <strong>${U.percentual(m.percentual_da_meta, 1)}</strong> da meta
-               e a <strong>${U.numero(m.dias_trabalho_extra, 1)} dias</strong> de trabalho a mais para alcançá-la.</p>
+            <p>Esta compra equivale a <strong>${U.percentual(m.percentual_da_meta, 1)}</strong> do alvo total
+               e a <strong>${U.percentual(m.percentual_do_restante, 1)}</strong> do que ainda falta,
+               ou cerca de <strong>${U.numero(m.dias_trabalho_extra, 1)} dias</strong> de trabalho a mais para alcançá-la.</p>
             ${m.cobre_a_meta ? `<p class="destaque">Com este valor você concluiria a meta hoje.</p>` : ""}
           </article>`).join("")
       : `<p class="vazio">Você ainda não tem metas cadastradas. <a href="metas.html">Criar uma meta</a> ajuda a comparar prioridades.</p>`;
@@ -102,7 +103,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       <li class="alternativa">
         <h5>${U.escapeHTML(a.titulo)}</h5>
         <p>${U.escapeHTML(a.texto)}</p>
-        ${a.economia > 0 ? `<small>Economia estimada: ${U.moeda(a.economia)}</small>` : ""}
+        ${a.economia > 0
+          ? `<small>Hipótese ilustrativa: economia de até ${U.moeda(a.economia)} — confirme com o preço real.</small>`
+          : ""}
       </li>`).join("");
   }
 

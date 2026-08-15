@@ -17,7 +17,10 @@ window.FinckReality = (() => {
     const saldo = Number(ctx.saldo) || 0;
     const saldoDepois = saldo - preco;
     const despesasFixas = Number(ctx.despesasFixas) || 0;
-    const rendaLivre = Math.max(0, renda - despesasFixas);
+
+    const sobraAposFixos = renda - despesasFixas;
+    const rendaLivre = Math.max(0, sobraAposFixos);
+    const semFolga = renda > 0 && sobraAposFixos <= 0;
     const percentualRendaLivre = rendaLivre > 0 ? (preco / rendaLivre) * 100 : 0;
 
     return {
@@ -32,9 +35,12 @@ window.FinckReality = (() => {
       saldo_depois: saldoDepois,
       compromete_saldo: saldoDepois < 0,
       renda_livre: rendaLivre,
+      sobra_apos_fixos: sobraAposFixos,
+      deficit_fixos: Math.max(0, -sobraAposFixos),
+      sem_folga: semFolga,
       percentual_renda_livre: percentualRendaLivre,
       impacto_metas: impactoMetas(preco, ctx.metas || [], valorDia),
-      semaforo: semaforo(income_percent, saldoDepois, percentualRendaLivre),
+      semaforo: semaforo(income_percent, saldoDepois, percentualRendaLivre, semFolga),
       alternativas: alternativas(preco),
     };
   }
@@ -45,19 +51,32 @@ window.FinckReality = (() => {
       const atual = Number(m.current_amount) || 0;
       const falta = Math.max(0, alvo - atual);
       const percentualDaMeta = alvo > 0 ? (preco / alvo) * 100 : 0;
+      const percentualDoRestante = falta > 0 ? (preco / falta) * 100 : 0;
       const diasAtraso = valorDia > 0 ? preco / valorDia : 0;
       return {
         id: m.id,
         nome: m.name,
         falta,
         percentual_da_meta: percentualDaMeta,
+
+        percentual_do_restante: percentualDoRestante,
         dias_trabalho_extra: diasAtraso,
         cobre_a_meta: preco >= falta && falta > 0,
       };
     });
   }
 
-  function semaforo(incomePercent, saldoDepois, percentualRendaLivre) {
+  function semaforo(incomePercent, saldoDepois, percentualRendaLivre, semFolga = false) {
+
+    if (semFolga) {
+      return {
+        nivel: "alerta",
+        titulo: saldoDepois < 0 ? "Sem folga e sem caixa" : "Sem folga na renda do mês",
+        texto: saldoDepois < 0
+          ? "Suas despesas fixas já consomem toda a renda do mês e a compra ainda deixaria o saldo negativo. Aqui não é questão de tamanho da compra — não há de onde tirar."
+          : "Suas despesas fixas já consomem toda a renda do mês. Esta compra sairia do caixa acumulado, não do que entra agora. Pode ser uma escolha válida, mas ela reduz reserva em vez de usar sobra.",
+      };
+    }
 
     if (saldoDepois < 0 || incomePercent >= 30 || percentualRendaLivre >= 60) {
       return {
@@ -82,10 +101,10 @@ window.FinckReality = (() => {
 
   function alternativas(preco) {
     return [
-      { id: "usado", titulo: "Comprar usado ou recondicionado", economia: preco * 0.4, texto: "Mercados de segunda mão costumam custar cerca de 40% menos e evitam a produção de um novo item." },
-      { id: "reparar", titulo: "Reparar ou reaproveitar o que você já tem", economia: preco * 0.8, texto: "O reparo prolonga a vida útil do produto e evita descarte prematuro." },
-      { id: "compartilhar", titulo: "Alugar, emprestar ou compartilhar", economia: preco * 0.7, texto: "Indicado para itens de uso pouco frequente." },
-      { id: "adiar", titulo: "Adiar 30 dias e reavaliar", economia: 0, texto: "A regra dos 30 dias ajuda a separar necessidade real de impulso." },
+      { id: "usado", titulo: "Comprar usado ou recondicionado", economia: preco * 0.4, hipotese: true, texto: "Estimativa ilustrativa: mercados de segunda mão costumam custar cerca de 40% menos. Confira o preço real antes de decidir." },
+      { id: "reparar", titulo: "Reparar ou reaproveitar o que você já tem", economia: preco * 0.8, hipotese: true, texto: "Estimativa ilustrativa: o reparo costuma custar uma fração do item novo e prolonga a vida útil dele." },
+      { id: "compartilhar", titulo: "Alugar, emprestar ou compartilhar", economia: preco * 0.7, hipotese: true, texto: "Estimativa ilustrativa para itens de uso pouco frequente. O custo do aluguel varia bastante." },
+      { id: "adiar", titulo: "Adiar 30 dias e reavaliar", economia: 0, hipotese: false, texto: "A regra dos 30 dias ajuda a separar necessidade real de impulso." },
     ];
   }
 

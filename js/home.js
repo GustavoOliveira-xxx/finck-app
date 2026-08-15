@@ -28,7 +28,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("saldoAtual").textContent = U.moeda(ctx.saldo);
     document.getElementById("entradasMes").textContent = U.moeda(ctx.entradasMes);
     document.getElementById("saidasMes").textContent = U.moeda(ctx.saidasMes);
-    document.getElementById("rendaLivre").textContent = U.moeda(ctx.rendaLivre);
+
+    const campoSobra = document.getElementById("rendaLivre");
+    campoSobra.textContent = U.moeda(ctx.sobraAposFixos);
+    campoSobra.classList.toggle("cor-vermelha", ctx.sobraAposFixos < 0);
+
+    const campoDisponivel = document.getElementById("disponivelProjetado");
+    if (campoDisponivel) {
+      campoDisponivel.textContent = U.moeda(ctx.disponivelProjetado);
+      campoDisponivel.classList.toggle("cor-vermelha", ctx.disponivelProjetado < 0);
+    }
+
+    const notaSaldo = document.getElementById("notaSaldo");
+    if (notaSaldo) notaSaldo.textContent = ctx.origemSaldo.nota;
+
+    const notaFolga = document.getElementById("notaFolga");
+    if (notaFolga) {
+      notaFolga.textContent = ctx.semFolga
+        ? `Suas despesas fixas consomem toda a renda do mês — faltam ${U.moeda(ctx.deficitFixos)}. O que você gastar agora sai do caixa acumulado, não da renda deste mês.`
+        : "";
+      notaFolga.classList.toggle("nota-saldo--alerta", ctx.semFolga);
+    }
 
     const dias = Number(ctx.perfil?.work_days_month) || cfg.PADRAO.work_days_month;
     const horas = Number(ctx.perfil?.work_hours_day) || cfg.PADRAO.work_hours_day;
@@ -75,15 +95,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("indNivel").textContent = nivel.level;
 
     const CT = window.FinckContas;
-    const [contas, transferencias, ajustes] = await Promise.all([
-      S.listar("accounts"),
+    const contas = ctx.contas;
+    const [transferencias, ajustes] = await Promise.all([
       S.listar("transfers"),
       S.listar("balance_adjustments"),
     ]);
     const resumoContas = CT.consolidado(contas, {
-      transacoes: ctx.transacoes, transferencias, ajustes,
+      transacoes: ctx.transacoesRealizadas, transferencias, ajustes,
     });
-    const orfaos = CT.semConta(ctx.transacoes);
+    const orfaos = CT.semConta(ctx.transacoesRealizadas);
+    const diferenca = ctx.saldo - resumoContas.disponivel;
 
     document.getElementById("cardContas").innerHTML = contas.length
       ? `<article class="card-contas">
@@ -94,6 +115,14 @@ document.addEventListener("DOMContentLoaded", async () => {
            </div>
            <p class="descricao">${resumoContas.quantidade} conta(s) ativa(s)${
              orfaos ? ` · ${orfaos} lançamento(s) sem conta` : ""}</p>
+           ${Math.abs(diferenca) >= 0.01
+             ? `<p class="nota nota--conciliacao">
+                  O saldo geral (${U.moeda(ctx.saldo)}) e a soma das contas (${U.moeda(resumoContas.disponivel)})
+                  diferem em ${U.moeda(Math.abs(diferenca))}${
+                    orfaos ? ` porque ${orfaos} lançamento(s) ainda não têm conta` : " por causa de ajustes de saldo"}.
+                  <a href="contas.html">Conferir</a>
+                </p>`
+             : `<p class="nota">Saldo geral e soma das contas estão conciliados.</p>`}
            ${resumoContas.contas.slice(0, 3).map((c) => `
              <div class="card-contas__linha">
                <span class="ponto-banco" style="--cor:${c.instituicao.cor}"></span>
@@ -126,7 +155,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       <div class="barra" role="img" aria-label="Percentual da renda comprometido com despesas fixas">
         <div class="barra-preenchida" style="width:${Math.min(100, comprometido)}%"></div>
       </div>
-      <p class="nota">${U.percentual(comprometido, 1)} da renda prevista já está comprometida com despesas fixas.</p>`;
+      <p class="nota">${U.percentual(comprometido, 1)} da renda prevista já está comprometida com despesas fixas${
+        comprometido > 100 ? " — as fixas passaram da renda prevista."
+        : comprometido === 100 ? " — exatamente no limite, sem folga."
+        : "."}</p>
+      <p class="nota">Estes valores são previsão do mês, não o que já saiu da conta.</p>`;
 
     const metasHost = document.getElementById("metasResumo");
     metasHost.innerHTML = ctx.metas.length
@@ -162,10 +195,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     lista.querySelectorAll("[data-excluir]").forEach((b) =>
       b.addEventListener("click", async () => {
-        if (!confirm("Excluir esta movimentação?")) return;
-        await S.remover("transactions", b.dataset.excluir);
-        U.toast("Movimentação excluída.", "info");
-        render();
+        const alvo = ctx.transacoes.find((t) => String(t.id) === String(b.dataset.excluir));
+        const aviso = alvo?.goal_id
+          ? "Esta movimentação está vinculada a uma meta. Excluir também devolve o valor ao progresso da meta. Continuar?"
+          : "Excluir esta movimentação?";
+        if (!confirm(aviso)) return;
+        try {
+          const r = await F.estornarTransacao(b.dataset.excluir);
+          U.toast(r.estornouMeta ? "Movimentação excluída e meta estornada." : "Movimentação excluída.", "info");
+          render();
+        } catch (err) {
+          U.toast(err.message || "Não foi possível excluir.", "erro");
+        }
       })
     );
 
@@ -225,18 +266,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btnConfirmarSalvar").addEventListener("click", async () => {
     if (!pendente) return;
     try {
-      await S.inserir("transactions", pendente);
 
-      if (pendente.goal_id) {
-        const metas = await S.listar("goals");
-        const meta = metas.find((m) => String(m.id) === String(pendente.goal_id));
-        if (meta) {
-          const delta = pendente.type === "saida" ? Number(pendente.amount) : -Number(pendente.amount);
-          await S.atualizar("goals", meta.id, {
-            current_amount: Math.max(0, Number(meta.current_amount || 0) + delta),
-          });
-        }
-      }
+      await F.registrarTransacao(pendente);
 
       await G.premiar(pendente.type === "entrada" ? "entrada" : "saida", { motivo: pendente.type === "entrada" ? "entrada registrada" : "saída registrada" });
       await G.sincronizarConquistas();

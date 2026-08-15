@@ -59,8 +59,9 @@
     </section>
 
     <section class="balance-card" aria-labelledby="rotuloSaldo">
-      <small id="rotuloSaldo">Saldo atual</small>
+      <small id="rotuloSaldo">Saldo atual — dinheiro em caixa</small>
       <p id="saldoAtual">R$ 0,00</p>
+      <p class="nota-saldo" id="notaSaldo"></p>
       <div class="balance-info">
         <div>
           <span>Entradas do mês</span>
@@ -71,10 +72,15 @@
           <strong class="cor-vermelha" id="saidasMes">R$ 0,00</strong>
         </div>
         <div>
-          <span>Renda livre</span>
+          <span title="Renda do mês menos as despesas fixas. É orçamento, não saldo em conta.">Sobra após fixos</span>
           <strong id="rendaLivre">R$ 0,00</strong>
         </div>
+        <div>
+          <span title="Saldo atual menos as parcelas ainda em aberto.">Disponível projetado</span>
+          <strong id="disponivelProjetado">R$ 0,00</strong>
+        </div>
       </div>
+      <p class="nota-saldo" id="notaFolga"></p>
     </section>
 
     <section id="cardContas"></section>
