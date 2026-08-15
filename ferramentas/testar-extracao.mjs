@@ -10,7 +10,7 @@
 import {
   paraNumero, lojaBloqueada, montarPanorama,
   valoresJsonLd, valoresMeta, valoresMicrodata, valoresRiscados,
-  candidatosTexto, parDePor, descontoAnunciado,
+  candidatosTexto, parDePor, descontoAnunciado, parcelasAnunciadas,
   acharParcelamento, acharAVista, acharFrete,
 } from "../supabase/functions/buscar-preco/index.ts";
 
@@ -371,6 +371,50 @@ conferir("diagnóstico traz o selo", f7?.diagnostico?.seloDesconto, 25);
 conferir("diagnóstico traz os riscados", f7?.diagnostico?.riscados, [200]);
 conferir("sem diagnóstico por padrão",
   montarPanorama(`<span>R$ 10,00</span>`)?.diagnostico, undefined);
+
+/* ---------------------------------------------------------------- */
+console.log("Segunda página real que falhou (BAPPE Barcelona)");
+
+// O caso do print: a busca devolveu R$ 41,65 — o valor da PARCELA — e ainda
+// inventou um "original" de R$ 83,30, que é 2 × 41,65 e não existe na página.
+// Correto: 249,90, original 439,90 (o selo diz 43%), pix 242,40, 6x de 41,65.
+const barcelona = `
+<html><head><title>AIR MAX TN PLUS BARCELONA</title></head><body>
+  <span class="badge">43% OFF</span>
+  <h1>AIR MAX TN PLUS BARCELONA</h1>
+  <div class="precos">
+    <span class="deee">R$439,90</span>
+    <strong class="agora">R$249,90</strong>
+    <p>R$242,40 com Pix</p>
+    <small>6 x de R$41,65 sem juros</small>
+  </div>
+  <p>3% OFF no pix + Envio Prioritário</p>
+</body></html>`;
+
+const b1 = montarPanorama(barcelona);
+conferir("preço não é a parcela", b1?.preco, 249.90);
+conferir("original correto", b1?.precoOriginal, 439.90);
+conferir("desconto bate com o selo de 43%", Math.round(b1?.desconto?.percentual ?? 0), 43);
+conferir("pix identificado", b1?.aVista?.valor, 242.40);
+conferir("parcelamento identificado", b1?.parcelamento,
+  { vezes: 6, valor: 41.65, semJuros: true, total: 249.9 });
+
+// mesma página sem o selo: o total do parcelamento sozinho já resolve
+const b2 = montarPanorama(barcelona.replace('<span class="badge">43% OFF</span>', ""));
+conferir("sem selo, a parcela ainda aponta o preço", b2?.preco, 249.90);
+
+// e sem parcelamento nem selo: sobra o riscado
+const b3 = montarPanorama(
+  barcelona.replace('<span class="badge">43% OFF</span>', "")
+           .replace("<small>6 x de R$41,65 sem juros</small>", ""));
+conferir("sem selo nem parcela, o riscado resolve", b3?.preco, 249.90);
+
+// nunca inventar desconto que a página não confirma
+const b4 = montarPanorama(`
+  <span class="badge">10% OFF</span>
+  <del>R$ 500,00</del><span>R$ 200,00</span>`);
+conferir("desconto que contradiz o selo é descartado", b4?.precoOriginal, undefined);
+conferir("mas o preço continua", b4?.preco, 200);
 
 /* ---------------------------------------------------------------- */
 console.log("Lojas bloqueadas");

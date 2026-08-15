@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;
@@ -74,9 +72,69 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("formRenda").addEventListener("submit", (e) => {
     e.preventDefault();
-    if (!(Number(incomeEl.value) > 0)) return U.toast("Informe uma renda maior que zero.", "erro");
+    if (!(U.lerMoeda(incomeEl) > 0)) return U.toast("Informe uma renda maior que zero.", "erro");
     mostrar(fluxo === "manual" ? 3 : 2);
     renderResumo();
+  });
+
+  function modoDe(nome) {
+    const m = document.querySelector(`input[name="${nome}"]:checked`);
+    return m ? m.value : "percentual";
+  }
+
+  function trocarModo(nome, raiz) {
+    const modo = modoDe(nome);
+    raiz.querySelectorAll("[data-campo]").forEach((c) => {
+      c.hidden = c.dataset.campo !== modo;
+    });
+  }
+
+  function planoRenda() {
+    const modoLivre = modoDe("modoLivre");
+    const modoEcon = modoDe("modoEconomia");
+    const pctLivre = Number(document.getElementById("livrePercent")?.value) || null;
+    const valLivre = U.lerMoeda("livreValor") || null;
+    const pctEcon = Number(document.getElementById("economiaPercent")?.value) || null;
+    const valEcon = U.lerMoeda("economiaValor") || null;
+
+    return {
+      free_income_mode: (modoLivre === "valor" ? valLivre : pctLivre) ? modoLivre : null,
+      free_income_percent: modoLivre === "percentual" ? pctLivre : null,
+      free_income_amount: modoLivre === "valor" ? valLivre : null,
+      savings_mode: (modoEcon === "valor" ? valEcon : pctEcon) ? modoEcon : null,
+      savings_percent: modoEcon === "percentual" ? pctEcon : null,
+      savings_amount: modoEcon === "valor" ? valEcon : null,
+    };
+  }
+
+  function previaPlano() {
+    const alvo = document.getElementById("previaPlano");
+    if (!alvo) return;
+    const renda = U.lerMoeda(incomeEl);
+    const p = planoRenda();
+    if (!renda || (!p.free_income_mode && !p.savings_mode)) { alvo.textContent = ""; return; }
+
+    const valor = (modo, pct, fixo) =>
+      modo === "valor" ? (fixo || 0) : ((renda * (pct || 0)) / 100);
+
+    const livre = valor(p.free_income_mode, p.free_income_percent, p.free_income_amount);
+    const econ = valor(p.savings_mode, p.savings_percent, p.savings_amount);
+    const partes = [];
+    if (livre) partes.push(`renda livre de ${U.moeda(livre)}`);
+    if (econ) partes.push(`economia de ${U.moeda(econ)}`);
+    alvo.textContent = partes.length
+      ? `Sobre ${U.moeda(renda)} por mês: ${partes.join(" e ")}.`
+      : "";
+  }
+
+  document.querySelectorAll(".plano-renda__item").forEach((item) => {
+    const nome = item.querySelector("input[type=radio]")?.name;
+    if (!nome) return;
+    item.querySelectorAll("input[type=radio]").forEach((r) =>
+      r.addEventListener("change", () => { trocarModo(nome, item); previaPlano(); }));
+    item.querySelectorAll("input:not([type=radio])").forEach((c) =>
+      c.addEventListener("input", previaPlano));
+    trocarModo(nome, item);
   });
 
   const listaDespesas = document.getElementById("listaDespesas");
@@ -144,12 +202,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     botao.disabled = true;
     try {
       await S.salvarPerfil({
-        income_monthly: Number(incomeEl.value),
+        income_monthly: U.lerMoeda(incomeEl),
         income_type: document.getElementById("incomeType").value,
         payday: Number(document.getElementById("payday").value) || 5,
         work_days_month: Number(diasEl.value),
         work_hours_day: Number(horasEl.value),
         initial_balance: U.lerMoeda(saldoEl) || 0,
+        ...planoRenda(),
         setup_mode: fluxo,
         onboarded_at: new Date().toISOString(),
       });
@@ -168,10 +227,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const perfil = await S.obterPerfil();
   if (perfil?.income_monthly) {
-    incomeEl.value = perfil.income_monthly;
+    U.escreverMoeda(incomeEl, perfil.income_monthly);
     diasEl.value = perfil.work_days_month || 22;
     horasEl.value = perfil.work_hours_day || 8;
-    saldoEl.value = perfil.initial_balance || 0;
+    U.escreverMoeda(saldoEl, perfil.initial_balance || 0);
     document.getElementById("incomeType").value = perfil.income_type || "fixa";
     document.getElementById("payday").value = perfil.payday || 5;
   }

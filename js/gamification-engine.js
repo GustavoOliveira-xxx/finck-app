@@ -1,5 +1,3 @@
-
-
 window.FinckGame = (() => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -7,7 +5,7 @@ window.FinckGame = (() => {
 
   const NIVEIS = cfg.NIVEIS;
   const REGRAS = cfg.XP;
-  const XP_POR_NIVEL = 250; 
+  const XP_POR_NIVEL = 250;
 
   const CONQUISTAS = [
     { id: "primeiro_passo",     icone: "🌱", titulo: "Primeiro passo",       descricao: "Configurou o perfil financeiro.",                         teste: (c) => Boolean(c.perfilCompleto) },

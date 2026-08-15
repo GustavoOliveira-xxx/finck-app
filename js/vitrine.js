@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", () => {
   const vitrine = document.getElementById("vitrine");
   if (!vitrine) return;

@@ -1,5 +1,3 @@
-
-
 window.FinckNav = (() => {
   const S = window.FinckStore;
   const U = window.FinckUtils;

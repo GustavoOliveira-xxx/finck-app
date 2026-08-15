@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;

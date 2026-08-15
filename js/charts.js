@@ -1,5 +1,3 @@
-
-
 window.FinckCharts = (() => {
   const PALETA_PADRAO = ["#a78bfa", "#fbbf24", "#34d399", "#60a5fa", "#f87171", "#f472b6", "#22d3ee", "#c4b5fd", "#fcd34d"];
 

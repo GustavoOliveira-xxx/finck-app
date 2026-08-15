@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -207,7 +205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("contaNome").value = c?.name || "";
     $("contaDigitos").value = c?.last_four_digits || "";
     $("contaNota").value = c?.notes || "";
-    $("contaData").value = c?.initial_balance_date
+    window.FinckData.ler("contaData") = c?.initial_balance_date
       ? String(c.initial_balance_date).slice(0, 10) : U.hojeISO();
     $("contaPadrao").checked = Boolean(c?.is_default);
 
@@ -233,7 +231,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = $("contaId").value;
     const nome = $("contaNome").value.trim();
     if (!nome) return U.toast("Dê um nome para a conta.", "erro");
-    if (!$("contaData").value) return U.toast("Informe a data do saldo inicial.", "erro");
+    if (!window.FinckData.ler("contaData")) return U.toast("Informe a data do saldo inicial.", "erro");
 
     const digitos = $("contaDigitos").value.replace(/\D/g, "").slice(0, 4);
     const bruto = U.lerMoeda("contaSaldo");
@@ -244,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       institution_name: instituicaoEscolhida,
       account_type: $("contaTipo").value,
       initial_balance: saldoInicial,
-      initial_balance_date: $("contaData").value,
+      initial_balance_date: window.FinckData.ler("contaData"),
       last_four_digits: digitos || null,
       color: C.instituicao(instituicaoEscolhida).cor,
       notes: $("contaNota").value.trim() || null,
@@ -353,7 +351,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("transferOrigem").innerHTML = opcoes(lista[0].id);
     $("transferDestino").innerHTML = opcoes(lista[1].id);
-    $("transferData").value = U.hojeISO();
+    window.FinckData.ler("transferData") = U.hojeISO();
     $("transferDescricao").value = "";
     U.limparMoeda("transferValor");
     U.abrirModal("modalTransferencia");
@@ -369,7 +367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const erro = C.validarTransferencia({ origem, destino, valor });
     if (erro) return U.toast(erro, "erro");
-    if (!$("transferData").value) return U.toast("Informe a data.", "erro");
+    if (!window.FinckData.ler("transferData")) return U.toast("Informe a data.", "erro");
 
     try {
 
@@ -377,7 +375,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         from_account_id: origem,
         to_account_id: destino,
         amount: valor,
-        date: $("transferData").value,
+        date: window.FinckData.ler("transferData"),
         description: $("transferDescricao").value.trim() || null,
       });
       U.fecharModal("modalTransferencia");
@@ -392,7 +390,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     $("ajusteConta").innerHTML = lista
       .map((c) => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
-    $("ajusteData").value = U.hojeISO();
+    window.FinckData.ler("ajusteData") = U.hojeISO();
     $("ajusteMotivo").value = "";
     $("ajusteConfirma").checked = false;
     $("ajusteNegativo").checked = false;
@@ -432,7 +430,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("formAjuste").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!$("ajusteConfirma").checked) return U.toast("Confirme que conferiu o saldo.", "erro");
-    if (!$("ajusteData").value) return U.toast("Informe a data da conferência.", "erro");
+    if (!window.FinckData.ler("ajusteData")) return U.toast("Informe a data da conferência.", "erro");
 
     const esperado = saldoEsperadoDaConta();
     const bruto = U.lerMoeda("ajusteSaldo");
@@ -449,7 +447,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         account_id: $("ajusteConta").value,
         amount: dif,
         new_balance: real,
-        date: $("ajusteData").value,
+        date: window.FinckData.ler("ajusteData"),
         reason: $("ajusteMotivo").value.trim() || null,
       });
       U.fecharModal("modalAjuste");

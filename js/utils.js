@@ -1,5 +1,3 @@
-
-
 window.FinckUtils = (() => {
   const cfg = window.FINCK_CONFIG;
 

@@ -1,5 +1,3 @@
-
-
 (() => {
   const PAINEIS = { calculo: "painelCalculo", calculos: "painelCalculos" };
 

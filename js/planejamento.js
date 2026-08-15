@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -238,7 +236,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("parcelaDescricao").value = p?.description || "";
     U.escreverMoeda("parcelaTotal", p?.total_amount || 0);
     $("parcelaQtd").value = p?.installments_count || "";
-    $("parcelaData").value = p ? String(p.first_due_date).slice(0, 10) : U.hojeISO();
+    window.FinckData.ler("parcelaData") = p ? String(p.first_due_date).slice(0, 10) : U.hojeISO();
     $("parcelaPagas").value = p?.paid_count || 0;
     $("parcelaCategoria").innerHTML = cfg.CATEGORIAS
       .map((c) => `<option value="${c}"${p?.category === c ? " selected" : ""}>${c}</option>`).join("");
@@ -278,7 +276,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!(total > 0)) return U.toast("Informe um valor total maior que zero.", "erro");
     if (!(qtd >= 1)) return U.toast("Informe ao menos 1 parcela.", "erro");
     if (pagas > qtd) return U.toast("Parcelas pagas não podem passar do total.", "erro");
-    if (!$("parcelaData").value) return U.toast("Informe o primeiro vencimento.", "erro");
+    if (!window.FinckData.ler("parcelaData")) return U.toast("Informe o primeiro vencimento.", "erro");
 
     const dados = {
       description: $("parcelaDescricao").value.trim(),
@@ -286,7 +284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       total_amount: total,
       installments_count: qtd,
       installment_amount: P.valorParcela(total, qtd),
-      first_due_date: $("parcelaData").value,
+      first_due_date: window.FinckData.ler("parcelaData"),
       paid_count: pagas,
       active: true,
     };

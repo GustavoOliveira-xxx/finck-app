@@ -1,5 +1,3 @@
-
-
 document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;
@@ -160,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("metaNome").value = m?.name || "";
     U.escreverMoeda("metaAlvo", m?.target_amount || 0);
     U.escreverMoeda("metaAtual", m?.current_amount || 0);
-    document.getElementById("metaPrazo").value = m?.deadline ? String(m.deadline).slice(0, 10) : "";
+    window.FinckData.ler("metaPrazo") = m?.deadline ? String(m.deadline).slice(0, 10) : "";
     document.getElementById("metaTaxa").value = m?.rate || 0;
     U.abrirModal("modalMeta");
   }
@@ -173,7 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       name: document.getElementById("metaNome").value.trim(),
       target_amount: U.lerMoeda("metaAlvo"),
       current_amount: U.lerMoeda("metaAtual"),
-      deadline: document.getElementById("metaPrazo").value || null,
+      deadline: window.FinckData.ler("metaPrazo") || null,
       rate: Number(document.getElementById("metaTaxa").value) || 0,
     };
     if (!dados.name) return U.toast("Informe o nome da meta.", "erro");

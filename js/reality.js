@@ -1,5 +1,3 @@
-
-
 window.FinckReality = (() => {
   const cfg = window.FINCK_CONFIG;
 

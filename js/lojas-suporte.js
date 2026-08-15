@@ -1,23 +1,3 @@
-
-
-/**
- * Classificação das lojas para a busca automática de preço.
- *
- * Este é o único arquivo que precisa ser editado quando uma loja mudar de
- * comportamento. A tela de cálculo e o modal de ajuda leem tudo daqui.
- *
- * Três situações:
- *
- *   bloqueada — não adianta tentar. A busca fica desativada e o usuário
- *               é avisado antes de clicar.
- *   instavel  — a busca tenta, mas pode voltar sem preço.
- *   provavel  — costuma funcionar.
- *
- * O critério não é a loja ser grande ou pequena: é como a página é montada.
- * Loja que entrega o preço no HTML (para aparecer no Google Shopping) funciona.
- * Loja que monta o preço por JavaScript, ou que bloqueia acesso de servidor,
- * não funciona.
- */
 window.FinckLojas = (() => {
 
   const BLOQUEADAS = [
@@ -167,10 +147,6 @@ window.FinckLojas = (() => {
   const casa = (host, dominios) =>
     (dominios || []).some((d) => host === d || host.endsWith(`.${d}`));
 
-  /**
-   * Classifica um link.
-   * @returns {{status: "bloqueada"|"instavel"|"provavel"|"desconhecida", loja?: string, motivo?: string, host?: string}}
-   */
   function classificar(url) {
     const host = hostDe(url);
     if (!host) return { status: "desconhecida" };

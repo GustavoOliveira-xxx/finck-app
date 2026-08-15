@@ -1,5 +1,3 @@
-
-
 (() => {
   "use strict";
 
@@ -7,17 +5,6 @@
   const toque = window.matchMedia("(hover: none)").matches;
   const raf = window.requestAnimationFrame.bind(window);
 
-  /* ------------------------------------------------------------------ *
-   * Fundo "Cofre"
-   *
-   * Uma grade em perspectiva que corre em direção ao observador, com dois
-   * elementos indo embora pelo horizonte: pulsos de luz percorrendo as
-   * linhas e moedas girando sobre o piso.
-   *
-   * Tudo num único canvas. A versão anterior usava seis camadas de DOM com
-   * blur e mix-blend-mode, que o navegador recompõe a cada quadro; aqui é
-   * um desenho só, e o laço para quando a aba sai de foco.
-   * ------------------------------------------------------------------ */
   const COLUNAS = 16;
   const TAU = Math.PI * 2;
   const sorteio = (a, b) => a + Math.random() * (b - a);
@@ -41,8 +28,6 @@
     let pulsos = [], moedas = [];
     let t = 0, anterior = 0, laco = 0;
 
-    // o ponto de fuga acompanha o ponteiro de leve, o que dá profundidade
-    // sem que a pessoa perceba de onde vem a sensação
     const mira = { alvo: 0.5, atual: 0.5 };
 
     const emY = (prof) => hz + (A - hz) * prof;
@@ -57,7 +42,6 @@
       v: sorteio(0.1, 0.3),
     });
 
-    // faixas fracionárias: as moedas não ficam presas às linhas da grade
     const novaMoeda = (p) => ({
       faixa: sorteio(3.4, 12.6),
       p,
@@ -76,20 +60,16 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       hz = A * 0.34;
 
-      // Moeda e pulso são medidos em pixels. Sem escalar pela largura, o que
-      // é discreto num monitor vira enorme num celular de 390px — as moedas
-      // chegavam a cobrir o valor do saldo.
       escala = Math.max(0.42, Math.min(1, L / 900));
     }
 
     function povoar() {
-      // menos elementos na tela estreita: além do custo, ficariam amontoados
+
       const cheio = L > 700;
       pulsos = Array.from({ length: cheio ? 8 : 5 }, () => novoPulso(Math.random()));
       moedas = Array.from({ length: cheio ? 7 : 5 }, () => novaMoeda(Math.random()));
     }
 
-    /** Uma moeda de perfil variável: a largura oscila e ela parece girar. */
     function desenharMoeda(x, y, r, giro) {
       const halo = ctx.createRadialGradient(x, y, 0, x, y, r * 2.8);
       halo.addColorStop(0, "rgba(254,200,0,.3)");
@@ -99,8 +79,6 @@
       ctx.arc(x, y, r * 2.8, 0, TAU);
       ctx.fill();
 
-      // De perfil a moeda não pode virar um bastão: a largura mínima é maior
-      // e a altura encolhe um pouco, o que lê como o rebordo da moeda.
       const frente = Math.abs(Math.cos(giro));
       const rx = Math.max(r * 0.22, frente * r);
       const ry = r * (0.86 + 0.14 * frente);
@@ -120,8 +98,6 @@
         ctx.stroke();
       }
 
-      // o cifrão só entra quando a moeda está de frente e grande o bastante
-      // para ele não virar borrão
       if (r > 8 && rx > r * 0.55) {
         ctx.save();
         ctx.font = `700 ${(r * 1.2).toFixed(1)}px ${getComputedStyle(document.body).fontFamily || "sans-serif"}`;
@@ -140,9 +116,6 @@
       ctx.fillStyle = "#07060a";
       ctx.fillRect(0, 0, L, A);
 
-      // O clarão do piso precisa nascer transparente. Começar a faixa já com
-      // cor cria uma linha horizontal visível na altura em que o retângulo
-      // começa — parece um defeito de renderização.
       const topo = hz - 150;
       const chao = ctx.createLinearGradient(0, topo, 0, A);
       chao.addColorStop(0, "rgba(104,12,144,0)");
@@ -196,12 +169,8 @@
       }
       ctx.globalCompositeOperation = "source-over";
 
-      // as moedas vêm depois e sem "lighter": ouro sólido, não translúcido
       for (const m of moedas) {
-        // Em perspectiva pura o que se afasta desacelera, e as moedas se
-        // amontoam no horizonte enquanto o primeiro plano fica vazio. Este
-        // fator segura um pouco a chegada e apressa a saída, o que espalha
-        // as moedas pela profundidade toda.
+
         m.p += m.v * dt * (0.5 + 1.2 * m.p);
         m.giro += m.vGiro * dt;
         if (m.p > 1) Object.assign(m, novaMoeda(0));
@@ -212,9 +181,6 @@
         desenharMoeda(x, y, (19 * k + 1.2) * escala, m.giro);
       }
 
-      // Névoa: é ela que faz pulsos e moedas sumirem no horizonte. Começa
-      // acima de onde o clarão do piso nasce, senão o topo dela corta o
-      // clarão e deixa outra linha horizontal à mostra.
       const nevoaTopo = hz - 170;
       const nevoa = ctx.createLinearGradient(0, nevoaTopo, 0, hz + 40);
       nevoa.addColorStop(0, "rgba(7,6,10,.95)");
@@ -328,7 +294,7 @@
 
     const passo = (agora) => {
       const p = Math.min(1, (agora - inicio) / dur);
-      const e = 1 - Math.pow(1 - p, 3); 
+      const e = 1 - Math.pow(1 - p, 3);
       el.textContent = fmt(de + (destino - de) * e);
       if (p < 1) raf(passo);
       else { el.textContent = molde; el.dataset.fxValor = String(destino); }
