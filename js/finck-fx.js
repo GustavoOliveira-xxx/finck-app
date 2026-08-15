@@ -416,7 +416,7 @@
 
     const extrusao = Array.from({ length: CAMADAS_EXTRUSAO }, (_, i) => {
       const t = i / (CAMADAS_EXTRUSAO - 1);
-      const z = -(i + 1) * 1.5;
+      const z = (i + 1) * 1.5;
       const forca = (1 - t) ** 1.25;
       const matiz = t < 0.45 ? "var(--marca-metal-claro)"
         : t < 0.8 ? "var(--marca-metal)" : "var(--marca-metal-fundo)";

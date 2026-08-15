@@ -35,9 +35,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     ctx = await F.carregarContexto();
-    if (!ctx.perfil?.income_monthly) {
-      U.toast("Configure sua renda para usar o FinCK of Reality.", "erro");
-      setTimeout(() => { location.href = "onboarding.html"; }, 900);
+    if (!(Number(ctx.perfil?.income_monthly) > 0)) {
+      U.toast("Informe sua renda mensal no Perfil para usar o FinCK of Reality.", "erro");
       return;
     }
 
