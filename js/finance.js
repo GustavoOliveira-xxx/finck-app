@@ -110,7 +110,7 @@ window.FinckFinance = (() => {
       naoAlocado: 0, duplicaria: saldoPerfil,
       nota: saldoPerfil > 0
         ? `O saldo inicial agora vem das suas contas (${U.moeda(saldoContas)}). Os ${U.moeda(saldoPerfil)} informados no perfil não são somados de novo.`
-        : "O saldo inicial vem das suas contas cadastradas.",
+        : "",
     };
   }
 
