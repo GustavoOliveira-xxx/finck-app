@@ -93,11 +93,17 @@ window.FinckFinance = (() => {
   }
 
   function origemDoSaldo(perfil, contas = []) {
-    const ativas = (contas || []).filter((c) => c.active !== false);
+    const todas = contas || [];
+    const ativas = todas.filter((c) => c.active !== false);
     const saldoPerfil = Number(perfil?.initial_balance || 0);
     const saldoContas = ativas.reduce((s, c) => s + Number(c.initial_balance || 0), 0);
+    const fonteContas = Boolean(
+      todas.length ||
+      perfil?.initial_balance_source === "contas" ||
+      perfil?.initial_balance_migrated_at
+    );
 
-    if (!ativas.length) {
+    if (!fonteContas) {
       return {
         fonte: "perfil", saldoInicial: saldoPerfil, saldoPerfil, saldoContas: 0,
         naoAlocado: saldoPerfil, duplicaria: 0,
@@ -110,7 +116,9 @@ window.FinckFinance = (() => {
       naoAlocado: 0, duplicaria: saldoPerfil,
       nota: saldoPerfil > 0
         ? `O saldo inicial agora vem das suas contas (${U.moeda(saldoContas)}). Os ${U.moeda(saldoPerfil)} informados no perfil não são somados de novo.`
-        : "",
+        : todas.length
+          ? "O saldo inicial vem das contas ativas. Contas arquivadas permanecem no histórico, mas não voltam a ativar o saldo antigo do perfil."
+          : "O saldo inicial já foi migrado para contas. O valor guardado no perfil é apenas histórico.",
     };
   }
 
@@ -156,7 +164,7 @@ window.FinckFinance = (() => {
     const saida = [];
     for (let i = meses - 1; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      const chave = d.toISOString().slice(0, 7);
+      const chave = U.mesISO(d);
       const doPeriodo = transacoes.filter((t) => String(t.date || "").slice(0, 7) === chave);
       const e = soma(doPeriodo.filter(ehEntrada));
       const s = soma(doPeriodo.filter(ehSaida));
@@ -528,7 +536,7 @@ window.FinckFinance = (() => {
     if (substituir) await S.limparDados();
 
     const hoje = new Date();
-    const dia = (n) => new Date(hoje.getFullYear(), hoje.getMonth(), n).toISOString().slice(0, 10);
+    const dia = (n) => U.dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), n));
     const resumo = { inseridos: 0, jaExistiam: 0 };
 
     const cache = {};
@@ -574,13 +582,13 @@ window.FinckFinance = (() => {
     // soma dos movimentos desde o primeiro dia, como em qualquer meta real.
     const metaReserva = await registrar("goals", {
       name: "Reserva de emergência", target_amount: 6000, current_amount: 1500,
-      deadline: new Date(hoje.getFullYear(), hoje.getMonth() + 8, 1).toISOString().slice(0, 10), rate: 0,
+      deadline: U.dataISO(new Date(hoje.getFullYear(), hoje.getMonth() + 8, 1)), rate: 0,
     });
     if (metaReserva) await ajustarMeta(metaReserva.id, 1500, "Saldo inicial da meta de exemplo");
 
     const metaNotebook = await registrar("goals", {
       name: "Notebook para estudos", target_amount: 3200, current_amount: 400,
-      deadline: new Date(hoje.getFullYear() + 1, 2, 1).toISOString().slice(0, 10), rate: 0,
+      deadline: U.dataISO(new Date(hoje.getFullYear() + 1, 2, 1)), rate: 0,
     });
     if (metaNotebook) await ajustarMeta(metaNotebook.id, 400, "Saldo inicial da meta de exemplo");
 

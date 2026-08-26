@@ -67,7 +67,7 @@
       </div>
       <p class="descricao">Parte do saldo de hoje e aplica, mês a mês, as recorrentes e as parcelas que vencem. No mês corrente só entra o que ainda não passou.</p>
       <div class="projecao-grafico" id="projecaoGrafico" role="img" aria-label="Projeção do saldo nos próximos meses"></div>
-      <div class="tabela-wrapper">
+      <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Projeção mensal; deslize horizontalmente para ver todas as colunas">
         <table class="tabela" id="tabelaProjecao">
           <caption class="visualmente-oculto">Projeção de entradas, saídas e saldo por mês</caption>
           <thead>
@@ -175,7 +175,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>

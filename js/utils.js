@@ -23,9 +23,17 @@ window.FinckUtils = (() => {
     return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString(cfg.LOCALE);
   };
 
-  const hojeISO = () => new Date().toISOString().slice(0, 10);
-
-  const mesAtual = () => new Date().toISOString().slice(0, 7);
+  // Datas financeiras seguem o calendário local do usuário. Usar ISO em UTC
+  // aqui fazia o app avançar um dia antes da meia-noite no Brasil.
+  const doisDigitos = (n) => String(n).padStart(2, "0");
+  const dataISO = (valor = new Date()) => {
+    const d = valor instanceof Date ? valor : new Date(valor);
+    if (Number.isNaN(d.getTime())) return "";
+    return `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+  };
+  const mesISO = (valor = new Date()) => dataISO(valor).slice(0, 7);
+  const hojeISO = () => dataISO();
+  const mesAtual = () => mesISO();
 
   const uid = () =>
     (crypto.randomUUID && crypto.randomUUID()) ||
@@ -52,13 +60,32 @@ window.FinckUtils = (() => {
     setTimeout(() => el.remove(), ms);
   }
 
+  const focoAnterior = new Map();
   const abrirModal = (id) => {
     const el = document.getElementById(id);
-    if (el) { el.hidden = false; document.body.classList.add("modal-aberto"); }
+    if (!el) return;
+    focoAnterior.set(id, document.activeElement);
+    el.hidden = false;
+    document.body.classList.add("modal-aberto");
+    requestAnimationFrame(() => {
+      const foco = el.querySelector('[autofocus], button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (foco) foco.focus();
+      else {
+        el.setAttribute("tabindex", "-1");
+        el.focus();
+      }
+    });
   };
   const fecharModal = (id) => {
     const el = document.getElementById(id);
-    if (el) { el.hidden = true; document.body.classList.remove("modal-aberto"); }
+    if (!el) return;
+    el.hidden = true;
+    if (!document.querySelector(".modal-overlay:not([hidden])")) {
+      document.body.classList.remove("modal-aberto");
+    }
+    const anterior = focoAnterior.get(id);
+    if (anterior?.isConnected) anterior.focus();
+    focoAnterior.delete(id);
   };
 
   function ligarModais() {
@@ -97,7 +124,7 @@ window.FinckUtils = (() => {
   const limparMoeda = (alvo) => window.FinckMoeda?.limpar(alvo);
 
   return {
-    moeda, numero, percentual, dataBR, hojeISO, mesAtual, uid, escapeHTML,
+    moeda, numero, percentual, dataBR, dataISO, mesISO, hojeISO, mesAtual, uid, escapeHTML,
     toast, abrirModal, fecharModal, ligarModais, saudacao, progresso, baixarArquivo,
     lerMoeda, escreverMoeda, limparMoeda,
   };

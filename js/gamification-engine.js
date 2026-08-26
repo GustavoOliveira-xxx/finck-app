@@ -24,7 +24,7 @@ window.FinckGame = (() => {
     { id: "mil_reais",          icone: "💰", titulo: "Mil conscientes",      descricao: "Deixou de gastar R$ 1.000 em compras evitadas.",          teste: (c) => c.economia >= 1000 },
     { id: "primeira_entrada",   icone: "💰", titulo: "Primeiro dinheiro registrado", descricao: "Cadastrou a primeira entrada.",                      teste: (c) => c.entradas >= 1 },
     { id: "primeira_saida",     icone: "💸", titulo: "Primeiro gasto registrado",   descricao: "Cadastrou a primeira saída.",                          teste: (c) => c.saidas >= 1 },
-    { id: "mestre_financas",    icone: "🏅", titulo: "Mestre das finanças",         descricao: "Alcançou o nível 10 (The Miner).",                     teste: (c) => c.nivel >= 10 },
+    { id: "mestre_financas",    icone: "🏅", titulo: "Mestre das finanças",         descricao: "Alcançou o nível 10 (Guardião do tempo).",              teste: (c) => c.nivel >= 10 },
     { id: "semana_firme",       icone: "🔥", titulo: "Semana firme",         descricao: "Manteve 7 dias seguidos de uso do app.",                  teste: (c) => c.streak >= 7 },
     { id: "mes_firme",          icone: "☄️", titulo: "Mês firme",            descricao: "Manteve 30 dias seguidos de uso do app.",                 teste: (c) => c.streak >= 30 },
   ];
@@ -60,28 +60,32 @@ window.FinckGame = (() => {
     return { dia: hoje, total: Number(l.total || 0), acoes: l.acoes || {}, ultimo: Number(l.ultimo || 0), chaves };
   }
 
-  function podePremiar(estado, tipo, chave) {
+  function podePremiar(estado, tipo, chave, { ignorarIntervalo = false } = {}) {
     const regra = REGRAS.ACOES[tipo];
     if (!regra) return { ok: false, motivo: "Ação desconhecida." };
     const l = normalizarLedger(estado);
     if (chave && l.chaves.includes(`${tipo}:${chave}`)) return { ok: false, motivo: "Esta ação já rendeu XP antes." };
     if (l.total >= REGRAS.TETO_DIARIO) return { ok: false, motivo: "Teto diário de XP atingido. Volte amanhã." };
     if ((l.acoes[tipo] || 0) >= regra.limiteDia) return { ok: false, motivo: `Limite diário de "${regra.rotulo}" atingido.` };
-    if (Date.now() - l.ultimo < REGRAS.INTERVALO_MIN_MS) return { ok: false, motivo: "Aguarde alguns segundos entre ações." };
+    if (!ignorarIntervalo && Date.now() - l.ultimo < REGRAS.INTERVALO_MIN_MS) return { ok: false, motivo: "Aguarde alguns segundos entre ações." };
     return { ok: true, regra, ledger: l };
   }
 
   async function premiar(tipo, opcoes = {}) {
     const estado = await S.obterGamificacao();
     const hoje = U.hojeISO();
-    const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const dataOntem = new Date();
+    dataOntem.setDate(dataOntem.getDate() - 1);
+    const ontem = U.dataISO(dataOntem);
 
     let streak = Number(estado.streak || 0);
     if (estado.last_active === hoje) {  }
     else if (estado.last_active === ontem) streak += 1;
     else streak = 1;
 
-    const veredito = podePremiar(estado, tipo, opcoes.chave);
+    const veredito = podePremiar(estado, tipo, opcoes.chave, {
+      ignorarIntervalo: Boolean(opcoes.ignorarIntervalo),
+    });
     const ledger = veredito.ledger || normalizarLedger(estado);
 
     if (!veredito.ok) {
@@ -132,7 +136,7 @@ window.FinckGame = (() => {
     const resumo = window.FinckReality.resumoHistorico(analises);
 
     const ctx = {
-      perfilCompleto: Boolean(perfil?.income_monthly),
+      perfilCompleto: Boolean(perfil?.onboarded_at),
       transacoes: transacoes.length,
       metas: metas.length,
       metasConcluidas: metas.filter((m) => Number(m.current_amount || 0) >= Number(m.target_amount || 0) && Number(m.target_amount) > 0).length,
@@ -155,7 +159,12 @@ window.FinckGame = (() => {
       await S.salvarGamificacao({ ...estado, achievements: desbloqueadas });
       for (const id of novas) {
         const c = CONQUISTAS.find((x) => x.id === id);
-        await premiar("conquista", { chave: id, motivo: `Conquista: ${c.titulo}`, silencioso: true });
+        // Conquistas podem abrir em lote na primeira sincronização. O intervalo
+        // antiautomação não pode fazer as seguintes perderem o próprio XP.
+        await premiar("conquista", {
+          chave: id, motivo: `Conquista: ${c.titulo}`,
+          silencioso: true, ignorarIntervalo: true,
+        });
         U.toast(`${c.icone} Conquista desbloqueada: ${c.titulo}`, "sucesso", 4500);
       }
     }

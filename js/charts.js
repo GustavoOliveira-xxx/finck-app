@@ -142,7 +142,7 @@ window.FinckCharts = (() => {
     bloco.innerHTML = `
       <details class="grafico-dados__caixa">
         <summary>Ver os números deste gráfico</summary>
-        <div class="tabela-wrapper">
+        <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Dados do gráfico; deslize horizontalmente para ver todas as colunas">
           <table class="tabela">
             <caption class="visualmente-oculto">${U().escapeHTML(spec.resumo || "Dados do gráfico")}</caption>
             <thead><tr>${cabecalho}</tr></thead>

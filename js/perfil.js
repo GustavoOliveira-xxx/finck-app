@@ -27,7 +27,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.escreverMoeda("perfilSaldoInicial", p.initial_balance || 0);
 
     $("perfilEmail").textContent = user.email || "—";
-    $("perfilModo").textContent = S.ONLINE ? "Banco de dados (online)" : "Offline (localStorage)";
+    $("perfilModo").textContent = ({
+      online: "Banco de dados (Supabase)",
+      demo: "Demonstração neste aparelho",
+      local: "Dados locais neste aparelho",
+    })[S.MODO] || "—";
     $("perfilSetup").textContent =
       ({ perfil: "Perfil Financeiro Inicial", manual: "Configuração Manual", demo: "Modo Demonstrativo" })[p.setup_mode] || "—";
 
@@ -58,7 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const horas = Number($("perfilHoras").value) || 8;
     $("perfilDica").textContent = renda > 0
       ? `Com esses dados, sua hora vale ${U.moeda(renda / dias / horas)} e seu dia, ${U.moeda(renda / dias)}.`
-      : "Informe sua renda para o FinCK of Reality funcionar.";
+      : "Sem renda informada, os cálculos em tempo ficam indisponíveis; as demais funções continuam ativas.";
   }
   ["perfilRenda", "perfilDias", "perfilHoras"].forEach((id) => $(id).addEventListener("input", atualizarDica));
 
@@ -74,7 +78,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       initial_balance: U.lerMoeda("perfilSaldoInicial"),
     };
     if (!dados.name) return U.toast("Informe seu nome.", "erro");
-    if (!(dados.income_monthly > 0)) return U.toast("Informe uma renda maior que zero.", "erro");
+    if (!(dados.income_monthly >= 0)) return U.toast("A renda não pode ser negativa.", "erro");
+    if (!(Number.isInteger(dados.work_days_month) && dados.work_days_month >= 1 && dados.work_days_month <= 31)) {
+      return U.toast("Informe de 1 a 31 dias trabalhados por mês.", "erro");
+    }
+    if (!(dados.work_hours_day > 0 && dados.work_hours_day <= 16)) {
+      return U.toast("Informe de 0,5 a 16 horas por dia.", "erro");
+    }
+    if (!(Number.isInteger(dados.payday) && dados.payday >= 1 && dados.payday <= 31)) {
+      return U.toast("Informe um dia de recebimento entre 1 e 31.", "erro");
+    }
     try {
       await S.salvarPerfil(dados);
       U.toast("Perfil atualizado.", "sucesso");
@@ -138,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     cena.hidden = false;
 
     const esq = r.caixa.saldoGlobal;
-    const dir = r.caixa.somaContas + r.caixa.naoAlocado;
+    const dir = r.caixa.somaContas + r.caixa.somaArquivadas + r.caixa.naoAlocado;
     const maior = Math.max(Math.abs(esq), Math.abs(dir), 1);
     const inclinacao = Math.max(-12, Math.min(12, ((esq - dir) / maior) * 60));
 

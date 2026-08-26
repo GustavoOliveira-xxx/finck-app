@@ -77,12 +77,16 @@ window.FinckStore = (() => {
     "Cadastro e login precisam do banco de dados configurado. " +
     "Enquanto isso, use o modo demonstração para conhecer o app.";
 
+  // Mantém o caminho da pasta em hospedagens como GitHub Pages; location.origin
+  // sozinho redirecionava para a raiz do domínio e quebrava confirmação e senha.
+  const urlLocal = (arquivo, base = location.href) => new URL(arquivo, base).href;
+
   async function cadastrar({ nome, email, senha }) {
     if (!sb) throw new Error(SEM_BANCO);
     const { data, error } = await sb.auth.signUp({
       email,
       password: senha,
-      options: { data: { name: nome }, emailRedirectTo: `${location.origin}/index.html` },
+      options: { data: { name: nome }, emailRedirectTo: urlLocal("index.html") },
     });
     if (error) throw new Error(traduzErro(error.message));
 
@@ -107,7 +111,7 @@ window.FinckStore = (() => {
   async function recuperarSenha(email) {
     if (!sb) throw new Error(SEM_BANCO);
     const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: `${location.origin}/nova-senha.html`,
+      redirectTo: urlLocal("nova-senha.html"),
     });
     if (error) throw new Error(traduzErro(error.message));
     return true;
@@ -125,7 +129,7 @@ window.FinckStore = (() => {
     const { error } = await sb.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${location.origin}/index.html` },
+      options: { emailRedirectTo: urlLocal("index.html") },
     });
     if (error) throw new Error(traduzErro(error.message));
     return true;
@@ -156,7 +160,7 @@ window.FinckStore = (() => {
     if (/invalid.*email|email.*invalid/i.test(msg)) return "Esse endereço de e-mail não parece válido.";
     if (/same.*password/i.test(msg)) return "A nova senha precisa ser diferente da anterior.";
     if (/expired|invalid.*token/i.test(msg)) return "Este link expirou. Peça um novo e-mail de redefinição.";
-    if (/password/i.test(msg)) return "A senha precisa ter ao menos 6 caracteres.";
+    if (/password/i.test(msg)) return "A senha precisa ter ao menos 8 caracteres.";
     return msg || "Não foi possível concluir a operação.";
   }
 
@@ -460,7 +464,9 @@ window.FinckStore = (() => {
 
   async function precisaOnboarding() {
     const p = await obterPerfil();
-    return !p || !p.income_monthly || !p.work_days_month || !p.work_hours_day;
+    return !p || !p.onboarded_at ||
+      !(Number(p.work_days_month) >= 1 && Number(p.work_days_month) <= 31) ||
+      !(Number(p.work_hours_day) > 0 && Number(p.work_hours_day) <= 16);
   }
 
   async function obterGamificacao() {
@@ -520,21 +526,61 @@ window.FinckStore = (() => {
     goal_movements: [
       ["goal_id", "goals", true],
       ["transaction_id", "transactions", false],
+      ["reverses_id", "goal_movements", false],
     ],
+  };
+
+  // Backup é entrada não confiável. Só os campos de negócio conhecidos seguem
+  // para o banco; IDs de dono, timestamps e colunas inventadas nunca atravessam.
+  const CAMPOS_PERMITIDOS = {
+    accounts: ["name", "type", "balance", "institution_name", "account_type", "initial_balance", "initial_balance_date", "last_four_digits", "color", "notes", "is_default", "active"],
+    goals: ["name", "target_amount", "current_amount", "deadline", "rate"],
+    transactions: ["account_id", "goal_id", "type", "description", "amount", "date", "category", "source", "source_occurrence_id", "reversed_at", "reversal_reason", "unallocated"],
+    recurring_transactions: ["description", "type", "amount", "day_of_month", "active", "category", "account_id"],
+    purchase_analyses: ["item_name", "price", "category", "item_link", "note", "work_days", "work_hours", "income_percent", "impact_level", "decision", "reflections", "income_base", "hour_value", "day_value", "work_days_month", "work_hours_day", "income_type", "balance_before", "balance_after", "free_income", "analyzed_at"],
+    installment_purchases: ["description", "category", "total_amount", "installments_count", "installment_amount", "first_due_date", "paid_count", "active", "note", "account_id"],
+    category_budgets: ["category", "limit_amount"],
+    transfers: ["from_account_id", "to_account_id", "amount", "date", "description"],
+    balance_adjustments: ["account_id", "amount", "new_balance", "date", "reason"],
+    installment_payments: ["purchase_id", "installment_no", "due_date", "amount", "status", "transaction_id", "paid_at"],
+    goal_movements: ["goal_id", "transaction_id", "kind", "amount", "date", "note", "reverses_id", "reversed_at"],
+    profile: ["name", "income_monthly", "income_type", "payday", "work_days_month", "work_hours_day", "initial_balance", "setup_mode", "onboarded_at", "free_income_mode", "free_income_percent", "free_income_amount", "savings_mode", "savings_percent", "savings_amount", "initial_balance_source", "initial_balance_migrated_at"],
+    gamification: ["xp", "level", "streak", "last_active", "achievements", "ledger"],
+  };
+
+  const limparCampos = (tabela, linha, { manterId = false } = {}) => {
+    const permitido = new Set(CAMPOS_PERMITIDOS[tabela] || []);
+    const limpa = {};
+    if (manterId && linha?.id !== undefined && linha?.id !== null) limpa.id = linha.id;
+    for (const campo of permitido) {
+      if (Object.prototype.hasOwnProperty.call(linha || {}, campo)) limpa[campo] = linha[campo];
+    }
+    return limpa;
   };
 
   const positivo = (v) => Number.isFinite(Number(v)) && Number(v) > 0;
   const naoNegativo = (v) => v === null || v === undefined || v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0);
-  const dataValida = (v) => /^\d{4}-\d{2}-\d{2}/.test(String(v || ""));
+  const dataValida = (v) => {
+    const match = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+    if (!match) return false;
+    const [, ano, mes, dia] = match.map(Number);
+    const d = new Date(Date.UTC(ano, mes - 1, dia));
+    return d.getUTCFullYear() === ano && d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia;
+  };
 
   // Regras por tabela. Devolve o motivo da rejeição ou null quando a linha é válida.
   const INVARIANTES = {
-    accounts: (r) => (!String(r.name || "").trim() ? "conta sem nome" : null),
+    accounts: (r) =>
+      !String(r.name || "").trim() ? "conta sem nome"
+      : r.initial_balance_date && !dataValida(r.initial_balance_date) ? "conta com data inicial inválida"
+      : r.initial_balance !== undefined && !Number.isFinite(Number(r.initial_balance)) ? "conta com saldo inicial inválido"
+      : null,
 
     goals: (r) =>
       !String(r.name || "").trim() ? "meta sem nome"
       : !positivo(r.target_amount) ? "meta com alvo zerado ou negativo"
       : !naoNegativo(r.current_amount) ? "meta com valor guardado negativo"
+      : r.deadline && !dataValida(r.deadline) ? "meta com prazo inválido"
       : null,
 
     transactions: (r) =>
@@ -547,13 +593,17 @@ window.FinckStore = (() => {
     recurring_transactions: (r) =>
       !["entrada", "saida"].includes(r.type) ? "recorrente sem tipo válido"
       : !positivo(r.amount) ? "recorrente com valor zerado ou negativo"
+      : !String(r.description || "").trim() ? "recorrente sem descrição"
       : !(Number(r.day_of_month) >= 1 && Number(r.day_of_month) <= 31) ? "recorrente com dia fora de 1 a 31"
       : null,
 
     installment_purchases: (r) =>
-      !positivo(r.total_amount) ? "parcelamento com total zerado ou negativo"
-      : !(Number(r.installments_count) >= 1) ? "parcelamento sem número de parcelas"
+      !String(r.description || "").trim() ? "parcelamento sem descrição"
+      : !positivo(r.total_amount) ? "parcelamento com total zerado ou negativo"
+      : !(Number.isInteger(Number(r.installments_count)) && Number(r.installments_count) >= 1 && Number(r.installments_count) <= 120) ? "parcelamento sem número de parcelas válido"
+      : !positivo(r.installment_amount) ? "parcelamento com valor de parcela inválido"
       : !dataValida(r.first_due_date) ? "parcelamento sem primeiro vencimento válido"
+      : !(Number.isInteger(Number(r.paid_count || 0)) && Number(r.paid_count || 0) >= 0) ? "parcelamento com quantidade paga inválida"
       : Number(r.paid_count || 0) > Number(r.installments_count) ? "parcelamento com mais parcelas pagas que o total"
       : null,
 
@@ -565,19 +615,26 @@ window.FinckStore = (() => {
     transfers: (r) =>
       !positivo(r.amount) ? "transferência com valor zerado ou negativo"
       : String(r.from_account_id) === String(r.to_account_id) ? "transferência entre a mesma conta"
+      : !dataValida(r.date) ? "transferência sem data válida"
       : null,
 
     balance_adjustments: (r) =>
-      !dataValida(r.date) ? "ajuste sem data válida" : null,
+      !Number.isFinite(Number(r.amount)) ? "ajuste com valor inválido"
+      : !Number.isFinite(Number(r.new_balance)) ? "ajuste com novo saldo inválido"
+      : !dataValida(r.date) ? "ajuste sem data válida"
+      : null,
 
     purchase_analyses: (r) =>
       !String(r.item_name || "").trim() ? "análise sem item"
       : !positivo(r.price) ? "análise com preço zerado ou negativo"
+      : r.impact_level && !["verde", "atencao", "alerta"].includes(r.impact_level) ? "análise com impacto inválido"
+      : r.decision && !["comprar", "adiar", "substituir", "usado", "reparar", "desistir"].includes(r.decision) ? "análise com decisão inválida"
       : null,
 
     installment_payments: (r) =>
-      !(Number(r.installment_no) >= 1) ? "parcela sem número válido"
+      !(Number.isInteger(Number(r.installment_no)) && Number(r.installment_no) >= 1) ? "parcela sem número válido"
       : !positivo(r.amount) ? "parcela com valor zerado ou negativo"
+      : !dataValida(r.due_date) ? "parcela sem vencimento válido"
       : !["aberta", "paga", "estornada"].includes(r.status) ? "parcela com estado inválido"
       : r.status === "aberta" && r.transaction_id ? "parcela aberta não pode ter movimentação vinculada"
       : null,
@@ -600,6 +657,13 @@ window.FinckStore = (() => {
 
     if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
       return { valido: false, erros: ["Arquivo inválido: não parece um backup do FinCK."], avisos, linhas: {} };
+    }
+
+    if (dados.profile && (typeof dados.profile !== "object" || Array.isArray(dados.profile))) {
+      erros.push('"profile" deveria ser um objeto.');
+    }
+    if (dados.gamification && (typeof dados.gamification !== "object" || Array.isArray(dados.gamification))) {
+      erros.push('"gamification" deveria ser um objeto.');
     }
 
     const temAlgo = TABELAS.some((t) => Array.isArray(dados[t])) || dados.profile;
@@ -636,14 +700,22 @@ window.FinckStore = (() => {
           return;
         }
 
+        const limpa = limparCampos(tabela, linha, { manterId: true });
+        const desconhecidos = Object.keys(linha).filter((campo) =>
+          !["id", "user_id", "created_at", "updated_at"].includes(campo) &&
+          !CAMPOS_PERMITIDOS[tabela].includes(campo));
+        if (desconhecidos.length) {
+          avisos.push(`${posicao}: campo(s) desconhecido(s) removido(s): ${desconhecidos.join(", ")}.`);
+        }
+
         const regra = INVARIANTES[tabela];
-        const motivo = regra ? regra(linha) : null;
+        const motivo = regra ? regra(limpa) : null;
         if (motivo) { avisos.push(`${posicao}: ${motivo} — registro descartado.`); return; }
 
         // Referências: obrigatórias derrubam a linha; opcionais só perdem o vínculo.
         let descartar = false;
         (VINCULOS[tabela] || []).forEach(([campo, alvo, obrigatorio]) => {
-          const valor = linha[campo];
+          const valor = limpa[campo];
           if (valor === null || valor === undefined || valor === "") {
             if (obrigatorio) {
               avisos.push(`${posicao}: sem ${campo} — registro descartado.`);
@@ -666,7 +738,7 @@ window.FinckStore = (() => {
           }
         });
 
-        if (!descartar) aceitas.push(linha);
+        if (!descartar) aceitas.push(limpa);
       });
 
       linhas[tabela] = aceitas;
@@ -748,7 +820,7 @@ window.FinckStore = (() => {
     };
 
     if (dados.profile) {
-      const { id, created_at, user_id, ...perfil } = dados.profile;
+      const perfil = limparCampos("profile", dados.profile);
       await salvarPerfil(perfil);
       relatorio.perfilAtualizado = true;
     }
@@ -768,10 +840,16 @@ window.FinckStore = (() => {
     };
 
     for (const t of TABELAS) {
-      const linhas = exame.linhas[t] || [];
+      const linhasBase = exame.linhas[t] || [];
+      // O estorno aponta para um movimento anterior. Backups são exportados
+      // do mais novo para o mais antigo; invertemos só esta dependência para o
+      // ID original já estar mapeado quando a linha de estorno entrar.
+      const linhas = t === "goal_movements"
+        ? [...linhasBase].sort((a, b) => Number(Boolean(a.reverses_id)) - Number(Boolean(b.reverses_id)))
+        : linhasBase;
 
       const existentes = modoImport === "substituir" ? [] : await listar(t);
-      const vistos = new Set(existentes.map((r) => assinar(t, r)));
+      const porAssinatura = new Map(existentes.map((r) => [assinar(t, r), r]));
       let entraram = 0, pulados = 0;
 
       for (const linha of linhas) {
@@ -779,15 +857,19 @@ window.FinckStore = (() => {
         const preparada = reapontar(t, resto);
         const chave = assinar(t, preparada);
 
-        if (vistos.has(chave)) {
+        if (porAssinatura.has(chave)) {
+          const correspondente = porAssinatura.get(chave);
+          if (id !== undefined && id !== null && correspondente?.id !== undefined) {
+            mapaDeIds[t].set(String(id), correspondente.id);
+          }
           pulados++;
           if (relatorio.conflitos.length < 25) {
             relatorio.conflitos.push({ tabela: t, descricao: descreverLinha(t, preparada) });
           }
           continue;
         }
-        vistos.add(chave);
         const criada = await inserir(t, preparada);
+        porAssinatura.set(chave, criada);
         if (id !== undefined && id !== null && criada?.id !== undefined) {
           mapaDeIds[t].set(String(id), criada.id);
         }
@@ -800,7 +882,7 @@ window.FinckStore = (() => {
     }
 
     if (dados.gamification) {
-      const { user_id, ...g } = dados.gamification;
+      const g = limparCampos("gamification", dados.gamification);
       await salvarGamificacao(g);
     }
 
@@ -827,7 +909,7 @@ window.FinckStore = (() => {
     get ONLINE() { return Boolean(bd()); },
     get MODO() { return modo(); },
     get CONFIGURADO() { return CONFIGURADO; },
-    emDemo, entrarDemo, encerrarDemo,
+    emDemo, entrarDemo, encerrarDemo, urlLocal,
     usuarioAtual, tokenAcesso, cadastrar, entrar, sair, exigirLogin,
     recuperarSenha, definirNovaSenha, reenviarConfirmacao,
     listar, obter, inserir, inserirSeNovo, upsert, atualizar, remover, rpc,

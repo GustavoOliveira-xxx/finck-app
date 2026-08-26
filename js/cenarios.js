@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const melhor = C.ranking(cenarios)[0];
 
     $("tabelaCenarios").innerHTML = `
-      <div class="tabela-wrapper">
+      <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Comparação de cenários; deslize horizontalmente para ver todas as colunas">
         <table class="tabela tabela-cenarios">
           <caption class="visualmente-oculto">Comparação entre cenários de compra</caption>
           <thead>
