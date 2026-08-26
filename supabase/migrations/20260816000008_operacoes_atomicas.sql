@@ -1,14 +1,4 @@
--- Fase 2 do relatório de conclusão: operações atômicas.
---
--- A partir daqui, alterar dinheiro tem porta única. Cada função recebe o fato,
--- valida a propriedade, grava tudo numa transação de banco e devolve o estado
--- final completo — para o front-end substituir o estado local pelo retorno do
--- servidor em vez de adivinhar o resultado.
---
--- Todas aceitam p_idem_key. Repetir a chamada com a mesma chave devolve o
--- resultado da primeira, sem criar um segundo lançamento.
 
--- Auxiliar: progresso da meta recalculado a partir do histórico ------------
 
 create or replace function public.recalcular_meta(p_goal_id uuid)
 returns numeric
@@ -33,11 +23,6 @@ $$;
 
 comment on function public.recalcular_meta is
   'Reescreve o cache current_amount a partir da soma dos movimentos. É a prova de que o progresso é derivável.';
-
--- Auxiliar: meta antiga ganha a linha que explica o que ela já tinha ---------
--- Sem isso, o primeiro aporte numa meta anterior ao livro-razão apagaria o
--- progresso que o usuário já havia registrado — o recálculo veria zero
--- movimentos e concluiria zero. Nada é apagado: o valor vira um ajuste.
 
 create or replace function public.garantir_historico_meta(p_goal_id uuid)
 returns void
@@ -69,8 +54,6 @@ $$;
 
 comment on function public.garantir_historico_meta is
   'Semeia o livro-razão com o valor que a meta já tinha, antes do primeiro movimento novo. Idempotente.';
-
--- 1. Aporte em meta ---------------------------------------------------------
 
 create or replace function public.aportar_meta(
   p_goal_id     uuid,
@@ -148,8 +131,6 @@ $$;
 comment on function public.aportar_meta is
   'Cria a saída, o movimento de meta e recalcula o progresso numa transação só. O progresso muda exatamente uma vez.';
 
--- 2. Retirada ou gasto associado à meta --------------------------------------
-
 create or replace function public.retirar_meta(
   p_goal_id     uuid,
   p_amount      numeric,
@@ -226,10 +207,6 @@ $$;
 comment on function public.retirar_meta is
   'Devolve dinheiro da meta ao caixa. Mesma porta do aporte, sinal invertido no livro-razão.';
 
--- 3. Estorno que preserva o histórico ----------------------------------------
--- A versão antiga apagava a linha e devolvia void. Esta marca, registra motivo
--- e escreve o movimento de estorno na meta.
-
 drop function if exists public.estornar_transacao(uuid);
 
 create or replace function public.estornar_transacao(
@@ -263,7 +240,6 @@ begin
     return jsonb_build_object('encontrada', false, 'estornada', false);
   end if;
 
-  -- Idempotência natural: estornar de novo devolve o mesmo estado.
   if v_tx.reversed_at is not null then
     return jsonb_build_object(
       'encontrada', true, 'estornada', true, 'repetida', true,
@@ -280,7 +256,6 @@ begin
    where id = p_transaction_id and user_id = auth.uid()
   returning * into v_tx;
 
-  -- A ocorrência que originou o lançamento volta a ser uma previsão em aberto.
   update public.recurring_occurrences
      set status         = 'pendente',
          actual_amount  = null,
@@ -288,7 +263,6 @@ begin
          decided_at     = now()
    where transaction_id = p_transaction_id and user_id = auth.uid();
 
-  -- A parcela paga por este lançamento volta a ser compromisso.
   update public.installment_payments
      set status         = 'aberta',
          transaction_id = null,
@@ -314,8 +288,7 @@ begin
          set reversed_at = now()
        where id = v_original.id;
     else
-      -- Aporte antigo, sem linha de histórico: cria a contrapartida mesmo assim
-      -- para o progresso poder ser recalculado a partir de agora.
+
       insert into public.goal_movements
         (user_id, goal_id, transaction_id, kind, amount, date, note)
       values
@@ -349,8 +322,6 @@ $$;
 
 comment on function public.estornar_transacao is
   'Marca a movimentação como estornada, devolve ocorrência e parcela ao estado aberto e escreve o estorno no livro da meta. Nada é apagado.';
-
--- 4. Confirmação de parcela --------------------------------------------------
 
 create or replace function public.confirmar_parcela(
   p_purchase_id    uuid,
@@ -398,7 +369,6 @@ begin
      and user_id = auth.uid()
      for update;
 
-  -- Já quitada: devolve o que existe em vez de lançar de novo.
   if found and v_parcela.status = 'paga' then
     return jsonb_build_object(
       'ja_paga', true,
@@ -432,8 +402,6 @@ begin
     returning * into v_parcela;
   end if;
 
-  -- paid_count segue sendo derivado: quantas parcelas iniciais estão pagas
-  -- em sequência. Continua útil para telas antigas, sem ser fonte de verdade.
   select count(*)::smallint into v_pagas
     from generate_series(1, v_compra.installments_count) n
    where not exists (
@@ -468,8 +436,6 @@ $$;
 
 comment on function public.confirmar_parcela is
   'Paga uma parcela: cria a movimentação, muda o estado da parcela e recalcula o contador, tudo junto.';
-
--- 5. Desfazer o pagamento de uma parcela -------------------------------------
 
 create or replace function public.desfazer_parcela(
   p_purchase_id    uuid,
@@ -506,8 +472,6 @@ begin
 
   v_tx_id := v_parcela.transaction_id;
 
-  -- Solta o vínculo antes de mexer na transação: a parcela nunca fica
-  -- apontando para o que já não vale.
   update public.installment_payments
      set status = 'aberta', transaction_id = null, paid_at = null
    where id = v_parcela.id and user_id = auth.uid()
@@ -548,8 +512,6 @@ $$;
 comment on function public.desfazer_parcela is
   'Devolve a parcela ao compromisso e estorna a movimentação que a quitou, sem apagar o histórico.';
 
--- 6. Transferência entre contas ----------------------------------------------
-
 create or replace function public.transferir_contas(
   p_from_account_id uuid,
   p_to_account_id   uuid,
@@ -581,8 +543,6 @@ begin
     raise exception 'A conta de destino precisa ser diferente da origem.' using errcode = 'check_violation';
   end if;
 
-  -- O gatilho conta_do_dono já barra conta de outro usuário; travar as duas
-  -- linhas aqui evita que uma transferência simultânea leia saldo velho.
   perform 1 from public.accounts
    where id in (p_from_account_id, p_to_account_id) and user_id = auth.uid()
    for update;
@@ -608,10 +568,6 @@ $$;
 
 comment on function public.transferir_contas is
   'Move dinheiro entre contas do mesmo dono. O patrimônio total não muda; origem e destino mudam juntos.';
-
--- 7. Confirmação de ocorrência: idempotência por chave e alocação explícita ---
--- A versão de 15.08 já era idempotente pelo vínculo. Esta acrescenta a chave
--- de operação (retry depois de timeout) e a declaração de não alocada.
 
 drop function if exists public.confirmar_ocorrencia(uuid, numeric, uuid);
 
@@ -712,10 +668,6 @@ $$;
 comment on function public.confirmar_ocorrencia is
   'Confirma uma ocorrência em uma transação única. Idempotente pelo vínculo e pela chave de operação.';
 
--- 7b. Desfazer uma ocorrência também preserva o histórico --------------------
--- A versão de 15.08 apagava a transação vinculada. Se ela existia, dinheiro se
--- moveu: o registro fica, estornado, com motivo.
-
 create or replace function public.desfazer_ocorrencia(
   p_occurrence_id uuid,
   p_status        text
@@ -732,8 +684,6 @@ begin
     raise exception 'Estado inválido para desfazer.' using errcode = 'check_violation';
   end if;
 
-  -- Solta o vínculo antes de mexer na transação: a ocorrência nunca fica
-  -- apontando para um lançamento que já não conta.
   update public.recurring_occurrences
      set status         = p_status,
          actual_amount  = null,
@@ -764,10 +714,6 @@ $$;
 
 comment on function public.desfazer_ocorrencia is
   'Volta a ocorrência para um estado sem movimentação e estorna o lançamento vinculado, sem apagá-lo.';
-
--- 8. Migração do saldo inicial do perfil para uma conta ----------------------
--- Converte o valor legado em saldo de conta e marca o perfil como migrado,
--- para o mesmo dinheiro nunca ser contado duas vezes.
 
 create or replace function public.migrar_saldo_inicial(
   p_account_id uuid,

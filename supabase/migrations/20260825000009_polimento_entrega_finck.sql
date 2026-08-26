@@ -1,7 +1,5 @@
--- Polimento de entrega: uma política RLS por operação, privilégios mínimos,
--- RPCs fechadas para anônimos e índices para todas as chaves estrangeiras.
 
--- Remove políticas legadas e duplicadas antes de recriar a matriz canônica.
+
 do $$
 declare
   p record;
@@ -15,8 +13,6 @@ begin
   end loop;
 end $$;
 
--- Nenhuma tabela financeira é pública. O cliente autenticado recebe somente
--- leitura/escrita de linhas; TRUNCATE, REFERENCES e TRIGGER ficam revogados.
 revoke all on all tables in schema public from anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 
@@ -42,10 +38,8 @@ to authenticated;
 grant select, insert, delete on table public.integrity_events to authenticated;
 grant select, insert on table public.operation_keys to authenticated;
 
--- migration_reports é artefato administrativo: nunca pertence à Data API.
 revoke all on table public.migration_reports from anon, authenticated;
 
--- Perfis usam o próprio id como dono.
 alter table public.profiles enable row level security;
 create policy "perfil autenticado: ler" on public.profiles
   for select to authenticated using ((select auth.uid()) = id);
@@ -57,7 +51,6 @@ create policy "perfil autenticado: alterar" on public.profiles
 create policy "perfil autenticado: apagar" on public.profiles
   for delete to authenticated using ((select auth.uid()) = id);
 
--- Tabelas usuais usam user_id e permitem o ciclo CRUD completo.
 do $$
 declare
   t text;
@@ -98,8 +91,6 @@ create policy "chaves autenticadas: criar" on public.operation_keys
 
 alter table public.migration_reports enable row level security;
 
--- A Data API só expõe RPCs de negócio a usuários autenticados. Funções de
--- trigger SECURITY DEFINER continuam internas e não podem ser chamadas por RPC.
 revoke all on all functions in schema public from public, anon, authenticated;
 alter default privileges in schema public revoke execute on functions from public, anon, authenticated;
 
@@ -115,7 +106,6 @@ grant execute on function public.recalcular_meta(uuid) to authenticated;
 grant execute on function public.retirar_meta(uuid, numeric, text, uuid, date, boolean, text) to authenticated;
 grant execute on function public.transferir_contas(uuid, uuid, numeric, date, text, text) to authenticated;
 
--- Índices das FKs que ainda obrigavam varredura integral em joins/cascatas.
 create index if not exists balance_adjustments_account_id_idx
   on public.balance_adjustments (account_id);
 create index if not exists goal_movements_goal_id_idx
