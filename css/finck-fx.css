@@ -421,12 +421,6 @@ body.finck-carregando{ overflow:hidden; }
   font-weight:700; color:var(--texto);
 }
 
-/* ==========================================================
-   METAS — Cristal da meta
-   Prisma hexagonal de vidro que gira no espaço e se enche de
-   luz conforme o progresso da meta mais perto de fechar.
-   ========================================================== */
-
 @property --meta-p{     syntax:"<number>"; inherits:true; initial-value:0; }
 @property --meta-calor{ syntax:"<number>"; inherits:true; initial-value:0; }
 
@@ -479,8 +473,6 @@ body.finck-carregando{ overflow:hidden; }
   left:50%; top:50%;
   translate:-50% -50%;
 }
-
-/* ---- fundo: halo, aros e arco de progresso ---- */
 
 .cristal__halo{
   width:112%; aspect-ratio:1;
@@ -570,8 +562,6 @@ body.finck-carregando{ overflow:hidden; }
   box-shadow:0 0 9px 2px rgba(255,243,200,.65);
 }
 
-/* ---- o prisma ---- */
-
 .cristal__flutua{
   width:100%; height:100%;
   transform-style:preserve-3d;
@@ -624,8 +614,6 @@ body.finck-carregando{ overflow:hidden; }
   background:linear-gradient(140deg, rgba(60,22,96,.85), rgba(20,8,34,.92));
 }
 
-/* ---- o núcleo: a luz que sobe com o progresso ---- */
-
 .cristal__nucleo{
   position:absolute;
   width:0; height:0;
@@ -669,8 +657,6 @@ body.finck-carregando{ overflow:hidden; }
   animation-delay:calc(var(--i) * 1.35s);
 }
 
-/* ---- chão ---- */
-
 .cristal__base{
   width:70%; aspect-ratio:1;
   border-radius:50%;
@@ -692,8 +678,6 @@ body.finck-carregando{ overflow:hidden; }
   pointer-events:none;
 }
 
-/* ---- estados ---- */
-
 .cristal--cheio .cristal__tampa{
   background:radial-gradient(circle at 50% 50%,
     rgba(255,246,216,.55) 0%, rgba(254,200,0,.34) 50%, rgba(226,196,255,.32) 100%);
@@ -705,8 +689,6 @@ body.finck-carregando{ overflow:hidden; }
 .cristal--vazio .cristal__superficie{ opacity:.32; }
 .cristal--vazio .cristal__arco-luz{ opacity:0; }
 .cristal--vazio .cristal__bolha{ display:none; }
-
-/* ---- rótulo ---- */
 
 .cristal__rotulo{
   display:grid;
@@ -739,8 +721,6 @@ body.finck-carregando{ overflow:hidden; }
   font-variant-numeric:tabular-nums;
 }
 .cristal__falta:empty{ display:none; }
-
-/* ---- animações ---- */
 
 @keyframes cristal-gira{
   to{ transform:rotateY(360deg); }
@@ -1329,4 +1309,3 @@ body.finck-carregando{ overflow:hidden; }
   margin-inline:auto;
 }
 .marca3d-cena--auth .marca3d__chao{ opacity:.5; }
-

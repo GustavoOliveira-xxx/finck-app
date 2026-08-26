@@ -66,7 +66,7 @@
 
         <button type="button" class="card-opcao" data-fluxo="manual">
           <strong>Configuração Manual</strong>
-          <span>Comece com o saldo atual e cadastre tudo por conta própria.</span>
+          <span>Informe renda e saldo, pule as despesas fixas e cadastre o restante depois.</span>
           <small>Controle total</small>
         </button>
 
@@ -83,7 +83,7 @@
       <p class="descricao">Esses dados alimentam o FinCK of Reality: é com eles que calculamos o preço de uma compra em horas de trabalho.</p>
 
       <form id="formRenda" novalidate>
-        <label>Renda mensal (R$)
+        <label>Renda mensal (R$) <small>pode ser zero</small>
           <input type="text" inputmode="numeric" data-moeda id="incomeMonthly">
         </label>
 
@@ -205,7 +205,7 @@
 
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/moeda-input.js"></script>

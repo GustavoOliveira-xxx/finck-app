@@ -3,126 +3,68 @@ document.addEventListener("DOMContentLoaded", () => {
   const S = window.FinckStore;
   const L = window.FinckLojas;
   const cfg = window.FINCK_CONFIG;
-
   const campoLink = document.getElementById("itemLink");
   const botao = document.getElementById("btnBuscarPreco");
   const aviso = document.getElementById("avisoLoja");
   const abrirLista = document.getElementById("btnLojasSuportadas");
-  if (!campoLink || !botao || !aviso) return;
-
+  if (!campoLink || !botao || !aviso) {
+    return;
+  }
   const ENDPOINT = `${cfg.SUPABASE_URL}/functions/v1/buscar-preco`;
-
   const TEXTOS = {
-    bloqueada: (c) =>
-      `<strong>${U.escapeHTML(c.loja)} não permite busca automática.</strong> ` +
-      `${U.escapeHTML(c.motivo)} Digite o valor manualmente.`,
-    instavel: (c) =>
-      `<strong>${U.escapeHTML(c.loja)}:</strong> a busca pode não encontrar o preço. ` +
-      `${U.escapeHTML(c.motivo)}`,
+    bloqueada: c => `<strong>${U.escapeHTML(c.loja)} não permite busca automática.</strong> ` + `${U.escapeHTML(c.motivo)} Digite o valor manualmente.`,
+    instavel: c => `<strong>${U.escapeHTML(c.loja)}:</strong> a busca pode não encontrar o preço. ` + `${U.escapeHTML(c.motivo)}`,
     provavel: () => `Busca disponível para esta loja.`,
-    desconhecida: () =>
-      `Loja não catalogada. Vale tentar — se não achar, é só digitar o valor.`,
+    desconhecida: () => `Loja não catalogada. Vale tentar — se não achar, é só digitar o valor.`
   };
-
-  let classificacao = { status: "desconhecida" };
-
+  let classificacao = {
+    status: "desconhecida"
+  };
   function avaliarLink() {
     const valor = campoLink.value.trim();
-
     if (!valor) {
-      classificacao = { status: "desconhecida" };
+      classificacao = {
+        status: "desconhecida"
+      };
       aviso.hidden = true;
       botao.disabled = true;
       botao.classList.remove("busca-preco__botao--bloqueado");
       return;
     }
-
     classificacao = L.classificar(valor);
     const status = classificacao.status;
-
     aviso.hidden = false;
     aviso.className = `busca-preco__aviso busca-preco__aviso--${status}`;
     aviso.innerHTML = TEXTOS[status](classificacao);
-
     const bloqueada = status === "bloqueada";
     botao.disabled = bloqueada;
     botao.classList.toggle("busca-preco__botao--bloqueado", bloqueada);
   }
-
   campoLink.addEventListener("input", avaliarLink);
   campoLink.addEventListener("paste", () => setTimeout(avaliarLink, 0));
   avaliarLink();
-
   function carregando(ligado) {
     botao.disabled = ligado || classificacao.status === "bloqueada";
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
-    botao.querySelector(".busca-preco__rotulo").textContent =
-      ligado ? "Buscando…" : "Buscar preço do link";
+    botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço do link";
   }
-
   function montarPainel(d) {
     const linhas = [];
-
     if (d.aVista) {
-      linhas.push([
-        `À vista${d.aVista.forma === "Pix" ? " no Pix" : d.aVista.forma === "boleto" ? " no boleto" : ""}`,
-        `${U.moeda(d.aVista.valor)}<span class="panorama__off">−${Math.floor(d.aVista.percentual)}%</span>`,
-      ]);
+      linhas.push([ `À vista${d.aVista.forma === "Pix" ? " no Pix" : d.aVista.forma === "boleto" ? " no boleto" : ""}`, `${U.moeda(d.aVista.valor)}<span class="panorama__off">−${Math.floor(d.aVista.percentual)}%</span>` ]);
     }
-
     if (d.parcelamento) {
       const p = d.parcelamento;
-      linhas.push([
-        "Parcelado",
-        `${p.vezes}x de ${U.moeda(p.valor)}` +
-        `<span class="panorama__juros">${p.semJuros ? "sem juros" : `com juros · total ${U.moeda(p.total)}`}</span>`,
-      ]);
+      linhas.push([ "Parcelado", `${p.vezes}x de ${U.moeda(p.valor)}` + `<span class="panorama__juros">${p.semJuros ? "sem juros" : `com juros · total ${U.moeda(p.total)}`}</span>` ]);
     }
-
     if (d.frete) {
-      linhas.push([
-        "Frete",
-        d.frete.minimo
-          ? `grátis acima de ${U.moeda(d.frete.minimo)}`
-          : "grátis, segundo a página",
-      ]);
+      linhas.push([ "Frete", d.frete.minimo ? `grátis acima de ${U.moeda(d.frete.minimo)}` : "grátis, segundo a página" ]);
     }
-
-    const selo = d.desconto
-      ? `<span class="panorama__selo">${Math.floor(d.desconto.percentual)}% OFF</span>`
-      : "";
-
-    const de = d.precoOriginal
-      ? `<p class="panorama__de">de <s>${U.moeda(d.precoOriginal)}</s> · você economiza
-         <strong>${U.moeda(d.desconto.valor)}</strong></p>`
-      : "";
-
-    const trocarPix = d.aVista
-      ? `<button type="button" class="panorama__troca" data-preco="${d.aVista.valor}">
-           Usar o preço ${d.aVista.forma === "Pix" ? "do Pix" : "à vista"} (${U.moeda(d.aVista.valor)})
-         </button>`
-      : "";
-
-    return `
-      <div class="panorama">
-        <div class="panorama__cabecalho">
-          ${d.titulo ? `<p class="panorama__item">${U.escapeHTML(d.titulo)}</p>` : ""}
-          ${d.loja ? `<span class="panorama__loja">${U.escapeHTML(d.loja)}</span>` : ""}
-        </div>
-
-        <div class="panorama__valor">
-          <strong>${U.moeda(d.preco)}</strong>${selo}
-        </div>
-        ${de}
-
-        ${linhas.length ? `<dl class="panorama__linhas">${linhas.map(([rotulo, valor]) => `
-          <div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}
-
-        ${trocarPix ? `<div class="panorama__acoes">${trocarPix}</div>` : ""}
-        <p class="panorama__nota">${avisoConfianca(d)}</p>
-      </div>`;
+    const selo = d.desconto ? `<span class="panorama__selo">${Math.floor(d.desconto.percentual)}% OFF</span>` : "";
+    const de = d.precoOriginal ? `<p class="panorama__de">de <s>${U.moeda(d.precoOriginal)}</s> · você economiza\n         <strong>${U.moeda(d.desconto.valor)}</strong></p>` : "";
+    const trocarPix = d.aVista ? `<button type="button" class="panorama__troca" data-preco="${d.aVista.valor}">\n           Usar o preço ${d.aVista.forma === "Pix" ? "do Pix" : "à vista"} (${U.moeda(d.aVista.valor)})\n         </button>` : "";
+    return `\n      <div class="panorama">\n        <div class="panorama__cabecalho">\n          ${d.titulo ? `<p class="panorama__item">${U.escapeHTML(d.titulo)}</p>` : ""}\n          ${d.loja ? `<span class="panorama__loja">${U.escapeHTML(d.loja)}</span>` : ""}\n        </div>\n\n        <div class="panorama__valor">\n          <strong>${U.moeda(d.preco)}</strong>${selo}\n        </div>\n        ${de}\n\n        ${linhas.length ? `<dl class="panorama__linhas">${linhas.map(([rotulo, valor]) => `\n          <div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}\n\n        ${trocarPix ? `<div class="panorama__acoes">${trocarPix}</div>` : ""}\n        <p class="panorama__nota">${avisoConfianca(d)}</p>\n      </div>`;
   }
-
   function avisoConfianca(d) {
     if (d.moeda && d.moeda !== "BRL") {
       return `Atenção: o preço está em ${U.escapeHTML(d.moeda)}, não em reais. Converta antes de salvar.`;
@@ -135,12 +77,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return "Preço lido do código da página. Confira se bate com o que a loja mostra.";
   }
-
   function mostrarResultado(dados) {
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--painel";
     aviso.innerHTML = montarPainel(dados);
-
     const troca = aviso.querySelector(".panorama__troca");
     if (troca) {
       troca.addEventListener("click", () => {
@@ -151,42 +91,39 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
-
   function mostrarErro(motivo) {
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--erro";
     aviso.textContent = motivo;
   }
-
   botao.addEventListener("click", async () => {
     const url = campoLink.value.trim();
-    if (!url) return;
-
+    if (!url) {
+      return;
+    }
     if (S.emDemo()) {
       mostrarErro("A busca de preço precisa de uma conta cadastrada. No modo demonstração, digite o valor manualmente.");
       return;
     }
-
     const token = await S.tokenAcesso();
     if (!token) {
       mostrarErro("Sua sessão expirou. Entre novamente para usar a busca.");
       return;
     }
-
     carregando(true);
     try {
       const r = await fetch(ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-          "apikey": cfg.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          apikey: cfg.SUPABASE_ANON_KEY
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          url: url
+        })
       });
-
       const dados = await r.json().catch(() => null);
-
       if (!dados) {
         mostrarErro("Não consegui falar com o servidor de busca. Tente de novo em instantes.");
         return;
@@ -195,14 +132,11 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarErro(dados.motivo || "Não encontrei o preço nessa página.");
         return;
       }
-
       U.escreverMoeda("itemPrice", dados.preco);
-
       const campoNome = document.getElementById("itemName");
       if (campoNome && !campoNome.value.trim() && dados.titulo) {
         campoNome.value = String(dados.titulo).slice(0, 80);
       }
-
       mostrarResultado(dados);
       U.toast("Preço preenchido. Confira antes de analisar.", "sucesso");
     } catch {
@@ -211,63 +145,19 @@ document.addEventListener("DOMContentLoaded", () => {
       carregando(false);
     }
   });
-
   function montarModal() {
     const host = document.getElementById("conteudoLojas");
-    if (!host) return;
-
-    const item = (l, mostrarMotivo) => `
-      <li>
-        <strong>${U.escapeHTML(l.nome)}</strong>
-        ${mostrarMotivo && l.motivo ? `<p>${U.escapeHTML(l.motivo)}</p>` : ""}
-        ${l.detalhe ? `<p>${U.escapeHTML(l.detalhe)}</p>` : ""}
-      </li>`;
-
-    host.innerHTML = `
-      <p class="lojas-intro">
-        A busca lê a página do produto e traz o preço. Isso depende de como cada
-        loja monta o site — por isso não funciona em todas. Em qualquer caso,
-        você pode digitar o valor manualmente.
-      </p>
-
-      <section class="lojas-grupo lojas-grupo--bloqueada">
-        <h4>Não funciona</h4>
-        <p class="lojas-grupo__nota">O botão fica desativado nestas lojas.</p>
-        <ul class="lojas-lista">
-          ${L.BLOQUEADAS.map((l) => item(l, true)).join("")}
-        </ul>
-      </section>
-
-      <section class="lojas-grupo lojas-grupo--instavel">
-        <h4>Pode falhar</h4>
-        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>
-        <ul class="lojas-lista">
-          ${L.INSTAVEIS.map((l) => item(l, true)).join("")}
-        </ul>
-      </section>
-
-      <section class="lojas-grupo lojas-grupo--provavel">
-        <h4>Costuma funcionar</h4>
-        <ul class="lojas-lista">
-          ${L.PROVAVEIS.map((l) => item(l, false)).join("")}
-        </ul>
-      </section>
-
-      <p class="lojas-rodape">
-        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem
-        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda
-        por CEP, o valor lido pode ser o do item base.
-      </p>`;
+    if (!host) {
+      return;
+    }
+    const item = (l, mostrarMotivo) => `\n      <li>\n        <strong>${U.escapeHTML(l.nome)}</strong>\n        ${mostrarMotivo && l.motivo ? `<p>${U.escapeHTML(l.motivo)}</p>` : ""}\n        ${l.detalhe ? `<p>${U.escapeHTML(l.detalhe)}</p>` : ""}\n      </li>`;
+    host.innerHTML = `\n      <p class="lojas-intro">\n        A busca lê a página do produto e traz o preço. Isso depende de como cada\n        loja monta o site — por isso não funciona em todas. Em qualquer caso,\n        você pode digitar o valor manualmente.\n      </p>\n\n      <section class="lojas-grupo lojas-grupo--bloqueada">\n        <h4>Não funciona</h4>\n        <p class="lojas-grupo__nota">O botão fica desativado nestas lojas.</p>\n        <ul class="lojas-lista">\n          ${L.BLOQUEADAS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--instavel">\n        <h4>Pode falhar</h4>\n        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>\n        <ul class="lojas-lista">\n          ${L.INSTAVEIS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--provavel">\n        <h4>Costuma funcionar</h4>\n        <ul class="lojas-lista">\n          ${L.PROVAVEIS.map(l => item(l, false)).join("")}\n        </ul>\n      </section>\n\n      <p class="lojas-rodape">\n        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem\n        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda\n        por CEP, o valor lido pode ser o do item base.\n      </p>`;
   }
-
   if (abrirLista) {
     abrirLista.addEventListener("click", () => {
       montarModal();
       U.abrirModal("modalLojas");
     });
   }
-
-  document.querySelectorAll('[data-fechar="modalLojas"]').forEach((b) =>
-    b.addEventListener("click", () => U.fecharModal("modalLojas")),
-  );
+  document.querySelectorAll('[data-fechar="modalLojas"]').forEach(b => b.addEventListener("click", () => U.fecharModal("modalLojas")));
 });
