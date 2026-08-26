@@ -1,114 +1,351 @@
 window.FINCK_CONFIG = {
   SUPABASE_URL: "https://iruqoghylxgopbopxjbi.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_zn_jngIj2xibO_VpzOi0Wg_gGG7Z8eS",
-
   APP_NOME: "FinCK of Reality",
   APP_NOME_CURTO: "FinCK",
   EMPRESA: "Conscious Knowledge",
   MOEDA: "BRL",
   LOCALE: "pt-BR",
-
   PADRAO: {
     work_days_month: 22,
     work_hours_day: 8,
     income_type: "fixa",
-    payday: 5,
+    payday: 5
   },
-
-  CATEGORIAS: [
-    "Alimentação",
-    "Transporte",
-    "Moradia",
-    "Lazer",
-    "Vestuário",
-    "Eletrônicos",
-    "Saúde",
-    "Educação",
-    "Outros",
-  ],
-
-  INSTITUICOES: [
-    { id: "inter",     nome: "Banco Inter",              curto: "Inter",     cor: "#ea7100", logo: "assets/bancos/inter.svg" },
-    { id: "nubank",    nome: "Nubank",                   curto: "Nubank",    cor: "#820ad1", logo: "assets/bancos/nubank.svg" },
-    { id: "itau",      nome: "Itaú Unibanco",            curto: "Itaú",      cor: "#ff6200", logo: "assets/bancos/itau.svg" },
-    { id: "bradesco",  nome: "Bradesco",                 curto: "Bradesco",  cor: "#e5173f", logo: "assets/bancos/bradesco.svg" },
-    { id: "bb",        nome: "Banco do Brasil",          curto: "BB",        cor: "#fde100", logo: "assets/bancos/banco-do-brasil.svg" },
-    { id: "caixa",     nome: "Caixa Econômica Federal",  curto: "Caixa",     cor: "#0066b3", logo: "assets/bancos/caixa.svg" },
-    { id: "banrisul",  nome: "Banrisul",                 curto: "Banrisul",  cor: "#0788fe", logo: "assets/bancos/banrisul.svg" },
-    { id: "santander", nome: "Santander",                curto: "Santander", cor: "#ec0000", logo: null },
-    { id: "carteira",  nome: "Dinheiro em espécie",      curto: "Carteira",  cor: "#1fd18f", logo: null },
-    { id: "outro",     nome: "Outro banco ou instituição", curto: "Outro",   cor: "#9333c4", logo: null },
-  ],
-
-  TIPOS_CONTA: [
-    { id: "corrente",     rotulo: "Conta corrente" },
-    { id: "poupanca",     rotulo: "Poupança" },
-    { id: "digital",      rotulo: "Conta digital" },
-    { id: "carteira",     rotulo: "Carteira / dinheiro" },
-    { id: "investimento", rotulo: "Investimento (manual)" },
-  ],
-
-  DECISOES: [
-    { id: "comprar", label: "Comprar agora", xp: 5, consciente: false },
-    { id: "adiar", label: "Adiar a compra", xp: 25, consciente: true },
-    { id: "alternativa", label: "Pesquisar alternativa", xp: 20, consciente: true },
-    { id: "usado", label: "Comprar usado", xp: 30, consciente: true },
-    { id: "reparar", label: "Reparar o item atual", xp: 35, consciente: true },
-    { id: "desistir", label: "Desistir da compra", xp: 40, consciente: true },
-  ],
-
-  REFLEXOES: [
-    { id: "necessidade", dimensao: "Necessidade", pergunta: "Eu preciso deste produto agora ou estou respondendo a um impulso?" },
-    { id: "uso", dimensao: "Uso", pergunta: "Com que frequência pretendo usar o item?" },
-    { id: "durabilidade", dimensao: "Durabilidade", pergunta: "O produto tem qualidade, garantia ou possibilidade de reparo?" },
-    { id: "alternativas", dimensao: "Alternativas", pergunta: "Existe uma opção usada, compartilhada, alugada ou reaproveitada?" },
-    { id: "orcamento", dimensao: "Orçamento", pergunta: "A compra compromete despesas essenciais ou uma meta importante?" },
-    { id: "descarte", dimensao: "Descarte", pergunta: "Como o item será mantido, reutilizado ou descartado quando não servir mais?" },
-  ],
-
-  NIVEIS: [
-    { level: 1,  titulo: "CK Newbie",              xp: 0,     icone: "🆕", lema: "Você acabou de entrar no mundo do consumo consciente." },
-    { level: 2,  titulo: "Conscious Planner",      xp: 100,   icone: "📝", lema: "Começou a registrar e planejar o próprio dinheiro." },
-    { level: 3,  titulo: "Financial Thinker",      xp: 300,   icone: "💡", lema: "Pensa antes de comprar — o preço virou pergunta." },
-    { level: 4,  titulo: "Stark's Investor",       xp: 600,   icone: "🚀", lema: "Enxerga cada gasto como investimento ou desperdício." },
-    { level: 5,  titulo: "Economy Knowledgist",    xp: 1000,  icone: "📚", lema: "Domina os números da própria realidade financeira." },
-    { level: 6,  titulo: "Norman Osborn",          xp: 1500,  icone: "🕷️", lema: "Controla o impulso antes que ele controle você." },
-    { level: 7,  titulo: "Golden Seeker",          xp: 2100,  icone: "🏆", lema: "Busca metas com método, não com sorte." },
-    { level: 8,  titulo: "Fisk's Counter",         xp: 2800,  icone: "⚖️", lema: "Equilibra desejo e orçamento sem se enganar." },
-    { level: 9,  titulo: "Fantastic Richards",     xp: 3600,  icone: "🔬", lema: "Analisa cada compra como um experimento." },
-    { level: 10, titulo: "The Miner",              xp: 4500,  icone: "⛏️", lema: "Extrai valor real de cada hora trabalhada." },
-    { level: 11, titulo: "The Philanthropist",     xp: 5500,  icone: "🤝", lema: "Consome com consciência do impacto que gera." },
-    { level: 12, titulo: "Wealth Keeper",          xp: 6600,  icone: "💰", lema: "Guarda o que constrói e corta o que drena." },
-    { level: 13, titulo: "The Future Guardian",    xp: 7800,  icone: "🛡️", lema: "Protege o amanhã nas decisões de hoje." },
-    { level: 14, titulo: "Wilson Fisk",            xp: 9100,  icone: "👑", lema: "Nada entra ou sai sem a sua autorização." },
-    { level: 15, titulo: "Lex Luthor",             xp: 10500, icone: "🦅", lema: "Estratégia fria diante de qualquer promoção." },
-    { level: 16, titulo: "CK's Bruce Wayne",       xp: 12000, icone: "🦇", lema: "Patrimônio construído com disciplina silenciosa." },
-    { level: 17, titulo: "Tony Stark",             xp: 13600, icone: "🤖", lema: "Suas decisões financeiras já são engenharia." },
-    { level: 18, titulo: "EconomisT'Challa",       xp: 15300, icone: "🐆", lema: "Riqueza com propósito e responsabilidade." },
-    { level: 19, titulo: "The Future Doctor Doom", xp: 17100, icone: "🎭", lema: "Domina totalmente a própria realidade financeira." },
-    { level: 20, titulo: "THE TRUE CK ZEMO",       xp: 19000, icone: "⚔️", lema: "Consumo consciente virou identidade. Nível máximo." },
-  ],
-
+  CATEGORIAS: [ "Alimentação", "Transporte", "Moradia", "Lazer", "Vestuário", "Eletrônicos", "Saúde", "Educação", "Outros" ],
+  INSTITUICOES: [ {
+    id: "inter",
+    nome: "Banco Inter",
+    curto: "Inter",
+    cor: "#ea7100",
+    logo: "assets/bancos/inter.svg"
+  }, {
+    id: "nubank",
+    nome: "Nubank",
+    curto: "Nubank",
+    cor: "#820ad1",
+    logo: "assets/bancos/nubank.svg"
+  }, {
+    id: "itau",
+    nome: "Itaú Unibanco",
+    curto: "Itaú",
+    cor: "#ff6200",
+    logo: "assets/bancos/itau.svg"
+  }, {
+    id: "bradesco",
+    nome: "Bradesco",
+    curto: "Bradesco",
+    cor: "#e5173f",
+    logo: "assets/bancos/bradesco.svg"
+  }, {
+    id: "bb",
+    nome: "Banco do Brasil",
+    curto: "BB",
+    cor: "#fde100",
+    logo: "assets/bancos/banco-do-brasil.svg"
+  }, {
+    id: "caixa",
+    nome: "Caixa Econômica Federal",
+    curto: "Caixa",
+    cor: "#0066b3",
+    logo: "assets/bancos/caixa.svg"
+  }, {
+    id: "banrisul",
+    nome: "Banrisul",
+    curto: "Banrisul",
+    cor: "#0788fe",
+    logo: "assets/bancos/banrisul.svg"
+  }, {
+    id: "santander",
+    nome: "Santander",
+    curto: "Santander",
+    cor: "#ec0000",
+    logo: null
+  }, {
+    id: "carteira",
+    nome: "Dinheiro em espécie",
+    curto: "Carteira",
+    cor: "#1fd18f",
+    logo: null
+  }, {
+    id: "outro",
+    nome: "Outro banco ou instituição",
+    curto: "Outro",
+    cor: "#9333c4",
+    logo: null
+  } ],
+  TIPOS_CONTA: [ {
+    id: "corrente",
+    rotulo: "Conta corrente"
+  }, {
+    id: "poupanca",
+    rotulo: "Poupança"
+  }, {
+    id: "digital",
+    rotulo: "Conta digital"
+  }, {
+    id: "carteira",
+    rotulo: "Carteira / dinheiro"
+  }, {
+    id: "investimento",
+    rotulo: "Investimento (manual)"
+  } ],
+  DECISOES: [ {
+    id: "comprar",
+    label: "Comprar agora",
+    xp: 5,
+    consciente: false
+  }, {
+    id: "adiar",
+    label: "Adiar a compra",
+    xp: 25,
+    consciente: true
+  }, {
+    id: "alternativa",
+    label: "Pesquisar alternativa",
+    xp: 20,
+    consciente: true
+  }, {
+    id: "usado",
+    label: "Comprar usado",
+    xp: 30,
+    consciente: true
+  }, {
+    id: "reparar",
+    label: "Reparar o item atual",
+    xp: 35,
+    consciente: true
+  }, {
+    id: "desistir",
+    label: "Desistir da compra",
+    xp: 40,
+    consciente: true
+  } ],
+  REFLEXOES: [ {
+    id: "necessidade",
+    dimensao: "Necessidade",
+    pergunta: "Eu preciso deste produto agora ou estou respondendo a um impulso?"
+  }, {
+    id: "uso",
+    dimensao: "Uso",
+    pergunta: "Com que frequência pretendo usar o item?"
+  }, {
+    id: "durabilidade",
+    dimensao: "Durabilidade",
+    pergunta: "O produto tem qualidade, garantia ou possibilidade de reparo?"
+  }, {
+    id: "alternativas",
+    dimensao: "Alternativas",
+    pergunta: "Existe uma opção usada, compartilhada, alugada ou reaproveitada?"
+  }, {
+    id: "orcamento",
+    dimensao: "Orçamento",
+    pergunta: "A compra compromete despesas essenciais ou uma meta importante?"
+  }, {
+    id: "descarte",
+    dimensao: "Descarte",
+    pergunta: "Como o item será mantido, reutilizado ou descartado quando não servir mais?"
+  } ],
+  NIVEIS: [ {
+    level: 1,
+    titulo: "Primeiro passo",
+    xp: 0,
+    icone: "🌱",
+    lema: "Você começou a observar as próprias escolhas."
+  }, {
+    level: 2,
+    titulo: "Observador do orçamento",
+    xp: 100,
+    icone: "👀",
+    lema: "Começou a registrar e planejar o próprio dinheiro."
+  }, {
+    level: 3,
+    titulo: "Planejador consciente",
+    xp: 300,
+    icone: "📝",
+    lema: "Pensa antes de comprar — o preço virou pergunta."
+  }, {
+    level: 4,
+    titulo: "Guardião das escolhas",
+    xp: 600,
+    icone: "🧭",
+    lema: "Enxerga cada gasto como investimento ou desperdício."
+  }, {
+    level: 5,
+    titulo: "Leitor dos números",
+    xp: 1e3,
+    icone: "📚",
+    lema: "Entende os números da própria realidade financeira."
+  }, {
+    level: 6,
+    titulo: "Domador do impulso",
+    xp: 1500,
+    icone: "🛑",
+    lema: "Controla o impulso antes que ele controle você."
+  }, {
+    level: 7,
+    titulo: "Construtor de metas",
+    xp: 2100,
+    icone: "🎯",
+    lema: "Busca metas com método, não com sorte."
+  }, {
+    level: 8,
+    titulo: "Equilibrista financeiro",
+    xp: 2800,
+    icone: "⚖️",
+    lema: "Equilibra desejo e orçamento sem se enganar."
+  }, {
+    level: 9,
+    titulo: "Analista de impacto",
+    xp: 3600,
+    icone: "🔎",
+    lema: "Analisa cada compra e o impacto que ela produz."
+  }, {
+    level: 10,
+    titulo: "Guardião do tempo",
+    xp: 4500,
+    icone: "⏳",
+    lema: "Reconhece o valor real de cada hora trabalhada."
+  }, {
+    level: 11,
+    titulo: "Consumidor responsável",
+    xp: 5500,
+    icone: "🤝",
+    lema: "Consome com consciência do impacto que gera."
+  }, {
+    level: 12,
+    titulo: "Protetor da reserva",
+    xp: 6600,
+    icone: "🏦",
+    lema: "Guarda o que constrói e corta o que drena."
+  }, {
+    level: 13,
+    titulo: "Cuidador do futuro",
+    xp: 7800,
+    icone: "🛡️",
+    lema: "Protege o amanhã nas decisões de hoje."
+  }, {
+    level: 14,
+    titulo: "Curador de recursos",
+    xp: 9100,
+    icone: "♻️",
+    lema: "Faz cada recurso circular com propósito."
+  }, {
+    level: 15,
+    titulo: "Estrategista sustentável",
+    xp: 10500,
+    icone: "🌿",
+    lema: "Planeja compras para durar, reparar e reaproveitar."
+  }, {
+    level: 16,
+    titulo: "Arquiteto do patrimônio",
+    xp: 12e3,
+    icone: "🏗️",
+    lema: "Constrói patrimônio com disciplina constante."
+  }, {
+    level: 17,
+    titulo: "Engenheiro das escolhas",
+    xp: 13600,
+    icone: "⚙️",
+    lema: "Transforma decisões financeiras em um sistema coerente."
+  }, {
+    level: 18,
+    titulo: "Líder de impacto",
+    xp: 15300,
+    icone: "🌎",
+    lema: "Une prosperidade, propósito e responsabilidade."
+  }, {
+    level: 19,
+    titulo: "Mestre da consciência",
+    xp: 17100,
+    icone: "💡",
+    lema: "Domina a própria realidade sem perder de vista o coletivo."
+  }, {
+    level: 20,
+    titulo: "Embaixador da ODS 12",
+    xp: 19e3,
+    icone: "🏅",
+    lema: "Consumo responsável virou prática diária. Nível máximo."
+  } ],
   XP: {
     TETO_DIARIO: 260,
-    INTERVALO_MIN_MS: 8000,
+    INTERVALO_MIN_MS: 8e3,
     ACOES: {
-      primeiro_acesso:  { xp:  5, rotulo: "Primeiro acesso do dia",            limiteDia: 1 },
-      onboarding:       { xp: 30, rotulo: "Completar o perfil financeiro",     limiteDia: 1,  unico: true },
-      entrada:          { xp: 25, rotulo: "Registrar uma entrada",             limiteDia: 4 },
-      saida:            { xp: 10, rotulo: "Registrar uma saída",               limiteDia: 6 },
-      transacao:        { xp: 10, rotulo: "Registrar uma movimentação",        limiteDia: 6, oculto: true },
-      meta_criada:      { xp: 15, rotulo: "Criar uma meta",                    limiteDia: 2 },
-      meta_aporte:      { xp: 15, rotulo: "Fazer um aporte em meta",           limiteDia: 3 },
-      meta_concluida:   { xp: 50, rotulo: "Concluir uma meta",                 limiteDia: 3,  unico: true },
-      calculo:          { xp: 15, rotulo: "Cadastrar um cálculo real",         limiteDia: 3 },
-      decisao:          { xp: 40, rotulo: "Registrar a decisão da compra",     limiteDia: 4 },
-      analise:          { xp:  5, rotulo: "Consultar suas análises",           limiteDia: 1 },
-      relatorio:        { xp: 10, rotulo: "Gerar um relatório",                limiteDia: 1 },
-      streak:           { xp: 10, rotulo: "Manter a sequência diária",         limiteDia: 1 },
-      conquista:        { xp: 50, rotulo: "Desbloquear uma conquista",         limiteDia: 99, unico: true },
+      primeiro_acesso: {
+        xp: 5,
+        rotulo: "Primeiro acesso do dia",
+        limiteDia: 1
+      },
+      onboarding: {
+        xp: 30,
+        rotulo: "Completar o perfil financeiro",
+        limiteDia: 1,
+        unico: true
+      },
+      entrada: {
+        xp: 25,
+        rotulo: "Registrar uma entrada",
+        limiteDia: 4
+      },
+      saida: {
+        xp: 10,
+        rotulo: "Registrar uma saída",
+        limiteDia: 6
+      },
+      transacao: {
+        xp: 10,
+        rotulo: "Registrar uma movimentação",
+        limiteDia: 6,
+        oculto: true
+      },
+      meta_criada: {
+        xp: 15,
+        rotulo: "Criar uma meta",
+        limiteDia: 2
+      },
+      meta_aporte: {
+        xp: 15,
+        rotulo: "Fazer um aporte em meta",
+        limiteDia: 3
+      },
+      meta_concluida: {
+        xp: 50,
+        rotulo: "Concluir uma meta",
+        limiteDia: 3,
+        unico: true
+      },
+      calculo: {
+        xp: 15,
+        rotulo: "Cadastrar um cálculo real",
+        limiteDia: 3
+      },
+      decisao: {
+        xp: 40,
+        rotulo: "Registrar a decisão da compra",
+        limiteDia: 4
+      },
+      analise: {
+        xp: 5,
+        rotulo: "Consultar suas análises",
+        limiteDia: 1
+      },
+      relatorio: {
+        xp: 10,
+        rotulo: "Gerar um relatório",
+        limiteDia: 1
+      },
+      streak: {
+        xp: 10,
+        rotulo: "Manter a sequência diária",
+        limiteDia: 1
+      },
+      conquista: {
+        xp: 50,
+        rotulo: "Desbloquear uma conquista",
+        limiteDia: 99,
+        unico: true
+      }
     },
-
-    VALOR_MINIMO_CALCULO: 20,
-  },
+    VALOR_MINIMO_CALCULO: 20
+  }
 };

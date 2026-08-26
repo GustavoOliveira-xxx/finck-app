@@ -1,14 +1,4 @@
--- Fase 1 do relatório de conclusão: fundação de dados.
---
--- Fecha os três buracos que sobraram depois da migration de integridade:
---   1. o progresso da meta era uma verdade independente, não derivável;
---   2. estornar apagava o histórico em vez de preservá-lo;
---   3. um retry depois de timeout não tinha como se reconhecer.
---
--- Regra de ouro que continua valendo: cada fato financeiro tem uma fonte de
--- verdade, um vínculo rastreável e uma transição idempotente.
 
--- 1. Movimentos de meta: o progresso vira histórico, não um número solto -----
 
 create table if not exists public.goal_movements (
   id             uuid primary key default gen_random_uuid(),
@@ -20,8 +10,6 @@ create table if not exists public.goal_movements (
   kind           text not null
                    check (kind in ('aporte', 'retirada', 'estorno', 'ajuste')),
 
-  -- Assinado: aporte entra positivo, retirada negativa, estorno com o sinal
-  -- oposto ao do movimento que ele reverte. O progresso é a soma, nada mais.
   amount         numeric(12,2) not null check (amount <> 0),
 
   date           date not null,
@@ -67,10 +55,6 @@ create policy "movimentos de meta: alterar" on public.goal_movements
 create policy "movimentos de meta: apagar"  on public.goal_movements
   for delete using (auth.uid() = user_id);
 
--- 2. Estorno preserva o histórico -------------------------------------------
--- Excluir destruía a prova de que o dinheiro se moveu. A partir daqui a
--- movimentação continua na tabela, marcada, fora do saldo e com motivo.
-
 alter table public.transactions
   add column if not exists reversed_at     timestamptz,
   add column if not exists reversal_reason text,
@@ -85,16 +69,10 @@ create index if not exists transacoes_vigentes_idx
   on public.transactions (user_id, date desc)
   where reversed_at is null;
 
--- A trava de "uma ocorrência, uma transação" precisa ignorar as estornadas:
--- senão uma confirmação estornada impediria confirmar o mesmo ciclo de novo.
 drop index if exists transacao_unica_por_ocorrencia;
 create unique index transacao_unica_por_ocorrencia
   on public.transactions (source_occurrence_id)
   where source_occurrence_id is not null and reversed_at is null;
-
--- 3. Alocação explícita ------------------------------------------------------
--- O relatório é direto: ou a transação tem conta, ou o usuário assumiu que ela
--- é não alocada. O que o produto não pode fazer é esconder a diferença.
 
 alter table public.transactions
   add column if not exists unallocated boolean not null default false;
@@ -113,10 +91,6 @@ end $$;
 
 comment on constraint alocacao_explicita on public.transactions is
   'Não dá para estar em uma conta e fora de todas ao mesmo tempo.';
-
--- 4. Chave de idempotência ---------------------------------------------------
--- Um retry depois de timeout precisa se reconhecer e devolver o mesmo
--- resultado, em vez de criar um segundo fato financeiro.
 
 create table if not exists public.operation_keys (
   user_id    uuid not null references auth.users (id) on delete cascade,
@@ -140,10 +114,6 @@ create policy "chaves proprias: ler"   on public.operation_keys
   for select using (auth.uid() = user_id);
 create policy "chaves proprias: criar" on public.operation_keys
   for insert with check (auth.uid() = user_id);
-
--- 5. Fila de reconciliação ---------------------------------------------------
--- Dado ambíguo não é apagado nem corrigido por adivinhação: ele espera decisão
--- do usuário aqui.
 
 create table if not exists public.reconciliation_queue (
   id           uuid primary key default gen_random_uuid(),
@@ -189,9 +159,6 @@ create policy "pendencias proprias: alterar" on public.reconciliation_queue
 create policy "pendencias proprias: apagar"  on public.reconciliation_queue
   for delete using (auth.uid() = user_id);
 
--- 6. Observabilidade ---------------------------------------------------------
--- Erro de confirmação e divergência de reconciliação deixam rastro técnico.
-
 create table if not exists public.integrity_events (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
@@ -223,8 +190,6 @@ create policy "eventos proprios: criar"  on public.integrity_events
 create policy "eventos proprios: apagar" on public.integrity_events
   for delete using (auth.uid() = user_id);
 
--- 7. Saldo inicial com política única ----------------------------------------
-
 alter table public.profiles
   add column if not exists initial_balance_migrated_at timestamptz,
   add column if not exists initial_balance_account_id  uuid
@@ -235,11 +200,6 @@ comment on column public.profiles.initial_balance_migrated_at is
 comment on column public.profiles.initial_balance_account_id is
   'Conta que recebeu o saldo inicial na migração. O usuário consegue conferir a composição, não só o número final.';
 
--- 7b. Conta padrão do parcelamento -------------------------------------------
--- O app já lia installment_purchases.account_id (o importador inclusive
--- reaponta esse vínculo), mas a coluna nunca chegou a existir: toda parcela
--- paga caía no saldo global sem aparecer em conta nenhuma.
-
 alter table public.installment_purchases
   add column if not exists account_id uuid references public.accounts (id) on delete set null;
 
@@ -248,8 +208,6 @@ comment on column public.installment_purchases.account_id is
 
 create index if not exists parcelamentos_conta_idx
   on public.installment_purchases (user_id, account_id);
-
--- 8. Parcela estornada é um estado, não um apagamento ------------------------
 
 do $$
 begin
@@ -268,9 +226,6 @@ begin
 exception
   when duplicate_object then null;
 end $$;
-
--- 9. Guarda de propriedade nos vínculos novos --------------------------------
--- Mesmo padrão do gatilho de contas: o vínculo nunca atravessa o usuário.
 
 create or replace function public.vinculo_pertence_ao_usuario()
 returns trigger
@@ -316,13 +271,6 @@ create trigger vinculo_do_dono
   before insert or update on public.installment_payments
   for each row execute function public.vinculo_pertence_ao_usuario();
 
--- 10. Relatório ANTES de alterar qualquer registro ---------------------------
--- O relatório de conclusão é explícito: a migração gera um relatório antes de
--- tocar em qualquer linha, apontando transações sem conta, aportes sem vínculo,
--- ocorrências sem categoria, parcelas pagas apenas por contador e possíveis
--- duplicidades. Este bloco roda antes do backfill e guarda a foto do estado
--- anterior — é a referência para conferir depois o que a migração fez.
-
 create table if not exists public.migration_reports (
   id         uuid primary key default gen_random_uuid(),
   migration  text not null,
@@ -351,43 +299,37 @@ declare
   v_saldo_duplo      bigint;
   v_amostra          jsonb;
 begin
-  -- Transações sem conta vinculada (ainda sem declaração de não alocada).
+
   select count(*) into v_sem_conta
     from public.transactions where account_id is null;
 
-  -- Aportes que apontam para meta mas não têm linha no livro-razão.
   select count(*) into v_aportes_sem_vinc
     from public.transactions t
    where t.goal_id is not null
      and not exists (select 1 from public.goal_movements m where m.transaction_id = t.id);
 
-  -- Ocorrências de saída sem categoria: o gasto não será comparado a teto nenhum.
   select count(*) into v_oc_sem_categoria
     from public.recurring_occurrences
    where type = 'saida' and category is null;
 
-  -- Parcelamentos com parcelas pagas só pelo contador agregado.
   select count(*) into v_parc_contador
     from public.installment_purchases p
    where coalesce(p.paid_count, 0) > 0
      and not exists (select 1 from public.installment_payments ip
                       where ip.purchase_id = p.id and ip.status = 'paga');
 
-  -- Possíveis duplicidades: mesmo tipo, valor, data e descrição.
   select coalesce(count(*), 0) into v_duplicatas from (
     select 1 from public.transactions
      group by user_id, type, amount, date, lower(trim(description))
     having count(*) > 1
   ) d;
 
-  -- Perfil e contas carregando o mesmo saldo inicial.
   select count(*) into v_saldo_duplo
     from public.profiles p
    where coalesce(p.initial_balance, 0) <> 0
      and exists (select 1 from public.accounts a
                   where a.user_id = p.id and coalesce(a.active, true));
 
-  -- Amostra do que será tocado, para conferência linha a linha depois.
   select coalesce(jsonb_agg(x), '[]'::jsonb) into v_amostra from (
     select jsonb_build_object('id', t.id, 'descricao', t.description,
                               'valor', t.amount, 'data', t.date) as x
@@ -417,10 +359,6 @@ begin
   raise notice 'Nada foi alterado até aqui. O backfill começa a seguir e não apaga nenhum registro.';
 end $$;
 
--- 11. Backfill: reconstrói o que dá para reconstruir com segurança -----------
--- Idempotente. Nada é apagado; o que for ambíguo vai para a fila.
-
--- Aportes e gastos que já apontavam para uma meta viram movimentos de meta.
 insert into public.goal_movements (user_id, goal_id, transaction_id, kind, amount, date, note)
 select t.user_id,
        t.goal_id,
@@ -436,8 +374,6 @@ select t.user_id,
      select 1 from public.goal_movements m where m.transaction_id = t.id
    );
 
--- Sem conta cadastrada, "sem conta" é a única situação possível: declarar isso
--- é mais honesto do que deixar a linha ambígua.
 update public.transactions t
    set unallocated = true
  where t.account_id is null
@@ -447,7 +383,6 @@ update public.transactions t
       where a.user_id = t.user_id and coalesce(a.active, true)
    );
 
--- Com contas cadastradas, o sistema não adivinha: a linha espera decisão.
 insert into public.reconciliation_queue (user_id, kind, entity_table, entity_id, detail)
 select t.user_id,
        'transacao_sem_conta',
@@ -464,8 +399,6 @@ select t.user_id,
    )
 on conflict do nothing;
 
--- Meta cujo cache não bate com o histórico: divergência declarada, não corrigida
--- por baixo do pano.
 insert into public.reconciliation_queue (user_id, kind, entity_table, entity_id, detail)
 select g.user_id,
        'meta_sem_historico',
@@ -484,7 +417,6 @@ select g.user_id,
  where abs(coalesce(g.current_amount, 0) - coalesce(m.total, 0)) > 0.005
 on conflict do nothing;
 
--- Parcelamento com parcelas pagas só pelo contador, sem registro individual.
 insert into public.reconciliation_queue (user_id, kind, entity_table, entity_id, detail)
 select p.user_id,
        'parcela_por_contador',
@@ -499,8 +431,6 @@ select p.user_id,
    )
 on conflict do nothing;
 
--- Perfil e contas com o mesmo dinheiro: o app já deixou de somar os dois, mas
--- a decisão de para onde vai o saldo inicial continua sendo do usuário.
 insert into public.reconciliation_queue (user_id, kind, entity_table, entity_id, detail)
 select p.id,
        'saldo_inicial_duplicado',
@@ -515,10 +445,6 @@ select p.id,
       where a.user_id = p.id and coalesce(a.active, true)
    )
 on conflict do nothing;
-
--- 12. Relatório DEPOIS: o que a migração de fato fez --------------------------
--- Comparado com a foto de antes, mostra o que mudou e o que ficou esperando
--- decisão. É assim que a alteração vira conferível em vez de confiável.
 
 do $$
 declare

@@ -75,7 +75,7 @@
 
         <label for="senhaCad">Senha
           <span class="campo-senha">
-            <input type="password" id="senhaCad" name="senha" autocomplete="new-password" minlength="6" required placeholder="Mínimo de 6 caracteres">
+            <input type="password" id="senhaCad" name="senha" autocomplete="new-password" minlength="8" required placeholder="Mínimo de 8 caracteres">
             <button type="button" class="toggle-senha" aria-label="Mostrar senha">👁</button>
           </span>
         </label>
@@ -93,8 +93,8 @@
         </label>
 
         <div class="captcha" id="captchaTrackCad">
-          <div class="captcha-slider" id="captchaSliderCad" role="slider" aria-label="Deslize para verificar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Não verificado" tabindex="0">›</div>
-          <span class="captcha-texto" id="captchaTextCad">Deslize para verificar →</span>
+          <div class="captcha-slider" id="captchaSliderCad" role="slider" aria-label="Deslize para continuar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Aguardando confirmação" tabindex="0">›</div>
+          <span class="captcha-texto" id="captchaTextCad">Deslize para continuar →</span>
         </div>
 
         <p id="mensagemCad" class="mensagem" role="alert"></p>
@@ -108,7 +108,7 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/store.js"></script>
