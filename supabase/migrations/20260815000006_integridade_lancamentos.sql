@@ -1,10 +1,5 @@
--- Fecha as invariantes de contabilidade apontadas na análise lógica do FinCK.
--- Regra de ouro: cada fato financeiro tem uma fonte de verdade, um vínculo
--- rastreável e uma transição idempotente.
 
--- 1. Vínculo rastreável entre ocorrência e movimentação -------------------
 
--- account_id já existe desde 20260809000004; aqui entra só o vínculo com a previsão.
 alter table public.transactions
   add column if not exists source_occurrence_id uuid
     references public.recurring_occurrences (id) on delete set null;
@@ -12,13 +7,9 @@ alter table public.transactions
 comment on column public.transactions.source_occurrence_id is
   'Ocorrência que originou esta movimentação. Permite reconciliar confirmações repetidas em vez de duplicar lançamentos.';
 
--- Uma previsão vira no máximo UMA transação. Esta é a trava que impede que
--- uma falha entre o insert e o update crie um segundo lançamento no retry.
 create unique index if not exists transacao_unica_por_ocorrencia
   on public.transactions (source_occurrence_id)
   where source_occurrence_id is not null;
-
--- 2. Conta e categoria fazem parte da regra recorrente --------------------
 
 alter table public.recurring_transactions
   add column if not exists category text,
@@ -29,15 +20,11 @@ comment on column public.recurring_transactions.category is
 comment on column public.recurring_transactions.account_id is
   'Conta padrão da regra. Sem ela, a confirmação entra no saldo global sem aparecer em nenhuma conta.';
 
--- 3. A ocorrência congela conta e categoria do ciclo ----------------------
-
 alter table public.recurring_occurrences
   add column if not exists account_id uuid references public.accounts (id) on delete set null;
 
 comment on column public.recurring_occurrences.account_id is
   'Conta congelada no ciclo. Mudar a regra não reescreve para onde o dinheiro já foi.';
-
--- 4. Estado por parcela, com vínculo à movimentação -----------------------
 
 create table if not exists public.installment_payments (
   id             uuid primary key default gen_random_uuid(),
@@ -91,8 +78,6 @@ create policy "parcelas proprias: alterar" on public.installment_payments
 create policy "parcelas proprias: apagar"  on public.installment_payments
   for delete using (auth.uid() = user_id);
 
--- 5. Saldo inicial tem uma fonte só ---------------------------------------
-
 alter table public.profiles
   add column if not exists initial_balance_source text
     default 'perfil'
@@ -100,10 +85,6 @@ alter table public.profiles
 
 comment on column public.profiles.initial_balance_source is
   'De onde vem o saldo inicial. Com contas cadastradas passa a ser "contas" e o valor do perfil deixa de ser somado, para não duplicar patrimônio.';
-
--- 6. Confirmação de ocorrência como operação atômica ----------------------
--- Cria ou reaproveita exatamente uma transação para a ocorrência e devolve o
--- estado final. Repetir a chamada é seguro: nunca gera um segundo lançamento.
 
 create or replace function public.confirmar_ocorrencia(
   p_occurrence_id uuid,
@@ -175,8 +156,6 @@ $$;
 comment on function public.confirmar_ocorrencia is
   'Confirma uma ocorrência em uma transação única. Idempotente: repetir a chamada atualiza o mesmo lançamento em vez de criar outro.';
 
--- 7. Desfazer é igualmente atômico ----------------------------------------
-
 create or replace function public.desfazer_ocorrencia(
   p_occurrence_id uuid,
   p_status        text
@@ -193,8 +172,6 @@ begin
     raise exception 'Estado inválido para desfazer.' using errcode = 'check_violation';
   end if;
 
-  -- Solta o vínculo antes de apagar: a ocorrência nunca fica apontando
-  -- para uma transação que já não existe.
   update public.recurring_occurrences
      set status         = p_status,
          actual_amount  = null,
@@ -216,9 +193,6 @@ $$;
 
 comment on function public.desfazer_ocorrencia is
   'Volta a ocorrência para um estado sem movimentação e apaga a transação vinculada na mesma operação.';
-
--- 8. Estorno de movimentação vinculada a meta ------------------------------
--- Excluir um aporte devolve o valor ao progresso da meta exatamente uma vez.
 
 create or replace function public.estornar_transacao(p_transaction_id uuid)
 returns void
@@ -253,12 +227,6 @@ $$;
 comment on function public.estornar_transacao is
   'Remove a movimentação e reverte o progresso da meta na mesma transação de banco.';
 
--- 9. Reconciliação dos dados que já existem --------------------------------
--- Confirmações feitas antes desta migration não têm o vínculo novo. Estes
--- dois updates reconstroem o que dá para reconstruir com segurança. São
--- idempotentes: rodar de novo não muda nada.
-
--- Amarra a transação à ocorrência que já apontava para ela.
 update public.transactions t
    set source_occurrence_id = o.id
   from public.recurring_occurrences o
@@ -266,7 +234,6 @@ update public.transactions t
    and o.user_id = t.user_id
    and t.source_occurrence_id is null;
 
--- Herda para a ocorrência a conta em que o lançamento realmente caiu.
 update public.recurring_occurrences o
    set account_id = t.account_id
   from public.transactions t
@@ -275,14 +242,9 @@ update public.recurring_occurrences o
    and o.account_id is null
    and t.account_id is not null;
 
--- Marca de onde vem o saldo inicial de quem já tem contas cadastradas,
--- para o app não somar o valor do perfil por cima do saldo das contas.
 update public.profiles p
    set initial_balance_source = 'contas'
  where exists (
    select 1 from public.accounts a
     where a.user_id = p.id and coalesce(a.active, true)
  );
-
--- Parcelamentos antigos não precisam de backfill: sem registro explícito de
--- pagamento, o app continua lendo paid_count como antes.
