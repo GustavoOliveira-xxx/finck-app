@@ -43,7 +43,7 @@ window.FinckReconciliador = (() => {
     parcelamentos = [],
     pagamentos = [],
     ocorrencias = [],
-    hoje = new Date().toISOString().slice(0, 10),
+    hoje = window.FinckUtils.hojeISO(),
   } = {}) {
     const F = window.FinckFinance;
     const CT = window.FinckContas;

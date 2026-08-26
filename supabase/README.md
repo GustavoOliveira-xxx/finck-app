@@ -17,6 +17,7 @@ diretamente simplesmente não envia esse filtro.
 |---|---|
 | `migrations/20260809000001_schema_inicial.sql` | Cria as 7 tabelas, restrições e índices |
 | `migrations/20260809000002_rls.sql` | Liga RLS, cria as políticas e o gatilho de perfil |
+| `migrations/20260825000009_polimento_entrega_finck.sql` | Consolida RLS, privilégios de Data API, acesso às RPCs e índices de FKs para a entrega |
 
 ## Como aplicar
 
@@ -40,7 +41,10 @@ select relname, relrowsecurity
  order by relname;
 ```
 
-E cada tabela precisa das 4 políticas (ler, criar, alterar, apagar):
+Cada tabela exposta ao app precisa de políticas explícitas para o papel
+`authenticated`. Tabelas internas, como `migration_reports`, ficam sem acesso
+pela Data API; `operation_keys` e `integrity_events` têm menos operações de
+propósito:
 
 ```sql
 select tablename, count(*)
@@ -52,6 +56,20 @@ select tablename, count(*)
 
 O teste que importa de verdade: entre com dois usuários diferentes e
 confirme que nenhum enxerga o dado do outro.
+
+## Polimento de segurança e desempenho (20260825000009)
+
+A migration final remove políticas duplicadas e políticas destinadas ao papel
+`public`, usa `(select auth.uid())` para evitar recalcular a sessão linha a
+linha, revoga os privilégios excessivos de `anon` e libera ao cliente apenas as
+operações de tabela necessárias. As funções `SECURITY DEFINER` de gatilho não
+podem ser chamadas por RPC; somente as funções de negócio recebem `execute` de
+`authenticated`.
+
+Ela também cria índices para todas as chaves estrangeiras apontadas pelo
+advisor do Postgres. O advisor pode classificar índices recém-criados como
+“não usados” enquanto a base ainda tem pouco tráfego; isso é informativo e não
+é motivo para removê-los antes de uso real.
 
 ## Confirmação de e-mail
 

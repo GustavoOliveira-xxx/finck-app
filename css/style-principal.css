@@ -588,7 +588,7 @@ body.rolando header[data-finck-header]::after{ opacity:1; }
   letter-spacing:.14em; text-transform:uppercase;
   color:var(--texto-fraco);
 }
-.balance-card > p{
+.balance-card > #saldoAtual{
   margin-top:.25rem;
   font-size:clamp(2rem,1.5rem + 3vw,3.1rem);
   font-weight:700;
@@ -1169,6 +1169,7 @@ input[type="month"]::-webkit-calendar-picker-indicator{
   border:1px solid var(--superficie-borda);
   background:rgba(0,0,0,.2);
 }
+.tabela-wrapper:focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; }
 .tabela{
   width:100%;
   border-collapse:collapse;
@@ -2101,7 +2102,7 @@ body.rolando header[data-finck-header]{
 .modal{ max-height:88dvh; }
 
 @media (pointer: coarse){
-  .btn-excluir-item,.btn-remover,.fechar{
+  .btn-excluir-item,.btn-remover,.fechar,.btn-mini{
     min-width:44px; min-height:44px;
   }
   .btn-texto,.link-mais,.btn-sair,.link-rodape a{
@@ -2110,6 +2111,31 @@ body.rolando header[data-finck-header]{
   }
   .aba{ min-height:44px; }
 }
+
+.ods-card{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:clamp(.8rem,2vw,1.4rem);
+  padding:clamp(1rem,2.5vw,1.5rem);
+  border:1px solid rgba(31,209,143,.3);
+  border-radius:var(--raio-lg);
+  background:linear-gradient(135deg, rgba(31,209,143,.12), rgba(104,12,144,.12));
+  box-shadow:var(--sombra-card);
+}
+.ods-card__selo{
+  display:grid; place-items:center;
+  width:64px; aspect-ratio:1;
+  border-radius:50%;
+  background:var(--verde);
+  color:#07120e;
+  font-family:var(--fonte-display);
+  font-weight:800;
+  letter-spacing:-.03em;
+  box-shadow:0 0 28px rgba(31,209,143,.24);
+}
+.ods-card h2{ font-size:clamp(1.05rem,1rem + .5vw,1.35rem); }
+.ods-card p{ margin-top:.25rem; color:var(--texto-fraco); line-height:1.55; }
 
 @media (max-width: 780px){
   :root{
@@ -2765,6 +2791,12 @@ table th{
     --vidro-alto: rgba(28,22,40,.84);
   }
 
+  .btn-sair,.btn-mini,.btn-excluir-item,.btn-remover,.fechar,
+  .revisao__adiar,.busca-preco__ajuda,.chip--acao{
+    min-width:44px;
+    min-height:44px;
+  }
+
   .hero,
   .bloco,
   .etapa,
@@ -2774,6 +2806,17 @@ table th{
   .modal{
     backdrop-filter:none;
     -webkit-backdrop-filter:none;
+  }
+
+  .ods-card{ grid-template-columns:auto minmax(0,1fr); align-items:start; }
+  .ods-card .btn-secundario{ grid-column:1 / -1; width:100%; text-align:center; }
+
+  .tabela-wrapper::before{
+    content:"Deslize para ver todas as colunas →";
+    position:sticky; left:0;
+    display:block; width:max-content;
+    padding:.55rem .75rem .25rem;
+    font-size:.7rem; color:var(--texto-fraquissimo);
   }
 
   .balance-card{
@@ -3939,8 +3982,9 @@ table th{
 @media (max-width:720px){
   .balanca-cena{ grid-template-columns:1fr; }
   .balanca{ height:196px; transform:rotateX(8deg) rotateY(-8deg); }
-  .balanca__viga{ width:92%; }
-  .balanca__prato{ min-width:104px; padding:.45rem .5rem; }
+  .balanca__viga{ width:calc(100% - 116px); min-width:150px; max-width:280px; }
+  .balanca__prato{ min-width:0; width:112px; padding:.45rem .4rem; }
+  .balanca__rotulo{ max-width:100px; text-align:center; line-height:1.25; }
   .balanca__prato strong{ font-size:.8rem; }
   .pendencia{ flex-direction:column; align-items:stretch; }
 }

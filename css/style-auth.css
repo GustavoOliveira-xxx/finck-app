@@ -82,6 +82,17 @@ button{ cursor:pointer; border:none; background:none; }
 :focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; border-radius:var(--raio-sm); }
 ::selection{ background:var(--roxo-claro); color:#fff; }
 
+.pular-para-conteudo{
+  position:fixed; top:.65rem; left:.65rem; z-index:10000;
+  padding:.65rem .9rem;
+  border-radius:var(--raio-sm);
+  background:var(--amarelo); color:#120b16;
+  font-weight:800;
+  transform:translateY(calc(-100% - 1rem));
+  transition:transform var(--dur-rapida) var(--ease-out);
+}
+.pular-para-conteudo:focus{ transform:translateY(0); }
+
 body.pagina-auth::before{
   content:"";
   position:fixed; inset:0; z-index:-3; pointer-events:none;

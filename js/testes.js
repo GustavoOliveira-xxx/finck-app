@@ -236,6 +236,19 @@ window.FinckTestes = (() => {
       esperar(cfg.XP.INTERVALO_MIN_MS > 0).aSerVerdadeiro();
     });
 
+    teste("conquistas em lote ignoram só o intervalo, não a chave nem o teto", () => {
+      const estado = {
+        ledger: {
+          dia: window.FinckUtils.hojeISO(), total: 50,
+          acoes: { conquista: 1 }, ultimo: Date.now(),
+          chaves: ["conquista:ja-foi"],
+        },
+      };
+      esperar(G.podePremiar(estado, "conquista", "nova").ok).aSerFalso();
+      esperar(G.podePremiar(estado, "conquista", "nova", { ignorarIntervalo: true }).ok).aSerVerdadeiro();
+      esperar(G.podePremiar(estado, "conquista", "ja-foi", { ignorarIntervalo: true }).ok).aSerFalso();
+    });
+
     teste("cálculo abaixo do valor mínimo não paga XP", () => {
       esperar(cfg.XP.VALOR_MINIMO_CALCULO > 0).aSerVerdadeiro();
     });
@@ -869,6 +882,17 @@ window.FinckTestes = (() => {
     teste("escapeHTML neutraliza marcação", () => {
       const saida = U.escapeHTML('<img src=x onerror="alert(1)">');
       esperar(saida.includes("<img")).aSerFalso();
+    });
+
+    teste("data financeira preserva o dia do calendário local", () => {
+      const fimDaNoite = new Date(2026, 7, 25, 23, 45);
+      esperar(U.dataISO(fimDaNoite)).aSer("2026-08-25");
+      esperar(U.mesISO(fimDaNoite)).aSer("2026-08");
+    });
+
+    teste("URL de autenticação preserva a pasta da publicação", () => {
+      esperar(window.FinckStore.urlLocal("nova-senha.html", "https://exemplo.com/finck/index.html"))
+        .aSer("https://exemplo.com/finck/nova-senha.html");
     });
   });
 
@@ -1695,6 +1719,48 @@ window.FinckTestes = (() => {
         esperar(CT.saldoDaConta(conta, { transacoes: ctx.transacoes, ajustes: ctx.ajustes })).aSer(150);
       });
     });
+
+    teste("mesclagem reaponta vínculos para um registro equivalente que já existe", async () => {
+      await comSessaoLimpa(async () => {
+        const metaExistente = await S.inserir("goals", { name: "Viagem", target_amount: 5000, current_amount: 0 });
+        await S.importarTudo({
+          goals: [{ id: "meta-do-backup", name: "Viagem", target_amount: 5000, current_amount: 0 }],
+          transactions: [{
+            id: "tx-do-backup", type: "saida", description: "Aporte",
+            amount: 100, date: "2026-08-01", goal_id: "meta-do-backup",
+          }],
+        }, { modo: "mesclar" });
+
+        const [mov] = await S.listar("transactions");
+        esperar(String(mov.goal_id)).aSer(String(metaExistente.id));
+      });
+    });
+
+    teste("importação preserva o vínculo entre estorno e movimento original", async () => {
+      await comSessaoLimpa(async () => {
+        await S.importarTudo({
+          goals: [{ id: "g1", name: "Reserva", target_amount: 1000, current_amount: 0 }],
+          goal_movements: [
+            { id: "m2", goal_id: "g1", kind: "estorno", amount: -100, date: "2026-08-02", reverses_id: "m1" },
+            { id: "m1", goal_id: "g1", kind: "aporte", amount: 100, date: "2026-08-01" },
+          ],
+        }, { modo: "substituir" });
+
+        const movimentos = await S.listar("goal_movements");
+        const original = movimentos.find((m) => m.kind === "aporte");
+        const estorno = movimentos.find((m) => m.kind === "estorno");
+        esperar(String(estorno.reverses_id)).aSer(String(original.id));
+      });
+    });
+
+    teste("arquivar a última conta não ressuscita o saldo legado do perfil", () => {
+      const origem = F.origemDoSaldo(
+        { initial_balance: 900, initial_balance_source: "contas", initial_balance_migrated_at: "2026-08-10T12:00:00Z" },
+        [{ id: "a", initial_balance: 900, active: false }]
+      );
+      esperar(origem.fonte).aSer("contas");
+      esperar(origem.saldoInicial).aSer(0);
+    });
   });
 
   descrever("Reconciliador financeiro (fase 3)", () => {
@@ -2286,22 +2352,38 @@ window.FinckTestes = (() => {
 
     teste("parcela com estado desconhecido é descartada", () => {
       const r = S.validarImportacao({
-        installment_purchases: [{ id: "c1", total_amount: 300, installments_count: 3, first_due_date: "2026-08-10" }],
-        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, amount: 100, status: "sei_la" }],
+        installment_purchases: [{ id: "c1", description: "Curso", total_amount: 300, installments_count: 3, installment_amount: 100, first_due_date: "2026-08-10" }],
+        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, due_date: "2026-08-10", amount: 100, status: "sei_la" }],
       });
       esperar(r.linhas.installment_payments).aTerTamanho(0);
     });
 
     teste("parcela estornada é estado válido", () => {
       const r = S.validarImportacao({
-        installment_purchases: [{ id: "c1", total_amount: 300, installments_count: 3, first_due_date: "2026-08-10" }],
-        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, amount: 100, status: "estornada" }],
+        installment_purchases: [{ id: "c1", description: "Curso", total_amount: 300, installments_count: 3, installment_amount: 100, first_due_date: "2026-08-10" }],
+        installment_payments: [{ id: "p1", purchase_id: "c1", installment_no: 1, due_date: "2026-08-10", amount: 100, status: "estornada" }],
       });
       esperar(r.linhas.installment_payments).aTerTamanho(1);
     });
 
     teste("arquivo inválido é recusado antes de gravar qualquer coisa", async () => {
       await esperar(() => S.importarTudo({ lixo: true })).aFalharCom("Arquivo inválido");
+    });
+
+    teste("datas impossíveis são descartadas antes de chegar ao banco", () => {
+      const r = S.validarImportacao({
+        transactions: [{ id: "t1", type: "saida", description: "Impossível", amount: 10, date: "2026-02-31" }],
+      });
+      esperar(r.linhas.transactions).aTerTamanho(0);
+    });
+
+    teste("campos inventados no backup são removidos", () => {
+      const r = S.validarImportacao({
+        goals: [{ id: "g1", name: "Reserva", target_amount: 1000, current_amount: 0, administrador: true }],
+      });
+      esperar(r.linhas.goals).aTerTamanho(1);
+      esperar(Object.prototype.hasOwnProperty.call(r.linhas.goals[0], "administrador")).aSerFalso();
+      esperar(r.avisos.some((a) => a.includes("administrador"))).aSerVerdadeiro();
     });
   });
 

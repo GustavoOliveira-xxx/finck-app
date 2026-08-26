@@ -35,20 +35,20 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const validar = () => {
-      if (texto) texto.textContent = "✅ Verificado";
+      if (texto) texto.textContent = "✅ Pronto para continuar";
       track.classList.add("verificado");
       slider.style.transform = `translateX(${max}px)`;
       slider.setAttribute("aria-valuenow", "100");
-      slider.setAttribute("aria-valuetext", "Verificado");
+      slider.setAttribute("aria-valuetext", "Pronto para continuar");
       if (btn) btn.disabled = false;
     };
 
     const resetar = () => {
       slider.style.transform = "translateX(0px)";
-      if (texto) texto.textContent = "Deslize para verificar →";
+      if (texto) texto.textContent = "Deslize para continuar →";
       track.classList.remove("verificado");
       slider.setAttribute("aria-valuenow", "0");
-      slider.setAttribute("aria-valuetext", "Não verificado");
+      slider.setAttribute("aria-valuetext", "Aguardando confirmação");
       if (btn) btn.disabled = true;
     };
 
@@ -79,9 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    slider.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") { e.preventDefault(); validar(); }
-    });
   }
 
   initCaptcha("captchaSlider", "captchaText", "btnEntrar");
@@ -139,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!nome) return msg(mensagemEl, "Informe seu nome.", "erro");
       if (!/^\S+@\S+\.\S+$/.test(email)) return msg(mensagemEl, "Informe um e-mail válido.", "erro");
-      if (senha.length < 6) return msg(mensagemEl, "A senha precisa ter ao menos 6 caracteres.", "erro");
+      if (senha.length < 8) return msg(mensagemEl, "A senha precisa ter ao menos 8 caracteres.", "erro");
       if (senha !== confirma) return msg(mensagemEl, "As senhas não conferem.", "erro");
       if (!aceite) return msg(mensagemEl, "É necessário aceitar o uso educacional.", "erro");
 
@@ -248,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
       msg(mensagemEl, "");
       const senha = document.getElementById("senhaNova").value;
       const confirma = document.getElementById("senhaNovaConfirma").value;
-      if (senha.length < 6) return msg(mensagemEl, "A senha precisa ter ao menos 6 caracteres.", "erro");
+      if (senha.length < 8) return msg(mensagemEl, "A senha precisa ter ao menos 8 caracteres.", "erro");
       if (senha !== confirma) return msg(mensagemEl, "As senhas não conferem.", "erro");
 
       btn.disabled = true;

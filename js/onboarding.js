@@ -59,10 +59,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function atualizarDica() {
     const renda = U.lerMoeda(incomeEl);
-    const dias = Number(diasEl.value) || 22;
-    const horas = Number(horasEl.value) || 8;
+    const dias = Number(diasEl.value);
+    const horas = Number(horasEl.value);
     if (renda <= 0) {
-      dicaEl.textContent = "Informe a renda para ver quanto vale a sua hora.";
+      dicaEl.textContent = "Sem renda no momento? Você pode seguir: os cálculos em tempo ficam indisponíveis até atualizar este valor.";
+      return;
+    }
+    if (!(dias >= 1 && dias <= 31 && horas > 0 && horas <= 16)) {
+      dicaEl.textContent = "Revise os dias e as horas da sua jornada.";
       return;
     }
     const valorDia = renda / dias;
@@ -72,7 +76,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("formRenda").addEventListener("submit", (e) => {
     e.preventDefault();
-    if (!(U.lerMoeda(incomeEl) > 0)) return U.toast("Informe uma renda maior que zero.", "erro");
+    const renda = U.lerMoeda(incomeEl);
+    const dias = Number(diasEl.value);
+    const horas = Number(horasEl.value);
+    const pagamento = Number(document.getElementById("payday").value);
+    if (!(renda >= 0)) return U.toast("A renda não pode ser negativa.", "erro");
+    if (!(Number.isInteger(dias) && dias >= 1 && dias <= 31)) return U.toast("Informe de 1 a 31 dias trabalhados por mês.", "erro");
+    if (!(horas > 0 && horas <= 16)) return U.toast("Informe de 0,5 a 16 horas por dia.", "erro");
+    if (!(Number.isInteger(pagamento) && pagamento >= 1 && pagamento <= 31)) return U.toast("Informe um dia de recebimento entre 1 e 31.", "erro");
     mostrar(fluxo === "manual" ? 3 : 2);
     renderResumo();
   });
@@ -164,6 +175,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const amount = U.lerMoeda("despesaValor");
     const day_of_month = Number(document.getElementById("despesaDia").value) || 10;
     if (!description || !(amount > 0)) return U.toast("Preencha descrição e valor.", "erro");
+    if (!(Number.isInteger(day_of_month) && day_of_month >= 1 && day_of_month <= 31)) {
+      return U.toast("O vencimento precisa estar entre os dias 1 e 31.", "erro");
+    }
     despesas.push({ description, amount, day_of_month, type: "saida", active: true });
     e.target.reset();
     document.getElementById("despesaDia").value = 10;
@@ -181,7 +195,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const horas = Number(horasEl.value) || 8;
     const fixas = despesas.reduce((s, d) => s + d.amount, 0);
     const livre = Math.max(0, renda - fixas);
-    const valorDia = renda / dias;
+    const valorDia = renda > 0 ? renda / dias : 0;
+    const valorHora = renda > 0 ? valorDia / horas : 0;
 
     document.getElementById("resumoOnboarding").innerHTML = `
       <h3>Resumo</h3>
@@ -189,44 +204,71 @@ document.addEventListener("DOMContentLoaded", async () => {
         <li><span>Renda mensal</span><strong>${U.moeda(renda)}</strong></li>
         <li><span>Despesas fixas</span><strong class="cor-vermelha">${U.moeda(fixas)}</strong></li>
         <li><span>Renda livre estimada</span><strong class="cor-verde">${U.moeda(livre)}</strong></li>
-        <li><span>Valor do seu dia de trabalho</span><strong>${U.moeda(valorDia)}</strong></li>
-        <li><span>Valor da sua hora</span><strong>${U.moeda(valorDia / horas)}</strong></li>
+        <li><span>Valor do seu dia de trabalho</span><strong>${renda > 0 ? U.moeda(valorDia) : "Indisponível"}</strong></li>
+        <li><span>Valor da sua hora</span><strong>${renda > 0 ? U.moeda(valorHora) : "Indisponível"}</strong></li>
         <li><span>Saldo inicial</span><strong>${U.moeda(U.lerMoeda(saldoEl) || 0)}</strong></li>
       </ul>
-      <p class="nota">Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho.</p>`;
+      <p class="nota">${renda > 0
+        ? "Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho."
+        : "Você pode usar o restante do FinCK normalmente e informar uma renda depois no perfil."}</p>`;
   }
 
   document.getElementById("formSaldo").addEventListener("submit", async (e) => {
     e.preventDefault();
     const botao = e.target.querySelector('button[type="submit"]');
+    const textoOriginal = botao.textContent;
     botao.disabled = true;
+    botao.setAttribute("aria-busy", "true");
+    botao.textContent = "Concluindo…";
+    const criadas = [];
     try {
+      const dias = Number(diasEl.value);
+      const horas = Number(horasEl.value);
+      const pagamento = Number(document.getElementById("payday").value);
+      if (!(Number.isInteger(dias) && dias >= 1 && dias <= 31)) throw new Error("Revise os dias trabalhados.");
+      if (!(horas > 0 && horas <= 16)) throw new Error("Revise as horas trabalhadas por dia.");
+      if (!(Number.isInteger(pagamento) && pagamento >= 1 && pagamento <= 31)) throw new Error("Revise o dia do recebimento.");
+
+      // Os itens relacionados entram primeiro. Se algum falhar, os anteriores
+      // são removidos e o perfil não fica marcado como concluído pela metade.
+      for (const d of despesas) {
+        const criada = await S.inserir("recurring_transactions", d);
+        if (criada?.id) criadas.push(criada);
+      }
+
       await S.salvarPerfil({
         income_monthly: U.lerMoeda(incomeEl),
         income_type: document.getElementById("incomeType").value,
-        payday: Number(document.getElementById("payday").value) || 5,
-        work_days_month: Number(diasEl.value),
-        work_hours_day: Number(horasEl.value),
+        payday: pagamento,
+        work_days_month: dias,
+        work_hours_day: horas,
         initial_balance: U.lerMoeda(saldoEl) || 0,
         ...planoRenda(),
         setup_mode: fluxo,
         onboarded_at: new Date().toISOString(),
       });
 
-      for (const d of despesas) await S.inserir("recurring_transactions", d);
-
-      await G.premiar("onboarding", { chave: "perfil", motivo: "perfil financeiro configurado" });
-      await G.sincronizarConquistas();
+      try {
+        await G.premiar("onboarding", { chave: "perfil", motivo: "perfil financeiro configurado" });
+        await G.sincronizarConquistas();
+      } catch (err) {
+        await S.registrarEvento({ scope: "gamificacao", message: err.message, context: { origem: "onboarding" } });
+      }
       U.toast("Configuração concluída!", "sucesso");
       setTimeout(() => { location.href = "home.html"; }, 700);
     } catch (err) {
+      for (const criada of criadas.reverse()) {
+        try { await S.remover("recurring_transactions", criada.id); } catch { /* melhor esforço */ }
+      }
       U.toast(err.message, "erro");
       botao.disabled = false;
+      botao.removeAttribute("aria-busy");
+      botao.textContent = textoOriginal;
     }
   });
 
   const perfil = await S.obterPerfil();
-  if (perfil?.income_monthly) {
+  if (perfil) {
     U.escreverMoeda(incomeEl, perfil.income_monthly);
     diasEl.value = perfil.work_days_month || 22;
     horasEl.value = perfil.work_hours_day || 8;
