@@ -11,7 +11,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   const ENDPOINT = `${cfg.SUPABASE_URL}/functions/v1/buscar-preco`;
-  const TEXTOS = {
+  const IA = cfg.BUSCA_IA || {};
+  const IA_ATIVA = IA.ATIVA === true && !!IA.ENDPOINT;
+  const TEXTOS = IA_ATIVA ? {
+    bloqueada: c => `<strong>${U.escapeHTML(c.loja)} dificulta a leitura de fora.</strong> ` + `A busca por IA vai tentar mesmo assim, mas aqui ela costuma voltar sem preço. ` + `Se voltar, digite o valor manualmente.`,
+    instavel: c => `<strong>${U.escapeHTML(c.loja)}:</strong> a busca por IA lê a página, mas nesta loja ` + `pode voltar sem preço. ${U.escapeHTML(c.motivo)}`,
+    provavel: () => `Busca por IA disponível para esta loja.`,
+    desconhecida: () => `Loja não catalogada. A busca por IA lê a página do produto — ` + `se não achar, é só digitar o valor.`
+  } : {
     bloqueada: c => `<strong>${U.escapeHTML(c.loja)} não permite busca automática.</strong> ` + `${U.escapeHTML(c.motivo)} Digite o valor manualmente.`,
     instavel: c => `<strong>${U.escapeHTML(c.loja)}:</strong> a busca pode não encontrar o preço. ` + `${U.escapeHTML(c.motivo)}`,
     provavel: () => `Busca disponível para esta loja.`,
@@ -36,15 +43,15 @@ document.addEventListener("DOMContentLoaded", () => {
     aviso.hidden = false;
     aviso.className = `busca-preco__aviso busca-preco__aviso--${status}`;
     aviso.innerHTML = TEXTOS[status](classificacao);
-    const bloqueada = status === "bloqueada";
-    botao.disabled = bloqueada;
-    botao.classList.toggle("busca-preco__botao--bloqueado", bloqueada);
+    const travado = status === "bloqueada" && !IA_ATIVA;
+    botao.disabled = travado;
+    botao.classList.toggle("busca-preco__botao--bloqueado", travado);
   }
   campoLink.addEventListener("input", avaliarLink);
   campoLink.addEventListener("paste", () => setTimeout(avaliarLink, 0));
   avaliarLink();
   function carregando(ligado) {
-    botao.disabled = ligado || classificacao.status === "bloqueada";
+    botao.disabled = ligado || (classificacao.status === "bloqueada" && !IA_ATIVA);
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
     botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço do link";
   }
@@ -69,6 +76,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (d.moeda && d.moeda !== "BRL") {
       return `Atenção: o preço está em ${U.escapeHTML(d.moeda)}, não em reais. Converta antes de salvar.`;
     }
+    if (d.fonte === "ia") {
+      if (d.metodo === "ia-busca") {
+        return "Este valor veio de uma busca na web, não da própria página. Confira na loja antes de analisar.";
+      }
+      if (d.confianca === "baixa") {
+        return "A IA leu a página, mas ficou em dúvida sobre qual valor é o do produto. Confira na loja.";
+      }
+      if (d.confianca === "media") {
+        return "A página mostrava mais de um valor; a IA escolheu o do produto principal. Vale conferir.";
+      }
+      return "Preço lido da página pela IA. Confira se bate com o que a loja mostra.";
+    }
     if (d.confianca === "baixa") {
       return "Li os valores do texto da página, então podem estar errados. Confira na loja antes de analisar.";
     }
@@ -91,6 +110,41 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
+  async function consultar(endpoint, url, token) {
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: cfg.SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          url: url
+        })
+      });
+      return await r.json().catch(() => null);
+    } catch {
+      return null;
+    }
+  }
+  async function buscarPreco(url, token) {
+    if (!IA_ATIVA) {
+      return consultar(ENDPOINT, url, token);
+    }
+    const porIA = await consultar(IA.ENDPOINT, url, token);
+    if (porIA?.ok) {
+      return porIA;
+    }
+    // A IA não trouxe preço. O leitor antigo lê o HTML direto e às vezes acha
+    // o que ela não achou — menos nas lojas que recusam acesso de servidor,
+    // onde ele já responderia recusando.
+    if (classificacao.status === "bloqueada") {
+      return porIA;
+    }
+    const antigo = await consultar(ENDPOINT, url, token);
+    return antigo?.ok ? antigo : porIA || antigo;
+  }
   function mostrarErro(motivo) {
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--erro";
@@ -112,18 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     carregando(true);
     try {
-      const r = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: cfg.SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({
-          url: url
-        })
-      });
-      const dados = await r.json().catch(() => null);
+      const dados = await buscarPreco(url, token);
       if (!dados) {
         mostrarErro("Não consegui falar com o servidor de busca. Tente de novo em instantes.");
         return;
@@ -151,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const item = (l, mostrarMotivo) => `\n      <li>\n        <strong>${U.escapeHTML(l.nome)}</strong>\n        ${mostrarMotivo && l.motivo ? `<p>${U.escapeHTML(l.motivo)}</p>` : ""}\n        ${l.detalhe ? `<p>${U.escapeHTML(l.detalhe)}</p>` : ""}\n      </li>`;
-    host.innerHTML = `\n      <p class="lojas-intro">\n        A busca lê a página do produto e traz o preço. Isso depende de como cada\n        loja monta o site — por isso não funciona em todas. Em qualquer caso,\n        você pode digitar o valor manualmente.\n      </p>\n\n      <section class="lojas-grupo lojas-grupo--bloqueada">\n        <h4>Não funciona</h4>\n        <p class="lojas-grupo__nota">O botão fica desativado nestas lojas.</p>\n        <ul class="lojas-lista">\n          ${L.BLOQUEADAS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--instavel">\n        <h4>Pode falhar</h4>\n        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>\n        <ul class="lojas-lista">\n          ${L.INSTAVEIS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--provavel">\n        <h4>Costuma funcionar</h4>\n        <ul class="lojas-lista">\n          ${L.PROVAVEIS.map(l => item(l, false)).join("")}\n        </ul>\n      </section>\n\n      <p class="lojas-rodape">\n        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem\n        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda\n        por CEP, o valor lido pode ser o do item base.\n      </p>`;
+    host.innerHTML = `\n      <p class="lojas-intro">\n        ${IA_ATIVA ? "A busca manda a IA abrir a página do produto e ler o preço.\n        Ela entende a página como um leitor humano, então funciona em muito\n        mais loja do que antes — mas ainda depende de a loja deixar a página\n        ser aberta de fora." : "A busca lê a página do produto e traz o preço. Isso depende de como cada\n        loja monta o site — por isso não funciona em todas."} Em qualquer caso,\n        você pode digitar o valor manualmente.\n      </p>\n\n      <section class="lojas-grupo lojas-grupo--bloqueada">\n        <h4>${IA_ATIVA ? "Raramente funciona" : "Não funciona"}</h4>\n        <p class="lojas-grupo__nota">${IA_ATIVA ? "Estas lojas recusam o acesso de fora, inclusive o da IA. O botão\n          continua liberado — se voltar sem preço, digite o valor." : "O botão fica desativado nestas lojas."}</p>\n        <ul class="lojas-lista">\n          ${L.BLOQUEADAS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--instavel">\n        <h4>Pode falhar</h4>\n        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>\n        <ul class="lojas-lista">\n          ${L.INSTAVEIS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--provavel">\n        <h4>Costuma funcionar</h4>\n        <ul class="lojas-lista">\n          ${L.PROVAVEIS.map(l => item(l, false)).join("")}\n        </ul>\n      </section>\n\n      <p class="lojas-rodape">\n        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem\n        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda\n        por CEP, o valor lido pode ser o do item base.\n      </p>`;
   }
   if (abrirLista) {
     abrirLista.addEventListener("click", () => {
