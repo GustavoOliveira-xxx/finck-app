@@ -1,6 +1,13 @@
 window.FINCK_CONFIG = {
   SUPABASE_URL: "https://iruqoghylxgopbopxjbi.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_zn_jngIj2xibO_VpzOi0Wg_gGG7Z8eS",
+  BUSCA_IA: {
+    ATIVA: true,
+    // Caminho relativo funciona quando o site é servido pela mesma Vercel que
+    // hospeda a função. Em outra hospedagem, troque pela URL completa —
+    // por exemplo "https://finck-app.vercel.app/api/buscar-preco-ia".
+    ENDPOINT: "/api/buscar-preco-ia"
+  },
   APP_NOME: "FinCK of Reality",
   APP_NOME_CURTO: "FinCK",
   EMPRESA: "Conscious Knowledge",
