@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const S = window.FinckStore;
   const U = window.FinckUtils;
   const C = window.FinckContas;
+  const F = window.FinckFinance;
   const user = await window.FinckNav.iniciarPagina({
     titulo: "Contas",
     subtitulo: "Onde seu dinheiro está"
@@ -15,9 +16,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   let transacoes = [];
   let transferencias = [];
   let ajustes = [];
+  let perfil = null;
   let instituicaoEscolhida = "inter";
   async function carregar() {
-    [contas, transacoes, transferencias, ajustes] = await Promise.all([ S.listar("accounts", {
+    [contas, transacoes, transferencias, ajustes, perfil] = await Promise.all([ S.listar("accounts", {
       ordem: "created_at",
       asc: true
     }), S.listar("transactions", {
@@ -29,11 +31,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }), S.listar("balance_adjustments", {
       ordem: "date",
       asc: false
-    }) ]);
+    }), S.obterPerfil() ]);
     render();
   }
+  const hoje = () => U.hojeISO();
+  const realizadas = () => F.vigentesAteHoje(transacoes, hoje());
+  const futuras = () => F.vigentesFuturas(transacoes, hoje());
   const movimentos = () => ({
-    transacoes: transacoes,
+    transacoes: realizadas(),
     transferencias: transferencias,
     ajustes: ajustes
   });
@@ -42,14 +47,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   function render() {
     const resumo = C.consolidado(contas, movimentos());
     $("chipContas").textContent = `${resumo.quantidade} ativa${resumo.quantidade === 1 ? "" : "s"}`;
-    const semConta = transacoes.filter(t => !t.account_id);
-    const naoAlocado = semConta.filter(t => t.type === "entrada").reduce((s, t) => s + Number(t.amount || 0), 0) - semConta.filter(t => t.type === "saida").reduce((s, t) => s + Number(t.amount || 0), 0);
-    const ambiguas = semConta.filter(t => !t.unallocated).length;
-    $("consolidado").innerHTML = `\n      <li><span>Dinheiro em contas</span>\n          <strong class="${resumo.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(resumo.disponivel)}</strong></li>\n      <li><span>Fora das contas (não alocado)</span>\n          <strong class="${naoAlocado < 0 ? "cor-vermelha" : ""}">${U.moeda(naoAlocado)}</strong></li>\n      <li class="linha-identidade"><span>Saldo global</span>\n          <strong>${U.moeda(resumo.disponivel + naoAlocado)}</strong></li>\n      <li><span>Transferências registradas</span>\n          <strong>${transferencias.length}</strong></li>`;
+    const origem = F.origemDoSaldo(perfil, contas);
+    const naoAlocado = F.naoAlocadoDe(transacoes, origem, hoje());
+    const saldoAtual = resumo.disponivel + naoAlocado;
+    const aVir = futuras();
+    const previsto = F.saldoDeMovimentos(aVir);
+    const ambiguas = F.alocacaoAmbigua(transacoes, contas, hoje()).length;
+    const linhaPrevisto = aVir.length ? `\n      <li class="linha-previsto"><span>Previsto (ainda não saiu do caixa)</span>\n          <strong class="${previsto < 0 ? "cor-vermelha" : ""}">${previsto > 0 ? "+" : ""}${U.moeda(previsto)}</strong></li>` : "";
+    $("consolidado").innerHTML = `\n      <li><span>Dinheiro em contas</span>\n          <strong class="${resumo.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(resumo.disponivel)}</strong></li>\n      <li><span>Fora das contas (não alocado)</span>\n          <strong class="${naoAlocado < 0 ? "cor-vermelha" : ""}">${U.moeda(naoAlocado)}</strong></li>\n      <li class="linha-identidade"><span>Saldo atual (realizado)</span>\n          <strong>${U.moeda(saldoAtual)}</strong></li>${linhaPrevisto}\n      <li><span>Transferências registradas</span>\n          <strong>${transferencias.length}</strong></li>`;
+    const notaOrigem = $("notaOrigemSaldo");
+    if (notaOrigem) {
+      notaOrigem.textContent = `${origem.nota} O saldo atual conta apenas o que já aconteceu até hoje; o previsto aparece em linha separada.`;
+    }
     const aviso = $("avisoReconciliacao");
     if (aviso) {
       aviso.hidden = ambiguas === 0;
-      aviso.innerHTML = ambiguas ? `<strong>${ambiguas} lançamento(s) sem conta definida.</strong>\n           Eles entram no saldo global, mas não aparecem em nenhuma conta — e você\n           ainda não disse que devem ficar de fora. Enquanto isso, os dois números\n           acima contam histórias diferentes.\n           <a href="perfil.html#diagnostico">Resolver no diagnóstico</a>` : "";
+      aviso.innerHTML = ambiguas ? `<strong>${ambiguas} lançamento(s) sem conta definida.</strong>\n           Eles entram no saldo atual, mas não aparecem em nenhuma conta — e você\n           ainda não disse que devem ficar de fora. Enquanto isso, os dois números\n           acima contam histórias diferentes.\n           <a href="perfil.html#diagnostico">Resolver no diagnóstico</a>` : "";
     }
     renderContas();
     renderInstituicoes(resumo.contas);

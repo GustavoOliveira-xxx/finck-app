@@ -4,14 +4,13 @@ window.FinckReconciliador = (() => {
   const TOLERANCIA = .005;
   const bate = (a, b) => Math.abs(num(a) - num(b)) <= TOLERANCIA;
   const vigente = t => !t.reversed_at;
-  const realizada = (t, hoje) => String(t.date || "") <= hoje;
   function conferir({perfil: perfil = null, contas: contas = [], transacoes: transacoes = [], transferencias: transferencias = [], ajustes: ajustes = [], metas: metas = [], movimentosMeta: movimentosMeta = [], parcelamentos: parcelamentos = [], pagamentos: pagamentos = [], ocorrencias: ocorrencias = [], hoje: hoje = window.FinckUtils.hojeISO()} = {}) {
     const F = window.FinckFinance;
     const CT = window.FinckContas;
     const M = window.FinckMetas;
     const P = window.FinckPlano;
     const ativas = (contas || []).filter(c => c.active !== false);
-    const noCaixa = (transacoes || []).filter(t => vigente(t) && realizada(t, hoje));
+    const noCaixa = F.vigentesAteHoje(transacoes, hoje);
     const estornadas = (transacoes || []).filter(t => !vigente(t));
     const entradas = noCaixa.filter(t => t.type === "entrada").reduce((s, t) => s + num(t.amount), 0);
     const saidas = noCaixa.filter(t => t.type === "saida").reduce((s, t) => s + num(t.amount), 0);
@@ -31,10 +30,9 @@ window.FinckReconciliador = (() => {
       ajustes: ajustes
     });
     const somaArquivadas = comSaldoArquivadas.reduce((s, c) => s + num(c.saldo) - num(c.initial_balance), 0);
-    const semConta = noCaixa.filter(t => !t.account_id);
-    const naoAlocadoMovimento = semConta.filter(t => t.type === "entrada").reduce((s, t) => s + num(t.amount), 0) - semConta.filter(t => t.type === "saida").reduce((s, t) => s + num(t.amount), 0);
-    const naoAlocado = naoAlocadoMovimento + (origem.fonte === "perfil" ? origem.saldoInicial : 0);
-    const ambiguas = ativas.length ? semConta.filter(t => !t.unallocated) : [];
+    const naoAlocadoMovimento = F.saldoDeMovimentos(noCaixa.filter(t => !t.account_id));
+    const naoAlocado = F.naoAlocadoDe(transacoes, origem, hoje);
+    const ambiguas = F.alocacaoAmbigua(transacoes, contas, hoje);
     const identidade = somaContas + somaArquivadas + naoAlocado;
     const diferencaCaixa = saldoGlobal - identidade;
     const porCategoria = F.porCategoria(noCaixa);
