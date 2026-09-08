@@ -191,6 +191,31 @@ window.FINCK_CONFIG = {
     orcamento: "Você marcou que a compra compromete o essencial. O impacto aqui é financeiro antes de ser ambiental.",
     descarte: "Você marcou que o item vira descarte rápido. Um produto de vida curta tende a ser refeito, transportado e descartado mais vezes."
   },
+  TIPOS_ACAO_LOCAL: [ {
+    id: "reparo",
+    rotulo: "Conserta / repara",
+    icone: "🔧"
+  }, {
+    id: "usado",
+    rotulo: "Vende usado",
+    icone: "🏷️"
+  }, {
+    id: "troca",
+    rotulo: "Troca ou empresta",
+    icone: "🔁"
+  }, {
+    id: "aluguel",
+    rotulo: "Aluga",
+    icone: "📅"
+  }, {
+    id: "doacao",
+    rotulo: "Recebe doação",
+    icone: "🎁"
+  }, {
+    id: "descarte",
+    rotulo: "Descarte correto",
+    icone: "♻️"
+  } ],
   ACOMPANHAMENTO: [ {
     id: "mantive",
     label: "Mantive a decisão",

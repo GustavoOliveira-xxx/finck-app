@@ -25,6 +25,7 @@ window.FinckStore = (() => {
     reconciliation_queue: "finck.reconciliacao",
     integrity_events: "finck.eventos",
     operation_keys: "finck.chaves",
+    local_actions: "finck.locais",
     demo: "finck.demo"
   };
   const ler = (k, fb) => {
@@ -609,7 +610,7 @@ window.FinckStore = (() => {
     gravar(KEYS.gamification, linhas);
     return registro;
   }
-  const TABELAS = [ "accounts", "goals", "transactions", "recurring_transactions", "purchase_analyses", "installment_purchases", "category_budgets", "transfers", "balance_adjustments", "installment_payments", "goal_movements" ];
+  const TABELAS = [ "accounts", "goals", "transactions", "recurring_transactions", "purchase_analyses", "installment_purchases", "category_budgets", "transfers", "balance_adjustments", "installment_payments", "goal_movements", "local_actions" ];
   const VINCULOS = {
     transactions: [ [ "account_id", "accounts", false ], [ "goal_id", "goals", false ], [ "source_occurrence_id", "recurring_occurrences", false ] ],
     recurring_transactions: [ [ "account_id", "accounts", false ] ],
