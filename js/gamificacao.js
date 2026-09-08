@@ -26,9 +26,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `\n      <article class="conquista${ativa ? " conquista--ativa" : " conquista--bloqueada"}">\n        <span class="conquista-icone" aria-hidden="true">${ativa ? c.icone : "🔒"}</span>\n        <h4>${U.escapeHTML(c.titulo)}</h4>\n        <p>${U.escapeHTML(c.descricao)}</p>\n      </article>`;
   }).join("");
   document.getElementById("chipTeto").textContent = `${diario.total} / ${diario.teto} XP hoje`;
-  document.getElementById("listaXP").innerHTML = diario.acoes.filter(a => !a.oculto).map(a => {
+  // PROD-007 — registrar uma saída é organização, não redução de consumo. As
+  // duas coisas rendem XP, mas aparecem separadas para não se confundirem.
+  const linhaXP = a => {
     const limite = a.unico ? "1 vez na vida" : `${a.usados}/${a.limite} hoje`;
     const esgotado = a.usados >= a.limiteDia;
     return `\n      <li class="item-lista${esgotado ? " item-lista--esgotado" : ""}">\n        <span>${U.escapeHTML(a.rotulo)}</span>\n        <small class="limite">${limite}</small>\n        <strong>+${a.xp} XP</strong>\n      </li>`;
-  }).join("") + `\n      <li class="item-lista"><span>Decisão consciente (adiar, usado, reparar, desistir)</span>\n        <small class="limite">até ${cfg.XP.ACOES.decisao.limiteDia} por dia</small>\n        <strong>+${Math.min(...cfg.DECISOES.map(d => d.xp))} a +${Math.max(...cfg.DECISOES.map(d => d.xp))} XP</strong></li>`;
+  };
+  const visiveis = diario.acoes.filter(a => !a.oculto);
+  const consumo = visiveis.filter(a => a.categoria === "consumo");
+  const organizacao = visiveis.filter(a => a.categoria !== "consumo");
+  document.getElementById("listaXP").innerHTML = `\n    <li class="item-lista item-lista--titulo"><span>Consumo responsável</span></li>\n    ${consumo.map(linhaXP).join("")}\n    <li class="item-lista"><span>Decisão consciente (adiar, usado, reparar, desistir)</span>\n      <small class="limite">até ${cfg.XP.ACOES.decisao.limiteDia} por dia</small>\n      <strong>+${Math.min(...cfg.DECISOES.map(d => d.xp))} a +${Math.max(...cfg.DECISOES.map(d => d.xp))} XP</strong></li>\n    <li class="item-lista item-lista--titulo"><span>Organização financeira</span></li>\n    ${organizacao.map(linhaXP).join("")}`;
 });

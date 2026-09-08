@@ -191,6 +191,22 @@ window.FINCK_CONFIG = {
     orcamento: "Você marcou que a compra compromete o essencial. O impacto aqui é financeiro antes de ser ambiental.",
     descarte: "Você marcou que o item vira descarte rápido. Um produto de vida curta tende a ser refeito, transportado e descartado mais vezes."
   },
+  DESTINOS_ITEM: [ {
+    id: "doar_revender",
+    rotulo: "Doar ou revender"
+  }, {
+    id: "reciclar",
+    rotulo: "Levar para reciclagem/descarte correto"
+  }, {
+    id: "guardar",
+    rotulo: "Guardar mesmo sem usar"
+  }, {
+    id: "descartar",
+    rotulo: "Jogar fora"
+  }, {
+    id: "nao_sei",
+    rotulo: "Ainda não sei"
+  } ],
   TIPOS_ACAO_LOCAL: [ {
     id: "reparo",
     rotulo: "Conserta / repara",
@@ -384,74 +400,88 @@ window.FINCK_CONFIG = {
     INTERVALO_MIN_MS: 8e3,
     ACOES: {
       primeiro_acesso: {
+        categoria: "organizacao",
         xp: 5,
         rotulo: "Primeiro acesso do dia",
         limiteDia: 1
       },
       onboarding: {
+        categoria: "organizacao",
         xp: 30,
         rotulo: "Completar o perfil financeiro",
         limiteDia: 1,
         unico: true
       },
       entrada: {
+        categoria: "organizacao",
         xp: 25,
         rotulo: "Registrar uma entrada",
         limiteDia: 4
       },
       saida: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Registrar uma saída",
         limiteDia: 6
       },
       transacao: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Registrar uma movimentação",
         limiteDia: 6,
         oculto: true
       },
       meta_criada: {
+        categoria: "organizacao",
         xp: 15,
         rotulo: "Criar uma meta",
         limiteDia: 2
       },
       meta_aporte: {
+        categoria: "organizacao",
         xp: 15,
         rotulo: "Fazer um aporte em meta",
         limiteDia: 3
       },
       meta_concluida: {
+        categoria: "organizacao",
         xp: 50,
         rotulo: "Concluir uma meta",
         limiteDia: 3,
         unico: true
       },
       calculo: {
+        categoria: "consumo",
         xp: 15,
         rotulo: "Cadastrar um cálculo real",
         limiteDia: 3
       },
       decisao: {
+        categoria: "consumo",
         xp: 40,
         rotulo: "Registrar a decisão da compra",
         limiteDia: 4
       },
       analise: {
+        categoria: "consumo",
         xp: 5,
         rotulo: "Consultar suas análises",
         limiteDia: 1
       },
       relatorio: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Gerar um relatório",
         limiteDia: 1
       },
       streak: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Manter a sequência diária",
         limiteDia: 1
       },
       conquista: {
+        categoria: "organizacao",
         xp: 50,
         rotulo: "Desbloquear uma conquista",
         limiteDia: 99,

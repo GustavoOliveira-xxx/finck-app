@@ -27,7 +27,27 @@ document.addEventListener("DOMContentLoaded", () => {
   let classificacao = {
     status: "desconhecida"
   };
+  // PROD-009 — a busca automática é um extra: ela depende de chave de ambiente,
+  // de conta cadastrada e de sites de terceiros que podem bloquear a leitura. O
+  // caminho principal, e o único que precisa funcionar na demonstração, é
+  // digitar o preço. Aqui o botão diz isso antes de o usuário clicar e falhar.
+  const OPCIONAL = !IA_ATIVA || S.emDemo();
+  function marcarOpcional() {
+    if (!OPCIONAL) {
+      return false;
+    }
+    botao.disabled = true;
+    botao.classList.add("busca-preco__botao--bloqueado");
+    botao.title = "Recurso opcional indisponível aqui — digite o preço no campo acima.";
+    aviso.hidden = false;
+    aviso.className = "busca-preco__aviso busca-preco__aviso--opcional";
+    aviso.innerHTML = S.emDemo() ? `<strong>Recurso opcional indisponível na demonstração.</strong> Digite o preço no campo acima — é assim que a análise funciona.` : `<strong>Busca automática não configurada neste ambiente.</strong> Ela é opcional: digite o preço no campo acima.`;
+    return true;
+  }
   function avaliarLink() {
+    if (marcarOpcional()) {
+      return;
+    }
     const valor = campoLink.value.trim();
     if (!valor) {
       classificacao = {
@@ -152,11 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   botao.addEventListener("click", async () => {
     const url = campoLink.value.trim();
-    if (!url) {
-      return;
-    }
-    if (S.emDemo()) {
-      mostrarErro("A busca de preço precisa de uma conta cadastrada. No modo demonstração, digite o valor manualmente.");
+    if (!url || OPCIONAL) {
       return;
     }
     const token = await S.tokenAcesso();

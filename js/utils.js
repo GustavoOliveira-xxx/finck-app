@@ -201,6 +201,20 @@ window.FinckUtils = (() => {
       document.querySelectorAll(".modal-overlay:not([hidden])").forEach(m => fecharModal(m.id));
     });
   }
+  // CODE-010 — escapeHTML protege a marcação, mas não impede um href
+  // "javascript:" vindo de um backup antigo ou importado. Só http(s) vira link.
+  function urlHttpSegura(bruta) {
+    const texto = String(bruta || "").trim();
+    if (!texto) {
+      return null;
+    }
+    try {
+      const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(texto) ? texto : `https://${texto}`);
+      return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
   const saudacao = () => {
     const h = (new Date).getHours();
     return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
@@ -232,6 +246,7 @@ window.FinckUtils = (() => {
     uid: uid,
     escapeHTML: escapeHTML,
     toast: toast,
+    urlHttpSegura: urlHttpSegura,
     abrirModal: abrirModal,
     dialogo: dialogo,
     confirmar: confirmar,

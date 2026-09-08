@@ -237,13 +237,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
     evento = e;
-    setTimeout(() => montar("Instale o FinCK na sua tela inicial.", async () => {
+    setTimeout(() => montar("Instale o FinCK na sua tela inicial. Ele abre em tela cheia, mas ainda precisa de internet.", async () => {
       evento.prompt();
       await evento.userChoice;
       evento = null;
     }), 2600);
   });
   if (iOS) {
-    setTimeout(() => montar("Para instalar: toque em Compartilhar e escolha “Adicionar à Tela de Início”.", null), 2600);
+    setTimeout(() => montar("Para instalar: toque em Compartilhar e escolha “Adicionar à Tela de Início”. O app abre em tela cheia, mas ainda precisa de internet.", null), 2600);
   }
 });
