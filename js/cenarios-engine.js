@@ -17,8 +17,10 @@ window.FinckCenarios = (() => {
     id: "adiar",
     rotulo: "Comprar mês que vem",
     pergunta: "E se eu esperar um mês?",
-    resumo: "Um mês de folga para a sobra recompor.",
-    consciente: true
+    resumo: "Não sai do caixa de hoje. O efeito no mês seguinte depende das suas previsões.",
+    consciente: true,
+    qualitativo: true,
+    nota: "O FinCK não simula renda, compromissos e metas do próximo ciclo. Este cenário mostra apenas que o valor não sai do saldo atual."
   }, {
     id: "parcelar",
     rotulo: "Parcelar",
@@ -30,7 +32,22 @@ window.FinckCenarios = (() => {
     rotulo: "Comprar usado",
     pergunta: "E se eu comprar usado?",
     resumo: "Mesma função por uma fração do preço.",
-    consciente: true
+    consciente: true,
+    hipotese: "usado"
+  }, {
+    id: "reparar",
+    rotulo: "Reparar o que já tenho",
+    pergunta: "E se eu consertar em vez de trocar?",
+    resumo: "Prolonga a vida útil do item que já existe.",
+    consciente: true,
+    hipotese: "reparar"
+  }, {
+    id: "compartilhar",
+    rotulo: "Alugar ou compartilhar",
+    pergunta: "E se eu não precisar ser dono?",
+    resumo: "Resolve o uso pontual sem um item novo no mundo.",
+    consciente: true,
+    hipotese: "compartilhar"
   } ];
   const catalogo = () => CATALOGO.map(c => ({
     ...c
@@ -38,7 +55,10 @@ window.FinckCenarios = (() => {
   function calcular(id, entrada, ctx) {
     const preco = num(entrada.preco);
     const parcelas = Math.max(1, Math.floor(num(entrada.parcelas) || 12));
-    const desconto = Math.min(.95, Math.max(0, num(entrada.descontoUsado ?? .45)));
+    const base = CATALOGO.find(c => c.id === id) || {};
+    const hipotese = base.hipotese ? cfg.HIPOTESES_ALTERNATIVAS[base.hipotese] : null;
+    const informado = entrada.precoAlternativo != null && num(entrada.precoAlternativo) > 0 ? num(entrada.precoAlternativo) : null;
+    const desconto = entrada.descontoUsado != null ? Math.min(.95, Math.max(0, num(entrada.descontoUsado))) : hipotese ? hipotese.referencia : 0;
     const saldo = num(ctx.saldo);
     const rendaLivre = num(ctx.rendaLivre);
     let custoAgora = 0;
@@ -57,8 +77,8 @@ window.FinckCenarios = (() => {
 
      case "adiar":
       custoAgora = 0;
-      custoMensal = preco;
-      mesesDeImpacto = 1;
+      custoMensal = 0;
+      mesesDeImpacto = 0;
       break;
 
      case "parcelar":
@@ -68,7 +88,9 @@ window.FinckCenarios = (() => {
       break;
 
      case "usado":
-      precoEfetivo = preco * (1 - desconto);
+     case "reparar":
+     case "compartilhar":
+      precoEfetivo = informado != null ? informado : preco * (1 - desconto);
       custoAgora = precoEfetivo;
       mesesDeImpacto = 1;
       break;
@@ -82,7 +104,13 @@ window.FinckCenarios = (() => {
     const horas = valorHora > 0 ? precoEfetivo / valorHora : 0;
     return {
       id: id,
-      ...CATALOGO.find(c => c.id === id),
+      ...base,
+      hipotese: hipotese ? {
+        ...hipotese,
+        minimo: preco * (1 - hipotese.max),
+        maximo: preco * (1 - hipotese.min),
+        informado: informado != null
+      } : null,
       precoEfetivo: precoEfetivo,
       custoAgora: custoAgora,
       custoMensal: custoMensal,

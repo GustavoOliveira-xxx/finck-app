@@ -18,24 +18,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   const ctx = await F.carregarContexto();
-  function filtrar() {
+  const regime = () => document.getElementById("filtroRegime").value;
+  const baseDoRegime = () => regime() === "ambos" ? ctx.transacoes : ctx.transacoesRealizadas;
+  function noPeriodo(lista) {
     const modo = document.getElementById("filtroPeriodo").value;
     if (modo === "tudo") {
-      return ctx.transacoes;
+      return lista;
     }
     if (modo === "mes") {
-      return ctx.transacoes.filter(t => F.doMes(t));
+      return lista.filter(t => F.doMes(t));
     }
     const meses = Number(modo);
     const limite = new Date;
     limite.setMonth(limite.getMonth() - (meses - 1));
     limite.setDate(1);
-    return ctx.transacoes.filter(t => new Date(`${String(t.date).slice(0, 10)}T12:00:00`) >= limite);
+    return lista.filter(t => new Date(`${String(t.date).slice(0, 10)}T12:00:00`) >= limite);
   }
+  const filtrar = () => noPeriodo(baseDoRegime());
   function render() {
     const transacoes = filtrar();
+    const previstas = noPeriodo(ctx.transacoesFuturas);
     const entradas = F.soma(transacoes.filter(F.ehEntrada));
     const saidas = F.soma(transacoes.filter(F.ehSaida));
+    document.getElementById("notaRegime").textContent = regime() === "ambos" ? `Os números abaixo somam realizado e previsto. O previsto (${previstas.length} lançamento(s), ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas) ainda não saiu do caixa.` : previstas.length ? `Os números abaixo contam apenas o que já aconteceu. Há ${previstas.length} lançamento(s) previsto(s) no período, somando ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas, que não entram neste total.` : "Os números abaixo contam apenas o que já aconteceu.";
     const dias = Number(ctx.perfil?.work_days_month || 22);
     const horas = Number(ctx.perfil?.work_hours_day || 8);
     const valorHora = Number(ctx.perfil?.income_monthly || 0) / dias / horas;
@@ -53,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const cor = C.cores(categorias.length)[i];
       return `\n            <li class="linha-categoria">\n              <span class="ponto" style="background:${cor}"></span>\n              <span class="cat-nome">${U.escapeHTML(c.categoria)}</span>\n              <span class="cat-valor">${U.moeda(c.valor)}</span>\n              <span class="cat-pct">${U.percentual(pct, 1)}</span>\n              <small>${U.numero(valorHora > 0 ? c.valor / valorHora : 0, 1)} h</small>\n            </li>`;
     }).join("") : `<li class="vazio">Nenhuma saída registrada no período.</li>`;
-    const serie = F.serieMensal(ctx.transacoes, 6);
+    const serie = F.serieMensal(baseDoRegime(), 6);
     C.barras(document.getElementById("graficoMensal"), serie);
     C.tabelaEquivalente(document.getElementById("graficoMensal"), {
       colunas: [ "Mês", "Entradas", "Saídas", "Resultado" ],
@@ -61,7 +66,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       resumo: `Entradas e saídas dos últimos ${serie.length} meses.`
     });
     const resumo = R.resumoHistorico(ctx.analises);
-    document.getElementById("blocoConsciente").innerHTML = `\n      <ul class="lista-resumo">\n        <li><span>Compras analisadas</span><strong>${resumo.total}</strong></li>\n        <li><span>Compras concluídas</span><strong>${resumo.compras}</strong></li>\n        <li><span>Compras evitadas ou substituídas</span><strong class="cor-verde">${resumo.evitadas}</strong></li>\n        <li><span>Economia acumulada</span><strong class="cor-verde">${U.moeda(resumo.economia)}</strong></li>\n        <li><span>Horas de trabalho preservadas</span><strong>${U.numero(resumo.horas_preservadas, 1)} h</strong></li>\n        <li><span>Taxa de decisões conscientes</span><strong>${U.percentual(resumo.taxa_consciente, 0)}</strong></li>\n      </ul>\n      <p class="nota">Cada compra evitada representa também um produto a menos sendo fabricado, transportado e descartado.</p>`;
+    const G = R.GLOSSARIO;
+    const linha = (chave, valor, classe = "") => `\n      <li title="${U.escapeHTML(G[chave].definicao)}">\n        <span>${U.escapeHTML(G[chave].rotulo)}\n          <small class="indicador-quando">${U.escapeHTML(G[chave].referencia)}</small>\n        </span>\n        <strong class="${classe}">${valor}</strong>\n      </li>`;
+    document.getElementById("blocoConsciente").innerHTML = `\n      <ul class="lista-resumo lista-resumo--glossario">\n        ${linha("analises_registradas", resumo.total)}\n        <li title="Análises em que a decisão foi comprar."><span>Compras concluídas</span><strong>${resumo.compras}</strong></li>\n        ${linha("decisoes_conscientes", resumo.evitadas, "cor-verde")}\n        ${linha("valor_potencial", U.moeda(resumo.valor_potencial), "cor-verde")}\n        ${linha("economia_confirmada", U.moeda(resumo.economia_confirmada), "cor-verde")}\n        ${linha("horas_equivalentes", `${U.numero(resumo.horas_preservadas, 1)} h`)}\n        ${resumo.indicador_medio !== null ? linha("indicador_responsavel", `${resumo.indicador_medio}/100`) : ""}\n        <li title="Fatia das análises decididas em que a escolha foi consciente."><span>Taxa de decisões conscientes</span><strong>${U.percentual(resumo.taxa_consciente, 0)}</strong></li>\n      </ul>\n      ${resumo.a_acompanhar ? `<p class="nota">${resumo.a_acompanhar} decisão(ões) consciente(s) ainda sem acompanhamento. <a href="decisoes.html">Dizer o que aconteceu depois</a> transforma valor potencial em economia confirmada.</p>` : ""}\n      <p class="nota">Uma compra adiada ou substituída <em>pode</em> reduzir a demanda por um item novo. O FinCK registra a decisão e a sua reflexão — ele não mede o impacto ambiental real e não prova que um produto deixou de ser fabricado, transportado ou descartado.</p>`;
   }
   document.getElementById("filtroPeriodo").addEventListener("change", render);
   window.addEventListener("resize", () => render());

@@ -31,7 +31,10 @@
 
   --texto:            #f4f1f9;
   --texto-fraco:      #a49bb2;
-  --texto-fraquissimo:#6d6579;
+  /* UX-001: #6d6579 dava 3,6:1 sobre o fundo #07060a — abaixo do mínimo de 4,5:1
+     da WCAG AA para texto normal, e pior ainda em projetor. #8b8397 dá 5,6:1
+     mantendo o cinza-arroxeado da identidade. */
+  --texto-fraquissimo:#8b8397;
   --texto-suave:      #a49bb2;
 
   --grad-marca:   linear-gradient(120deg, var(--roxo) 0%, var(--roxo-claro) 48%, var(--roxo-neon) 100%);
@@ -3959,4 +3962,60 @@ table th{
   .balanca--equilibrada .balanca__eixo,
   .balanca--desequilibrada .balanca__viga{ animation:none; }
   .checagem:hover{ transform:none; }
+}
+
+
+/* ==========================================================================
+   ODS 12 — indicador de decisão responsável, hipóteses e realizado/previsto
+   ========================================================================== */
+
+.indicador-responsavel{
+  display:grid; gap:.35rem;
+  margin-top:1rem; padding:1rem 1.1rem;
+  border:1px solid var(--superficie-borda-forte); border-radius:16px;
+  background:var(--superficie-alta);
+  border-left-width:4px;
+}
+.indicador-responsavel--alta{ border-left-color:var(--verde); }
+.indicador-responsavel--media{ border-left-color:var(--amarelo); }
+.indicador-responsavel--baixa{ border-left-color:var(--vermelho); }
+.indicador-responsavel__etiqueta{
+  font-size:.75rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--texto-fraco);
+}
+.indicador-responsavel__valor{
+  font-family:var(--fonte-dados); font-size:2rem; line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.indicador-responsavel__valor small{ font-size:.9rem; color:var(--texto-fraco); }
+.indicador-responsavel__rotulo{ font-weight:600; }
+.indicador-responsavel__cobertura{ font-size:.82rem; color:var(--texto-fraco); }
+
+.lista-alertas-reflexao{
+  list-style:none; display:grid; gap:.5rem;
+  margin-top:.8rem; padding:0;
+}
+.lista-alertas-reflexao li{
+  padding:.7rem .9rem; border-radius:12px;
+  background:var(--amarelo-fraco, rgba(254,200,0,.10));
+  border-left:3px solid var(--amarelo);
+  font-size:.9rem;
+}
+
+.detalhes-hipoteses{
+  margin-top:1rem; padding:.8rem 1rem;
+  border:1px solid var(--superficie-borda); border-radius:14px;
+  background:var(--superficie);
+}
+.detalhes-hipoteses summary{
+  cursor:pointer; font-weight:600; font-size:.92rem;
+}
+.detalhes-hipoteses summary:focus-visible{ outline:2px solid var(--roxo-neon); outline-offset:3px; }
+.detalhes-hipoteses ul{ margin-top:.7rem; }
+
+.linha-previsto strong{ color:var(--texto-fraco); }
+.linha-prevista td{ opacity:.78; font-style:italic; }
+.tag-acompanhamento{
+  display:inline-block; margin-top:.25rem;
+  font-size:.78rem; color:var(--texto-fraco);
 }

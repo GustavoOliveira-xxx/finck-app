@@ -19,14 +19,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const rotuloDecisao = id => cfg.DECISOES.find(d => d.id === id)?.label || "Sem decisão";
   function dadosDoMes() {
     const mes = filtroMes.value || U.mesAtual();
-    const transacoes = ctx.transacoes.filter(t => String(t.date || "").slice(0, 7) === mes);
+    const doMes = lista => lista.filter(t => String(t.date || "").slice(0, 7) === mes);
+    const transacoes = doMes(ctx.transacoes);
     const analises = ctx.analises.filter(a => String(a.analyzed_at || a.created_at || "").slice(0, 7) === mes);
     return {
       mes: mes,
       transacoes: transacoes,
+      realizadas: doMes(ctx.transacoesRealizadas),
+      previstas: doMes(ctx.transacoesFuturas),
       analises: analises
     };
   }
+  const ehPrevista = t => String(t.date || "") > ctx.hoje;
   function renderHistorico() {
     const mes = filtroMes.value || U.mesAtual();
     const p = H.panorama(ctx.transacoes, mes, 6);
@@ -48,20 +52,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   function render() {
     renderHistorico();
-    const {transacoes: transacoes, analises: analises} = dadosDoMes();
-    const entradas = F.soma(transacoes.filter(F.ehEntrada));
-    const saidas = F.soma(transacoes.filter(F.ehSaida));
+    const {transacoes: transacoes, realizadas: realizadas, previstas: previstas, analises: analises} = dadosDoMes();
+    const entradas = F.soma(realizadas.filter(F.ehEntrada));
+    const saidas = F.soma(realizadas.filter(F.ehSaida));
+    const saidasPrevistas = F.soma(previstas.filter(F.ehSaida));
     const resumo = R.resumoHistorico(analises);
-    document.getElementById("resumoMes").innerHTML = `\n      <article class="card-indicador"><span>Entradas</span><strong class="cor-verde">${U.moeda(entradas)}</strong></article>\n      <article class="card-indicador"><span>Saídas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong></article>\n      <article class="card-indicador"><span>Resultado</span><strong>${U.moeda(entradas - saidas)}</strong></article>\n      <article class="card-indicador"><span>Movimentações</span><strong>${transacoes.length}</strong></article>`;
-    document.getElementById("decisoesMes").innerHTML = analises.length ? `<ul class="lista-resumo">\n           <li><span>Análises no mês</span><strong>${resumo.total}</strong></li>\n           <li><span>Compras evitadas</span><strong class="cor-verde">${resumo.evitadas}</strong></li>\n           <li><span>Economia consciente</span><strong class="cor-verde">${U.moeda(resumo.economia)}</strong></li>\n           <li><span>Horas preservadas</span><strong>${U.numero(resumo.horas_preservadas, 1)} h</strong></li>\n         </ul>\n         <ul class="lista-simples">\n           ${analises.map(a => `\n             <li class="item-lista">\n               <span>${U.escapeHTML(a.item_name)}</span>\n               <span>${U.escapeHTML(rotuloDecisao(a.decision))}</span>\n               <strong>${U.moeda(a.price)}</strong>\n             </li>`).join("")}\n         </ul>` : `<p class="vazio">Nenhuma análise registrada neste mês.</p>`;
+    document.getElementById("notaRegimeMes").textContent = previstas.length ? `Os totais deste mês contam apenas o que já aconteceu. Ainda há ${previstas.length} lançamento(s) previsto(s), somando ${U.moeda(saidasPrevistas)} em saídas.` : "Os totais deste mês contam apenas o que já aconteceu.";
+    const blocoPrevisto = document.getElementById("blocoPrevistoMes");
+    blocoPrevisto.hidden = previstas.length === 0;
+    document.getElementById("chipPrevisto").textContent = `${previstas.length} lançamento(s)`;
+    document.getElementById("listaPrevistoMes").innerHTML = previstas.map(t => `\n      <article class="item-transacao ${t.type}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(t.description)}</h4>\n          <small>${U.escapeHTML(t.category || "Outros")} · ${U.dataBR(t.date)}</small>\n        </div>\n        <div class="item-lado">\n          <strong class="${t.type === "entrada" ? "cor-verde" : "cor-vermelha"}">${t.type === "entrada" ? "+" : "−"} ${U.moeda(t.amount)}</strong>\n          <small class="item-dia">previsto</small>\n        </div>\n      </article>`).join("");
+    document.getElementById("resumoMes").innerHTML = `\n      <article class="card-indicador"><span>Entradas</span><strong class="cor-verde">${U.moeda(entradas)}</strong></article>\n      <article class="card-indicador"><span>Saídas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong></article>\n      <article class="card-indicador"><span>Resultado</span><strong>${U.moeda(entradas - saidas)}</strong></article>\n      <article class="card-indicador"><span>Movimentações realizadas</span><strong>${realizadas.length}</strong></article>`;
+    document.getElementById("decisoesMes").innerHTML = analises.length ? `<ul class="lista-resumo">\n           <li><span>Análises registradas</span><strong>${resumo.total}</strong></li>\n           <li><span>Decisões conscientes</span><strong class="cor-verde">${resumo.evitadas}</strong></li>\n           <li><span>Valor potencial preservado</span><strong class="cor-verde">${U.moeda(resumo.valor_potencial)}</strong></li>\n           <li><span>Economia confirmada</span><strong class="cor-verde">${U.moeda(resumo.economia_confirmada)}</strong></li>\n           <li><span>Horas de trabalho equivalentes</span><strong>${U.numero(resumo.horas_preservadas, 1)} h</strong></li>\n           ${resumo.indicador_medio !== null ? `<li><span>Indicador de decisão responsável (média)</span><strong>${resumo.indicador_medio}/100</strong></li>` : ""}\n         </ul>\n         <p class="nota">Valor potencial é o preço que deixou de sair naquele momento; vira economia confirmada só depois que você diz, no acompanhamento, que manteve a decisão. O FinCK não mede resultado ambiental.</p>\n         <ul class="lista-simples">\n           ${analises.map(a => `\n             <li class="item-lista">\n               <span>${U.escapeHTML(a.item_name)}</span>\n               <span>${U.escapeHTML(rotuloDecisao(a.decision))}</span>\n               <strong>${U.moeda(a.price)}</strong>\n             </li>`).join("")}\n         </ul>` : `<p class="vazio">Nenhuma análise registrada neste mês.</p>`;
     const corpo = document.querySelector("#tabelaTransacoes tbody");
     document.getElementById("vazioRelatorio").hidden = transacoes.length > 0;
-    corpo.innerHTML = transacoes.map(t => `\n      <tr>\n        <td>${U.dataBR(t.date)}</td>\n        <td>${U.escapeHTML(t.description)}</td>\n        <td>${U.escapeHTML(t.category || "Outros")}</td>\n        <td>${t.type === "entrada" ? "Entrada" : "Saída"}</td>\n        <td class="${t.type === "entrada" ? "cor-verde" : "cor-vermelha"}">${U.moeda(t.amount)}</td>\n      </tr>`).join("");
+    corpo.innerHTML = transacoes.map(t => `\n      <tr${ehPrevista(t) ? ' class="linha-prevista"' : ""}>\n        <td>${U.dataBR(t.date)}</td>\n        <td>${U.escapeHTML(t.description)}</td>\n        <td>${U.escapeHTML(t.category || "Outros")}</td>\n        <td>${t.type === "entrada" ? "Entrada" : "Saída"}</td>\n        <td>${ehPrevista(t) ? "Previsto" : "Realizado"}</td>\n        <td class="${t.type === "entrada" ? "cor-verde" : "cor-vermelha"}">${U.moeda(t.amount)}</td>\n      </tr>`).join("");
     document.querySelector("#tabelaMetas tbody").innerHTML = ctx.metas.length ? ctx.metas.map(m => `\n          <tr>\n            <td>${U.escapeHTML(m.name)}</td>\n            <td>${U.moeda(m.current_amount)}</td>\n            <td>${U.moeda(m.target_amount)}</td>\n            <td>${U.percentual(U.progresso(m.current_amount, m.target_amount), 0)}</td>\n            <td>${m.deadline ? U.dataBR(m.deadline) : "—"}</td>\n          </tr>`).join("") : `<tr><td colspan="5" class="vazio">Nenhuma meta cadastrada.</td></tr>`;
   }
   document.getElementById("btnCSV").addEventListener("click", () => {
     const {mes: mes, transacoes: transacoes} = dadosDoMes();
-    const linhas = [ [ "Data", "Descricao", "Categoria", "Tipo", "Valor" ] ].concat(transacoes.map(t => [ t.date, t.description, t.category || "Outros", t.type, String(t.amount).replace(".", ",") ]));
+    const linhas = [ [ "Data", "Descricao", "Categoria", "Tipo", "Situacao", "Valor" ] ].concat(transacoes.map(t => [ t.date, t.description, t.category || "Outros", t.type, ehPrevista(t) ? "previsto" : "realizado", String(t.amount).replace(".", ",") ]));
     const csv = "\ufeff" + linhas.map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
     U.baixarArquivo(`finck-relatorio-${mes}.csv`, csv, "text/csv;charset=utf-8");
     U.toast("CSV exportado.", "sucesso");

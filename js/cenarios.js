@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     item: $("cenarioItem").value.trim(),
     preco: U.lerMoeda("cenarioPreco"),
     parcelas: Number($("cenarioParcelas").value) || 12,
-    descontoUsado: .45
+    precoAlternativo: U.lerMoeda("cenarioPrecoAlternativo") || null
   });
   function montarOpcoes() {
     $("opcoesCenarios").innerHTML = C.catalogo().map(c => `\n      <label class="chip chip--cenario">\n        <input type="checkbox" data-cenario="${c.id}" ${escolhidos.has(c.id) ? "checked" : ""}>\n        <span>${U.escapeHTML(c.rotulo)}</span>\n      </label>`).join("");
@@ -67,6 +67,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderTabela() {
     const melhor = C.ranking(cenarios)[0];
     $("tabelaCenarios").innerHTML = `\n      <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Comparação de cenários; deslize horizontalmente para ver todas as colunas">\n        <table class="tabela tabela-cenarios">\n          <caption class="visualmente-oculto">Comparação entre cenários de compra</caption>\n          <thead>\n            <tr>\n              <th scope="col">Cenário</th>\n              <th scope="col">Custo</th>\n              <th scope="col">Em trabalho</th>\n              <th scope="col">Metas</th>\n              <th scope="col">Saldo depois</th>\n            </tr>\n          </thead>\n          <tbody>\n            ${cenarios.map(c => `\n              <tr class="${c.id === melhor.id ? "linha-folga" : ""}">\n                <th scope="row">\n                  ${U.escapeHTML(c.rotulo)}\n                  ${c.id === melhor.id ? '<span class="selo selo--mini">mais folga</span>' : ""}\n                  <small>${U.escapeHTML(c.resumo)}</small>\n                </th>\n                <td>${c.parcelas ? `${c.parcelas}x ${U.moeda(c.custoMensal)}` : c.precoEfetivo > 0 ? U.moeda(c.precoEfetivo) : "R$ 0,00"}</td>\n                <td>${c.horas > 0 ? T.formatar(c.horas) : "—"}</td>\n                <td>${c.impactoMetas.possui ? U.percentual(c.impactoMetas.percentual, 0) : "—"}</td>\n                <td class="${c.comprometeSaldo ? "cor-vermelha" : ""}">\n                  <strong>${U.moeda(c.saldoDepois)}</strong>\n                </td>\n              </tr>`).join("")}\n          </tbody>\n        </table>\n      </div>\n      <p class="assinatura-cenarios">Você escolhe.</p>`;
+    renderNotas();
+  }
+  function renderNotas() {
+    const comHipotese = cenarios.filter(c => c.hipotese);
+    const qualitativos = cenarios.filter(c => c.qualitativo);
+    const linhas = comHipotese.map(c => c.hipotese.informado ? `<li><strong>${U.escapeHTML(c.rotulo)}:</strong> usando o preço real que você informou.</li>` : `<li><strong>${U.escapeHTML(c.rotulo)}:</strong> hipótese de ${U.percentual(c.hipotese.referencia * 100, 0)} de desconto (faixa de ${U.moeda(c.hipotese.minimo)} a ${U.moeda(c.hipotese.maximo)}). ${U.escapeHTML(c.hipotese.texto)}</li>`).concat(qualitativos.map(c => `<li><strong>${U.escapeHTML(c.rotulo)}:</strong> ${U.escapeHTML(c.nota)}</li>`));
+    $("notasCenarios").innerHTML = linhas.length ? `\n      <details class="detalhes-hipoteses">\n        <summary>O que é cálculo e o que é hipótese nesta tabela</summary>\n        <ul class="lista-simples">${linhas.join("")}</ul>\n        <p class="nota">Custo, saldo depois e horas de trabalho são calculados com os seus números. Percentuais de alternativa são hipóteses de design do projeto, não dado científico. O FinCK não estima impacto ambiental.</p>\n      </details>` : "";
   }
   function renderFluxograma(e) {
     const {nos: nos, arestas: arestas} = C.fluxograma(e, cenarios);
@@ -115,10 +122,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     partes.push(texto(meio, altura - 16, "Você escolhe.", "fluxo-assinatura", 13));
     $("fluxograma").innerHTML = `\n      <svg viewBox="0 0 ${largura} ${altura}" role="img"\n           aria-label="Fluxograma de decisão comparando ${caminhos.length} cenários"\n           preserveAspectRatio="xMidYMin meet">\n        ${partes.join("\n")}\n      </svg>`;
   }
-  [ "cenarioItem", "cenarioPreco", "cenarioParcelas" ].forEach(id => $(id).addEventListener("input", simular));
+  [ "cenarioItem", "cenarioPreco", "cenarioParcelas", "cenarioPrecoAlternativo" ].forEach(id => $(id).addEventListener("input", simular));
   $("btnLimparCenario").addEventListener("click", () => {
     $("cenarioItem").value = "";
     U.limparMoeda("cenarioPreco");
+    U.limparMoeda("cenarioPrecoAlternativo");
     $("cenarioParcelas").value = 12;
     simular();
   });

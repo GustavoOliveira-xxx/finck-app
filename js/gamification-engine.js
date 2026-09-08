@@ -87,8 +87,8 @@ window.FinckGame = (() => {
     id: "mil_reais",
     icone: "💰",
     titulo: "Mil conscientes",
-    descricao: "Deixou de gastar R$ 1.000 em compras evitadas.",
-    teste: c => c.economia >= 1e3
+    descricao: "Somou R$ 1.000 em valor potencial preservado por decisões conscientes.",
+    teste: c => c.valorPotencial >= 1e3
   }, {
     id: "primeira_entrada",
     icone: "💰",
@@ -287,7 +287,7 @@ window.FinckGame = (() => {
       metasConcluidas: metas.filter(m => Number(m.current_amount || 0) >= Number(m.target_amount || 0) && Number(m.target_amount) > 0).length,
       analises: analises.length,
       evitadas: resumo.evitadas,
-      economia: resumo.economia,
+      valorPotencial: resumo.valor_potencial,
       horasPreservadas: resumo.horas_preservadas,
       streak: Number(estado.streak || 0),
       entradas: transacoes.filter(t => t.type === "entrada").length,
