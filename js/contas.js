@@ -114,7 +114,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const nome = id => contas.find(c => String(c.id) === String(id))?.name || "conta removida";
     $("listaTransferencias").innerHTML = transferencias.slice(0, 10).map(t => `\n      <article class="item-transacao item-transferencia">\n        <div class="item-info">\n          <h4>${U.escapeHTML(nome(t.from_account_id))} → ${U.escapeHTML(nome(t.to_account_id))}</h4>\n          <small>${U.dataBR(t.date)}${t.description ? ` · ${U.escapeHTML(t.description)}` : ""}</small>\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(t.amount)}</strong>\n          <small class="item-dia">não altera o total</small>\n          <button type="button" class="btn-excluir-item" data-excluir-transf="${t.id}" aria-label="Excluir transferência">✕</button>\n        </div>\n      </article>`).join("");
     $("listaTransferencias").querySelectorAll("[data-excluir-transf]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir esta transferência? Os saldos das duas contas voltam ao que eram.")) {
+      if (!await U.confirmar("Excluir esta transferência?", "Os saldos das duas contas voltam ao que eram antes dela.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("transfers", b.dataset.excluirTransf);
@@ -206,7 +208,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function alternarArquivo(id) {
     const c = contas.find(x => String(x.id) === String(id));
     const arquivando = c.active !== false;
-    if (arquivando && !confirm(`Arquivar "${c.name}"? Ela sai dos formulários de novos lançamentos, mas todo o histórico continua.`)) {
+    if (arquivando && !await U.confirmar(`Arquivar "${c.name}"?`, "Ela sai dos formulários de novos lançamentos, mas todo o histórico continua valendo.", {
+      confirmar: "Arquivar",
+      perigo: false
+    })) {
       return;
     }
     await S.atualizar("accounts", id, {
@@ -217,18 +222,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     carregar();
   }
   let contaParaExcluir = null;
-  function pedirExclusao(id) {
+  async function pedirExclusao(id) {
     const c = contas.find(x => String(x.id) === String(id));
     const usos = transacoes.filter(t => String(t.account_id) === String(id)).length;
     const transf = transferencias.filter(t => String(t.from_account_id) === String(id) || String(t.to_account_id) === String(id)).length;
     if (usos === 0 && transf === 0) {
-      if (!confirm(`Excluir "${c.name}"? Ela não tem nenhum lançamento.`)) {
+      if (!await U.confirmar(`Excluir "${c.name}"?`, "Esta conta não tem nenhum lançamento, então nada de dinheiro se perde.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
-      S.remover("accounts", id).then(() => {
-        U.toast("Conta excluída.", "info");
-        carregar();
-      });
+      await S.remover("accounts", id);
+      U.toast("Conta excluída.", "info");
+      carregar();
       return;
     }
     contaParaExcluir = id;

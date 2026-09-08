@@ -136,7 +136,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     $("listaParcelas").querySelectorAll("[data-desfazer-parcela]").forEach(b => b.addEventListener("click", async () => {
       const p = parcelamentos.find(x => String(x.id) === b.dataset.desfazerParcela);
-      if (!confirm("Desfazer este pagamento? A movimentação correspondente será removida e a parcela volta a ser compromisso.")) {
+      if (!await U.confirmar("Desfazer este pagamento?", "A movimentação correspondente é removida e a parcela volta a ser compromisso em aberto.", {
+        confirmar: "Desfazer"
+      })) {
         return;
       }
       try {
@@ -149,7 +151,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     $("listaParcelas").querySelectorAll("[data-editar-parcela]").forEach(b => b.addEventListener("click", () => abrirParcela(b.dataset.editarParcela)));
     $("listaParcelas").querySelectorAll("[data-excluir-parcela]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir este parcelamento? Ele sai da projeção e do calendário.")) {
+      if (!await U.confirmar("Excluir este parcelamento?", "Ele sai da projeção e do calendário de compromissos.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("installment_purchases", b.dataset.excluirParcela);
@@ -237,7 +241,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("sugestaoTetos").innerHTML = semTeto.length ? `<p class="nota">Gastou este mês em <strong>${semTeto.map(U.escapeHTML).join(", ")}</strong> sem teto definido.\n           ${semTeto.map(c => `<button type="button" class="chip chip--acao" data-teto-rapido="${U.escapeHTML(c)}">definir ${U.escapeHTML(c)}</button>`).join(" ")}</p>` : "";
     $("listaOrcamento").querySelectorAll("[data-editar-teto]").forEach(b => b.addEventListener("click", () => abrirTeto(b.dataset.editarTeto)));
     $("listaOrcamento").querySelectorAll("[data-excluir-teto]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Remover o teto desta categoria?")) {
+      if (!await U.confirmar("Remover o teto desta categoria?", "A categoria deixa de ter limite mensal definido.", {
+        confirmar: "Remover"
+      })) {
         return;
       }
       await S.remover("category_budgets", b.dataset.excluirTeto);

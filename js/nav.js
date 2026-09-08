@@ -63,7 +63,9 @@ window.FinckNav = (() => {
     const btn = document.getElementById("btnSair");
     if (btn) {
       btn.addEventListener("click", async () => {
-        if (S.emDemo() && !confirm("Sair da demonstração apaga os dados de exemplo deste aparelho. Continuar?")) {
+        if (S.emDemo() && !await U.confirmar("Sair da demonstração?", "Os dados de exemplo deste aparelho são apagados. Sua conta real, se existir, não é afetada.", {
+          confirmar: "Sair da demo"
+        })) {
           return;
         }
         await S.sair();

@@ -63,7 +63,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}${a.item_link ? ` <a class="link-item" href="${U.escapeHTML(a.item_link)}" target="_blank" rel="noopener noreferrer" title="Abrir link do item">🔗</a>` : ""}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${a.decision ? U.escapeHTML(rotulo(a.decision)) : "Cálculo sem decisão"}</p>\n          <p class="tag-salario" title="Salário base usado neste cálculo">\n            Salário base na época: <strong>${U.moeda(a.income_base)}</strong>\n            ${rendaMudou(a) ? `<span class="selo-mudou">renda mudou</span>` : ""}\n          </p>\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(a.price)}</strong>\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir cálculo">✕</button>\n        </div>\n      </article>`).join("");
     host.querySelectorAll("[data-detalhe]").forEach(b => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir este cálculo do seu registro?")) {
+      if (!await U.confirmar("Excluir este cálculo?", "Ele sai do seu registro de análises. Nenhum lançamento financeiro é afetado.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("purchase_analyses", b.dataset.excluir);

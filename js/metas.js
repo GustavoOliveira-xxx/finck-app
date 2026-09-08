@@ -100,7 +100,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     host.querySelectorAll("[data-detalhe]").forEach(b => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
     host.querySelectorAll("[data-editar]").forEach(b => b.addEventListener("click", () => abrirMeta(b.dataset.editar)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir esta meta? As transações vinculadas serão mantidas.")) {
+      if (!await U.confirmar("Excluir esta meta?", "As transações já vinculadas a ela são mantidas no histórico.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("goals", b.dataset.excluir);
@@ -265,7 +267,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalDetalheMeta");
   }
   async function estornarDaMeta(transacaoId, metaId) {
-    const motivo = prompt("Por que este movimento está sendo estornado?", "Lançamento incorreto");
+    const motivo = await U.perguntar("Estornar este movimento?", "O valor volta para a meta exatamente uma vez e o histórico é preservado.", {
+      rotulo: "Motivo do estorno",
+      valor: "Lançamento incorreto",
+      placeholder: "Ex.: aporte lançado em duplicidade",
+      confirmar: "Estornar"
+    });
     if (motivo === null) {
       return;
     }

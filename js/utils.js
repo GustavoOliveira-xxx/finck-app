@@ -86,6 +86,103 @@ window.FinckUtils = (() => {
     }
     focoAnterior.delete(id);
   };
+  // UX-002 — confirm/prompt nativos quebram a identidade visual e ficam ruins no
+  // celular. Um único diálogo HTML, montado sob demanda, serve todas as telas.
+  // Se o DOM não estiver disponível, cai no nativo em vez de travar o fluxo.
+  const ID_DIALOGO = "finckDialogo";
+  function montarDialogo() {
+    let host = document.getElementById(ID_DIALOGO);
+    if (host) {
+      return host;
+    }
+    host = document.createElement("div");
+    host.id = ID_DIALOGO;
+    host.className = "modal-overlay";
+    host.hidden = true;
+    host.setAttribute("role", "dialog");
+    host.setAttribute("aria-modal", "true");
+    host.setAttribute("aria-labelledby", `${ID_DIALOGO}Titulo`);
+    host.innerHTML = `\n      <div class="modal modal--dialogo">\n        <h3 id="${ID_DIALOGO}Titulo"></h3>\n        <p class="descricao" data-dialogo-texto></p>\n        <label data-dialogo-campo hidden><span data-dialogo-rotulo></span>\n          <input type="text" data-dialogo-entrada maxlength="120">\n        </label>\n        <div class="acoes-etapa">\n          <button type="button" class="btn-secundario" data-dialogo-cancelar></button>\n          <button type="button" class="btn-primario" data-dialogo-confirmar></button>\n        </div>\n      </div>`;
+    document.body.appendChild(host);
+    return host;
+  }
+  function dialogo({titulo: titulo, texto: texto = "", confirmar: confirmar = "Confirmar", cancelar: cancelar = "Cancelar", perigo: perigo = false, campo: campo = null} = {}) {
+    if (typeof document === "undefined" || !document.body) {
+      const nativo = campo ? window.prompt(`${titulo}\n${texto}`, campo.valor || "") : window.confirm(`${titulo}\n${texto}`);
+      return Promise.resolve(nativo);
+    }
+    const host = montarDialogo();
+    const $ = sel => host.querySelector(sel);
+    $(`#${ID_DIALOGO}Titulo`).textContent = titulo || "";
+    const elTexto = $("[data-dialogo-texto]");
+    elTexto.textContent = texto || "";
+    elTexto.hidden = !texto;
+    const elCampo = $("[data-dialogo-campo]");
+    const elEntrada = $("[data-dialogo-entrada]");
+    elCampo.hidden = !campo;
+    if (campo) {
+      $("[data-dialogo-rotulo]").textContent = campo.rotulo || "";
+      elEntrada.value = campo.valor || "";
+      elEntrada.placeholder = campo.placeholder || "";
+    }
+    const btnOk = $("[data-dialogo-confirmar]");
+    const btnCancelar = $("[data-dialogo-cancelar]");
+    btnOk.textContent = confirmar;
+    btnCancelar.textContent = cancelar;
+    btnOk.classList.toggle("btn-perigo", Boolean(perigo));
+    return new Promise(resolver => {
+      const encerrar = resposta => {
+        btnOk.removeEventListener("click", aoConfirmar);
+        btnCancelar.removeEventListener("click", aoCancelar);
+        host.removeEventListener("click", aoFundo);
+        document.removeEventListener("keydown", aoTeclado);
+        fecharModal(ID_DIALOGO);
+        resolver(resposta);
+      };
+      const aoConfirmar = () => encerrar(campo ? elEntrada.value.trim() : true);
+      const aoCancelar = () => encerrar(campo ? null : false);
+      const aoFundo = e => {
+        if (e.target === host) {
+          aoCancelar();
+        }
+      };
+      const aoTeclado = e => {
+        if (e.key === "Escape") {
+          aoCancelar();
+        }
+        if (e.key === "Enter" && campo && document.activeElement === elEntrada) {
+          aoConfirmar();
+        }
+      };
+      btnOk.addEventListener("click", aoConfirmar);
+      btnCancelar.addEventListener("click", aoCancelar);
+      host.addEventListener("click", aoFundo);
+      document.addEventListener("keydown", aoTeclado);
+      abrirModal(ID_DIALOGO);
+      if (campo) {
+        requestAnimationFrame(() => elEntrada.focus());
+      }
+    });
+  }
+  const confirmar = (titulo, texto, opcoes = {}) => dialogo({
+    titulo: titulo,
+    texto: texto,
+    confirmar: opcoes.confirmar || "Confirmar",
+    cancelar: opcoes.cancelar || "Cancelar",
+    perigo: opcoes.perigo !== false
+  });
+  const perguntar = (titulo, texto, campo = {}) => dialogo({
+    titulo: titulo,
+    texto: texto,
+    confirmar: campo.confirmar || "Registrar",
+    cancelar: "Cancelar",
+    perigo: false,
+    campo: {
+      rotulo: campo.rotulo || "",
+      valor: campo.valor || "",
+      placeholder: campo.placeholder || ""
+    }
+  });
   function ligarModais() {
     document.querySelectorAll("[data-fechar]").forEach(btn => {
       btn.addEventListener("click", () => fecharModal(btn.dataset.fechar));
@@ -136,6 +233,9 @@ window.FinckUtils = (() => {
     escapeHTML: escapeHTML,
     toast: toast,
     abrirModal: abrirModal,
+    dialogo: dialogo,
+    confirmar: confirmar,
+    perguntar: perguntar,
     fecharModal: fecharModal,
     ligarModais: ligarModais,
     saudacao: saudacao,
