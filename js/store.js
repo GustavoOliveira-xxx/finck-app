@@ -258,7 +258,11 @@ window.FinckStore = (() => {
     const linhas = ler(KEYS[tabela], []).filter(r => r.user_id === user.id && Object.entries(filtro).every(([k, v]) => r[k] === v));
     return linhas.sort((a, b) => asc ? String(a[ordem]).localeCompare(String(b[ordem])) : String(b[ordem]).localeCompare(String(a[ordem])));
   }
+  const registroVazio = r => !r || typeof r !== "object" || Array.isArray(r) || !Object.keys(r).length;
   async function inserir(tabela, registro) {
+    if (registroVazio(registro)) {
+      throw new Error(`Nada para gravar em ${tabela}: o registro chegou vazio.`);
+    }
     const user = await usuarioAtual();
     if (!user) {
       throw new Error("Sessão expirada. Entre novamente.");
