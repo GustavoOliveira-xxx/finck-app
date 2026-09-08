@@ -68,7 +68,18 @@
       </div>
     </section>
 
+    <p class="nota" id="notaRegimeMes"></p>
+
     <section class="cards-indicadores" id="resumoMes"></section>
+
+    <section class="bloco" id="blocoPrevistoMes" hidden>
+      <div class="bloco-cabecalho">
+        <h3>Ainda previsto neste mês</h3>
+        <span class="chip" id="chipPrevisto"></span>
+      </div>
+      <p class="descricao">Lançamentos com data futura. Eles não entram no resultado realizado acima — aparecem aqui para você ver o que ainda vem.</p>
+      <div id="listaPrevistoMes" class="itens-lista"></div>
+    </section>
 
     <section class="bloco bloco--historico">
       <div class="bloco-cabecalho">
@@ -91,7 +102,7 @@
       <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Movimentações do mês; deslize horizontalmente para ver todas as colunas">
         <table class="tabela" id="tabelaTransacoes">
           <thead>
-            <tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col">Tipo</th><th scope="col">Valor</th></tr>
+            <tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col">Tipo</th><th scope="col">Situação</th><th scope="col">Valor</th></tr>
           </thead>
           <tbody></tbody>
         </table>

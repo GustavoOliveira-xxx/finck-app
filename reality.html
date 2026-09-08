@@ -79,7 +79,8 @@
         </label>
         <div class="linha-dupla">
           <label>Preço (R$)
-            <input type="text" inputmode="numeric" data-moeda id="itemPrice">
+            <input type="text" inputmode="numeric" data-moeda id="itemPrice" aria-describedby="ajudaPreco">
+            <small class="ajuda-campo" id="ajudaPreco">Digite os centavos: <strong>80000</strong> vira R$ 800,00. Colar <strong>800</strong> ou <strong>R$ 800,00</strong> também funciona.</small>
           </label>
           <label>Categoria
             <select id="itemCategory"></select>
@@ -102,6 +103,25 @@
           </button>
         </div>
         <div class="busca-preco__aviso" id="avisoLoja" role="status" hidden></div>
+        <details class="detalhes-hipoteses" id="detalhesVidaUtil">
+          <summary>Quantidade e vida útil (opcional, mas muda a conta)</summary>
+          <p class="descricao">
+            Sem isso, o FinCK compara só preços. Com isso, ele mostra o custo por mês de uso —
+            que é onde um item barato e descartável costuma perder para um caro e durável.
+          </p>
+          <div class="linha-dupla">
+            <label>Quantidade
+              <input type="number" id="itemQuantidade" min="1" max="999" step="1" placeholder="1">
+            </label>
+            <label>Uso esperado (meses)
+              <input type="number" id="itemMeses" min="1" max="600" step="1" placeholder="Ex.: 24">
+            </label>
+          </div>
+          <label>Quando não servir mais
+            <select id="itemDestino"></select>
+          </label>
+        </details>
+
         <label>Observação (opcional)
           <input type="text" id="itemNote" placeholder="Ex.: promoção acaba amanhã">
         </label>
@@ -140,8 +160,9 @@
 
     <section class="bloco" id="passoReflexao" hidden>
       <h3>3. Perguntas de reflexão</h3>
-      <p class="descricao">Nenhuma resposta bloqueia a compra. O objetivo é dar clareza.</p>
+      <p class="descricao">Nenhuma resposta bloqueia a compra. O objetivo é dar clareza — e o que você responder muda a síntese abaixo.</p>
       <form id="formReflexao" class="reflexoes"></form>
+      <div id="sinteseReflexao" aria-live="polite"></div>
     </section>
 
     <section class="bloco" id="passoDecisao" hidden>

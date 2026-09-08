@@ -1107,6 +1107,47 @@ window.FinckTestes = (() => {
         esperar(M.ler(el)).aSerPerto(1500.9, 2);
       });
     });
+    teste("colar um preço inteiro vale reais, não centavos", () => {
+      comCampo(el => {
+        const colar = texto => {
+          const evento = new Event("paste", {
+            bubbles: true,
+            cancelable: true
+          });
+          evento.clipboardData = {
+            getData: () => texto
+          };
+          el.dispatchEvent(evento);
+          return M.ler(el);
+        };
+        esperar(colar("800")).aSerPerto(800, 2);
+        esperar(colar("800,00")).aSerPerto(800, 2);
+        esperar(colar("R$ 800,00")).aSerPerto(800, 2);
+        esperar(colar("R$ 1.234,56")).aSerPerto(1234.56, 2);
+        esperar(colar("1.500")).aSerPerto(1500, 2);
+      });
+    });
+    teste("separador de milhar colado não vira centavo", () => {
+      esperar(M.centavosDeColagem("1.500")).aSer(15e4);
+      esperar(M.centavosDeColagem("1.500,90")).aSer(150090);
+      esperar(M.centavosDeColagem("1,500.90")).aSer(150090);
+    });
+    teste("colagem sem número não muda o campo", () => {
+      esperar(M.centavosDeColagem("sem preço aqui")).aSer(null);
+      esperar(M.centavosDeColagem("")).aSer(null);
+    });
+    teste("digitar continua sendo centavo a centavo", () => {
+      comCampo(el => {
+        esperar(digitar(el, "800")).aSerPerto(8, 2);
+        esperar(digitar(el, "80000")).aSerPerto(800, 2);
+      });
+    });
+    teste("o campo carrega a explicação do formato", () => {
+      comCampo(el => {
+        esperar(el.title).aConter("80000");
+        esperar(el.title).aConter("R$ 800,00");
+      });
+    });
     teste("backspace remove um dígito, não a formatação", () => {
       comCampo(el => {
         digitar(el, "3200");

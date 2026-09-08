@@ -29,11 +29,37 @@ Marque os três ambientes (Production, Preview, Development).
 | `GEMINI_API_KEY` | sim | Chave do Google AI Studio |
 | `GEMINI_MODELO` | não | Modelo preferido. Padrão: `gemini-3.5-flash`, com `gemini-3.1-flash-lite` de reserva |
 | `GEMINI_BUSCA_GOOGLE` | não | `1` liga a busca na web como último recurso |
+| `BUSCA_IA_DEMO` | não | `1` libera a busca **sem login**, para o modo demonstração |
+| `BUSCA_IA_ORIGENS` | não | Origens aceitas, separadas por vírgula. Padrão: a origem do deploy + `localhost` |
+| `BUSCA_IA_TETO_DIA` | não | Teto global de chamadas por dia. Padrão: `400` |
 | `SUPABASE_URL` | não | Padrão: o projeto que está em `js/config.js` |
 | `SUPABASE_ANON_KEY` | não | Chave pública, idem |
 
 Variável nova só vale depois de um novo deploy — *Deployments* → o último
 → *Redeploy*.
+
+### Sobre `BUSCA_IA_DEMO`
+
+Com `BUSCA_IA_DEMO=1`, esta rota passa a responder a quem não tem conta — que
+é o que permite demonstrar a busca no modo demo. Em troca, ela vira um endpoint
+público, e por isso se defende sozinha:
+
+- **Origem**: pedidos sem login só passam se o cabeçalho `Origin` estiver em
+  `BUSCA_IA_ORIGENS`. Sem a variável, vale a própria origem do deploy e o
+  `localhost`.
+- **Por IP**: 8 buscas por hora para quem não está logado (contra 30 por hora
+  por usuário logado).
+- **Teto do dia**: `BUSCA_IA_TETO_DIA` corta o total de chamadas, logado ou não.
+  É um freio contra esgotar a cota da chave, não uma contabilidade exata — a
+  instância serverless pode ser reciclada e zerar a contagem.
+
+A `GEMINI_API_KEY` **nunca** vai para o navegador: ela existe só aqui, no
+servidor. Não coloque a chave em `js/config.js` nem em qualquer arquivo do
+front-end — tudo que está lá é público para quem abrir o site.
+
+Se a chave vazar (ou se você desconfiar disso), revogue em
+<https://aistudio.google.com/apikey> e gere outra. Trocar a variável na Vercel
+e redeployar é o suficiente do lado do app.
 
 ## As três tentativas
 

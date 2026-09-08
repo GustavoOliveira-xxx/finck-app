@@ -58,6 +58,29 @@
       <p id="fraseDia">Antes de comprar, veja quanto custa em tempo de trabalho.</p>
     </section>
 
+    <!-- PROD-001: a proposta do app é decidir melhor antes de consumir. O painel
+         financeiro é o apoio; esta é a ação principal. -->
+    <section class="chamada-reality">
+      <div class="chamada-reality__texto">
+        <span class="chamada-reality__etiqueta">O que o FinCK faz</span>
+        <h2>Pense antes de comprar</h2>
+        <p>
+          Traduza uma compra em dinheiro, horas de trabalho e efeito nas suas metas.
+          Depois reflita, decida e — 30 dias depois — diga o que realmente aconteceu.
+        </p>
+        <ol class="chamada-reality__ciclo">
+          <li>Analisar</li>
+          <li>Refletir</li>
+          <li>Decidir</li>
+          <li>Acompanhar</li>
+        </ol>
+      </div>
+      <div class="chamada-reality__acoes">
+        <a class="btn-primario btn-grande" href="reality.html">Analisar uma compra</a>
+        <a class="btn-secundario" href="locais.html">Ações locais</a>
+      </div>
+    </section>
+
     <section class="balance-card" aria-labelledby="rotuloSaldo">
       <small id="rotuloSaldo">Saldo atual — dinheiro em caixa</small>
       <p id="saldoAtual">R$ 0,00</p>
@@ -84,6 +107,8 @@
     </section>
 
     <section id="cardContas"></section>
+
+    <div class="aviso-fechamento" id="avisoRevisao" hidden></div>
 
     <div class="aviso-fechamento" id="avisoFechamento" hidden></div>
 
@@ -161,19 +186,20 @@
       <a href="gamificacao.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4.5A1.5 1.5 0 0 0 3 6.5 3.5 3.5 0 0 0 6.5 10H7"/><path d="M17 5h2.5A1.5 1.5 0 0 1 21 6.5 3.5 3.5 0 0 1 17.5 10H17"/><path d="M12 13v3"/><path d="M8.5 20h7l-1-3.5h-5z"/></svg></span> Jornada</a>
       <a href="decisoes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span> Decisões</a>
       <a href="recorrentes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a3 3 0 0 1 3 3v1"/><path d="M15 4l3 3-3 3"/><path d="M20 17H9a3 3 0 0 1-3-3v-1"/><path d="M9 20l-3-3 3-3"/></svg></span> Recorrentes</a>
+      <a href="locais.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span> Ações locais</a>
     </nav>
 
     <section class="cards-indicadores">
       <article class="card-indicador">
-        <span>Compras evitadas</span>
+        <span>Decisões conscientes</span>
         <strong id="indEvitadas">0</strong>
       </article>
-      <article class="card-indicador">
-        <span>Economia consciente</span>
+      <article class="card-indicador" title="Preço que deixou de sair no momento da decisão. Não é economia comprovada.">
+        <span>Valor potencial preservado</span>
         <strong id="indEconomia" class="cor-verde">R$ 0,00</strong>
       </article>
       <article class="card-indicador">
-        <span>Horas preservadas</span>
+        <span>Horas de trabalho equivalentes</span>
         <strong id="indHoras">0 h</strong>
       </article>
       <article class="card-indicador">
@@ -267,6 +293,11 @@
     <div class="modal modal--revisao">
       <button type="button" class="fechar" data-fechar="modalRevisao" aria-label="Fechar">✕</button>
       <h3 id="tituloRevisao">Movimentações previstas</h3>
+      <p class="descricao">
+        Seus recorrentes já venceram, mas o FinCK não move dinheiro sozinho: uma previsão
+        só vira saldo depois que você confirma que ela aconteceu. Pode responder agora ou
+        clicar em "Decidir depois" — nada é perdido.
+      </p>
       <div id="conteudoRevisao"></div>
     </div>
   </div>

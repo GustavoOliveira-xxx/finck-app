@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       faceMetaNota.textContent = "crie uma meta para ver esta face";
     }
     document.getElementById("indEvitadas").textContent = resumo.evitadas;
-    document.getElementById("indEconomia").textContent = U.moeda(resumo.economia);
+    document.getElementById("indEconomia").textContent = U.moeda(resumo.valor_potencial);
     document.getElementById("indHoras").textContent = `${U.numero(resumo.horas_preservadas, 1)} h`;
     document.getElementById("indNivel").textContent = nivel.level;
     const CT = window.FinckContas;
@@ -107,7 +107,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       const id = b.dataset.estornar;
       const alvo = ctx.transacoes.find(t => String(t.id) === String(id));
       const contexto = alvo?.goal_id ? "Ela está vinculada a uma meta: o progresso volta exatamente uma vez." : alvo?.source_occurrence_id ? "Ela veio de uma previsão confirmada: a previsão volta a ficar em aberto." : "O lançamento sai do saldo, mas continua no histórico.";
-      const motivo = prompt(`Estornar "${alvo?.description || "movimentação"}"?\n${contexto}\n\nMotivo do estorno:`, "Lançamento incorreto");
+      const motivo = await U.perguntar(`Estornar "${alvo?.description || "movimentação"}"?`, contexto, {
+        rotulo: "Motivo do estorno",
+        valor: "Lançamento incorreto",
+        placeholder: "Ex.: valor digitado errado",
+        confirmar: "Estornar"
+      });
       if (motivo === null) {
         return;
       }

@@ -81,8 +81,8 @@ window.FinckLojas = (() => {
     detalhe: "Leroy Merlin, Telhanorte, Carrefour, Pão de Açúcar, Fast Shop."
   }, {
     nome: "Livros e games",
-    dominios: [ "amazon.com.br.livros", "saraiva.com.br", "store.steampowered.com", "nintendo.com", "playstation.com" ],
-    detalhe: "Steam, Nintendo eShop, PlayStation Store, livrarias em geral."
+    dominios: [ "saraiva.com.br", "store.steampowered.com", "nintendo.com", "playstation.com" ],
+    detalhe: "Steam, Nintendo eShop, PlayStation Store, Saraiva."
   } ];
   const hostDe = url => {
     if (!url) {

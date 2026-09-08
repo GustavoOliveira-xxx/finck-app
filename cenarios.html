@@ -65,12 +65,19 @@
           <input type="text" id="cenarioItem" maxlength="40" placeholder="Ex.: Fone de ouvido">
         </label>
         <label>Preço
-          <input type="text" inputmode="numeric" data-moeda id="cenarioPreco">
+          <input type="text" inputmode="numeric" data-moeda id="cenarioPreco" aria-describedby="ajudaPrecoCenario">
+          <small class="ajuda-campo" id="ajudaPrecoCenario">Digite os centavos: <strong>80000</strong> vira R$ 800,00. Colar <strong>800</strong> também funciona.</small>
         </label>
       </div>
-      <label class="campo-parcelas">Se parcelasse, em quantas vezes?
-        <input type="number" id="cenarioParcelas" min="2" max="48" step="1" value="12">
-      </label>
+      <div class="linha-dupla">
+        <label class="campo-parcelas">Se parcelasse, em quantas vezes?
+          <input type="number" id="cenarioParcelas" min="2" max="48" step="1" value="12">
+        </label>
+        <label>Preço real da alternativa <small>(usado, reparo ou aluguel — opcional)</small>
+          <input type="text" inputmode="numeric" data-moeda id="cenarioPrecoAlternativo">
+        </label>
+      </div>
+      <p class="nota">Sem esse preço, o FinCK usa uma faixa de hipótese do próprio projeto — não um dado de pesquisa. Informar o preço real torna a comparação verdadeira.</p>
 
       <fieldset class="campo-instituicoes">
         <legend>Cenários para comparar</legend>
@@ -87,6 +94,7 @@
       <h3>Comparação</h3>
       <p class="vazio" id="vazioCenarios">Informe um preço para ver os cenários lado a lado.</p>
       <div id="tabelaCenarios"></div>
+      <div id="notasCenarios"></div>
     </section>
 
     <section class="bloco" id="blocoFluxo" hidden>

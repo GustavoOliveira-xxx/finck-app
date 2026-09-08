@@ -1,5 +1,21 @@
 window.FinckReality = (() => {
   const cfg = window.FINCK_CONFIG;
+  // PROD-006 — preço sozinho não separa o barato descartável do caro durável.
+  // Quantidade e vida útil são opcionais; quando informadas, viram custo por mês
+  // de uso, que é o número que muda a conversa sobre consumo.
+  function custoDeUso(preco, {quantidade: quantidade = null, mesesDeUso: mesesDeUso = null} = {}) {
+    const qtd = Number(quantidade) > 0 ? Math.floor(Number(quantidade)) : null;
+    const meses = Number(mesesDeUso) > 0 ? Number(mesesDeUso) : null;
+    const total = qtd ? preco * qtd : preco;
+    return {
+      quantidade: qtd,
+      meses_de_uso: meses,
+      total: total,
+      por_mes: meses ? total / meses : null,
+      por_unidade: qtd ? preco : null,
+      informado: Boolean(qtd || meses)
+    };
+  }
   function calcular(price, perfil, ctx = {}) {
     const preco = Number(price) || 0;
     const renda = Number(perfil?.income_monthly) || 0;
@@ -42,6 +58,7 @@ window.FinckReality = (() => {
       sem_folga: semFolga,
       percentual_renda_livre: percentualRendaLivre,
       impacto_metas: impacto_metas,
+      custo_de_uso: custoDeUso(preco, ctx),
       semaforo: semaforo({
         incomePercent: income_percent,
         saldoDepois: saldoDepois,
@@ -153,33 +170,87 @@ window.FinckReality = (() => {
     };
   }
   function alternativas(preco) {
-    return [ {
-      id: "usado",
-      titulo: "Comprar usado ou recondicionado",
-      economia: preco * .4,
-      hipotese: true,
-      texto: "Estimativa ilustrativa: mercados de segunda mão costumam custar cerca de 40% menos. Confira o preço real antes de decidir."
-    }, {
-      id: "reparar",
-      titulo: "Reparar ou reaproveitar o que você já tem",
-      economia: preco * .8,
-      hipotese: true,
-      texto: "Estimativa ilustrativa: o reparo costuma custar uma fração do item novo e prolonga a vida útil dele."
-    }, {
-      id: "compartilhar",
-      titulo: "Alugar, emprestar ou compartilhar",
-      economia: preco * .7,
-      hipotese: true,
-      texto: "Estimativa ilustrativa para itens de uso pouco frequente. O custo do aluguel varia bastante."
-    }, {
+    const H = cfg.HIPOTESES_ALTERNATIVAS;
+    const daHipotese = id => {
+      const h = H[id];
+      return {
+        id: id,
+        titulo: h.rotulo,
+        economia: preco * h.referencia,
+        faixa: {
+          min: preco * h.min,
+          max: preco * h.max
+        },
+        percentual: h.referencia,
+        hipotese: true,
+        texto: h.texto
+      };
+    };
+    return [ daHipotese("usado"), daHipotese("reparar"), daHipotese("compartilhar"), {
       id: "adiar",
       titulo: "Adiar 30 dias e reavaliar",
       economia: 0,
+      faixa: null,
       hipotese: false,
       texto: "A regra dos 30 dias ajuda a separar necessidade real de impulso."
     } ];
   }
-  function paraRegistro({item_name: item_name, price: price, category: category, resultado: resultado, perfil: perfil, decision: decision, reflections: reflections, note: note, item_link: item_link}) {
+  const FAIXAS_RESPONSABILIDADE = [ {
+    minimo: 70,
+    nivel: "alta",
+    rotulo: "Escolha bem fundamentada",
+    texto: "Pelas suas respostas, esta compra tende a ser necessária, usada e duradoura."
+  }, {
+    minimo: 40,
+    nivel: "media",
+    rotulo: "Vale reconsiderar alguns pontos",
+    texto: "Suas respostas apontam pelo menos um ponto fraco antes de concluir a compra."
+  }, {
+    minimo: 0,
+    nivel: "baixa",
+    rotulo: "Sinais de consumo por impulso",
+    texto: "Suas respostas indicam pouca necessidade, pouco uso ou vida útil curta."
+  } ];
+  const LIMITE_RESPONSABILIDADE = "Este indicador resume apenas o que você declarou nas seis perguntas. Ele não mede impacto ambiental real — o FinCK não calcula CO₂, água ou resíduo.";
+  function indicadorResponsavel(reflexoes = {}) {
+    const pesos = cfg.PESOS_RESPONSABILIDADE;
+    const criterios = cfg.REFLEXOES.map(q => {
+      const resposta = (reflexoes || {})[q.id] || null;
+      const tabela = pesos[q.id] || {};
+      const ponto = resposta !== null && Object.prototype.hasOwnProperty.call(tabela, resposta) ? tabela[resposta] : null;
+      return {
+        id: q.id,
+        dimensao: q.dimensao,
+        resposta: resposta,
+        pontos: ponto,
+        maximo: 2,
+        respondida: ponto !== null
+      };
+    });
+    const respondidas = criterios.filter(c => c.respondida);
+    const soma = respondidas.reduce((s, c) => s + c.pontos, 0);
+    const maximo = respondidas.length * 2;
+    const pontuacao = maximo > 0 ? Math.round(soma / maximo * 100) : null;
+    const faixa = pontuacao === null ? null : FAIXAS_RESPONSABILIDADE.find(f => pontuacao >= f.minimo);
+    const alertas = respondidas.filter(c => c.pontos === 0).map(c => ({
+      id: c.id,
+      dimensao: c.dimensao,
+      texto: cfg.ALERTAS_RESPONSABILIDADE[c.id]
+    }));
+    return {
+      pontuacao: pontuacao,
+      nivel: faixa ? faixa.nivel : null,
+      rotulo: faixa ? faixa.rotulo : "Sem respostas suficientes",
+      sintese: faixa ? faixa.texto : "Responda as perguntas de reflexão para ver a síntese da escolha.",
+      criterios: criterios,
+      respondidas: respondidas.length,
+      total: criterios.length,
+      alertas: alertas,
+      limitacao: LIMITE_RESPONSABILIDADE
+    };
+  }
+  function paraRegistro({item_name: item_name, price: price, category: category, resultado: resultado, perfil: perfil, decision: decision, reflections: reflections, note: note, item_link: item_link, quantity: quantity, expected_months: expected_months, end_of_life: end_of_life}) {
+    const indicador = indicadorResponsavel(reflections);
     return {
       item_name: item_name,
       price: Number(price),
@@ -201,24 +272,44 @@ window.FinckReality = (() => {
       balance_before: Number((resultado.saldo_antes || 0).toFixed(2)),
       balance_after: Number((resultado.saldo_depois || 0).toFixed(2)),
       free_income: Number((resultado.renda_livre || 0).toFixed(2)),
+      quantity: Number(quantity) > 0 ? Math.floor(Number(quantity)) : null,
+      expected_months: Number(expected_months) > 0 ? Math.floor(Number(expected_months)) : null,
+      end_of_life: end_of_life || null,
+      responsibility_score: indicador.pontuacao,
+      responsibility_label: indicador.nivel,
       analyzed_at: (new Date).toISOString()
     };
   }
   function resumoHistorico(analises) {
+    const lista = analises || [];
     const conscientes = new Set(cfg.DECISOES.filter(d => d.consciente).map(d => d.id));
-    const decididas = analises.filter(a => a.decision);
+    const confirmam = new Set(cfg.ACOMPANHAMENTO.filter(a => a.confirma).map(a => a.id));
+    const decididas = lista.filter(a => a.decision);
     const evitadas = decididas.filter(a => conscientes.has(a.decision));
-    const economia = evitadas.reduce((s, a) => s + Number(a.price || 0), 0);
+    const potencial = evitadas.reduce((s, a) => s + Number(a.price || 0), 0);
     const horas = evitadas.reduce((s, a) => s + Number(a.work_hours || 0), 0);
+    const acompanhadas = evitadas.filter(a => a.outcome);
+    const confirmadas = acompanhadas.filter(a => confirmam.has(a.outcome));
+    const somaIndicador = lista.filter(a => Number.isFinite(Number(a.responsibility_score)));
     return {
-      total: analises.length,
+      total: lista.length,
       decididas: decididas.length,
       compras: decididas.length - evitadas.length,
       evitadas: evitadas.length,
-      economia: economia,
+      valor_potencial: potencial,
+      economia_confirmada: confirmadas.reduce((s, a) => s + Number(a.price || 0), 0),
+      acompanhadas: acompanhadas.length,
+      confirmadas: confirmadas.length,
+      a_acompanhar: evitadas.length - acompanhadas.length,
       horas_preservadas: horas,
+      indicador_medio: somaIndicador.length ? Math.round(somaIndicador.reduce((s, a) => s + Number(a.responsibility_score), 0) / somaIndicador.length) : null,
       taxa_consciente: decididas.length ? evitadas.length / decididas.length * 100 : 0
     };
+  }
+  function paraAcompanhar(analises, {dias: dias = 30, hoje: hoje = new Date} = {}) {
+    const conscientes = new Set(cfg.DECISOES.filter(d => d.consciente).map(d => d.id));
+    const limite = new Date(hoje.getTime() - dias * 864e5);
+    return (analises || []).filter(a => a.decision && conscientes.has(a.decision) && !a.outcome).filter(a => new Date(a.analyzed_at || a.created_at || 0) <= limite);
   }
   const GLOSSARIO = {
     saldo_atual: {
@@ -260,12 +351,52 @@ window.FinckReality = (() => {
       rotulo: "Realizado",
       definicao: "O que você confirmou que aconteceu de verdade. Move saldo.",
       referencia: "no ciclo"
+    },
+    analises_registradas: {
+      rotulo: "Análises registradas",
+      definicao: "Quantas compras você passou pelo FinCK of Reality antes de decidir.",
+      referencia: "no período"
+    },
+    decisoes_conscientes: {
+      rotulo: "Decisões conscientes",
+      definicao: "Análises em que você escolheu adiar, buscar alternativa, comprar usado, reparar ou desistir. É a decisão registrada, não a prova de que ela se manteve.",
+      referencia: "no período"
+    },
+    valor_potencial: {
+      rotulo: "Valor potencial preservado",
+      definicao: "Soma do preço das compras com decisão consciente. É o valor que deixou de sair naquele momento — você pode comprar depois, pagar outro preço ou gastar em um substituto.",
+      referencia: "no período"
+    },
+    economia_confirmada: {
+      rotulo: "Economia confirmada",
+      definicao: "Parte do valor potencial em que você, no acompanhamento, disse que manteve a decisão ou resolveu com reparo/reuso.",
+      referencia: "após o acompanhamento"
+    },
+    horas_equivalentes: {
+      rotulo: "Horas de trabalho equivalentes",
+      definicao: "Quanto tempo de trabalho o valor potencial representa, pela sua renda e jornada declaradas.",
+      referencia: "no período"
+    },
+    indicador_responsavel: {
+      rotulo: "Indicador de decisão responsável",
+      definicao: "Resumo de 0 a 100 das suas respostas às seis perguntas de reflexão. Critérios e pesos são visíveis. Não mede impacto ambiental real.",
+      referencia: "por análise"
+    },
+    resultado_ambiental: {
+      rotulo: "Resultado ambiental",
+      definicao: "Não medido pelo FinCK. O app registra decisões e reflexões; não calcula CO₂, água, resíduo nem prova que um produto deixou de ser fabricado.",
+      referencia: "fora do escopo"
     }
   };
   return {
     calcular: calcular,
     paraRegistro: paraRegistro,
     resumoHistorico: resumoHistorico,
+    custoDeUso: custoDeUso,
+    paraAcompanhar: paraAcompanhar,
+    indicadorResponsavel: indicadorResponsavel,
+    FAIXAS_RESPONSABILIDADE: FAIXAS_RESPONSABILIDADE,
+    LIMITE_RESPONSABILIDADE: LIMITE_RESPONSABILIDADE,
     alternativas: alternativas,
     semaforo: semaforo,
     GLOSSARIO: GLOSSARIO,

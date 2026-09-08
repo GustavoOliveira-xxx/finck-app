@@ -8,6 +8,21 @@ window.FinckFinance = (() => {
   const vigente = t => !t.reversed_at;
   const vigentes = (transacoes = []) => (transacoes || []).filter(vigente);
   const estornadas = (transacoes = []) => (transacoes || []).filter(t => !vigente(t));
+  const realizadaAte = (t, hoje = U.hojeISO()) => String(t.date || "") <= hoje;
+  const vigentesAteHoje = (transacoes = [], hoje = U.hojeISO()) => vigentes(transacoes).filter(t => realizadaAte(t, hoje));
+  const vigentesFuturas = (transacoes = [], hoje = U.hojeISO()) => vigentes(transacoes).filter(t => !realizadaAte(t, hoje));
+  const saldoDeMovimentos = (lista = []) => soma((lista || []).filter(ehEntrada)) - soma((lista || []).filter(ehSaida));
+  function naoAlocadoDe(transacoes = [], origem = null, hoje = U.hojeISO()) {
+    const semConta = vigentesAteHoje(transacoes, hoje).filter(t => !t.account_id);
+    return saldoDeMovimentos(semConta) + (origem && origem.fonte === "perfil" ? Number(origem.saldoInicial || 0) : 0);
+  }
+  function alocacaoAmbigua(transacoes = [], contas = [], hoje = U.hojeISO()) {
+    const ativas = (contas || []).filter(c => c.active !== false);
+    if (!ativas.length) {
+      return [];
+    }
+    return vigentesAteHoje(transacoes, hoje).filter(t => !t.account_id && !t.unallocated);
+  }
   async function carregarContexto() {
     const [perfil, todasTransacoes, metas, recorrentes, analises, contas, parcelamentos, pagamentos, transferencias, ajustes, movimentosMeta] = await Promise.all([ S.obterPerfil(), S.listar("transactions", {
       ordem: "date",
@@ -27,8 +42,8 @@ window.FinckFinance = (() => {
     }) ]);
     const transacoes = vigentes(todasTransacoes);
     const hoje = U.hojeISO();
-    const realizadas = transacoes.filter(t => String(t.date || "") <= hoje);
-    const futuras = transacoes.filter(t => String(t.date || "") > hoje);
+    const realizadas = vigentesAteHoje(todasTransacoes, hoje);
+    const futuras = vigentesFuturas(todasTransacoes, hoje);
     const entradas = soma(realizadas.filter(ehEntrada));
     const saidas = soma(realizadas.filter(ehSaida));
     const origem = origemDoSaldo(perfil, contas);
@@ -45,7 +60,8 @@ window.FinckFinance = (() => {
     const orcamento = orcamentoMensal(perfil, despesasFixas);
     const compromissos = compromissosEmAberto(parcelamentos, pagamentos);
     const semConta = realizadas.filter(t => !t.account_id);
-    const naoAlocado = soma(semConta.filter(ehEntrada)) - soma(semConta.filter(ehSaida)) + (origem.fonte === "perfil" ? saldoInicial : 0);
+    const naoAlocado = naoAlocadoDe(todasTransacoes, origem, hoje);
+    const ambiguas = alocacaoAmbigua(todasTransacoes, contas, hoje);
     return {
       perfil: perfil,
       transacoes: transacoes,
@@ -71,6 +87,8 @@ window.FinckFinance = (() => {
       origemSaldo: origem,
       naoAlocado: naoAlocado,
       semContaVinculada: semConta.length,
+      alocacaoAmbigua: ambiguas.length,
+      hoje: hoje,
       entradasMes: entradasMes,
       saidasMes: saidasMes,
       doMesAtual: doMesAtual,
@@ -601,12 +619,144 @@ window.FinckFinance = (() => {
       operacao: "transferir_contas"
     });
   }
+  // CODE-005 / PROD-003 — fonte única dos dados de demonstração.
+  //
+  // As datas são deslocamentos em dias a partir de hoje, não dias fixos do mês:
+  // assim o conjunto continua coerente em qualquer data do sistema, com sempre
+  // três lançamentos já realizados e três ainda previstos. Antes, os dias fixos
+  // 9, 10 e 12 apareciam como realizados ou futuros dependendo do dia em que a
+  // demo fosse aberta.
+  //
+  // Invariante da demonstração: saldo atual = 1200 + 3500 − 1200 − 620 = 2880,
+  // e o previsto (−675) nunca entra nesse número.
+  const FIXTURE_DEMO = {
+    perfil: {
+      name: "Usuário Demonstração",
+      income_monthly: 3500,
+      income_type: "fixa",
+      payday: 5,
+      work_days_month: 22,
+      work_hours_day: 8,
+      initial_balance: 1200,
+      setup_mode: "demo"
+    },
+    transacoes: [ {
+      dias: -3,
+      regime: "realizado",
+      type: "entrada",
+      description: "Salário",
+      amount: 3500,
+      category: "Salário"
+    }, {
+      dias: -2,
+      regime: "realizado",
+      type: "saida",
+      description: "Aluguel",
+      amount: 1200,
+      category: "Moradia"
+    }, {
+      dias: 0,
+      regime: "realizado",
+      type: "saida",
+      description: "Mercado",
+      amount: 620,
+      category: "Alimentação"
+    }, {
+      dias: 1,
+      regime: "previsto",
+      type: "saida",
+      description: "Transporte",
+      amount: 240,
+      category: "Transporte"
+    }, {
+      dias: 2,
+      regime: "previsto",
+      type: "saida",
+      description: "Streaming",
+      amount: 55,
+      category: "Lazer"
+    }, {
+      dias: 4,
+      regime: "previsto",
+      type: "saida",
+      description: "Tênis novo",
+      amount: 380,
+      category: "Vestuário"
+    } ],
+    recorrentes: [ {
+      description: "Salário",
+      type: "entrada",
+      amount: 3500,
+      dias: -3
+    }, {
+      description: "Aluguel",
+      type: "saida",
+      amount: 1200,
+      dias: -2
+    }, {
+      description: "Internet",
+      type: "saida",
+      amount: 99,
+      dias: 2
+    }, {
+      description: "Streaming",
+      type: "saida",
+      amount: 55,
+      dias: 2
+    } ],
+    metas: [ {
+      name: "Reserva de emergência",
+      target_amount: 6e3,
+      current_amount: 1500,
+      mesesAteOPrazo: 8
+    }, {
+      name: "Notebook para estudos",
+      target_amount: 3200,
+      current_amount: 400,
+      mesesAteOPrazo: 18
+    } ],
+    analise: {
+      diasAtras: 4,
+      item_name: "Fone de ouvido premium",
+      price: 800,
+      category: "Eletrônicos",
+      work_days: 5.03,
+      work_hours: 40.22,
+      income_percent: 22.86,
+      impact_level: "atencao",
+      decision: "adiar",
+      reflections: {
+        necessidade: "É impulso",
+        uso: "Uso ocasional",
+        durabilidade: "Alta, com garantia",
+        alternativas: "Existe opção usada",
+        orcamento: "Aperta um pouco",
+        descarte: "Uso por muitos anos"
+      },
+      note: "Vou reavaliar em 30 dias."
+    }
+  };
+  function datasDaDemo(hoje = new Date) {
+    const base = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    // Um recuo nunca atravessa para o mês anterior: se hoje é dia 2, o salário
+    // cai no dia 1 em vez do dia 30 passado, e o mês da demo continua fechando.
+    const emDias = n => {
+      const d = new Date(base);
+      d.setDate(n < 0 ? Math.max(1, base.getDate() + n) : base.getDate() + n);
+      return d;
+    };
+    return {
+      base: base,
+      emDias: emDias,
+      iso: n => U.dataISO(emDias(n))
+    };
+  }
   async function carregarDemo({substituir: substituir = false} = {}) {
     if (substituir) {
       await S.limparDados();
     }
     const hoje = new Date;
-    const dia = n => U.dataISO(new Date(hoje.getFullYear(), hoje.getMonth(), n));
+    const {emDias: emDias, iso: iso} = datasDaDemo(hoje);
     const resumo = {
       inseridos: 0,
       jaExistiam: 0
@@ -626,122 +776,49 @@ window.FinckFinance = (() => {
       return criado;
     };
     await S.salvarPerfil({
-      name: "Usuário Demonstração",
-      income_monthly: 3500,
-      income_type: "fixa",
-      payday: 5,
-      work_days_month: 22,
-      work_hours_day: 8,
-      initial_balance: 1200,
-      setup_mode: "demo",
+      ...FIXTURE_DEMO.perfil,
       onboarded_at: (new Date).toISOString()
     });
-    const transacoes = [ {
-      type: "entrada",
-      description: "Salário",
-      amount: 3500,
-      date: dia(5),
-      category: "Salário"
-    }, {
-      type: "saida",
-      description: "Aluguel",
-      amount: 1200,
-      date: dia(6),
-      category: "Moradia"
-    }, {
-      type: "saida",
-      description: "Mercado",
-      amount: 620,
-      date: dia(8),
-      category: "Alimentação"
-    }, {
-      type: "saida",
-      description: "Transporte",
-      amount: 240,
-      date: dia(9),
-      category: "Transporte"
-    }, {
-      type: "saida",
-      description: "Streaming",
-      amount: 55,
-      date: dia(10),
-      category: "Lazer"
-    }, {
-      type: "saida",
-      description: "Tênis novo",
-      amount: 380,
-      date: dia(12),
-      category: "Vestuário"
-    } ];
-    for (const t of transacoes) {
-      await registrar("transactions", t);
+    for (const t of FIXTURE_DEMO.transacoes) {
+      const {dias: dias, regime: regime, ...campos} = t;
+      await registrar("transactions", {
+        ...campos,
+        date: iso(dias)
+      });
     }
-    const recorrentes = [ {
-      description: "Salário",
-      type: "entrada",
-      amount: 3500,
-      day_of_month: 5,
-      active: true
-    }, {
-      description: "Aluguel",
-      type: "saida",
-      amount: 1200,
-      day_of_month: 6,
-      active: true
-    }, {
-      description: "Internet",
-      type: "saida",
-      amount: 99,
-      day_of_month: 10,
-      active: true
-    }, {
-      description: "Streaming",
-      type: "saida",
-      amount: 55,
-      day_of_month: 10,
-      active: true
-    } ];
-    for (const r of recorrentes) {
-      await registrar("recurring_transactions", r);
+    for (const r of FIXTURE_DEMO.recorrentes) {
+      const {dias: dias, ...campos} = r;
+      await registrar("recurring_transactions", {
+        ...campos,
+        day_of_month: emDias(dias).getDate(),
+        active: true
+      });
     }
-    const metaReserva = await registrar("goals", {
-      name: "Reserva de emergência",
-      target_amount: 6e3,
-      current_amount: 1500,
-      deadline: U.dataISO(new Date(hoje.getFullYear(), hoje.getMonth() + 8, 1)),
-      rate: 0
-    });
-    if (metaReserva) {
-      await ajustarMeta(metaReserva.id, 1500, "Saldo inicial da meta de exemplo");
+    for (const m of FIXTURE_DEMO.metas) {
+      const {mesesAteOPrazo: mesesAteOPrazo, ...campos} = m;
+      const meta = await registrar("goals", {
+        ...campos,
+        deadline: U.dataISO(new Date(hoje.getFullYear(), hoje.getMonth() + mesesAteOPrazo, 1)),
+        rate: 0
+      });
+      if (meta) {
+        await ajustarMeta(meta.id, Number(campos.current_amount), "Saldo inicial da meta de exemplo");
+      }
     }
-    const metaNotebook = await registrar("goals", {
-      name: "Notebook para estudos",
-      target_amount: 3200,
-      current_amount: 400,
-      deadline: U.dataISO(new Date(hoje.getFullYear() + 1, 2, 1)),
-      rate: 0
-    });
-    if (metaNotebook) {
-      await ajustarMeta(metaNotebook.id, 400, "Saldo inicial da meta de exemplo");
-    }
+    const {diasAtras: diasAtras, ...analise} = FIXTURE_DEMO.analise;
     await registrar("purchase_analyses", {
-      item_name: "Fone de ouvido premium",
-      price: 800,
-      category: "Eletrônicos",
-      work_days: 5.03,
-      work_hours: 40.22,
-      income_percent: 22.86,
-      impact_level: "atencao",
-      decision: "adiar",
-      reflections: {
-        necessidade: "impulso",
-        uso: "raro"
-      },
-      note: "Vou reavaliar em 30 dias.",
-      analyzed_at: `${dia(12)}T12:00:00.000Z`
+      ...analise,
+      responsibility_score: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).pontuacao : null,
+      responsibility_label: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).nivel : null,
+      analyzed_at: `${iso(-diasAtras)}T12:00:00.000Z`
     });
     return resumo;
   }
+  // Recarregar a demo por cima dela mesma não pode duplicar nada: inserirSeNovo
+  // já compara por assinatura, e substituir: true limpa antes de semear.
+  const resetarDemo = () => carregarDemo({
+    substituir: true
+  });
   return {
     soma: soma,
     ehEntrada: ehEntrada,
@@ -750,6 +827,12 @@ window.FinckFinance = (() => {
     vigente: vigente,
     vigentes: vigentes,
     estornadas: estornadas,
+    realizadaAte: realizadaAte,
+    vigentesAteHoje: vigentesAteHoje,
+    vigentesFuturas: vigentesFuturas,
+    saldoDeMovimentos: saldoDeMovimentos,
+    naoAlocadoDe: naoAlocadoDe,
+    alocacaoAmbigua: alocacaoAmbigua,
     carregarContexto: carregarContexto,
     origemDoSaldo: origemDoSaldo,
     orcamentoMensal: orcamentoMensal,
@@ -768,6 +851,9 @@ window.FinckFinance = (() => {
     pagarParcela: pagarParcela,
     desfazerPagamentoParcela: desfazerPagamentoParcela,
     transferir: transferir,
-    carregarDemo: carregarDemo
+    carregarDemo: carregarDemo,
+    resetarDemo: resetarDemo,
+    datasDaDemo: datasDaDemo,
+    FIXTURE_DEMO: FIXTURE_DEMO
   };
 })();

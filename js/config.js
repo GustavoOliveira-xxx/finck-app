@@ -128,6 +128,127 @@ window.FINCK_CONFIG = {
     xp: 40,
     consciente: true
   } ],
+  HIPOTESES_ALTERNATIVAS: {
+    usado: {
+      rotulo: "Comprar usado ou recondicionado",
+      referencia: .4,
+      min: .3,
+      max: .5,
+      texto: "Hipótese de design do projeto: itens de segunda mão costumam custar entre 30% e 50% menos. Não é dado científico — varia por produto, estado e região. Confirme com o preço real."
+    },
+    reparar: {
+      rotulo: "Reparar ou reaproveitar o que você já tem",
+      referencia: .8,
+      min: .6,
+      max: .9,
+      texto: "Hipótese de design do projeto: um reparo costuma custar uma fração do item novo e prolonga a vida útil. O valor real depende da peça e da mão de obra."
+    },
+    compartilhar: {
+      rotulo: "Alugar, emprestar ou compartilhar",
+      referencia: .7,
+      min: .5,
+      max: .85,
+      texto: "Hipótese de design do projeto para itens de uso pouco frequente. O custo do aluguel varia bastante e pode não compensar em uso diário."
+    }
+  },
+  PESOS_RESPONSABILIDADE: {
+    necessidade: {
+      "Preciso agora": 2,
+      "Posso esperar": 1,
+      "É impulso": 0
+    },
+    uso: {
+      "Uso diário": 2,
+      "Uso ocasional": 1,
+      "Uso raro": 0
+    },
+    durabilidade: {
+      "Alta, com garantia": 2,
+      "Média": 1,
+      "Baixa ou descartável": 0
+    },
+    alternativas: {
+      "Existe opção usada": 2,
+      "Posso emprestar/alugar": 2,
+      "Não há alternativa": 0
+    },
+    orcamento: {
+      "Não compromete nada": 2,
+      "Aperta um pouco": 1,
+      "Compromete o essencial": 0
+    },
+    descarte: {
+      "Uso por muitos anos": 2,
+      "Doo ou revendo depois": 1,
+      "Vai virar descarte rápido": 0
+    }
+  },
+  ALERTAS_RESPONSABILIDADE: {
+    necessidade: "Você marcou que a compra é um impulso. A regra dos 30 dias costuma separar necessidade real de vontade momentânea.",
+    uso: "Você marcou uso raro. Alugar, emprestar ou dividir com alguém costuma resolver o mesmo problema sem um item novo.",
+    durabilidade: "Você marcou baixa durabilidade. Considere reparar o que já tem ou comprar usado antes de concluir.",
+    alternativas: "Você marcou que não há alternativa de uso, aluguel ou reaproveitamento. Vale checar de novo antes de comprar novo.",
+    orcamento: "Você marcou que a compra compromete o essencial. O impacto aqui é financeiro antes de ser ambiental.",
+    descarte: "Você marcou que o item vira descarte rápido. Um produto de vida curta tende a ser refeito, transportado e descartado mais vezes."
+  },
+  DESTINOS_ITEM: [ {
+    id: "doar_revender",
+    rotulo: "Doar ou revender"
+  }, {
+    id: "reciclar",
+    rotulo: "Levar para reciclagem/descarte correto"
+  }, {
+    id: "guardar",
+    rotulo: "Guardar mesmo sem usar"
+  }, {
+    id: "descartar",
+    rotulo: "Jogar fora"
+  }, {
+    id: "nao_sei",
+    rotulo: "Ainda não sei"
+  } ],
+  TIPOS_ACAO_LOCAL: [ {
+    id: "reparo",
+    rotulo: "Conserta / repara",
+    icone: "🔧"
+  }, {
+    id: "usado",
+    rotulo: "Vende usado",
+    icone: "🏷️"
+  }, {
+    id: "troca",
+    rotulo: "Troca ou empresta",
+    icone: "🔁"
+  }, {
+    id: "aluguel",
+    rotulo: "Aluga",
+    icone: "📅"
+  }, {
+    id: "doacao",
+    rotulo: "Recebe doação",
+    icone: "🎁"
+  }, {
+    id: "descarte",
+    rotulo: "Descarte correto",
+    icone: "♻️"
+  } ],
+  ACOMPANHAMENTO: [ {
+    id: "mantive",
+    label: "Mantive a decisão",
+    confirma: true
+  }, {
+    id: "resolvi_reparo_reuso",
+    label: "Resolvi com reparo ou reuso",
+    confirma: true
+  }, {
+    id: "comprei_depois",
+    label: "Comprei depois",
+    confirma: false
+  }, {
+    id: "nao_sei",
+    label: "Ainda não sei",
+    confirma: false
+  } ],
   REFLEXOES: [ {
     id: "necessidade",
     dimensao: "Necessidade",
@@ -279,74 +400,88 @@ window.FINCK_CONFIG = {
     INTERVALO_MIN_MS: 8e3,
     ACOES: {
       primeiro_acesso: {
+        categoria: "organizacao",
         xp: 5,
         rotulo: "Primeiro acesso do dia",
         limiteDia: 1
       },
       onboarding: {
+        categoria: "organizacao",
         xp: 30,
         rotulo: "Completar o perfil financeiro",
         limiteDia: 1,
         unico: true
       },
       entrada: {
+        categoria: "organizacao",
         xp: 25,
         rotulo: "Registrar uma entrada",
         limiteDia: 4
       },
       saida: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Registrar uma saída",
         limiteDia: 6
       },
       transacao: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Registrar uma movimentação",
         limiteDia: 6,
         oculto: true
       },
       meta_criada: {
+        categoria: "organizacao",
         xp: 15,
         rotulo: "Criar uma meta",
         limiteDia: 2
       },
       meta_aporte: {
+        categoria: "organizacao",
         xp: 15,
         rotulo: "Fazer um aporte em meta",
         limiteDia: 3
       },
       meta_concluida: {
+        categoria: "organizacao",
         xp: 50,
         rotulo: "Concluir uma meta",
         limiteDia: 3,
         unico: true
       },
       calculo: {
+        categoria: "consumo",
         xp: 15,
         rotulo: "Cadastrar um cálculo real",
         limiteDia: 3
       },
       decisao: {
+        categoria: "consumo",
         xp: 40,
         rotulo: "Registrar a decisão da compra",
         limiteDia: 4
       },
       analise: {
+        categoria: "consumo",
         xp: 5,
         rotulo: "Consultar suas análises",
         limiteDia: 1
       },
       relatorio: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Gerar um relatório",
         limiteDia: 1
       },
       streak: {
+        categoria: "organizacao",
         xp: 10,
         rotulo: "Manter a sequência diária",
         limiteDia: 1
       },
       conquista: {
+        categoria: "organizacao",
         xp: 50,
         rotulo: "Desbloquear uma conquista",
         limiteDia: 99,

@@ -93,16 +93,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   const {fechamentos: fechamentos} = await contexto();
   const aFechar = prontos.find(c => !fechamentos.some(f => f.cycle === c && !f.reopened_at));
   const pendentes = O.pendentes(ocorrencias);
-  if (pendentes.length) {
-    await R.abrir(pendentes, {
-      cicloPronto: Boolean(aFechar),
-      aoTerminar: (_, opcoes) => {
-        window.FinckProgramacaoHome?.recarregar?.();
-        if (opcoes?.irParaFechamento && aFechar) {
-          abrirFechamento(aFechar);
-        }
+  const abrirRevisao = () => R.abrir(pendentes, {
+    cicloPronto: Boolean(aFechar),
+    aoTerminar: (_, opcoes) => {
+      window.FinckProgramacaoHome?.recarregar?.();
+      if (opcoes?.irParaFechamento && aFechar) {
+        abrirFechamento(aFechar);
       }
-    });
+    }
+  });
+  if (pendentes.length) {
+    // UX-003 — na demonstração ninguém pediu para revisar nada: abrir o modal de
+    // cara esconde o app de quem está conhecendo (ou apresentando) o FinCK. A
+    // faixa deixa a escolha explícita. Em conta real, o dinheiro é de verdade e
+    // a revisão continua vindo na frente.
+    const faixa = document.getElementById("avisoRevisao");
+    if (S.emDemo() && faixa) {
+      faixa.hidden = false;
+      faixa.innerHTML = `\n        <span>${pendentes.length} movimentação(ões) prevista(s) esperam sua confirmação. Elas ainda não mexeram no saldo.</span>\n        <button type="button" class="btn-secundario" id="btnRevisarAgora">Revisar agora</button>\n        <button type="button" class="btn-texto" id="btnVerAppPrimeiro">Ver o app primeiro</button>`;
+      document.getElementById("btnRevisarAgora").addEventListener("click", () => {
+        faixa.hidden = true;
+        abrirRevisao();
+      });
+      document.getElementById("btnVerAppPrimeiro").addEventListener("click", () => {
+        faixa.hidden = true;
+      });
+    } else {
+      await abrirRevisao();
+    }
   } else if (aFechar) {
     const faixa = document.getElementById("avisoFechamento");
     if (faixa) {

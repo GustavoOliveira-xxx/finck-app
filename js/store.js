@@ -25,6 +25,7 @@ window.FinckStore = (() => {
     reconciliation_queue: "finck.reconciliacao",
     integrity_events: "finck.eventos",
     operation_keys: "finck.chaves",
+    local_actions: "finck.locais",
     demo: "finck.demo"
   };
   const ler = (k, fb) => {
@@ -258,7 +259,11 @@ window.FinckStore = (() => {
     const linhas = ler(KEYS[tabela], []).filter(r => r.user_id === user.id && Object.entries(filtro).every(([k, v]) => r[k] === v));
     return linhas.sort((a, b) => asc ? String(a[ordem]).localeCompare(String(b[ordem])) : String(b[ordem]).localeCompare(String(a[ordem])));
   }
+  const registroVazio = r => !r || typeof r !== "object" || Array.isArray(r) || !Object.keys(r).length;
   async function inserir(tabela, registro) {
+    if (registroVazio(registro)) {
+      throw new Error(`Nada para gravar em ${tabela}: o registro chegou vazio.`);
+    }
     const user = await usuarioAtual();
     if (!user) {
       throw new Error("Sessão expirada. Entre novamente.");
@@ -605,7 +610,7 @@ window.FinckStore = (() => {
     gravar(KEYS.gamification, linhas);
     return registro;
   }
-  const TABELAS = [ "accounts", "goals", "transactions", "recurring_transactions", "purchase_analyses", "installment_purchases", "category_budgets", "transfers", "balance_adjustments", "installment_payments", "goal_movements" ];
+  const TABELAS = [ "accounts", "goals", "transactions", "recurring_transactions", "purchase_analyses", "installment_purchases", "category_budgets", "transfers", "balance_adjustments", "installment_payments", "goal_movements", "local_actions" ];
   const VINCULOS = {
     transactions: [ [ "account_id", "accounts", false ], [ "goal_id", "goals", false ], [ "source_occurrence_id", "recurring_occurrences", false ] ],
     recurring_transactions: [ [ "account_id", "accounts", false ] ],
