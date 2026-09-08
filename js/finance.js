@@ -8,6 +8,21 @@ window.FinckFinance = (() => {
   const vigente = t => !t.reversed_at;
   const vigentes = (transacoes = []) => (transacoes || []).filter(vigente);
   const estornadas = (transacoes = []) => (transacoes || []).filter(t => !vigente(t));
+  const realizadaAte = (t, hoje = U.hojeISO()) => String(t.date || "") <= hoje;
+  const vigentesAteHoje = (transacoes = [], hoje = U.hojeISO()) => vigentes(transacoes).filter(t => realizadaAte(t, hoje));
+  const vigentesFuturas = (transacoes = [], hoje = U.hojeISO()) => vigentes(transacoes).filter(t => !realizadaAte(t, hoje));
+  const saldoDeMovimentos = (lista = []) => soma((lista || []).filter(ehEntrada)) - soma((lista || []).filter(ehSaida));
+  function naoAlocadoDe(transacoes = [], origem = null, hoje = U.hojeISO()) {
+    const semConta = vigentesAteHoje(transacoes, hoje).filter(t => !t.account_id);
+    return saldoDeMovimentos(semConta) + (origem && origem.fonte === "perfil" ? Number(origem.saldoInicial || 0) : 0);
+  }
+  function alocacaoAmbigua(transacoes = [], contas = [], hoje = U.hojeISO()) {
+    const ativas = (contas || []).filter(c => c.active !== false);
+    if (!ativas.length) {
+      return [];
+    }
+    return vigentesAteHoje(transacoes, hoje).filter(t => !t.account_id && !t.unallocated);
+  }
   async function carregarContexto() {
     const [perfil, todasTransacoes, metas, recorrentes, analises, contas, parcelamentos, pagamentos, transferencias, ajustes, movimentosMeta] = await Promise.all([ S.obterPerfil(), S.listar("transactions", {
       ordem: "date",
@@ -27,8 +42,8 @@ window.FinckFinance = (() => {
     }) ]);
     const transacoes = vigentes(todasTransacoes);
     const hoje = U.hojeISO();
-    const realizadas = transacoes.filter(t => String(t.date || "") <= hoje);
-    const futuras = transacoes.filter(t => String(t.date || "") > hoje);
+    const realizadas = vigentesAteHoje(todasTransacoes, hoje);
+    const futuras = vigentesFuturas(todasTransacoes, hoje);
     const entradas = soma(realizadas.filter(ehEntrada));
     const saidas = soma(realizadas.filter(ehSaida));
     const origem = origemDoSaldo(perfil, contas);
@@ -45,7 +60,8 @@ window.FinckFinance = (() => {
     const orcamento = orcamentoMensal(perfil, despesasFixas);
     const compromissos = compromissosEmAberto(parcelamentos, pagamentos);
     const semConta = realizadas.filter(t => !t.account_id);
-    const naoAlocado = soma(semConta.filter(ehEntrada)) - soma(semConta.filter(ehSaida)) + (origem.fonte === "perfil" ? saldoInicial : 0);
+    const naoAlocado = naoAlocadoDe(todasTransacoes, origem, hoje);
+    const ambiguas = alocacaoAmbigua(todasTransacoes, contas, hoje);
     return {
       perfil: perfil,
       transacoes: transacoes,
@@ -71,6 +87,8 @@ window.FinckFinance = (() => {
       origemSaldo: origem,
       naoAlocado: naoAlocado,
       semContaVinculada: semConta.length,
+      alocacaoAmbigua: ambiguas.length,
+      hoje: hoje,
       entradasMes: entradasMes,
       saidasMes: saidasMes,
       doMesAtual: doMesAtual,
@@ -750,6 +768,12 @@ window.FinckFinance = (() => {
     vigente: vigente,
     vigentes: vigentes,
     estornadas: estornadas,
+    realizadaAte: realizadaAte,
+    vigentesAteHoje: vigentesAteHoje,
+    vigentesFuturas: vigentesFuturas,
+    saldoDeMovimentos: saldoDeMovimentos,
+    naoAlocadoDe: naoAlocadoDe,
+    alocacaoAmbigua: alocacaoAmbigua,
     carregarContexto: carregarContexto,
     origemDoSaldo: origemDoSaldo,
     orcamentoMensal: orcamentoMensal,
