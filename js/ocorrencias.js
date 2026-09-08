@@ -23,12 +23,13 @@ window.FinckOcorrencias = (() => {
   }
   function gerar(recorrentes, {referencia: referencia = new Date, ciclos: ciclos} = {}) {
     const alvos = ciclos || ciclosAoRedor(referencia);
+    const pedidoExplicito = Array.isArray(ciclos) && ciclos.length > 0;
     const ativos = (recorrentes || []).filter(r => r.active !== false);
     const linhas = [];
     for (const ciclo of alvos) {
       for (const r of ativos) {
         const criadoEm = r.created_at ? String(r.created_at).slice(0, 7) : null;
-        if (criadoEm && ciclo < criadoEm) {
+        if (!pedidoExplicito && criadoEm && ciclo < criadoEm) {
           continue;
         }
         const quando = dataDoCiclo(ciclo, r.day_of_month);
