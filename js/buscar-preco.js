@@ -27,11 +27,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let classificacao = {
     status: "desconhecida"
   };
-  // PROD-009 — a busca automática é um extra: ela depende de chave de ambiente,
-  // de conta cadastrada e de sites de terceiros que podem bloquear a leitura. O
-  // caminho principal, e o único que precisa funcionar na demonstração, é
-  // digitar o preço. Aqui o botão diz isso antes de o usuário clicar e falhar.
-  const OPCIONAL = !IA_ATIVA || S.emDemo();
+  // PROD-009 — a busca automática continua sendo um extra: depende de chave no
+  // servidor e de sites de terceiros que podem recusar a leitura. Digitar o
+  // preço segue funcionando sempre. O que mudou é que ela roda em todos os
+  // modos, demo incluído: sem sessão, o pedido vai sem token e o servidor
+  // decide (BUSCA_IA_DEMO), aplicando limite por IP e teto diário. A chave
+  // nunca chega aqui no navegador.
+  const OPCIONAL = !IA_ATIVA;
   function marcarOpcional() {
     if (!OPCIONAL) {
       return false;
@@ -41,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     botao.title = "Recurso opcional indisponível aqui — digite o preço no campo acima.";
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--opcional";
-    aviso.innerHTML = S.emDemo() ? `<strong>Recurso opcional indisponível na demonstração.</strong> Digite o preço no campo acima — é assim que a análise funciona.` : `<strong>Busca automática não configurada neste ambiente.</strong> Ela é opcional: digite o preço no campo acima.`;
+    aviso.innerHTML = `<strong>Busca automática não configurada neste ambiente.</strong> Ela é opcional: digite o preço no campo acima.`;
     return true;
   }
   function avaliarLink() {
@@ -132,13 +134,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   async function consultar(endpoint, url, token) {
     try {
+      const cabecalhos = {
+        "Content-Type": "application/json",
+        apikey: cfg.SUPABASE_ANON_KEY
+      };
+      if (token) {
+        cabecalhos.Authorization = `Bearer ${token}`;
+      }
       const r = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: cfg.SUPABASE_ANON_KEY
-        },
+        headers: cabecalhos,
         body: JSON.stringify({
           url: url
         })
@@ -175,8 +180,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!url || OPCIONAL) {
       return;
     }
-    const token = await S.tokenAcesso();
-    if (!token) {
+    // Em conta real vai o token da sessão; na demonstração não há token, e o
+    // servidor responde pelo caminho anônimo se ele estiver liberado.
+    const token = S.emDemo() ? null : await S.tokenAcesso();
+    if (!S.emDemo() && !token) {
       mostrarErro("Sua sessão expirou. Entre novamente para usar a busca.");
       return;
     }

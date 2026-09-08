@@ -14,6 +14,16 @@
 //                         cota dessa ferramenta é zero e a chamada dá 429).
 //   SUPABASE_URL          opcional. Padrão: o projeto que está em js/config.js
 //   SUPABASE_ANON_KEY     opcional. Chave pública, idem.
+//   BUSCA_IA_DEMO         opcional. "1" libera a busca sem login (modo demo).
+//   BUSCA_IA_ORIGENS      opcional. Origens permitidas, separadas por vírgula.
+//                         Padrão: a própria origem do deploy + localhost.
+//   BUSCA_IA_TETO_DIA     opcional. Teto global de chamadas por dia. Padrão 400.
+//
+// A chave do Gemini NUNCA vai para o front-end: ela existe só aqui, no
+// servidor. Por isso, quando a busca é liberada sem login (BUSCA_IA_DEMO=1),
+// esta rota vira um endpoint público — e passa a se defender sozinha, com
+// origem permitida, limite por IP e teto diário global. Sem isso, qualquer
+// pessoa que descobrisse a URL gastaria a cota da conta.
 
 const MODELOS_PADRAO = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const SUPABASE_URL_PADRAO = "https://iruqoghylxgopbopxjbi.supabase.co";
@@ -26,15 +36,47 @@ const LIMITE_TRECHO = 90000;
 const MAX_REDIRECIONAMENTOS = 5;
 const CACHE_MS = 5 * 60 * 1000;
 const LIMITE_POR_USUARIO = 30;
+const LIMITE_POR_IP_DEMO = 8;
+const TETO_DIA_PADRAO = 400;
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
+const CORS_BASE = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  Vary: "Origin",
 };
+
+const DEMO_LIBERADO = process.env.BUSCA_IA_DEMO === "1";
+
+// Sem lista configurada, aceita a própria origem do deploy e o desenvolvimento
+// local. Com BUSCA_IA_ORIGENS, aceita exatamente o que estiver lá.
+function origensPermitidas() {
+  const configuradas = String(process.env.BUSCA_IA_ORIGENS || "")
+    .split(",").map((o) => o.trim()).filter(Boolean);
+  if (configuradas.length) return configuradas;
+  const proprio = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  return [
+    proprio ? `https://${proprio}` : null,
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+  ].filter(Boolean);
+}
+
+function origemAceita(origem) {
+  if (!origem) return true;               // chamada sem Origin (curl, app nativo)
+  const lista = origensPermitidas();
+  if (lista.includes("*")) return true;
+  return lista.some((o) => o === origem);
+}
+
+function cabecalhosCors(origem) {
+  return { ...CORS_BASE, "Access-Control-Allow-Origin": origemAceita(origem) && origem ? origem : "*" };
+}
+
+const CORS = { ...CORS_BASE, "Access-Control-Allow-Origin": "*" };
 
 // ---------------------------------------------------------------- segurança
 
@@ -400,12 +442,29 @@ function montarPanorama(bruto, metodo) {
 const cache = new Map();
 const usos = new Map();
 
-function passouDoLimite(userId) {
+function passouDoLimite(userId, teto = LIMITE_POR_USUARIO) {
   const agora = Date.now();
   const janela = (usos.get(userId) ?? []).filter((t) => agora - t < 3600000);
   janela.push(agora);
   usos.set(userId, janela);
-  return janela.length > LIMITE_POR_USUARIO;
+  return janela.length > teto;
+}
+
+// Teto global do dia. A instância serverless pode ser reciclada, então isto é
+// um freio, não uma contabilidade exata — o que importa é que um endpoint
+// aberto não consiga esvaziar a cota da conta de uma vez.
+const diario = { dia: null, total: 0 };
+function passouDoTetoDoDia() {
+  const teto = Number(process.env.BUSCA_IA_TETO_DIA || TETO_DIA_PADRAO);
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (diario.dia !== hoje) { diario.dia = hoje; diario.total = 0; }
+  diario.total += 1;
+  return diario.total > teto;
+}
+
+function ipDoPedido(req) {
+  const encaminhado = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return encaminhado || req.socket?.remoteAddress || "desconhecido";
 }
 
 function responder(res, corpo, status = 200) {
@@ -461,24 +520,40 @@ module.exports = async function handler(req, res) {
   }
 
   const token = String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (!token) {
-    return responder(res, {
-      ok: false,
-      codigo: "SEM_LOGIN",
-      motivo: "Entre na sua conta para usar a busca.",
-    }, 401);
-  }
+  const userId = token ? await usuarioDoToken(token) : null;
 
-  const userId = await usuarioDoToken(token);
+  // Com login válido, o limite é por usuário. Sem login, a busca só roda se o
+  // modo demo estiver ligado — e aí o limite é por IP, bem mais apertado.
   if (!userId) {
-    return responder(res, {
-      ok: false,
-      codigo: "SEM_LOGIN",
-      motivo: "Sessão expirada. Entre novamente.",
-    }, 401);
-  }
-
-  if (passouDoLimite(userId)) {
+    if (!DEMO_LIBERADO) {
+      return responder(res, {
+        ok: false,
+        codigo: "SEM_LOGIN",
+        motivo: token ? "Sessão expirada. Entre novamente." : "Entre na sua conta para usar a busca.",
+      }, 401);
+    }
+    if (!origemAceita(req.headers.origin)) {
+      return responder(res, {
+        ok: false,
+        codigo: "ORIGEM_NAO_PERMITIDA",
+        motivo: "Esta busca só responde ao próprio aplicativo.",
+      }, 403);
+    }
+    if (passouDoTetoDoDia()) {
+      return responder(res, {
+        ok: false,
+        codigo: "LIMITE",
+        motivo: "A busca por IA atingiu o limite de uso de hoje. Digite o preço manualmente.",
+      }, 429);
+    }
+    if (passouDoLimite(`ip:${ipDoPedido(req)}`, LIMITE_POR_IP_DEMO)) {
+      return responder(res, {
+        ok: false,
+        codigo: "LIMITE",
+        motivo: "Muitas buscas seguidas neste aparelho. Espere alguns minutos ou digite o preço.",
+      }, 429);
+    }
+  } else if (passouDoLimite(userId)) {
     return responder(res, {
       ok: false,
       codigo: "LIMITE",
