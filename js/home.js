@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       faceMetaNota.textContent = "crie uma meta para ver esta face";
     }
     document.getElementById("indEvitadas").textContent = resumo.evitadas;
-    document.getElementById("indEconomia").textContent = U.moeda(resumo.economia);
+    document.getElementById("indEconomia").textContent = U.moeda(resumo.valor_potencial);
     document.getElementById("indHoras").textContent = `${U.numero(resumo.horas_preservadas, 1)} h`;
     document.getElementById("indNivel").textContent = nivel.level;
     const CT = window.FinckContas;
