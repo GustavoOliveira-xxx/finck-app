@@ -33,7 +33,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // modos, demo incluído: sem sessão, o pedido vai sem token e o servidor
   // decide (BUSCA_IA_DEMO), aplicando limite por IP e teto diário. A chave
   // nunca chega aqui no navegador.
-  const OPCIONAL = !IA_ATIVA;
+  let OPCIONAL = !IA_ATIVA;
+  // Códigos em que o servidor diz "este recurso não existe aqui" — diferente de
+  // "não achei o preço nesta página". Nesses casos não adianta o usuário tentar
+  // de novo: o certo é dizer que a busca é opcional e liberar a digitação.
+  const INDISPONIVEL = new Set([ "IA_INDISPONIVEL", "SEM_LOGIN", "ORIGEM_NAO_PERMITIDA" ]);
   function marcarOpcional() {
     if (!OPCIONAL) {
       return false;
@@ -43,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     botao.title = "Recurso opcional indisponível aqui — digite o preço no campo acima.";
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--opcional";
-    aviso.innerHTML = `<strong>Busca automática não configurada neste ambiente.</strong> Ela é opcional: digite o preço no campo acima.`;
+    aviso.innerHTML = `<strong>Busca automática indisponível neste ambiente.</strong> Ela é um recurso opcional: digite o preço no campo acima e siga com a análise normalmente.`;
     return true;
   }
   function avaliarLink() {
@@ -73,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
   campoLink.addEventListener("paste", () => setTimeout(avaliarLink, 0));
   avaliarLink();
   function carregando(ligado) {
-    botao.disabled = ligado || (classificacao.status === "bloqueada" && !IA_ATIVA);
+    botao.disabled = ligado || OPCIONAL || (classificacao.status === "bloqueada" && !IA_ATIVA);
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
     botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço do link";
   }
@@ -195,6 +199,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       if (!dados.ok) {
+        // Servidor sem chave, sem demo liberado ou origem recusada: o recurso
+        // não está disponível aqui, e insistir no botão não muda isso.
+        if (INDISPONIVEL.has(dados.codigo)) {
+          OPCIONAL = true;
+          marcarOpcional();
+          return;
+        }
         mostrarErro(dados.motivo || "Não encontrei o preço nessa página.");
         return;
       }
