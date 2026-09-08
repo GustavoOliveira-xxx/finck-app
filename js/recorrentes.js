@@ -49,7 +49,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     host.querySelectorAll("[data-editar]").forEach(b => b.addEventListener("click", () => abrirEdicao(b.dataset.editar)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir este lançamento recorrente? Os meses já confirmados continuam no histórico.")) {
+      if (!await U.confirmar("Excluir este recorrente?", "Os meses já confirmados continuam no histórico — só param de ser gerados daqui para frente.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("recurring_transactions", b.dataset.excluir);

@@ -79,7 +79,8 @@
         </label>
         <div class="linha-dupla">
           <label>Preço (R$)
-            <input type="text" inputmode="numeric" data-moeda id="itemPrice">
+            <input type="text" inputmode="numeric" data-moeda id="itemPrice" aria-describedby="ajudaPreco">
+            <small class="ajuda-campo" id="ajudaPreco">Digite os centavos: <strong>80000</strong> vira R$ 800,00. Colar <strong>800</strong> ou <strong>R$ 800,00</strong> também funciona.</small>
           </label>
           <label>Categoria
             <select id="itemCategory"></select>

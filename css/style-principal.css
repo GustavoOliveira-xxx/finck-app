@@ -4064,3 +4064,16 @@ a.btn-grande, a.btn-secundario{ text-decoration:none; display:inline-block; text
   display:inline-block; margin-top:.5rem;
   font-size:.85rem; font-weight:600; color:var(--roxo-neon);
 }
+
+/* PROD-002 — a regra da máscara precisa estar visível, não só no title. */
+.ajuda-campo{
+  display:block; margin-top:.35rem;
+  font-size:.8rem; line-height:1.4; color:var(--texto-fraquissimo);
+}
+.ajuda-campo strong{ color:var(--texto-fraco); font-family:var(--fonte-dados); }
+
+/* UX-002 — diálogo único que substitui confirm/prompt nativos. */
+.modal--dialogo{ max-width:34rem; }
+.modal--dialogo h3{ margin-bottom:.5rem; }
+.modal--dialogo .acoes-etapa{ margin-top:1.1rem; }
+.modal--dialogo label{ display:block; margin-top:.9rem; }

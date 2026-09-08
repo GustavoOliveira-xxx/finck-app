@@ -55,7 +55,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${U.escapeHTML(rotulo(a.decision))}</p>\n          ${a.outcome ? `<p class="tag-acompanhamento">Depois: ${U.escapeHTML(rotuloAcompanhamento(a.outcome) || a.outcome)}</p>` : ""}\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(a.price)}</strong>\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir análise">✕</button>\n        </div>\n      </article>`).join("");
     host.querySelectorAll("[data-detalhe]").forEach(b => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
-      if (!confirm("Excluir esta análise do histórico?")) {
+      if (!await U.confirmar("Excluir esta análise?", "Ela sai do histórico de decisões conscientes e deixa de contar no valor potencial preservado.", {
+        confirmar: "Excluir"
+      })) {
         return;
       }
       await S.remover("purchase_analyses", b.dataset.excluir);

@@ -205,7 +205,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return U.toast("Escolha a conta que vai receber o saldo.", "erro");
     }
     const nome = $("contaSaldoInicial").selectedOptions[0]?.textContent || "conta";
-    if (!confirm(`O saldo inicial do perfil vai para "${nome}". O valor do perfil vira histórico e nunca mais é somado. Continuar?`)) {
+    if (!await U.confirmar("Migrar o saldo inicial?", `O saldo inicial do perfil vai para "${nome}". O valor do perfil vira histórico e nunca mais é somado ao saldo.`, {
+      confirmar: "Migrar",
+      perigo: false
+    })) {
       return;
     }
     try {
@@ -263,7 +266,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.toast("Registro técnico exportado.", "sucesso");
   });
   $("btnLimparEventos").addEventListener("click", async () => {
-    if (!confirm("Apagar o registro técnico? O histórico financeiro não é afetado.")) {
+    if (!await U.confirmar("Apagar o registro técnico?", "São os eventos de diagnóstico do app. O histórico financeiro não é afetado.", {
+      confirmar: "Apagar"
+    })) {
       return;
     }
     await S.limparEventos();
@@ -274,7 +279,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const r = await reconciliar({
       silencioso: true
     });
-    if (r && !r.contabilOk && !confirm(`A reconciliação encontrou ${r.falhas.length} divergência(s). Exportar mesmo assim?`)) {
+    if (r && !r.contabilOk && !await U.confirmar("Exportar com divergências?", `A reconciliação encontrou ${r.falhas.length} divergência(s). O backup vai sair com elas dentro.`, {
+      confirmar: "Exportar assim",
+      perigo: false
+    })) {
       return U.toast("Exportação cancelada. Resolva as divergências no diagnóstico.", "info");
     }
     const dados = await S.exportarTudo();
@@ -312,7 +320,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll("#modalImportar [data-modo]").forEach(botao => {
       botao.onclick = async () => {
         const modo = botao.dataset.modo;
-        if (modo === "substituir" && !confirm("Substituir apaga seus dados atuais e não pode ser desfeito. Continuar?")) {
+        if (modo === "substituir" && !await U.confirmar("Substituir todos os dados?", "Isso apaga o que existe hoje nesta conta e não pode ser desfeito.", {
+          confirmar: "Substituir"
+        })) {
           return;
         }
         document.querySelectorAll("#modalImportar [data-modo]").forEach(b => {
@@ -343,7 +353,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalRelatorio");
   }
   $("btnDemoDados").addEventListener("click", async () => {
-    if (!confirm("Carregar dados de exemplo? O que já existir não será duplicado.")) {
+    if (!await U.confirmar("Carregar dados de exemplo?", "Serve para conhecer o app. O que já existir não é duplicado.", {
+      confirmar: "Carregar",
+      perigo: false
+    })) {
       return;
     }
     const r = await F.carregarDemo();
@@ -352,7 +365,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     carregar();
   });
   $("btnLimpar").addEventListener("click", async () => {
-    if (!confirm("Apagar todas as movimentações, metas, recorrentes e análises? Esta ação não pode ser desfeita.")) {
+    if (!await U.confirmar("Apagar tudo?", "Movimentações, metas, recorrentes e análises. Esta ação não pode ser desfeita — considere exportar um backup antes.", {
+      confirmar: "Apagar tudo"
+    })) {
       return;
     }
     await S.limparDados();
