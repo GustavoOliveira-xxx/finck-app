@@ -66,6 +66,48 @@
       <div id="resultado"></div>
     </section>
 
+    <!-- CODE-006: um placar verde não é prova de cobertura completa. -->
+    <section class="bloco">
+      <h3>Cobertura e limitações</h3>
+      <p class="descricao">
+        O número acima é dos testes que rodam <strong>nesta página</strong>. Ele não cobre o app
+        inteiro. Abaixo está o que é testado, o que roda fora daqui e o que não é testado de
+        forma nenhuma.
+      </p>
+
+      <h4>Roda aqui, no navegador</h4>
+      <ul class="lista-simples">
+        <li>Regras de cálculo do Reality, tempo de trabalho e indicador de decisão responsável.</li>
+        <li>Contabilidade: saldo realizado, não alocado, estornos, metas, parcelas e reconciliação.</li>
+        <li>Ocorrências recorrentes: geração, confirmação, idempotência, retry e concorrência.</li>
+        <li>Campo de dinheiro, datas, utilidades e anti-farm de XP.</li>
+        <li>Camada de dados no modo local (localStorage), que é o que a demonstração usa.</li>
+      </ul>
+
+      <h4>Roda fora daqui, por linha de comando</h4>
+      <ul class="lista-simples">
+        <li><code>ferramentas/testar-ocorrencias.mjs</code> — ciclos recorrentes com data fixa.</li>
+        <li><code>ferramentas/testar-programacao.mjs</code> — projeção e calendário.</li>
+        <li><code>ferramentas/testar-extracao.mjs</code> — extração de preço a partir de HTML salvo.</li>
+        <li><code>ferramentas/testar-migration.sh</code> — migrations SQL; precisa de um Postgres local
+            e informa explicitamente quando é pulado.</li>
+      </ul>
+
+      <h4>Não é testado automaticamente</h4>
+      <ul class="lista-simples">
+        <li>Login, cadastro e recuperação de senha reais no Supabase.</li>
+        <li>As funções RPC no banco (o caminho local de fallback é testado; o do servidor não).</li>
+        <li>Row Level Security aplicada no Postgres.</li>
+        <li>A busca de preço por IA, que depende de chave de ambiente e de sites de terceiros.</li>
+        <li>Publicação na Vercel e comportamento de instalação como PWA.</li>
+      </ul>
+
+      <p class="nota">
+        Ler "tudo verde" como "o app está 100% coberto" seria um erro. O que está verde é o
+        conjunto de regras que dá para verificar sem infraestrutura paga.
+      </p>
+    </section>
+
     <p class="link-rodape"><a href="home.html">← Voltar ao app</a></p>
   </main>
 

@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let decisao = null;
   let registroId = null;
   document.getElementById("itemCategory").innerHTML = cfg.CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join("");
+  document.getElementById("itemDestino").innerHTML = `<option value="">Prefiro não dizer</option>` + cfg.DESTINOS_ITEM.map(d => `<option value="${d.id}">${U.escapeHTML(d.rotulo)}</option>`).join("");
   document.getElementById("formReality").addEventListener("submit", async e => {
     e.preventDefault();
     const item_name = document.getElementById("itemName").value.trim();
@@ -46,17 +47,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       U.toast("Informe sua renda mensal no Perfil para usar o FinCK of Reality.", "erro");
       return;
     }
+    const quantidade = Number(document.getElementById("itemQuantidade").value) || null;
+    const mesesDeUso = Number(document.getElementById("itemMeses").value) || null;
+    const destino = document.getElementById("itemDestino").value || null;
     entrada = {
       item_name: item_name,
       price: price,
       category: category,
       note: note,
-      item_link: item_link || null
+      item_link: item_link || null,
+      quantity: quantidade,
+      expected_months: mesesDeUso,
+      end_of_life: destino
     };
     resultado = R.calcular(price, ctx.perfil, {
       saldo: ctx.saldo,
       despesasFixas: ctx.despesasFixas,
       compromissosAbertos: ctx.compromissosAbertos,
+      quantidade: quantidade,
+      mesesDeUso: mesesDeUso,
       metas: ctx.metas
     });
     renderResultado();
@@ -74,7 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderResultado() {
     const r = resultado;
     document.getElementById("semaforo").innerHTML = `\n      <div class="semaforo-card semaforo--${r.semaforo.nivel}">\n        <strong>${r.semaforo.titulo}</strong>\n        <p>${r.semaforo.texto}</p>\n      </div>`;
-    document.getElementById("indicadores").innerHTML = `\n      <article class="card-indicador"><span>Preço</span><strong>${U.moeda(r.price)}</strong></article>\n      <article class="card-indicador"><span>% da renda mensal</span><strong>${U.percentual(r.income_percent)}</strong></article>\n      <article class="card-indicador"><span>Dias de trabalho</span><strong>${U.numero(r.work_days)} dias</strong></article>\n      <article class="card-indicador"><span>Horas de trabalho</span><strong>${U.numero(r.work_hours)} horas</strong></article>`;
+    document.getElementById("indicadores").innerHTML = `\n      <article class="card-indicador"><span>Preço</span><strong>${U.moeda(r.price)}</strong></article>\n      <article class="card-indicador"><span>% da renda mensal</span><strong>${U.percentual(r.income_percent)}</strong></article>\n      <article class="card-indicador"><span>Dias de trabalho</span><strong>${U.numero(r.work_days)} dias</strong></article>\n      <article class="card-indicador"><span>Horas de trabalho</span><strong>${U.numero(r.work_hours)} horas</strong></article>\n      ${r.custo_de_uso.por_mes ? `<article class="card-indicador" title="Preço total dividido pelos meses de uso que você espera. É estimativa sua, não medição.">\n        <span>Custo por mês de uso</span><strong>${U.moeda(r.custo_de_uso.por_mes)}</strong></article>` : ""}\n      ${r.custo_de_uso.quantidade > 1 ? `<article class="card-indicador"><span>Total por ${r.custo_de_uso.quantidade} unidades</span><strong>${U.moeda(r.custo_de_uso.total)}</strong></article>` : ""}`;
     const G = R.GLOSSARIO;
     const linha = (chave, valor, classe = "") => `\n      <li title="${U.escapeHTML(G[chave].definicao)}">\n        <span>${U.escapeHTML(G[chave].rotulo)}\n          <small class="indicador-quando">${U.escapeHTML(G[chave].referencia)}</small>\n        </span>\n        <strong class="${classe}">${valor}</strong>\n      </li>`;
     document.getElementById("impactoOrcamento").innerHTML = `\n      <ul class="lista-resumo lista-resumo--glossario">\n        ${linha("saldo_atual", U.moeda(r.saldo_antes))}\n        <li title="Saldo atual menos o preço desta compra.">\n          <span>Saldo após a compra <small class="indicador-quando">se comprar hoje</small></span>\n          <strong class="${r.compromete_saldo ? "cor-vermelha" : ""}">${U.moeda(r.saldo_depois)}</strong>\n        </li>\n        ${r.deficit_fixos > 0 ? linha("deficit_fixos", `− ${U.moeda(r.deficit_fixos)}`, "cor-vermelha") : linha("sobra_apos_fixos", U.moeda(r.sobra_apos_fixos))}\n        ${r.compromissos_futuros > 0 ? linha("compromissos_futuros", U.moeda(r.compromissos_futuros)) : ""}\n        ${linha("disponivel_projetado", U.moeda(r.disponivel_projetado), r.disponivel_projetado < 0 ? "cor-vermelha" : "")}\n        <li title="Fatia da sobra após os fixos que esta compra consome.">\n          <span>Fatia da sobra comprometida <small class="indicador-quando">neste mês</small></span>\n          <strong>${r.renda_livre > 0 ? U.percentual(r.percentual_renda_livre) : "sem sobra"}</strong>\n        </li>\n        <li><span>Valor do seu dia / hora</span><strong>${U.moeda(r.valor_dia)} / ${U.moeda(r.valor_hora)}</strong></li>\n      </ul>\n      ${r.compromete_saldo ? `<p class="alerta">Esta compra deixa seu saldo negativo em ${U.moeda(Math.abs(r.saldo_depois))}.</p>` : r.compromete_projetado ? `<p class="alerta">Cabe no saldo de hoje, mas não no disponível projetado: faltariam ${U.moeda(Math.abs(r.disponivel_depois))} para cobrir os compromissos já assumidos.</p>` : ""}\n      ${r.deficit_fixos > 0 ? `<p class="alerta">Suas despesas fixas superam a renda em ${U.moeda(r.deficit_fixos)} por mês. Enquanto isso durar, toda compra sai da reserva.</p>` : ""}`;
@@ -185,20 +194,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     botao.disabled = true;
     try {
       const jaRegistrado = Boolean(registroId);
+      const reflexoes = coletarReflexoes();
+      // PROD-010 — a análise e a saída eram duas gravações soltas: se a segunda
+      // falhasse, ficava uma decisão de "comprar" sem dinheiro saindo. Agora a
+      // análise é gravada sem decisão, o lançamento vem antes (idempotente pela
+      // chave da análise, então clicar duas vezes não duplica) e a decisão só é
+      // registrada depois que o dinheiro se moveu de verdade.
       await cadastrarCalculo({
-        decision: decisao,
-        reflections: coletarReflexoes()
+        decision: null,
+        reflections: reflexoes
       });
       if (decisao === "comprar") {
-        await S.inserir("transactions", {
+        await S.operacao(S.chaveDeOperacao("compra_reality", registroId), () => S.inserir("transactions", {
           type: "saida",
           description: entrada.item_name,
           amount: entrada.price,
           date: U.hojeISO(),
           category: entrada.category,
           source: "reality"
+        }), {
+          operacao: "compra_reality"
         });
       }
+      await S.atualizar("purchase_analyses", registroId, {
+        decision: decisao,
+        reflections: reflexoes
+      });
       if (!jaRegistrado && Number(entrada.price) >= cfg.XP.VALOR_MINIMO_CALCULO) {
         await G.premiar("calculo", {
           chave: chaveCalculo(),

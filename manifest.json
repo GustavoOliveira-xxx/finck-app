@@ -1,7 +1,7 @@
 {
   "name": "FinCK — Consumo consciente",
   "short_name": "FinCK",
-  "description": "Descubra quanto uma compra custa em dinheiro, em tempo de trabalho e em espaço no seu futuro financeiro.",
+  "description": "Descubra quanto uma compra custa em dinheiro, em tempo de trabalho e em espaço no seu futuro financeiro. Requer conexão com a internet.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "home.html",

@@ -1,5 +1,21 @@
 window.FinckReality = (() => {
   const cfg = window.FINCK_CONFIG;
+  // PROD-006 — preço sozinho não separa o barato descartável do caro durável.
+  // Quantidade e vida útil são opcionais; quando informadas, viram custo por mês
+  // de uso, que é o número que muda a conversa sobre consumo.
+  function custoDeUso(preco, {quantidade: quantidade = null, mesesDeUso: mesesDeUso = null} = {}) {
+    const qtd = Number(quantidade) > 0 ? Math.floor(Number(quantidade)) : null;
+    const meses = Number(mesesDeUso) > 0 ? Number(mesesDeUso) : null;
+    const total = qtd ? preco * qtd : preco;
+    return {
+      quantidade: qtd,
+      meses_de_uso: meses,
+      total: total,
+      por_mes: meses ? total / meses : null,
+      por_unidade: qtd ? preco : null,
+      informado: Boolean(qtd || meses)
+    };
+  }
   function calcular(price, perfil, ctx = {}) {
     const preco = Number(price) || 0;
     const renda = Number(perfil?.income_monthly) || 0;
@@ -42,6 +58,7 @@ window.FinckReality = (() => {
       sem_folga: semFolga,
       percentual_renda_livre: percentualRendaLivre,
       impacto_metas: impacto_metas,
+      custo_de_uso: custoDeUso(preco, ctx),
       semaforo: semaforo({
         incomePercent: income_percent,
         saldoDepois: saldoDepois,
@@ -232,7 +249,7 @@ window.FinckReality = (() => {
       limitacao: LIMITE_RESPONSABILIDADE
     };
   }
-  function paraRegistro({item_name: item_name, price: price, category: category, resultado: resultado, perfil: perfil, decision: decision, reflections: reflections, note: note, item_link: item_link}) {
+  function paraRegistro({item_name: item_name, price: price, category: category, resultado: resultado, perfil: perfil, decision: decision, reflections: reflections, note: note, item_link: item_link, quantity: quantity, expected_months: expected_months, end_of_life: end_of_life}) {
     const indicador = indicadorResponsavel(reflections);
     return {
       item_name: item_name,
@@ -255,6 +272,9 @@ window.FinckReality = (() => {
       balance_before: Number((resultado.saldo_antes || 0).toFixed(2)),
       balance_after: Number((resultado.saldo_depois || 0).toFixed(2)),
       free_income: Number((resultado.renda_livre || 0).toFixed(2)),
+      quantity: Number(quantity) > 0 ? Math.floor(Number(quantity)) : null,
+      expected_months: Number(expected_months) > 0 ? Math.floor(Number(expected_months)) : null,
+      end_of_life: end_of_life || null,
       responsibility_score: indicador.pontuacao,
       responsibility_label: indicador.nivel,
       analyzed_at: (new Date).toISOString()
@@ -372,6 +392,7 @@ window.FinckReality = (() => {
     calcular: calcular,
     paraRegistro: paraRegistro,
     resumoHistorico: resumoHistorico,
+    custoDeUso: custoDeUso,
     paraAcompanhar: paraAcompanhar,
     indicadorResponsavel: indicadorResponsavel,
     FAIXAS_RESPONSABILIDADE: FAIXAS_RESPONSABILIDADE,

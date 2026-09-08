@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
+#
+# Valida as migrations SQL do FinCK num Postgres descartável.
+#
+# FIN-004 — este script precisa de um Postgres local com o usuário "postgres".
+# Onde ele não existe, o certo é dizer "PULADO" e sair com 0: falhar com
+# "su: user postgres does not exist" dava a impressão de que as migrations
+# estavam quebradas, e sair 0 em silêncio daria a impressão oposta, de que
+# foram validadas. Ele termina sempre num destes três estados:
+#
+#   VALIDADO  — todas as migrations aplicaram e as asserções passaram (exit 0)
+#   PULADO    — falta dependência local; nada foi validado          (exit 0)
+#   FALHOU    — rodou de verdade e encontrou erro                   (exit 1)
+#
 set -euo pipefail
 
 PORTA=5433
@@ -6,16 +19,47 @@ DADOS=/tmp/pgfinck-teste
 SOCK=/tmp/pgsock-teste
 export PATH=/usr/lib/postgresql/16/bin:$PATH
 
+pular() {
+  echo
+  echo "PULADO — a validação de migrations não rodou."
+  echo "Motivo: $1"
+  echo
+  echo "Nenhuma migration foi verificada por este comando. Isso não quer dizer"
+  echo "que elas estejam certas ou erradas — quer dizer que não foram testadas."
+  echo
+  echo "Para rodar, é preciso um Postgres local (16+) com o usuário do sistema"
+  echo "\"postgres\" e os binários initdb/pg_ctl/psql no PATH. Em Debian/Ubuntu:"
+  echo "  sudo apt-get install postgresql-16 && sudo ./ferramentas/testar-migration.sh"
+  exit 0
+}
+
+command -v initdb >/dev/null 2>&1 || pular "initdb não está no PATH (Postgres não instalado)."
+command -v psql   >/dev/null 2>&1 || pular "psql não está no PATH (cliente Postgres não instalado)."
+id -u postgres    >/dev/null 2>&1 || pular "o usuário de sistema \"postgres\" não existe neste ambiente."
+[ "$(id -u)" -eq 0 ] || pular "é preciso rodar como root para usar o usuário postgres (tente com sudo)."
+
 rm -rf "$DADOS" "$SOCK"; mkdir -p "$DADOS" "$SOCK"
 chown postgres:postgres "$DADOS" "$SOCK" 2>/dev/null || true
 
-su postgres -s /bin/bash -c "export PATH=$PATH; initdb -D $DADOS -U postgres --auth=trust" >/dev/null
-su postgres -s /bin/bash -c "export PATH=$PATH; pg_ctl -D $DADOS -o '-p $PORTA -k $SOCK' -l $DADOS/log start" >/dev/null
+su postgres -s /bin/bash -c "export PATH=$PATH; initdb -D $DADOS -U postgres --auth=trust" >/dev/null \
+  || pular "initdb falhou ao criar o cluster de teste em $DADOS."
+su postgres -s /bin/bash -c "export PATH=$PATH; pg_ctl -D $DADOS -o '-p $PORTA -k $SOCK' -l $DADOS/log start" >/dev/null \
+  || pular "não foi possível subir o Postgres de teste na porta $PORTA."
 sleep 3
 
 P="psql -h $SOCK -p $PORTA -U postgres -tA"
 $P -c "create database finck" >/dev/null
 $P -d finck -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+-- Papéis que o Supabase cria por conta própria e que as migrations concedem
+-- privilégios. Num Postgres puro eles não existem, e sem isso a validação
+-- parava na migration de polimento com 'role "anon" does not exist'.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon')          then create role anon          nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role')  then create role service_role  nologin; end if;
+end $$;
+
 create schema if not exists auth;
 create table auth.users (id uuid primary key default gen_random_uuid(),
                          raw_user_meta_data jsonb not null default '{}'::jsonb);
@@ -165,4 +209,9 @@ conferir "perfil marcado como migrado" \
 su postgres -s /bin/bash -c "export PATH=$PATH; pg_ctl -D $DADOS stop" >/dev/null 2>&1 || true
 rm -rf "$DADOS" "$SOCK"
 echo
-[ $FALHOU -eq 0 ] && echo "migration validada" || { echo "migration com falhas"; exit 1; }
+if [ $FALHOU -eq 0 ]; then
+  echo "VALIDADO — todas as migrations aplicaram e as asserções passaram."
+else
+  echo "FALHOU — a validação rodou e encontrou divergência(s) acima."
+  exit 1
+fi

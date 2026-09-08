@@ -330,6 +330,7 @@ window.FinckGame = (() => {
         tipo: tipo,
         rotulo: r.rotulo,
         xp: r.xp,
+        categoria: r.categoria || "organizacao",
         oculto: Boolean(r.oculto),
         usados: l.acoes[tipo] || 0,
         limite: r.limiteDia,
