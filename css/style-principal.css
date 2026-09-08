@@ -4019,3 +4019,48 @@ table th{
   display:inline-block; margin-top:.25rem;
   font-size:.78rem; color:var(--texto-fraco);
 }
+
+
+/* PROD-001 — a ação central do app vem antes do painel financeiro. */
+.chamada-reality{
+  display:grid; gap:1.2rem;
+  grid-template-columns:minmax(0,1fr);
+  margin-block:1.2rem; padding:1.4rem 1.5rem;
+  border:1px solid var(--superficie-borda-forte); border-radius:20px;
+  background:var(--grad-superficie), var(--superficie-alta);
+}
+@media (min-width:720px){
+  .chamada-reality{ grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+}
+.chamada-reality__etiqueta{
+  font-size:.75rem; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--roxo-neon); font-weight:700;
+}
+.chamada-reality h2{ margin:.3rem 0 .4rem; }
+.chamada-reality p{ color:var(--texto-fraco); max-width:52ch; }
+.chamada-reality__ciclo{
+  list-style:none; display:flex; flex-wrap:wrap; gap:.4rem;
+  margin:.9rem 0 0; padding:0; counter-reset:passo;
+}
+.chamada-reality__ciclo li{
+  display:flex; align-items:center; gap:.4rem;
+  padding:.3rem .7rem; border-radius:99px;
+  background:var(--roxo-vidro); border:1px solid var(--superficie-borda);
+  font-size:.85rem; font-weight:600;
+}
+.chamada-reality__ciclo li::before{
+  counter-increment:passo; content:counter(passo);
+  font-family:var(--fonte-dados); font-size:.72rem;
+  color:var(--roxo-neon);
+}
+.chamada-reality__acoes{ display:grid; gap:.6rem; align-content:center; }
+.btn-grande{ padding:.9rem 1.4rem; font-size:1.02rem; text-align:center; }
+a.btn-grande, a.btn-secundario{ text-decoration:none; display:inline-block; text-align:center; }
+
+.bloco--aviso{ border-left:4px solid var(--amarelo); }
+.btn-perigo{ background:var(--vermelho); border-color:transparent; color:#fff; }
+
+.alternativa__local{
+  display:inline-block; margin-top:.5rem;
+  font-size:.85rem; font-weight:600; color:var(--roxo-neon);
+}

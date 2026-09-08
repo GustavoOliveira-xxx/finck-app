@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FinCK | Ações locais</title>
+  <meta name="description" content="Pontos de reparo, doação, troca e descarte correto cadastrados por você para a sua cidade, bairro ou escola.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icone-apple-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FinCK">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style-principal.css">
+  <link rel="stylesheet" href="css/finck-fx.css">
+</head>
+<body data-page="reality">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+  <div class="finck-carga finck-carga--cofre" data-finck-carga aria-hidden="true">
+    <div class="cofre">
+      <div class="cofre__folha cofre__folha--topo">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+      <div class="cofre__folha cofre__folha--base">
+        <span class="cofre__grade"></span>
+        <span class="cofre__borda"></span>
+      </div>
+
+      <div class="cofre__nucleo">
+        <div class="cofre__selo">
+          <svg class="cofre__anel" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="cofre__anel-base" cx="60" cy="60" r="52"></circle>
+            <circle class="cofre__anel-arco" cx="60" cy="60" r="52"
+                    stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+          </svg>
+          <img class="cofre__logo" src="assets/logo-ck-256.png" alt="" decoding="async">
+        </div>
+        <p class="cofre__marca">FinCK</p>
+        <p class="cofre__pct" data-cofre-pct>0%</p>
+      </div>
+
+      <span class="cofre__fresta"></span>
+    </div>
+  </div>
+
+  <header data-finck-header></header>
+
+  <main class="conteudo" id="conteudo" tabindex="-1">
+    <section class="hero">
+      <h2>Ações locais</h2>
+      <p>Onde, no seu bairro, na sua cidade ou na sua escola, uma decisão consciente vira ação: consertar, doar, trocar, alugar ou descartar direito.</p>
+    </section>
+
+    <section class="bloco bloco--aviso">
+      <h3>De onde vêm estes endereços</h3>
+      <p class="descricao">
+        Todos eles são cadastrados por você. O FinCK <strong>não</strong> traz uma base pronta de
+        parceiros, não usa mapa e não consulta serviço pago — porque não teria como
+        garantir que um ponto listado existe, atende hoje e faz o que promete.
+        Um endereço inventado seria pior que endereço nenhum.
+      </p>
+      <p class="descricao">
+        Este é o protótipo de aplicabilidade local: a turma, a escola ou a comunidade
+        levanta os pontos reais da própria região e cadastra aqui. Marque a data em que
+        você conferiu — assim dá para saber o que está velho.
+      </p>
+    </section>
+
+    <section class="bloco">
+      <div class="bloco-cabecalho">
+        <h3>Sua rede</h3>
+        <span class="chip" id="chipLocais"></span>
+      </div>
+      <div class="acoes-etapa">
+        <button type="button" class="btn-primario" id="btnNovoLocal">Cadastrar um ponto</button>
+      </div>
+      <label class="filtro">Filtrar por tipo
+        <select id="filtroLocal"><option value="">Todos os tipos</option></select>
+      </label>
+      <div id="listaLocais" class="itens-lista"></div>
+      <p class="vazio" id="vazioLocais" hidden>
+        Nenhum ponto cadastrado ainda. Comece pelo mais próximo: uma assistência técnica do
+        bairro, um brechó, um ponto de coleta de eletrônico da escola ou da prefeitura.
+      </p>
+    </section>
+
+    <section class="bloco">
+      <h3>Desafio da turma</h3>
+      <p class="descricao">
+        Uma forma de usar isto em sala, sem depender de parceria nenhuma: cada pessoa cadastra
+        pelo menos um ponto real que visitou ou telefonou, registra uma análise no
+        <a href="reality.html">FinCK of Reality</a> e, 30 dias depois, diz em
+        <a href="decisoes.html">Decisões</a> o que realmente aconteceu. O que o grupo mede é o
+        próprio comportamento declarado — não o impacto ambiental, que este app não calcula.
+      </p>
+    </section>
+
+    <p class="link-rodape"><a href="reality.html">← Voltar ao FinCK of Reality</a></p>
+  </main>
+
+  <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
+
+  <div id="modalLocal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloLocal">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalLocal" aria-label="Fechar">✕</button>
+      <h3 id="tituloLocal">Cadastrar um ponto</h3>
+      <form id="formLocal" novalidate>
+        <input type="hidden" id="localId">
+        <label>Nome do lugar ou da pessoa
+          <input type="text" id="localNome" required maxlength="60" placeholder="Ex.: Assistência do seu Jorge">
+        </label>
+        <label>O que resolve
+          <select id="localTipo"></select>
+        </label>
+        <label>Endereço ou referência
+          <input type="text" id="localEndereco" maxlength="120" placeholder="Ex.: Rua das Palmeiras, 200 — ao lado da praça">
+        </label>
+        <label>Contato
+          <input type="text" id="localContato" maxlength="60" placeholder="Ex.: (11) 90000-0000">
+        </label>
+        <label>Observação
+          <input type="text" id="localNota" maxlength="120" placeholder="Ex.: só conserta fone e caixa de som">
+        </label>
+        <label>Conferido em
+          <input type="date" id="localData">
+        </label>
+        <div class="acoes-etapa">
+          <button type="button" class="btn-secundario" data-fechar="modalLocal">Cancelar</button>
+          <button type="submit" class="btn-primario">Salvar ponto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modalConfirmarLocal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConfirmarLocal">
+    <div class="modal">
+      <button type="button" class="fechar" data-fechar="modalConfirmarLocal" aria-label="Fechar">✕</button>
+      <h3 id="tituloConfirmarLocal">Excluir este ponto?</h3>
+      <p class="descricao" id="textoConfirmarLocal"></p>
+      <div class="acoes-etapa">
+        <button type="button" class="btn-secundario" data-fechar="modalConfirmarLocal">Manter</button>
+        <button type="button" class="btn-primario btn-perigo" id="btnConfirmarExcluirLocal">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/data-input.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reality.js"></script>
+  <script src="js/metas-engine.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/tempo.js"></script>
+  <script src="js/gamification-engine.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/locais.js"></script>
+  <script src="js/ui-fx.js"></script>
+  <script src="js/finck-fx.js"></script>
+</body>
+</html>
