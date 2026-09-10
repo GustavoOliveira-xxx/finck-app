@@ -276,123 +276,123 @@ window.FINCK_CONFIG = {
   } ],
   NIVEIS: [ {
     level: 1,
-    titulo: "Primeiro passo",
+    titulo: "CK Newbie",
     xp: 0,
-    icone: "🌱",
-    lema: "Você começou a observar as próprias escolhas."
+    icone: "🆕",
+    lema: "Todo mundo começa aqui: a primeira pergunta antes da primeira compra."
   }, {
     level: 2,
-    titulo: "Observador do orçamento",
+    titulo: "Conscious Planner",
     xp: 100,
-    icone: "👀",
-    lema: "Começou a registrar e planejar o próprio dinheiro."
+    icone: "📝",
+    lema: "Já não gasta no escuro — agora existe um plano."
   }, {
     level: 3,
-    titulo: "Planejador consciente",
+    titulo: "Financial Thinker",
     xp: 300,
-    icone: "📝",
-    lema: "Pensa antes de comprar — o preço virou pergunta."
+    icone: "💡",
+    lema: "O preço virou pergunta, não resposta pronta."
   }, {
     level: 4,
-    titulo: "Guardião das escolhas",
+    titulo: "Stark's Investor",
     xp: 600,
-    icone: "🧭",
-    lema: "Enxerga cada gasto como investimento ou desperdício."
+    icone: "🚀",
+    lema: "Aprendeu que dinheiro parado também é uma decisão."
   }, {
     level: 5,
-    titulo: "Leitor dos números",
+    titulo: "Economy \"Knowledgist\"",
     xp: 1e3,
     icone: "📚",
-    lema: "Entende os números da própria realidade financeira."
+    lema: "Lê os próprios números sem precisar de tradutor."
   }, {
     level: 6,
-    titulo: "Domador do impulso",
+    titulo: "Norman Osborn",
     xp: 1500,
-    icone: "🛑",
-    lema: "Controla o impulso antes que ele controle você."
+    icone: "🕷️",
+    lema: "Conhece o próprio impulso — e sabe quando ele fala mais alto."
   }, {
     level: 7,
-    titulo: "Construtor de metas",
+    titulo: "Golden Seeker",
     xp: 2100,
-    icone: "🎯",
-    lema: "Busca metas com método, não com sorte."
+    icone: "🏆",
+    lema: "Persegue meta com método, não com sorte."
   }, {
     level: 8,
-    titulo: "Equilibrista financeiro",
+    titulo: "Fisk's Counter",
     xp: 2800,
     icone: "⚖️",
-    lema: "Equilibra desejo e orçamento sem se enganar."
+    lema: "Equilibra desejo e orçamento sem se enganar na conta."
   }, {
     level: 9,
-    titulo: "Analista de impacto",
+    titulo: "Fantastic Richards",
     xp: 3600,
-    icone: "🔎",
-    lema: "Analisa cada compra e o impacto que ela produz."
+    icone: "🔬",
+    lema: "Analisa cada compra antes de assinar embaixo."
   }, {
     level: 10,
-    titulo: "Guardião do tempo",
+    titulo: "The Miner",
     xp: 4500,
-    icone: "⏳",
-    lema: "Reconhece o valor real de cada hora trabalhada."
+    icone: "⛏️",
+    lema: "Sabe quantas horas de trabalho cabem em cada preço."
   }, {
     level: 11,
-    titulo: "Consumidor responsável",
+    titulo: "The Philanthropist",
     xp: 5500,
     icone: "🤝",
-    lema: "Consome com consciência do impacto que gera."
+    lema: "Consome pensando em quem vem depois."
   }, {
     level: 12,
-    titulo: "Protetor da reserva",
+    titulo: "Wealth Keeper",
     xp: 6600,
-    icone: "🏦",
+    icone: "💰",
     lema: "Guarda o que constrói e corta o que drena."
   }, {
     level: 13,
-    titulo: "Cuidador do futuro",
+    titulo: "The Future Guardian",
     xp: 7800,
     icone: "🛡️",
-    lema: "Protege o amanhã nas decisões de hoje."
+    lema: "Protege o amanhã nas escolhas de hoje."
   }, {
     level: 14,
-    titulo: "Curador de recursos",
+    titulo: "Wilson Fisk",
     xp: 9100,
-    icone: "♻️",
-    lema: "Faz cada recurso circular com propósito."
+    icone: "👑",
+    lema: "Manda no próprio império sem deixar o caixa mandar em você."
   }, {
     level: 15,
-    titulo: "Estrategista sustentável",
+    titulo: "Lex Luthor",
     xp: 10500,
-    icone: "🌿",
-    lema: "Planeja compras para durar, reparar e reaproveitar."
+    icone: "🦅",
+    lema: "Planeja tão longe que o impulso não alcança."
   }, {
     level: 16,
-    titulo: "Arquiteto do patrimônio",
+    titulo: "CK's Bruce Wayne",
     xp: 12e3,
-    icone: "🏗️",
-    lema: "Constrói patrimônio com disciplina constante."
+    icone: "🦇",
+    lema: "Constrói patrimônio na disciplina, não no golpe de sorte."
   }, {
     level: 17,
-    titulo: "Engenheiro das escolhas",
+    titulo: "Tony Stark",
     xp: 13600,
-    icone: "⚙️",
-    lema: "Transforma decisões financeiras em um sistema coerente."
+    icone: "🤖",
+    lema: "Transformou as próprias decisões em um sistema que funciona."
   }, {
     level: 18,
-    titulo: "Líder de impacto",
+    titulo: "EconomisT'Challa",
     xp: 15300,
-    icone: "🌎",
+    icone: "🐆",
     lema: "Une prosperidade, propósito e responsabilidade."
   }, {
     level: 19,
-    titulo: "Mestre da consciência",
+    titulo: "The Future Doctor Doom",
     xp: 17100,
-    icone: "💡",
+    icone: "🎭",
     lema: "Domina a própria realidade sem perder de vista o coletivo."
   }, {
     level: 20,
-    titulo: "Embaixador da ODS 12",
+    titulo: "THE TRUE CK ZEMO",
     xp: 19e3,
-    icone: "🏅",
+    icone: "⚔️",
     lema: "Consumo responsável virou prática diária. Nível máximo."
   } ],
   XP: {

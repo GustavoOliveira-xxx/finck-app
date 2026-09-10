@@ -105,7 +105,7 @@ window.FinckGame = (() => {
     id: "mestre_financas",
     icone: "🏅",
     titulo: "Mestre das finanças",
-    descricao: "Alcançou o nível 10 (Guardião do tempo).",
+    descricao: "Alcançou o nível 10 (The Miner).",
     teste: c => c.nivel >= 10
   }, {
     id: "semana_firme",
