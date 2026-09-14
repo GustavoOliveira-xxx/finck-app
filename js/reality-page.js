@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   let ctx = await F.carregarContexto();
+  let locais = await carregarLocais();
   let resultado = null;
   let entrada = null;
   let decisao = null;
@@ -43,6 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     ctx = await F.carregarContexto();
+    locais = await carregarLocais();
     if (!(Number(ctx.perfil?.income_monthly) > 0)) {
       U.toast("Informe sua renda mensal no Perfil para usar o FinCK of Reality.", "erro");
       return;
@@ -69,6 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       metas: ctx.metas
     });
     renderResultado();
+    renderDestino();
     renderReflexoes();
     renderDecisoes();
     document.getElementById("passoResultado").hidden = false;
@@ -89,14 +92,93 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("impactoOrcamento").innerHTML = `\n      <ul class="lista-resumo lista-resumo--glossario">\n        ${linha("saldo_atual", U.moeda(r.saldo_antes))}\n        <li title="Saldo atual menos o preço desta compra.">\n          <span>Saldo após a compra <small class="indicador-quando">se comprar hoje</small></span>\n          <strong class="${r.compromete_saldo ? "cor-vermelha" : ""}">${U.moeda(r.saldo_depois)}</strong>\n        </li>\n        ${r.deficit_fixos > 0 ? linha("deficit_fixos", `− ${U.moeda(r.deficit_fixos)}`, "cor-vermelha") : linha("sobra_apos_fixos", U.moeda(r.sobra_apos_fixos))}\n        ${r.compromissos_futuros > 0 ? linha("compromissos_futuros", U.moeda(r.compromissos_futuros)) : ""}\n        ${linha("disponivel_projetado", U.moeda(r.disponivel_projetado), r.disponivel_projetado < 0 ? "cor-vermelha" : "")}\n        <li title="Fatia da sobra após os fixos que esta compra consome.">\n          <span>Fatia da sobra comprometida <small class="indicador-quando">neste mês</small></span>\n          <strong>${r.renda_livre > 0 ? U.percentual(r.percentual_renda_livre) : "sem sobra"}</strong>\n        </li>\n        <li><span>Valor do seu dia / hora</span><strong>${U.moeda(r.valor_dia)} / ${U.moeda(r.valor_hora)}</strong></li>\n      </ul>\n      ${r.compromete_saldo ? `<p class="alerta">Esta compra deixa seu saldo negativo em ${U.moeda(Math.abs(r.saldo_depois))}.</p>` : r.compromete_projetado ? `<p class="alerta">Cabe no saldo de hoje, mas não no disponível projetado: faltariam ${U.moeda(Math.abs(r.disponivel_depois))} para cobrir os compromissos já assumidos.</p>` : ""}\n      ${r.deficit_fixos > 0 ? `<p class="alerta">Suas despesas fixas superam a renda em ${U.moeda(r.deficit_fixos)} por mês. Enquanto isso durar, toda compra sai da reserva.</p>` : ""}`;
     const metasHost = document.getElementById("impactoMetas");
     metasHost.innerHTML = r.impacto_metas.length ? r.impacto_metas.map(m => `\n          <article class="card-impacto-meta">\n            <h5>${U.escapeHTML(m.nome)}</h5>\n            <p>Faltam ${U.moeda(m.falta)} para concluir.</p>\n            <p>Esta compra equivale a <strong>${U.percentual(m.percentual_da_meta, 1)}</strong> do alvo total\n               e a <strong>${U.percentual(m.percentual_do_restante, 1)}</strong> do que ainda falta,\n               ou cerca de <strong>${U.numero(m.dias_trabalho_extra, 1)} dias</strong> de trabalho a mais para alcançá-la.</p>\n            ${m.cobre_a_meta ? `<p class="destaque">Com este valor você concluiria a meta hoje.</p>` : ""}\n          </article>`).join("") : `<p class="vazio">Você ainda não tem metas cadastradas. <a href="metas.html">Criar uma meta</a> ajuda a comparar prioridades.</p>`;
-    document.getElementById("alternativas").innerHTML = r.alternativas.map(a => `\n      <li class="alternativa">\n        <h5>${U.escapeHTML(a.titulo)}</h5>\n        <p>${U.escapeHTML(a.texto)}</p>\n        ${a.faixa ? `<small>Hipótese de design do projeto: entre ${U.moeda(a.faixa.min)} e ${U.moeda(a.faixa.max)} a menos (referência de ${U.percentual(a.percentual * 100, 0)}). Não é dado de pesquisa — confirme com o preço real.</small>` : ""}\n        ${LOCAIS_POR_ALTERNATIVA[a.id] ? `<a class="alternativa__local" href="locais.html">${U.escapeHTML(LOCAIS_POR_ALTERNATIVA[a.id])}</a>` : ""}\n      </li>`).join("");
+    document.getElementById("alternativas").innerHTML = r.alternativas.map(a => `\n      <li class="alternativa">\n        <h5>${U.escapeHTML(a.titulo)}</h5>\n        <p>${U.escapeHTML(a.texto)}</p>\n        ${a.faixa ? `<small>Hipótese de design do projeto: entre ${U.moeda(a.faixa.min)} e ${U.moeda(a.faixa.max)} a menos (referência de ${U.percentual(a.percentual * 100, 0)}). Não é dado de pesquisa — confirme com o preço real.</small>` : ""}\n        ${blocoPontos(LOCAIS_POR_ALTERNATIVA[a.id])}\n      </li>`).join("");
   }
   // ODS-006: cada alternativa aponta para os pontos reais que o usuário cadastrou.
+  // Não existe base pronta de parceiros: os endereços são os que a própria pessoa
+  // levantou no módulo Ações locais. É isso que fecha o ciclo dentro do app —
+  // preço vira tempo de trabalho, tempo vira alternativa, e a alternativa vira
+  // um lugar concreto do bairro em vez de uma recomendação genérica.
   const LOCAIS_POR_ALTERNATIVA = {
-    usado: "Ver brechós e usados que você cadastrou →",
-    reparar: "Ver pontos de reparo que você cadastrou →",
-    compartilhar: "Ver quem aluga ou empresta na sua região →"
+    usado: {
+      tipos: [ "usado", "troca" ],
+      rotulo: "Onde comprar usado, perto de você",
+      convite: "Você ainda não cadastrou nenhum brechó ou ponto de troca."
+    },
+    reparar: {
+      tipos: [ "reparo" ],
+      rotulo: "Quem conserta, perto de você",
+      convite: "Você ainda não cadastrou nenhum ponto de reparo."
+    },
+    compartilhar: {
+      tipos: [ "aluguel", "troca" ],
+      rotulo: "Quem aluga ou empresta, perto de você",
+      convite: "Você ainda não cadastrou ninguém que aluga ou empresta."
+    }
   };
+  // ODS-007: o destino declarado no formulário deixa de ser só um dado guardado
+  // e passa a ter consequência na tela — é o elo com a meta 12.5 da ODS 12.
+  const DESTINOS_LOCAIS = {
+    doar_revender: {
+      tipos: [ "doacao", "usado" ],
+      titulo: "Você pretende doar ou revender depois",
+      texto: "Isso mantém o item em uso por mais tempo e o tira da fila do descarte."
+    },
+    reciclar: {
+      tipos: [ "descarte" ],
+      titulo: "Você pretende levar para descarte correto",
+      texto: "Eletrônico não vai no lixo comum: tem metal pesado e componente que contamina solo e água."
+    },
+    guardar: {
+      tipos: [ "doacao", "usado", "troca" ],
+      titulo: "Você pretende guardar mesmo sem usar",
+      texto: "Item parado perde valor até virar descarte. Doar, trocar ou revender enquanto ele ainda funciona devolve o produto ao uso."
+    },
+    descartar: {
+      tipos: [ "descarte", "doacao" ],
+      titulo: "Você pretende jogar fora",
+      texto: "É aqui que a compra vira resíduo. A meta 12.5 da ODS 12 trata exatamente disso: reduzir a geração de resíduo por prevenção, redução, reciclagem e reuso."
+    }
+  };
+  async function carregarLocais() {
+    try {
+      return await S.listar("local_actions", {
+        ordem: "created_at",
+        asc: false
+      });
+    } catch {
+      return [];
+    }
+  }
+  function pontosPorTipo(tipos) {
+    return locais.filter(l => tipos.indexOf(l.kind) >= 0);
+  }
+  function cartaoPonto(l) {
+    const t = cfg.TIPOS_ACAO_LOCAL.find(x => x.id === l.kind) || {};
+    const detalhe = [ l.address, l.contact ].filter(Boolean).map(U.escapeHTML).join(" · ");
+    return `\n      <li class="ponto-local">\n        <span class="ponto-local__icone" aria-hidden="true">${t.icone || "\ud83d\udccd"}</span>\n        <span class="ponto-local__corpo">\n          <b>${U.escapeHTML(l.name)}</b>\n          <small>${U.escapeHTML(t.rotulo || "")}${detalhe ? ` \u00b7 ${detalhe}` : ""}</small>\n          ${l.verified_at ? `<small class="ponto-local__data">conferido em ${U.dataBR(l.verified_at)}</small>` : `<small class="ponto-local__data">sem data de conferência</small>`}\n        </span>\n      </li>`;
+  }
+  function blocoPontos(mapa) {
+    if (!mapa) {
+      return "";
+    }
+    const achados = pontosPorTipo(mapa.tipos);
+    if (!achados.length) {
+      return `\n        <p class="alternativa__vazio">${U.escapeHTML(mapa.convite)}\n          <a href="locais.html">Cadastrar um ponto →</a></p>`;
+    }
+    return `\n        <div class="alternativa__pontos">\n          <p class="alternativa__pontos-rotulo">${U.escapeHTML(mapa.rotulo)}</p>\n          <ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n          <a class="alternativa__local" href="locais.html">${achados.length > 3 ? `Ver os outros ${achados.length - 3} →` : "Gerenciar meus pontos →"}</a>\n        </div>`;
+  }
+  function renderDestino() {
+    const host = document.getElementById("blocoDestino");
+    const mapa = entrada && entrada.end_of_life ? DESTINOS_LOCAIS[entrada.end_of_life] : null;
+    if (!mapa) {
+      host.hidden = true;
+      return;
+    }
+    const achados = pontosPorTipo(mapa.tipos);
+    document.getElementById("destinoItem").innerHTML = `\n      <p class="destino-item__titulo">${U.escapeHTML(mapa.titulo)}</p>\n      <p class="destino-item__texto">${U.escapeHTML(mapa.texto)}</p>\n      ${achados.length ? `<ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n        <a class="alternativa__local" href="locais.html">Gerenciar meus pontos →</a>` : `<p class="alternativa__vazio">Você ainda não cadastrou nenhum ponto para isso.\n        <a href="locais.html">Cadastrar um ponto →</a></p>`}`;
+    host.hidden = false;
+  }
   const OPCOES = {
     necessidade: [ "Preciso agora", "Posso esperar", "É impulso" ],
     uso: [ "Uso diário", "Uso ocasional", "Uso raro" ],

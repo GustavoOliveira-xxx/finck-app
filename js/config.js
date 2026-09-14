@@ -8,8 +8,12 @@ window.FINCK_CONFIG = {
     // por exemplo "https://finck-app.vercel.app/api/buscar-preco-ia".
     ENDPOINT: "/api/buscar-preco-ia"
   },
-  APP_NOME: "FinCK of Reality",
+  // O aplicativo chama-se FinCK. "FinCK of Reality" é o nome do motor de
+  // decisão que vive dentro dele — uma função, não o produto. Use MOTOR_NOME
+  // apenas quando estiver falando desse cálculo especificamente.
+  APP_NOME: "FinCK",
   APP_NOME_CURTO: "FinCK",
+  MOTOR_NOME: "FinCK of Reality",
   EMPRESA: "Conscious Knowledge",
   MOEDA: "BRL",
   LOCALE: "pt-BR",

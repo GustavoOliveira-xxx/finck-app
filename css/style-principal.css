@@ -4065,6 +4065,52 @@ a.btn-grande, a.btn-secundario{ text-decoration:none; display:inline-block; text
   font-size:.85rem; font-weight:600; color:var(--roxo-neon);
 }
 
+/* ODS-006/007 — a alternativa deixa de ser conselho genérico e vira endereço.
+   Estes são os pontos que o próprio usuário cadastrou em Ações locais: é o
+   trecho em que o ciclo preço → tempo → alternativa → território fica visível
+   dentro do produto, e não só no discurso. */
+.alternativa__pontos{
+  margin-top:.7rem;
+  padding:.7rem .8rem;
+  border-radius:var(--raio-md);
+  background:var(--verde-fraco);
+  border:1px solid rgba(31,209,143,.24);
+}
+.alternativa__pontos-rotulo{
+  margin:0 0 .5rem;
+  font-size:.78rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--verde);
+}
+.alternativa__vazio{
+  margin-top:.6rem;
+  font-size:.83rem; line-height:1.5;
+  color:var(--texto-fraquissimo);
+}
+.alternativa__vazio a{ color:var(--roxo-neon); font-weight:600; white-space:nowrap; }
+
+.lista-pontos{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.45rem; }
+.ponto-local{
+  display:flex; align-items:flex-start; gap:.6rem;
+  padding:.5rem .6rem;
+  border-radius:var(--raio-sm);
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--superficie-borda);
+}
+.ponto-local__icone{ font-size:1rem; line-height:1.35; flex:0 0 auto; }
+.ponto-local__corpo{ display:flex; flex-direction:column; gap:.12rem; min-width:0; }
+.ponto-local__corpo b{ font-size:.87rem; color:var(--texto); }
+.ponto-local__corpo small{ font-size:.76rem; line-height:1.4; color:var(--texto-fraco); }
+.ponto-local__data{ color:var(--texto-fraquissimo) !important; font-family:var(--fonte-dados); font-size:.72rem !important; }
+
+.destino-item__titulo{
+  margin:0 0 .3rem;
+  font-size:.92rem; font-weight:700; color:var(--amarelo);
+}
+.destino-item__texto{
+  margin:0 0 .7rem;
+  font-size:.85rem; line-height:1.55; color:var(--texto-fraco);
+}
+
 /* PROD-002 — a regra da máscara precisa estar visível, não só no title. */
 .ajuda-campo{
   display:block; margin-top:.35rem;
