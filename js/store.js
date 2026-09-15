@@ -625,13 +625,14 @@ window.FinckStore = (() => {
     goals: [ "name", "target_amount", "current_amount", "deadline", "rate" ],
     transactions: [ "account_id", "goal_id", "type", "description", "amount", "date", "category", "source", "source_occurrence_id", "reversed_at", "reversal_reason", "unallocated" ],
     recurring_transactions: [ "description", "type", "amount", "day_of_month", "active", "category", "account_id" ],
-    purchase_analyses: [ "item_name", "price", "category", "item_link", "note", "work_days", "work_hours", "income_percent", "impact_level", "decision", "reflections", "income_base", "hour_value", "day_value", "work_days_month", "work_hours_day", "income_type", "balance_before", "balance_after", "free_income", "analyzed_at" ],
+    purchase_analyses: [ "item_name", "price", "category", "item_link", "note", "work_days", "work_hours", "income_percent", "impact_level", "decision", "reflections", "income_base", "hour_value", "day_value", "work_days_month", "work_hours_day", "income_type", "balance_before", "balance_after", "free_income", "analyzed_at", "quantity", "expected_months", "end_of_life", "responsibility_score", "responsibility_label", "outcome", "outcome_at" ],
     installment_purchases: [ "description", "category", "total_amount", "installments_count", "installment_amount", "first_due_date", "paid_count", "active", "note", "account_id" ],
     category_budgets: [ "category", "limit_amount" ],
     transfers: [ "from_account_id", "to_account_id", "amount", "date", "description" ],
     balance_adjustments: [ "account_id", "amount", "new_balance", "date", "reason" ],
     installment_payments: [ "purchase_id", "installment_no", "due_date", "amount", "status", "transaction_id", "paid_at" ],
     goal_movements: [ "goal_id", "transaction_id", "kind", "amount", "date", "note", "reverses_id", "reversed_at" ],
+    local_actions: [ "name", "kind", "address", "contact", "notes", "verified_at" ],
     profile: [ "name", "income_monthly", "income_type", "payday", "work_days_month", "work_hours_day", "initial_balance", "setup_mode", "onboarded_at", "free_income_mode", "free_income_percent", "free_income_amount", "savings_mode", "savings_percent", "savings_amount", "initial_balance_source", "initial_balance_migrated_at" ],
     gamification: [ "xp", "level", "streak", "last_active", "achievements", "ledger" ]
   };
@@ -668,7 +669,7 @@ window.FinckStore = (() => {
     category_budgets: r => !String(r.category || "").trim() ? "teto sem categoria" : !positivo(r.limit_amount) ? "teto com limite zerado ou negativo" : null,
     transfers: r => !positivo(r.amount) ? "transferência com valor zerado ou negativo" : String(r.from_account_id) === String(r.to_account_id) ? "transferência entre a mesma conta" : !dataValida(r.date) ? "transferência sem data válida" : null,
     balance_adjustments: r => !Number.isFinite(Number(r.amount)) ? "ajuste com valor inválido" : !Number.isFinite(Number(r.new_balance)) ? "ajuste com novo saldo inválido" : !dataValida(r.date) ? "ajuste sem data válida" : null,
-    purchase_analyses: r => !String(r.item_name || "").trim() ? "análise sem item" : !positivo(r.price) ? "análise com preço zerado ou negativo" : r.impact_level && ![ "verde", "atencao", "alerta" ].includes(r.impact_level) ? "análise com impacto inválido" : r.decision && ![ "comprar", "adiar", "substituir", "usado", "reparar", "desistir" ].includes(r.decision) ? "análise com decisão inválida" : null,
+    purchase_analyses: r => !String(r.item_name || "").trim() ? "análise sem item" : !positivo(r.price) ? "análise com preço zerado ou negativo" : r.impact_level && ![ "verde", "atencao", "alerta" ].includes(r.impact_level) ? "análise com impacto inválido" : r.decision && ![ "comprar", "adiar", "alternativa", "usado", "reparar", "desistir", "substituir" ].includes(r.decision) ? "análise com decisão inválida" : null,
     installment_payments: r => !(Number.isInteger(Number(r.installment_no)) && Number(r.installment_no) >= 1) ? "parcela sem número válido" : !positivo(r.amount) ? "parcela com valor zerado ou negativo" : !dataValida(r.due_date) ? "parcela sem vencimento válido" : ![ "aberta", "paga", "estornada" ].includes(r.status) ? "parcela com estado inválido" : r.status === "aberta" && r.transaction_id ? "parcela aberta não pode ter movimentação vinculada" : null,
     goal_movements: r => ![ "aporte", "retirada", "estorno", "ajuste" ].includes(r.kind) ? "movimento de meta sem tipo válido" : !Number.isFinite(Number(r.amount)) || Number(r.amount) === 0 ? "movimento de meta com valor zerado" : !dataValida(r.date) ? "movimento de meta sem data válida" : r.kind === "aporte" && Number(r.amount) < 0 ? "aporte não pode ter valor negativo" : r.kind === "retirada" && Number(r.amount) > 0 ? "retirada precisa ter valor negativo" : null
   };
@@ -721,7 +722,8 @@ window.FinckStore = (() => {
         const limpa = limparCampos(tabela, linha, {
           manterId: true
         });
-        const desconhecidos = Object.keys(linha).filter(campo => ![ "id", "user_id", "created_at", "updated_at" ].includes(campo) && !CAMPOS_PERMITIDOS[tabela].includes(campo));
+        const permitidos = CAMPOS_PERMITIDOS[tabela] || [];
+        const desconhecidos = Object.keys(linha).filter(campo => ![ "id", "user_id", "created_at", "updated_at" ].includes(campo) && !permitidos.includes(campo));
         if (desconhecidos.length) {
           avisos.push(`${posicao}: campo(s) desconhecido(s) removido(s): ${desconhecidos.join(", ")}.`);
         }

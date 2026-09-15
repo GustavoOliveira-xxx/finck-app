@@ -15,9 +15,32 @@ diretamente simplesmente não envia esse filtro.
 
 | Arquivo | O que faz |
 |---|---|
-| `migrations/20260809000001_schema_inicial.sql` | Cria as 7 tabelas, restrições e índices |
+| `migrations/20260809000001_schema_inicial.sql` | Cria as tabelas de base, restrições e índices |
 | `migrations/20260809000002_rls.sql` | Liga RLS, cria as políticas e o gatilho de perfil |
+| `migrations/20260809000003_parcelas_e_orcamento.sql` | Compras parceladas, pagamentos e orçamento por categoria |
+| `migrations/20260809000004_contas_e_transferencias.sql` | Contas, transferências e ajustes de saldo |
+| `migrations/20260814000005_ocorrencias_e_fechamento.sql` | Ocorrências de recorrentes e fechamento mensal |
+| `migrations/20260815000006_integridade_lancamentos.sql` | Eventos de integridade e estorno de lançamentos |
+| `migrations/20260816000007_metas_estorno_e_reconciliacao.sql` | Movimentos de meta, estorno e fila de reconciliação |
+| `migrations/20260816000008_operacoes_atomicas.sql` | Chaves de operação e RPCs que gravam em transação |
 | `migrations/20260825000009_polimento_entrega_finck.sql` | Consolida RLS, privilégios de Data API, acesso às RPCs e índices de FKs para a entrega |
+| `migrations/20260908000010_ods12_indicador_e_acompanhamento.sql` | Indicador de decisão responsável e acompanhamento do que aconteceu depois |
+| `migrations/20260908000011_acoes_locais.sql` | Tabela `local_actions`: os pontos de reparo, troca, aluguel, doação e descarte que o usuário cadastra |
+| `migrations/20260908000012_vida_util_da_compra.sql` | Quantidade, vida útil esperada e destino do item |
+| `migrations/20260915000013_decisoes_conscientes.sql` | Amplia o check de `decision` para caber `alternativa`, `usado` e `reparar` |
+
+Os arquivos em `colar-no-supabase/` juntam as migrations mais recentes num
+único texto pronto para o SQL Editor, com uma consulta de verificação no fim.
+
+### Por que a 13 existe
+
+O check de `decision` tinha quatro valores desde o esquema inicial. O app
+passou a oferecer seis, e `js/reality-page.js` grava o id escolhido direto na
+coluna — então salvar "Pesquisar alternativa", "Comprar usado" ou "Reparar o
+item atual" era recusado pelo banco em conta real. O modo demonstração guarda
+em `localStorage`, que não tem constraint, e por isso a falha não aparecia nos
+testes locais. São justamente as três decisões que ligam o app à meta 12.5 da
+ODS 12, então vale conferir depois de aplicar.
 
 ## Como aplicar
 
