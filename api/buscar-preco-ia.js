@@ -17,8 +17,8 @@
 // Variáveis de ambiente (painel da Vercel → Settings → Environment Variables):
 //
 //   GEMINI_API_KEY        obrigatória. Chave do Google AI Studio.
-//   GEMINI_MODELO         opcional. Padrão: gemini-3.5-flash. Vale para o link
-//                         e para o print, sempre como primeira tentativa.
+//   GEMINI_MODELO         opcional. Padrão: gemini-3.5-flash-lite. Vale para o
+//                         link e para o print, sempre como primeira tentativa.
 //   GEMINI_BUSCA_GOOGLE   opcional. "1" liga o grounding com Busca do Google
 //                         (só funciona em chave paga; no plano gratuito a
 //                         cota dessa ferramenta é zero e a chamada dá 429).
@@ -37,16 +37,17 @@
 
 const { createHash } = require("node:crypto");
 
-const MODELOS_PADRAO = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
-// Ordem do print, medida em 03/10/2026 com os oito prints de
-// ferramentas/prints-exemplo (node ferramentas/testar-print.mjs --ao-vivo):
-//   gemini-3.5-flash-lite  8 de 8 certos, 1,8 s de mediana
+// Ordem dos modelos, a mesma para o link e para o print. Medida em
+// 03/10/2026 com os oito prints de ferramentas/prints-exemplo
+// (node ferramentas/testar-print.mjs --ao-vivo) e com links reais:
+//   gemini-3.5-flash-lite  8 de 8 prints certos, 1,8 s de mediana; abre o
+//                          link pelo url_context como os outros
 //   gemini-3.5-flash       também acerta, mas leva de 9 a 23 s, e no plano
 //                          gratuito aceita só 5 pedidos por minuto e 20 por dia
 //   gemini-3.1-flash-lite  certo quando responde, mas deu 503 em 3 de 8
 // Cada modelo tem a própria cota, então quando um responde 429 ou 503 o
 // próximo ainda tem fôlego. Os da família 2.5 já dão 404 para chave nova.
-const MODELOS_PRINT = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const MODELOS_PADRAO = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const SUPABASE_URL_PADRAO = "https://iruqoghylxgopbopxjbi.supabase.co";
 const SUPABASE_ANON_PADRAO = "sb_publishable_zn_jngIj2xibO_VpzOi0Wg_gGG7Z8eS";
 
@@ -67,6 +68,10 @@ const LIMITE_IMAGEM_BYTES = 3 * 1024 * 1024;
 // chegou a levar 32 s para voltar. Esperar tanto não deixaria vez ao próximo.
 const PRAZO_PRINT_MS = 50000;
 const PRAZO_PRINT_POR_MODELO_MS = 20000;
+// O link passa por até três etapas, cada uma com até três modelos de 25 s. Sem
+// um prazo para a busca inteira, a soma passava dos 60 s e a Vercel cortava a
+// resposta antes do aviso para digitar o preço.
+const PRAZO_LINK_MS = 52000;
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -290,6 +295,7 @@ const REGRAS = [
   '"moeda" é a moeda que a página realmente exibe. Se o preço estiver em dólar, devolva o valor em dólar com "moeda":"USD" — nunca converta para real.',
   'Responda encontrado=false só quando a página não abrir, não for de produto, ou não exibir preço nenhum. Explique em "motivo".',
   'Nunca invente, estime ou converta um valor: sem preço lido de verdade, encontrado=false.',
+  'Algumas lojas mostram o preço num contador animado, que no texto aparece como uma sequência de dígitos ("R$ 0123456789...,0123456789"). Nesse caso o preço não está legível no texto: use o dos dados estruturados, se houver; se não houver, encontrado=false. Nunca use no lugar dele o valor que aparece ao lado, que costuma ser o preço antigo.',
   '"confianca": "alta" quando o preço veio dos dados estruturados ou está claro na página; "media" quando houve ambiguidade entre valores; "baixa" quando é um palpite a partir do texto.',
 ];
 
@@ -484,6 +490,25 @@ function montarPanorama(bruto, metodo) {
   return panorama;
 }
 
+// A soma das parcelas tem de fechar com o preço. Se fecha, não há juros,
+// diga o anúncio o que disser. Se passa do preço, só vale como "com juros".
+// Se fica abaixo, ou se diz "sem juros" e não fecha, a parcela é de outro
+// valor: sai do panorama, e a função devolve false para quem chamou decidir
+// se o preço ainda merece confiança.
+function conferirParcelas(panorama) {
+  const parcelas = panorama.parcelamento;
+  if (!parcelas) return true;
+  const folga = Math.max(1, panorama.preco * 0.02);
+  const diferenca = parcelas.total - panorama.preco;
+  if (Math.abs(diferenca) <= folga) {
+    parcelas.semJuros = true;
+    return true;
+  }
+  if (diferenca > 0 && !parcelas.semJuros) return true;
+  delete panorama.parcelamento;
+  return false;
+}
+
 // --------------------------------------------------------------------- print
 
 const CATEGORIAS_PADRAO = [
@@ -663,19 +688,7 @@ function montarPanoramaDoPrint(bruto, categorias = CATEGORIAS_PADRAO) {
     }
   }
 
-  // A soma das parcelas tem de fechar com o preço. Se fecha, não há juros,
-  // diga o anúncio o que disser. Se passa do preço, só vale como "com juros".
-  // Se fica abaixo, a parcela não é deste preço.
-  if (panorama.parcelamento) {
-    const parcelas = panorama.parcelamento;
-    const folga = Math.max(1, panorama.preco * 0.02);
-    const diferenca = parcelas.total - panorama.preco;
-    if (Math.abs(diferenca) <= folga) {
-      parcelas.semJuros = true;
-    } else if (diferenca < 0 || parcelas.semJuros) {
-      delete panorama.parcelamento;
-    }
-  }
+  conferirParcelas(panorama);
 
   if (categorias.includes(bruto.categoria)) panorama.categoria = bruto.categoria;
   const nomeCurto = textoLimpo(bruto.nomeCurto, 60);
@@ -704,7 +717,7 @@ async function lerPrint({ chave, imagem, categorias }) {
   }
 
   const modelos = [
-    ...new Set([process.env.GEMINI_MODELO, ...MODELOS_PRINT].filter(Boolean)),
+    ...new Set([process.env.GEMINI_MODELO, ...MODELOS_PADRAO].filter(Boolean)),
   ];
   const lido = await chamarGemini({
     chave,
@@ -955,13 +968,26 @@ module.exports = async function handler(req, res) {
     ...new Set([process.env.GEMINI_MODELO, ...MODELOS_PADRAO].filter(Boolean)),
   ];
   const loja = alvo.hostname.replace(/^www\./, "");
-  const entregar = (panorama) => {
-    const resposta = { ok: true, ...panorama, loja };
+  const entregar = (panorama, modelo) => {
+    const resposta = { ok: true, ...panorama, loja, modelo };
     guardarNoCache(url, resposta);
     return responder(res, resposta);
   };
+  const ate = Date.now() + PRAZO_LINK_MS;
 
   let ultimoMotivo = null;
+  // Preço lido, mas com parcela que não fecha com ele. Na KaBuM, por exemplo,
+  // o preço atual fica num contador animado que não aparece como texto, e o
+  // modelo acabava lendo o valor ao lado, com a parcela do preço de verdade.
+  // Esse resultado espera as outras etapas e, se nenhuma resolver, sai com
+  // confiança baixa, para a tela pedir que o usuário confira na loja.
+  let reserva = null;
+  const avaliar = (panorama, modelo) => {
+    if (!panorama) return false;
+    if (conferirParcelas(panorama)) return true;
+    if (!reserva) reserva = { panorama: { ...panorama, confianca: "baixa" }, modelo };
+    return false;
+  };
 
   // 1) O Gemini abre a página por conta própria (ferramenta url_context).
   const porUrl = await chamarGemini({
@@ -969,6 +995,7 @@ module.exports = async function handler(req, res) {
     modelos,
     prompt: promptDaUrl(url),
     ferramentas: [{ url_context: {} }],
+    ate,
   });
   if (porUrl.erro) ultimoMotivo = porUrl.erro;
   if (porUrl.json?.motivo) ultimoMotivo = porUrl.json.motivo;
@@ -976,23 +1003,25 @@ module.exports = async function handler(req, res) {
   // trava o modelo responderia de memória, com valor desatualizado.
   if (porUrl.statusUrl?.includes("SUCCESS")) {
     const panorama = montarPanorama(porUrl.json, "ia-url");
-    if (panorama) return entregar(panorama);
+    if (avaliar(panorama, porUrl.modelo)) return entregar(panorama, porUrl.modelo);
   }
 
   // 2) A loja barrou o buscador do Google. Baixamos a página daqui — o IP da
   //    Vercel costuma passar onde o do Google não passa — e mandamos o
-  //    conteúdo já limpo para o modelo ler.
-  const pagina = await baixarPagina(url);
+  //    conteúdo já limpo para o modelo ler. Só vale a pena se ainda houver
+  //    tempo para baixar e ler.
+  const pagina = ate - Date.now() > PRAZO_PAGINA_MS + 5000 ? await baixarPagina(url) : null;
   if (pagina) {
     const porHtml = await chamarGemini({
       chave,
       modelos,
       prompt: promptDoHtml(pagina.urlFinal, resumirHtml(pagina.html)),
       ferramentas: [],
+      ate,
     });
     if (porHtml.erro) ultimoMotivo = porHtml.erro;
     const panorama = montarPanorama(porHtml.json, "ia-html");
-    if (panorama) return entregar(panorama);
+    if (avaliar(panorama, porHtml.modelo)) return entregar(panorama, porHtml.modelo);
     if (porHtml.json?.motivo) ultimoMotivo = porHtml.json.motivo;
   }
 
@@ -1004,12 +1033,15 @@ module.exports = async function handler(req, res) {
       modelos,
       prompt: promptDaBusca(url),
       ferramentas: [{ google_search: {} }],
+      ate,
     });
     if (porBusca.erro) ultimoMotivo = porBusca.erro;
     const panorama = montarPanorama(porBusca.json, "ia-busca");
-    if (panorama) return entregar(panorama);
+    if (avaliar(panorama, porBusca.modelo)) return entregar(panorama, porBusca.modelo);
     if (porBusca.json?.motivo) ultimoMotivo = porBusca.json.motivo;
   }
+
+  if (reserva) return entregar(reserva.panorama, reserva.modelo);
 
   return responder(res, {
     ok: false,

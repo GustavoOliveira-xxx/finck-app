@@ -2,7 +2,8 @@
 //
 //   node ferramentas/testar-print.mjs
 //     Sem rede: validação da imagem, conferências do panorama, a passagem
-//     entre os modelos e a rota HTTP, com o Gemini simulado.
+//     entre os modelos, a rota HTTP e a conferência de parcelas que a busca
+//     pelo link também usa, com o Gemini e as páginas simulados.
 //
 //   GEMINI_API_KEY=<chave> node ferramentas/testar-print.mjs --ao-vivo [modelo]
 //     Lê os prints de ferramentas/prints-exemplo com o Gemini de verdade e
@@ -212,8 +213,17 @@ const resposta = (status, corpo) => new Response(JSON.stringify(corpo), {
 
 const lido = (obj) => ({ candidates: [ { content: { parts: [ { text: JSON.stringify(obj) } ] } } ] });
 
+// Páginas de loja que a busca pelo link baixa na segunda etapa.
+const paginas = {};
+
 globalThis.fetch = async (url, opcoes) => {
-  chamadas.push({ url: String(url), corpo: JSON.parse(opcoes.body) });
+  const alvo = String(url);
+  if (alvo.includes("/auth/v1/user")) return resposta(200, { id: "usuario-teste" });
+  if (!alvo.includes("generativelanguage.googleapis.com")) {
+    const pagina = paginas[alvo];
+    return pagina ? pagina() : new Response("não encontrada", { status: 404 });
+  }
+  chamadas.push({ url: alvo, corpo: JSON.parse(opcoes.body) });
   const proxima = roteiro.shift();
   if (!proxima) throw new Error("chamada ao Gemini que o teste não esperava");
   return proxima();
@@ -272,7 +282,7 @@ conferir("imagem recusada nem chega ao Gemini", [ r.status, r.corpo.codigo, cham
 
 console.log("Rota HTTP");
 
-const rota = async (method, body) => {
+const rota = async (method, body, headers = {}) => {
   const res = {
     statusCode: 0,
     cabecalhos: {},
@@ -282,7 +292,7 @@ const rota = async (method, body) => {
     send(b) { this.corpo = JSON.parse(b); return this; },
     end() { return this; },
   };
-  await api({ method, headers: {}, body }, res);
+  await api({ method, headers, body, socket: {} }, res);
   return res;
 };
 
@@ -297,6 +307,50 @@ conferir("e não fica em cache", h.cabecalhos["cache-control"], "no-store");
 h = await rota("POST", { imagem: imagemDe("e") });
 
 conferir("print sem login, com a demo desligada, é recusado", [ h.statusCode, h.corpo.codigo ], [ 401, "SEM_LOGIN" ]);
+
+console.log("Busca pelo link: parcela que não fecha com o preço");
+
+const comLogin = { authorization: "Bearer teste" };
+
+const lidoDaUrl = (obj) => ({
+  candidates: [ {
+    content: { parts: [ { text: JSON.stringify(obj) } ] },
+    urlContextMetadata: { urlMetadata: [ { urlRetrievalStatus: "URL_RETRIEVAL_STATUS_SUCCESS" } ] },
+  } ],
+});
+
+// IP público no lugar do nome: a conferência de endereço não depende de DNS.
+const loja = "https://93.184.216.34/produto";
+
+roteiro = [ () => resposta(200, lidoDaUrl({ encontrado: true, confianca: "alta", preco: 189.9, parcelamento: { vezes: 6, valor: 31.65, semJuros: false } })) ];
+
+chamadas.length = 0;
+
+h = await rota("POST", { url: `${loja}/1` }, comLogin);
+
+conferir("parcela que fecha sai na primeira etapa, como sem juros", [ h.corpo.metodo, h.corpo.parcelamento?.semJuros, chamadas.length ], [ "ia-url", true, 1 ]);
+
+paginas[`${loja}/2`] = () => new Response("<html><title>Mouse</title><body>R$ 204,48 em 8x de R$ 25,56</body></html>", {
+  status: 200,
+  headers: { "content-type": "text/html; charset=utf-8" },
+});
+
+roteiro = [
+  () => resposta(200, lidoDaUrl({ encontrado: true, confianca: "alta", preco: 488.62, parcelamento: { vezes: 8, valor: 25.56, semJuros: true } })),
+  () => resposta(200, lido({ encontrado: true, confianca: "alta", preco: 204.48, parcelamento: { vezes: 8, valor: 25.56, semJuros: true } })),
+];
+
+h = await rota("POST", { url: `${loja}/2` }, comLogin);
+
+conferir("parcela que não fecha manda para a página baixada", [ h.corpo.preco, h.corpo.metodo, h.corpo.confianca ], [ 204.48, "ia-html", "alta" ]);
+
+roteiro = [ () => resposta(200, lidoDaUrl({ encontrado: true, confianca: "alta", preco: 527.64, parcelamento: { vezes: 10, valor: 36.99, semJuros: true } })) ];
+
+h = await rota("POST", { url: `${loja}/3` }, comLogin);
+
+conferir("sem página para baixar, entrega o primeiro com confiança baixa", [ h.corpo.preco, h.corpo.metodo, h.corpo.confianca ], [ 527.64, "ia-url", "baixa" ]);
+
+conferir("e sem a parcela que não fechava", h.corpo.parcelamento, undefined);
 
 delete process.env.GEMINI_API_KEY;
 

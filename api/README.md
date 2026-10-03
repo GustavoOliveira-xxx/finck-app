@@ -32,7 +32,7 @@ Marque os três ambientes (Production, Preview, Development).
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
 | `GEMINI_API_KEY` | sim | Chave do Google AI Studio |
-| `GEMINI_MODELO` | não | Modelo tentado primeiro, no link e no print. Sem ela, o link usa `gemini-3.5-flash` e depois `gemini-3.1-flash-lite`; o print, a ordem da seção [Leitura do print](#leitura-do-print) |
+| `GEMINI_MODELO` | não | Modelo tentado primeiro, no link e no print. Sem ela, vale a ordem de [Modelos](#modelos-medidos-em-03102026): `gemini-3.5-flash-lite`, `gemini-3.5-flash` e `gemini-3.1-flash-lite` |
 | `GEMINI_BUSCA_GOOGLE` | não | `1` liga a busca na web como último recurso |
 | `BUSCA_IA_DEMO` | não | `1` libera a busca **sem login**, para o modo demonstração |
 | `BUSCA_IA_ORIGENS` | não | Origens aceitas, separadas por vírgula. Padrão: a origem do deploy + `localhost` |
@@ -88,6 +88,24 @@ O `ia-busca` fica desligado porque **a cota dessa ferramenta é zero no
 plano gratuito do Gemini** — ligada numa chave gratuita, toda chamada volta
 `429`. Ligue quando a chave virar paga.
 
+A busca inteira tem 52 s, abaixo dos 60 s do `vercel.json`. Antes, três
+etapas com tentativas de 25 s podiam passar disso, e a Vercel cortava a
+resposta antes do aviso para digitar o preço.
+
+### Parcela que não fecha com o preço
+
+Um preço só sai de uma etapa se a soma das parcelas fechar com ele. Quando
+não fecha, a busca segue para a próxima etapa e guarda esse resultado como
+reserva: se nenhuma outra resolver, ele sai sem a parcela e com
+`confianca: "baixa"`, e a tela pede para conferir na loja.
+
+O caso que motivou isso, medido em 03/10/2026: na KaBuM, o preço atual fica
+num contador animado, e quando o Google abre a página ele vira
+"R$ 0123456789...". O modelo lia o valor ao lado, que é o preço antigo
+(R$ 488,62 num mouse de R$ 204,48), junto com a parcela do preço de verdade
+(8x de R$ 25,56). Com a conferência, a busca passa para o `ia-html`, onde o
+preço certo está nos dados estruturados da página.
+
 ## O que ainda não funciona
 
 Amazon, Shopee, Mercado Livre e afins recusam acesso automático de
@@ -139,25 +157,26 @@ campos a mais: `nomeCurto` (preenche o campo do item sem cortar palavra),
 
 ### Modelos, medidos em 03/10/2026
 
-Oito prints de teste (`ferramentas/prints-exemplo`), com a ordem que a
-função usa:
+A ordem é a mesma para o link e para o print. Com os oito prints de teste
+(`ferramentas/prints-exemplo`) e com links reais da KaBuM:
 
 | Ordem | Modelo | Resultado |
 |---|---|---|
-| 1 | `gemini-3.5-flash-lite` | 8 de 8 certos, 1,8 s de mediana |
+| 1 | `gemini-3.5-flash-lite` | 8 de 8 prints certos, 1,8 s de mediana; abre o link pelo `url_context` em 1,5 a 3 s |
 | 2 | `gemini-3.5-flash` | também acerta, mas leva de 9 a 23 s |
 | 3 | `gemini-3.1-flash-lite` | acerta quando responde, mas deu 503 em 3 de 8 |
 
-Quando um modelo responde 429, 500 ou 503, ou estoura 20 s, a função passa
-para o próximo, dentro de 50 s no total. Os da família 2.5 já respondem
-404 para chaves novas e ficaram de fora.
+Quando um modelo responde 429, 500 ou 503, ou estoura o prazo da tentativa
+(20 s no print, 25 s no link), a função passa para o próximo, dentro do
+prazo total (50 s no print, 52 s no link). Os da família 2.5 já respondem
+404 para chaves novas e ficaram de fora. A resposta traz em `modelo` qual
+deles leu.
 
 ### Plano gratuito do Gemini
 
 Na chave gratuita, o `gemini-3.5-flash` aceitou **5 pedidos por minuto e 20
 por dia**, para o projeto inteiro (todos os usuários somados). É por isso
-que ele não é o primeiro do print. A busca pelo link ainda começa por ele:
-passados os 20 do dia, ela segue no `gemini-3.1-flash-lite`.
+que ele não é o primeiro, nem no link nem no print.
 
 Cada modelo tem a própria cota, então a lista de reserva aumenta o total do
 dia. Quando todos estão cheios, a resposta é `IA_OCUPADA` e a tela pede
@@ -208,7 +227,8 @@ teste que diz se a leitura continua certa.
 ## Contrato da resposta
 
 É o mesmo da função do Supabase, mais os campos `fonte` e `metodo`, para o
-app saber de onde veio o número e ajustar o aviso de confiança:
+app saber de onde veio o número e ajustar o aviso de confiança, e `modelo`,
+que diz qual modelo leu:
 
 ```json
 {
@@ -224,7 +244,8 @@ app saber de onde veio o número e ajustar o aviso de confiança:
   "loja": "kabum.com.br",
   "metodo": "ia-url",
   "fonte": "ia",
-  "confianca": "alta"
+  "confianca": "alta",
+  "modelo": "gemini-3.5-flash-lite"
 }
 ```
 
