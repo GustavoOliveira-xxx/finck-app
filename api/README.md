@@ -8,6 +8,11 @@ do produto e devolve o preço já no formato que o painel do app desenha.
 continua no ar e vira rede de segurança. O front-end tenta a IA primeiro e
 só cai para o leitor antigo quando ela volta sem preço.
 
+A mesma função também **lê o print da tela** do produto (veja
+[Leitura do print](#leitura-do-print)). É a saída para Shopee, Amazon,
+Instagram e as outras lojas que recusam a leitura do link: ali o usuário já
+está vendo o preço, e o Gemini lê a imagem.
+
 ## Por que a chave fica aqui, e não no navegador
 
 Chave de API no `js/config.js` é chave pública — qualquer pessoa lê o
@@ -27,7 +32,7 @@ Marque os três ambientes (Production, Preview, Development).
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
 | `GEMINI_API_KEY` | sim | Chave do Google AI Studio |
-| `GEMINI_MODELO` | não | Modelo preferido. Padrão: `gemini-3.5-flash`, com `gemini-3.1-flash-lite` de reserva |
+| `GEMINI_MODELO` | não | Modelo tentado primeiro, no link e no print. Sem ela, o link usa `gemini-3.5-flash` e depois `gemini-3.1-flash-lite`; o print, a ordem da seção [Leitura do print](#leitura-do-print) |
 | `GEMINI_BUSCA_GOOGLE` | não | `1` liga a busca na web como último recurso |
 | `BUSCA_IA_DEMO` | não | `1` libera a busca **sem login**, para o modo demonstração |
 | `BUSCA_IA_ORIGENS` | não | Origens aceitas, separadas por vírgula. Padrão: a origem do deploy + `localhost` |
@@ -89,11 +94,116 @@ Amazon, Shopee, Mercado Livre e afins recusam acesso automático de
 qualquer origem — inclusive do buscador do Google. Nessas lojas a busca
 volta sem preço e o usuário digita o valor. O botão continua liberado
 (vale a tentativa, o bloqueio muda com o tempo), mas o aviso na tela diz
-que ali costuma falhar.
+que ali costuma falhar e sugere mandar o print, que não depende da loja.
 
 O `motivo` que a função devolve quando falha vem do próprio modelo — é ele
 que explica se a página não abriu, se não era página de produto ou se não
 havia preço. Isso aparece no campo `detalhe` da resposta.
+
+## Leitura do print
+
+No FinCK of Reality, o botão **Ler preço de um print** (ou colar a imagem,
+ou arrastá-la para o formulário) manda a imagem para esta mesma rota, com o
+mesmo login e os mesmos limites do link:
+
+```json
+{ "imagem": "data:image/jpeg;base64,...", "categorias": ["Alimentação", "..."] }
+```
+
+A resposta é o mesmo panorama do link, com `metodo: "ia-print"` e quatro
+campos a mais: `nomeCurto` (preenche o campo do item sem cortar palavra),
+`categoria` (sempre uma das enviadas, que são as do `js/config.js`), `faixa`
+(`{ min, max }` quando o preço muda por variação, e aí `preco` é o menor) e
+`modelo` (qual modelo leu). `loja` é o que a IA reconheceu na imagem.
+
+### O caminho da imagem
+
+1. O navegador (`js/imagem-print.js`) reduz o lado maior para até 2048 px e
+   converte para JPEG. Um print de celular de 1 a 4 MB chega com 100 a
+   300 KB. PNG com transparência ganha fundo branco; HEIC que o navegador
+   não desenha vai como está, porque o Gemini lê HEIC.
+2. A função aceita até 3 MB (a Vercel recusa corpo acima de 4,5 MB, e o
+   base64 cresce um terço) e confere os primeiros bytes contra o tipo
+   declarado: o Gemini só recebe JPEG, PNG, WEBP ou HEIC de verdade.
+3. O Gemini responde com saída estruturada (`responseSchema`). Aqui ela
+   funciona porque a chamada não usa ferramenta (veja o último item deste
+   README).
+4. O resultado passa por conferências antes de chegar ao painel. Nos testes
+   o modelo às vezes calculou uma parcela que não estava escrita, ou juntou o
+   preço de uma variação com o riscado de outra:
+   - parcelas que não fecham com o preço saem; se fecham, viram "sem juros";
+   - riscado do tamanho do topo da faixa sai, com o desconto calculado sobre ele;
+   - categoria fora da lista enviada é ignorada.
+5. A mesma imagem lida de novo em 5 minutos vem do cache (pelo hash), sem
+   gastar cota. A imagem em si não é guardada nem registrada em log.
+
+### Modelos, medidos em 03/10/2026
+
+Oito prints de teste (`ferramentas/prints-exemplo`), com a ordem que a
+função usa:
+
+| Ordem | Modelo | Resultado |
+|---|---|---|
+| 1 | `gemini-3.5-flash-lite` | 8 de 8 certos, 1,8 s de mediana |
+| 2 | `gemini-3.5-flash` | também acerta, mas leva de 9 a 23 s |
+| 3 | `gemini-3.1-flash-lite` | acerta quando responde, mas deu 503 em 3 de 8 |
+
+Quando um modelo responde 429, 500 ou 503, ou estoura 20 s, a função passa
+para o próximo, dentro de 50 s no total. Os da família 2.5 já respondem
+404 para chaves novas e ficaram de fora.
+
+### Plano gratuito do Gemini
+
+Na chave gratuita, o `gemini-3.5-flash` aceitou **5 pedidos por minuto e 20
+por dia**, para o projeto inteiro (todos os usuários somados). É por isso
+que ele não é o primeiro do print. A busca pelo link ainda começa por ele:
+passados os 20 do dia, ela segue no `gemini-3.1-flash-lite`.
+
+Cada modelo tem a própria cota, então a lista de reserva aumenta o total do
+dia. Quando todos estão cheios, a resposta é `IA_OCUPADA` e a tela pede
+para tentar em um minuto ou digitar o preço. Para uso de verdade, ligar o
+faturamento da chave no AI Studio acaba com esse aperto. Um print gasta
+perto de 1.700 tokens de entrada e 200 de saída; nos preços da linha
+flash-lite isso fica em fração de centavo, mas confira a tabela atual do
+Google antes de ligar.
+
+**Privacidade.** Pelos termos do Gemini, o conteúdo enviado no plano
+gratuito pode ser usado pelo Google para melhorar os produtos dele. Por isso
+a tela diz que a imagem é lida pela IA do Google e pede para evitar prints
+com dados pessoais (endereço de entrega, nome, notificações). Com o
+faturamento ligado, esse uso deixa de valer.
+
+### Situação da rota (GET)
+
+`GET /api/buscar-preco-ia` responde `{ ok, ia, demo, print }` sem login e
+sem gastar cota. A tela usa isso para desligar o botão do print antes de o
+usuário ir buscar uma imagem: sem chave no servidor, ou na demonstração
+com `BUSCA_IA_DEMO` desligada.
+
+### Códigos de erro do print
+
+| Código | Quando |
+|---|---|
+| `IMAGEM_INVALIDA` | tipo fora da lista, arquivo corrompido, acima de 3 MB, ou imagem que o Gemini não abriu |
+| `SEM_PRECO` | a imagem não mostra um produto à venda com preço legível; `detalhe` traz o motivo dado pela IA |
+| `IA_OCUPADA` | todos os modelos responderam 429 ou 503, ou estouraram o prazo |
+| `IA_FALHOU` | outro erro do Gemini; o texto original vai em `tecnico` |
+
+`SEM_LOGIN`, `LIMITE`, `ORIGEM_NAO_PERMITIDA` e `IA_INDISPONIVEL` valem como
+no link.
+
+### Como testar
+
+```bash
+node ferramentas/testar-print.mjs                  # sem rede, Gemini simulado
+GEMINI_API_KEY=<chave> node ferramentas/testar-print.mjs --ao-vivo
+FINCK_API=https://finck-app.vercel.app FINCK_TOKEN=<jwt> \
+  node ferramentas/testar-print.mjs --ao-vivo      # contra o deploy
+```
+
+O modo `--ao-vivo` lê os prints de `ferramentas/prints-exemplo` e compara
+com `esperado.json`. Quando um modelo for aposentado ou trocado, é este
+teste que diz se a leitura continua certa.
 
 ## Contrato da resposta
 
@@ -120,11 +230,13 @@ app saber de onde veio o número e ajustar o aviso de confiança:
 
 `moeda` é a moeda que a página exibe, não a do usuário: preço em dólar
 volta como `USD` e o app avisa na tela em vez de converter por conta
-própria.
+própria. O painel mostra o valor na moeda original (US$ 23,45) e o campo de
+preço não é preenchido: quem converte e digita em reais é o usuário.
 
 Quando falha: `{ "ok": false, "codigo": "...", "motivo": "...", "detalhe": "..." }`.
 Os códigos são `SEM_LOGIN`, `LIMITE`, `URL_INVALIDA`, `SEM_PRECO` e
-`IA_INDISPONIVEL` (esse último quando falta a `GEMINI_API_KEY`).
+`IA_INDISPONIVEL` (esse último quando falta a `GEMINI_API_KEY`). O print
+tem também os seus, na seção [Leitura do print](#códigos-de-erro-do-print).
 
 ## Como medir
 
@@ -147,3 +259,7 @@ a funcionar podem sair da lista de bloqueadas.
 sem erro. Por isso o formato do JSON vai escrito no prompt e a resposta
 passa por um extrator tolerante, que aceita o JSON embrulhado em
 ` ```json ` ou dentro de uma frase.
+
+O print não usa ferramenta nenhuma, então ali o esquema vai e o JSON chega
+no formato. `chamarGemini` só manda o esquema quando a lista de
+ferramentas está vazia, para essa trava não voltar por descuido.

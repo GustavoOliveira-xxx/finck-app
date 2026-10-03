@@ -332,3 +332,87 @@
   border-left:3px solid var(--texto-fraquissimo);
   color:var(--texto-fraco);
 }
+
+/* Leitura do print: botão com ícone, dica de privacidade, estado de leitura
+   com a miniatura da imagem enviada e a área que aceita arrastar e soltar. */
+.busca-preco__icone{
+  width:16px;
+  height:16px;
+  flex:none;
+}
+.busca-preco__botao--carregando .busca-preco__icone{ display:none; }
+
+.busca-preco__dica{
+  margin:.1rem 0 .75rem;
+  font-size:.78rem;
+  line-height:1.5;
+  color:var(--texto-fraquissimo);
+}
+.busca-preco__dica--desligada{
+  padding-left:.6rem;
+  border-left:3px solid var(--texto-fraquissimo);
+  color:var(--texto-fraco);
+}
+@media (pointer: coarse){
+  .busca-preco__dica-mouse{ display:none; }
+}
+
+.busca-preco__aviso--lendo{
+  border-color:rgba(147,51,196,.32);
+  background:var(--superficie-alta);
+}
+
+.print-lendo{
+  display:flex;
+  align-items:center;
+  gap:.8rem;
+}
+.print-lendo p{ margin:0; }
+
+.print-lendo__miniatura,
+.panorama__miniatura{
+  width:48px;
+  height:48px;
+  flex:none;
+  object-fit:cover;
+  object-position:top;
+  border-radius:8px;
+  border:1px solid var(--superficie-borda);
+  background:#fff;
+}
+
+.print-lendo__miniatura{ animation:print-lendo-pulso 1.4s ease-in-out infinite; }
+@keyframes print-lendo-pulso{ 50%{ opacity:.5; } }
+@media (prefers-reduced-motion: reduce){
+  .print-lendo__miniatura{ animation:none; }
+}
+
+.panorama__cabecalho--print{
+  align-items:center;
+  justify-content:flex-start;
+}
+.panorama__titulos{
+  min-width:0;
+  display:grid;
+  gap:.15rem;
+}
+@media (max-width: 460px){
+  .panorama__cabecalho--print{ flex-direction:row; gap:.65rem; }
+}
+
+.lojas-print{
+  margin:var(--gap-sm) 0 0;
+  padding:.7rem .85rem;
+  border-radius:var(--raio-sm);
+  border:1px solid rgba(31,209,143,.3);
+  background:var(--verde-fraco);
+  font-size:.86rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+.lojas-print strong{ color:var(--verde); }
+
+.busca-preco--soltar{
+  outline:2px dashed var(--roxo-neon);
+  outline-offset:4px;
+}

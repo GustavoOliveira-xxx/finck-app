@@ -3475,6 +3475,102 @@ window.FinckTestes = (() => {
       esperar(new Set(nomes).size).aSer(nomes.length);
     });
   });
+  descrever("Leitura do print (FinckPrint)", () => {
+    const P = window.FinckPrint;
+    const arquivoFalso = (tipo, nome) => ({
+      type: tipo,
+      name: nome
+    });
+    teste("print pequeno mantém o tamanho", () => {
+      const m = P.medidas(1080, 1920);
+      esperar(m.largura).aSer(1080);
+      esperar(m.altura).aSer(1920);
+    });
+    teste("print de celular reduz o lado maior para 2048 sem distorcer", () => {
+      const m = P.medidas(1170, 2532);
+      esperar(m.altura).aSer(2048);
+      esperar(m.largura).aSer(946);
+    });
+    teste("print largo de computador reduz pela largura", () => {
+      const m = P.medidas(3840, 2160);
+      esperar(m.largura).aSer(2048);
+      esperar(m.altura).aSer(1152);
+    });
+    teste("reconhece imagem pelo tipo ou pela extensão", () => {
+      esperar(P.ehImagem(arquivoFalso("image/png", "print.png"))).aSerVerdadeiro();
+      esperar(P.ehImagem(arquivoFalso("", "IMG_0001.HEIC"))).aSerVerdadeiro();
+      esperar(P.ehImagem(arquivoFalso("application/pdf", "nota.pdf"))).aSerFalso();
+      esperar(P.ehImagem(null)).aSerFalso();
+    });
+    teste("colar texto continua sendo texto, mesmo com imagem junto", () => {
+      const colagem = {
+        getData: () => "Fone de ouvido",
+        items: [ {
+          kind: "file",
+          type: "image/png",
+          getAsFile: () => "imagem-do-excel"
+        } ]
+      };
+      esperar(P.imagemDaColagem(colagem)).aSer(null);
+    });
+    teste("colar só a imagem vira print", () => {
+      const colagem = {
+        getData: () => "",
+        items: [ {
+          kind: "string",
+          type: "text/html"
+        }, {
+          kind: "file",
+          type: "image/png",
+          getAsFile: () => "print"
+        } ]
+      };
+      esperar(P.imagemDaColagem(colagem)).aSer("print");
+      esperar(P.imagemDaColagem({
+        getData: () => "",
+        items: []
+      })).aSer(null);
+    });
+    teste("arrastar aceita só imagem", () => {
+      const imagem = arquivoFalso("image/jpeg", "produto.jpg");
+      esperar(P.imagemDoArraste({
+        files: [ arquivoFalso("text/plain", "lista.txt"), imagem ]
+      })).aSer(imagem);
+      esperar(P.imagemDoArraste({
+        files: [ arquivoFalso("text/plain", "lista.txt") ]
+      })).aSer(null);
+      esperar(P.temArquivo({
+        types: [ "Files" ]
+      })).aSerVerdadeiro();
+      esperar(P.temArquivo({
+        types: [ "text/plain" ]
+      })).aSerFalso();
+    });
+    teste("prepara um print alto como JPEG de até 2048 px", async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1200;
+      canvas.height = 3000;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, 1200, 3000);
+      ctx.fillStyle = "#222";
+      ctx.font = "bold 120px sans-serif";
+      ctx.fillText("R$ 1.299,90", 80, 1500);
+      const png = await new Promise(ok => canvas.toBlob(ok, "image/png"));
+      const r = await P.preparar(new File([ png ], "print.png", {
+        type: "image/png"
+      }));
+      esperar(r.altura).aSer(2048);
+      esperar(r.largura).aSer(819);
+      esperar(r.dataUrl.startsWith("data:image/jpeg;base64,")).aSerVerdadeiro();
+      esperar(r.bytes < P.LIMITE_ENVIO_BYTES).aSerVerdadeiro();
+    });
+    teste("arquivo que não é imagem é recusado antes de enviar", async () => {
+      await esperar(() => P.preparar(new File([ "oi" ], "nota.txt", {
+        type: "text/plain"
+      }))).aFalharCom("não é uma imagem");
+    });
+  });
   async function rodar(aoAtualizar) {
     const resultado = {
       total: 0,

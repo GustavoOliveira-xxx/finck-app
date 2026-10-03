@@ -1,0 +1,11 @@
+{
+  "_sobre": "Prints simulados de lojas, feitos para medir a leitura por IA. Cada chave é um arquivo desta pasta; listas aceitam qualquer um dos valores. Rode com: GEMINI_API_KEY=... node ferramentas/testar-print.mjs --ao-vivo",
+  "mercadolivre.jpg": { "preco": 2129.05, "moeda": "BRL", "precoOriginal": 2599, "parcelas": [10, 212.9], "frete": true, "categoria": ["Eletrônicos"] },
+  "shopee.jpg": { "preco": 39.9, "moeda": "BRL", "faixa": [39.9, 59.9], "precoOriginal": [57, null], "frete": true, "categoria": ["Vestuário"] },
+  "amazon.jpg": { "preco": 549, "moeda": "BRL", "precoOriginal": 664.05, "parcelas": [10, 54.9], "frete": true, "categoria": ["Eletrônicos"] },
+  "magalu.jpg": { "preco": 459.9, "moeda": "BRL", "precoOriginal": 599.9, "pix": 413.91, "parcelas": [10, 45.99], "categoria": ["Moradia", "Eletrônicos"] },
+  "dolar.jpg": { "preco": 23.45, "moeda": "USD", "precoOriginal": 58.62, "categoria": ["Eletrônicos", "Lazer", "Saúde"] },
+  "carrinho.jpg": { "encontrado": false },
+  "conversa.jpg": { "encontrado": false },
+  "etiqueta.jpg": { "preco": 189.9, "moeda": "BRL", "parcelas": [6, 31.65], "categoria": ["Moradia", "Eletrônicos"] }
+}

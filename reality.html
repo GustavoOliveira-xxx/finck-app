@@ -98,10 +98,21 @@
             <span class="busca-preco__giro" aria-hidden="true"></span>
             <span class="busca-preco__rotulo">Buscar preço do link</span>
           </button>
+          <button type="button" class="btn-secundario busca-preco__botao" id="btnLerPrint" aria-describedby="dicaPrint">
+            <span class="busca-preco__giro" aria-hidden="true"></span>
+            <svg class="busca-preco__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></svg>
+            <span class="busca-preco__rotulo">Ler preço de um print</span>
+          </button>
+          <input type="file" id="entradaPrint" accept="image/*" hidden>
           <button type="button" class="busca-preco__ajuda" id="btnLojasSuportadas" aria-haspopup="dialog">
             Quais lojas funcionam?
           </button>
         </div>
+        <p class="busca-preco__dica" id="dicaPrint">
+          O print funciona até onde o link falha (Shopee, Amazon, Instagram).
+          <span class="busca-preco__dica-mouse">Também dá para colar ou arrastar a imagem.</span>
+          A IA do Google lê a imagem e o FinCK não a guarda; evite prints com dados pessoais.
+        </p>
         <div class="busca-preco__aviso" id="avisoLoja" role="status" hidden></div>
         <details class="detalhes-hipoteses" id="detalhesVidaUtil">
           <summary>Quantidade e vida útil (opcional, mas muda a conta)</summary>
@@ -260,6 +271,7 @@
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/reality-page.js"></script>
+  <script src="js/imagem-print.js"></script>
   <script src="js/buscar-preco.js"></script>
   <script src="js/calculos.js"></script>
   <script src="js/abas-reality.js"></script>
