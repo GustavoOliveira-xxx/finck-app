@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FinCK | Ações locais</title>
-  <meta name="description" content="Pontos de reparo, doação, troca e descarte correto cadastrados por você para a sua cidade, bairro ou escola.">
+  <meta name="description" content="Pontos de reparo, doação, troca e descarte correto perto de você: procure no Google Maps e salve na sua rede.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
   <meta name="theme-color" content="#07060a">
   <link rel="manifest" href="manifest.json">
@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/busca-locais.css">
 </head>
 <body data-page="reality">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -57,19 +58,39 @@
       <p>Onde, no seu bairro, na sua cidade ou na sua escola, uma decisão consciente vira ação: consertar, doar, trocar, alugar ou descartar direito.</p>
     </section>
 
-    <section class="bloco bloco--aviso">
-      <h3>De onde vêm estes endereços</h3>
+    <section class="bloco procurar" id="procurar">
+      <h3>Procurar perto de você</h3>
       <p class="descricao">
-        Todos eles são cadastrados por você. O FinCK <strong>não</strong> traz uma base pronta de
-        parceiros, não usa mapa e não consulta serviço pago — porque não teria como
-        garantir que um ponto listado existe, atende hoje e faz o que promete.
-        Um endereço inventado seria pior que endereço nenhum.
+        Quem conserta, vende usado, troca, aluga, recebe doação ou faz descarte correto no seu
+        bairro, direto do <span class="marca-maps" translate="no">Google Maps</span>. Você confere e
+        salva na sua rede só o que fizer sentido.
       </p>
-      <p class="descricao">
-        Este é o protótipo de aplicabilidade local: a turma, a escola ou a comunidade
-        levanta os pontos reais da própria região e cadastra aqui. Marque a data em que
-        você conferiu — assim dá para saber o que está velho.
-      </p>
+      <form id="formProcurar" novalidate>
+        <fieldset class="procurar__tipos">
+          <legend>O que você procura</legend>
+          <div class="opcoes-reflexao" id="tiposProcurar"></div>
+        </fieldset>
+        <div class="linha-dupla">
+          <label><span>Para quê <small class="procurar__opcional">(opcional)</small></span>
+            <input type="text" id="procurarItem" maxlength="60" placeholder="Ex.: celular, roupas, sofá">
+          </label>
+          <label>Onde
+            <input type="text" id="procurarOnde" maxlength="100" placeholder="Ex.: Jardim Bom Tempo, Taboão da Serra" autocomplete="address-level3">
+          </label>
+        </div>
+        <div class="procurar__acoes">
+          <button type="submit" class="btn-primario" id="btnProcurar">
+            <span class="procurar__giro" aria-hidden="true"></span>
+            <span class="procurar__rotulo">Procurar aqui</span>
+          </button>
+          <a class="btn-secundario" id="linkProcurarMaps" href="https://www.google.com/maps" target="_blank" rel="noopener"><span>Abrir no <span class="marca-maps" translate="no">Google Maps</span></span></a>
+        </div>
+        <p class="nota" id="notaProcurar">
+          A busca vai para o Google, que encontra os lugares no Maps: use bairro e cidade, não o
+          endereço da sua casa. O FinCK não guarda o resultado; só entra na sua rede o que você salvar.
+        </p>
+      </form>
+      <div id="resultadoProcurar" aria-live="polite"></div>
     </section>
 
     <section class="bloco">
@@ -90,6 +111,22 @@
       </p>
     </section>
 
+    <section class="bloco bloco--aviso">
+      <h3>De onde vêm estes endereços</h3>
+      <p class="descricao">
+        Sua rede tem só o que você salvou. A busca acima mostra lugares que existem no
+        <span class="marca-maps" translate="no">Google Maps</span>, com endereço e a nota de quem já foi;
+        quando o Maps não traz nada, o FinCK não mostra nada no lugar, porque um endereço
+        inventado seria pior que endereço nenhum.
+      </p>
+      <p class="descricao">
+        Mesmo vindo do mapa, confira se o lugar atende hoje e faz o que você precisa, e marque a
+        data em que conferiu: assim dá para saber o que está velho. A turma, a escola ou a
+        comunidade também pode cadastrar os pontos que o mapa não conhece, como a costureira da
+        rua ou a feira de trocas da escola.
+      </p>
+    </section>
+
     <section class="bloco">
       <h3>Desafio da turma</h3>
       <p class="descricao">
@@ -97,7 +134,8 @@
         pelo menos um ponto real que visitou ou telefonou, registra uma análise no
         <a href="reality.html">FinCK of Reality</a> e, 30 dias depois, diz em
         <a href="decisoes.html">Decisões</a> o que realmente aconteceu. O que o grupo mede é o
-        próprio comportamento declarado — não o impacto ambiental, que este app não calcula.
+        próprio comportamento declarado. O impacto ambiental que o FinCK of Reality mostra é uma
+        estimativa feita por IA, boa para comparar ordens de grandeza, e não uma medição.
       </p>
     </section>
 
@@ -112,6 +150,11 @@
       <h3 id="tituloLocal">Cadastrar um ponto</h3>
       <form id="formLocal" novalidate>
         <input type="hidden" id="localId">
+        <p class="nota origem-local" id="origemLocal" hidden>
+          Veio do <span class="marca-maps" translate="no">Google Maps</span>: a sua rede guarda o nome que
+          você confirmar e o link do lugar, que abre o endereço e o horário atualizados. Quando conferir
+          que ele atende, marque a data.
+        </p>
         <label>Nome do lugar ou da pessoa
           <input type="text" id="localNome" required maxlength="60" placeholder="Ex.: Assistência do seu Jorge">
         </label>
@@ -119,13 +162,13 @@
           <select id="localTipo"></select>
         </label>
         <label>Endereço ou referência
-          <input type="text" id="localEndereco" maxlength="120" placeholder="Ex.: Rua das Palmeiras, 200 — ao lado da praça">
+          <input type="text" id="localEndereco" maxlength="120" placeholder="Ex.: Rua das Palmeiras, 200, ao lado da praça">
         </label>
         <label>Contato
           <input type="text" id="localContato" maxlength="60" placeholder="Ex.: (11) 90000-0000">
         </label>
         <label>Observação
-          <input type="text" id="localNota" maxlength="120" placeholder="Ex.: só conserta fone e caixa de som">
+          <input type="text" id="localNota" maxlength="300" placeholder="Ex.: só conserta fone e caixa de som">
         </label>
         <label>Conferido em
           <input type="date" id="localData">
@@ -161,6 +204,7 @@
   <script src="js/tempo.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/ia-cliente.js"></script>
   <script src="js/locais.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>

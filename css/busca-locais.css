@@ -1,0 +1,180 @@
+/* "Procurar perto de você" em Ações locais: lugares do Google Maps buscados
+   pela rota da IA (api/buscar-preco-ia.js, pedido { locais }). */
+
+.procurar__tipos{
+  margin:0;
+  padding:0;
+  border:0;
+  min-width:0;
+}
+.procurar__tipos legend{
+  float:left;
+  width:100%;
+  margin:0 0 .5rem;
+  padding:0;
+  font-size:.82rem;
+  font-weight:600;
+  letter-spacing:.02em;
+  color:var(--texto-fraco);
+}
+.procurar__tipos .opcoes-reflexao{ clear:both; }
+.procurar__tipos .chip span{ margin-right:.15rem; }
+
+.procurar__opcional{
+  font-weight:400;
+  letter-spacing:0;
+  color:var(--texto-fraquissimo);
+}
+
+.procurar__acoes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.6rem;
+}
+.procurar__acoes > *{ flex:0 1 auto; }
+
+.procurar__giro{
+  width:14px;
+  height:14px;
+  flex:none;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;
+  display:none;
+}
+.procurar--carregando .procurar__giro{
+  display:block;
+  animation:procurar-giro .7s linear infinite;
+}
+@keyframes procurar-giro{ to{ transform:rotate(360deg); } }
+
+#notaProcurar{ margin:0; }
+
+#resultadoProcurar{
+  display:flex;
+  flex-direction:column;
+  gap:.7rem;
+}
+#resultadoProcurar:empty{ display:none; }
+
+.procurar__carregando{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:0;
+  font-size:.86rem;
+  color:var(--texto-fraco);
+}
+.procurar__carregando .procurar__giro{
+  display:block;
+  border-top-color:var(--roxo-neon);
+  animation:procurar-giro .7s linear infinite;
+}
+
+/* Atribuição pedida pelos termos do Google Maps: o nome aparece inteiro, sem
+   quebrar linha nem ser traduzido, na fonte padrão e sem negrito. */
+.procurar__fonte{
+  margin:0;
+  font-size:.8rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+.procurar__fonte .marca-maps{
+  font-family:Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight:400;
+  color:#fff;
+}
+
+.lugares{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(250px,1fr));
+  gap:.6rem;
+}
+.lugar{
+  display:flex;
+  flex-direction:column;
+  gap:.3rem;
+  padding:.85rem .95rem;
+  border-radius:var(--raio-md);
+  background:rgba(255,255,255,.026);
+  border:1px solid var(--superficie-borda);
+  min-width:0;
+}
+.lugar__nome{
+  margin:0;
+  font-size:.95rem;
+  line-height:1.35;
+}
+.lugar__nome a{ color:var(--texto); }
+.lugar__nome a:hover{ color:var(--amarelo); text-decoration:underline; }
+.lugar__endereco{
+  margin:0;
+  font-size:.82rem;
+  line-height:1.45;
+  color:var(--texto-fraco);
+}
+.lugar__meta{
+  margin:0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.2rem .75rem;
+  font-size:.78rem;
+  color:var(--texto-fraquissimo);
+}
+.lugar__meta a{ color:var(--texto-fraco); }
+.lugar__nota{ color:var(--amarelo); font-weight:600; }
+.lugar__acoes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem;
+  margin-top:auto;
+  padding-top:.4rem;
+}
+.lugar__acoes > *{ flex:1 1 auto; text-align:center; }
+.lugar__salvo{
+  align-self:center;
+  font-size:.78rem;
+  font-weight:600;
+  color:var(--verde);
+}
+
+.procurar__aviso{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:.65rem;
+  padding:.85rem .95rem;
+  border-radius:var(--raio-md);
+  border:1px dashed var(--superficie-borda-forte);
+  background:rgba(255,255,255,.015);
+}
+.procurar__aviso-acoes{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:.4rem 1rem;
+}
+.procurar__aviso p{
+  margin:0;
+  font-size:.86rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+
+/* Na rede, o link que a pessoa salvou do Maps. */
+.link-guardado{ color:var(--roxo-neon); font-weight:600; }
+
+/* Aviso no cadastro quando o ponto veio de uma busca no Maps. */
+.origem-local{ margin:0; }
+
+@media (max-width: 520px){
+  .procurar__acoes > *{ flex:1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .procurar--carregando .procurar__giro,
+  .procurar__carregando .procurar__giro{ animation-duration:2.4s; }
+}

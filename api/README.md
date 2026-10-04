@@ -1,4 +1,4 @@
-# IA do FinCK: preço e impacto ambiental
+# IA do FinCK: preço, impacto ambiental e lugares
 
 `buscar-preco-ia.js` é uma função serverless da Vercel. Ela recebe o link
 que o usuário colou no FinCK of Reality, pede ao Gemini que leia a página
@@ -16,6 +16,10 @@ está vendo o preço, e o Gemini lê a imagem.
 E **estima o impacto ambiental** do item analisado (veja
 [Impacto ambiental](#impacto-ambiental-ods-12)), o elo do resultado do
 FinCK of Reality com a ODS 12.
+
+E **procura lugares no Google Maps** para Ações locais: quem conserta, vende
+usado, troca, aluga, recebe doação ou faz descarte correto perto da pessoa
+(veja [Lugares no Google Maps](#lugares-no-google-maps-ações-locais)).
 
 ## Por que a chave fica aqui, e não no navegador
 
@@ -198,12 +202,12 @@ faturamento ligado, esse uso deixa de valer.
 
 ### Situação da rota (GET)
 
-`GET /api/buscar-preco-ia` responde `{ ok, ia, demo, print, impacto }` sem
-login e sem gastar cota. A tela usa isso para desligar o botão do print
+`GET /api/buscar-preco-ia` responde `{ ok, ia, demo, print, impacto, locais }`
+sem login e sem gastar cota. A tela usa isso para desligar o botão do print
 antes de o usuário ir buscar uma imagem, e para avisar no bloco de impacto
 ambiental em vez de pedir à toa: sem chave no servidor, ou na demonstração
 com `BUSCA_IA_DEMO` desligada. `js/ia-cliente.js` faz esse GET uma vez por
-página e o print e o impacto usam a mesma resposta.
+página e o print, o impacto e a busca de lugares usam a mesma resposta.
 
 ### Códigos de erro do print
 
@@ -321,6 +325,107 @@ o preço não entra na chave, porque só situa o porte do produto.
 ```bash
 node ferramentas/testar-impacto.mjs                 # sem rede, Gemini simulado
 GEMINI_API_KEY=<chave> node ferramentas/testar-impacto.mjs --ao-vivo
+```
+
+## Lugares no Google Maps (Ações locais)
+
+Em Ações locais, **Procurar perto de você** manda o tipo de lugar, para quê
+(opcional) e onde:
+
+```json
+{ "locais": { "tipo": "usado", "item": "roupas", "onde": "Vila Madalena, São Paulo, SP" } }
+```
+
+e a função pede ao Gemini, com a ferramenta do Google Maps, "Liste até 6
+lojas de usados e seminovos que vendem roupas perto de Vila Madalena, São
+Paulo, SP, com endereço.". A resposta:
+
+```json
+{
+  "ok": true,
+  "fonte": "google-maps",
+  "lugares": [
+    {
+      "nome": "Peça Rara Vila Madalena",
+      "endereco": "R. Delfina, 94 - Vila Madalena, São Paulo - SP, 05443-010",
+      "telefone": "+55 11 96858-6870",
+      "site": "https://instagram.com/pecarara.vilamadalena",
+      "descricao": null,
+      "nota": 3.9,
+      "avaliacoes": 66,
+      "mapa": "https://maps.google.com/maps?cid=8037813669314080211",
+      "placeId": "ChIJ..."
+    }
+  ],
+  "modelo": "gemini-3.5-flash-lite"
+}
+```
+
+`tipo` é um dos seis de Ações locais: `reparo`, `usado`, `troca`,
+`aluguel`, `doacao` ou `descarte`.
+
+### Para não inventar endereço
+
+- a lista sai das **fontes do Maps** (`groundingMetadata.groundingChunks`),
+  nunca do texto do modelo: todo lugar mostrado existe no Google Maps e tem
+  o link dele. Se o modelo responder sem fonte, a resposta é `SEM_LUGARES`,
+  mesmo que o texto cite nomes;
+- o pedido vai em texto livre. Com pedido de JSON ou com esquema de
+  resposta, o modelo responde de memória e não consulta o Maps;
+- `onde` é obrigatório e em texto (bairro e cidade). Só com coordenadas, ou
+  com "perto de mim", o modelo também não consulta o Maps.
+
+### Termos do Google Maps
+
+- cada cartão mostra o nome do lugar com o link da fonte, e a lista diz
+  "Resultados do Google Maps", com o nome inteiro, sem quebra de linha e com
+  `translate="no"` para o navegador não traduzir;
+- nada da busca é guardado: a função não usa cache para ela, e a tela não
+  grava o resultado. O único dado do Maps que os termos deixam guardar é o
+  `placeId`; quando a pessoa usa **Salvar na minha rede**, a observação do
+  ponto recebe o link no formato documentado do Maps
+  (`https://www.google.com/maps/search/?api=1&query=<nome>&query_place_id=<placeId>`),
+  que abre o lugar com o endereço e o horário do dia, e o nome entra como a
+  pessoa confirmar no cadastro;
+- o pedido (tipo, para quê e onde) vai para o Google: o serviço guarda
+  pedido e resposta por 30 dias e, no plano gratuito, o Google pode usá-los
+  para melhorar os produtos dele (veja
+  [Plano gratuito do Gemini](#plano-gratuito-do-gemini)). Por isso a tela
+  avisa que a busca vai para o Google e pede bairro e cidade, não o endereço
+  da casa.
+
+### Plano gratuito
+
+Medido em 04/10/2026: quando o Maps responde, são 6 lugares reais em cerca
+de 4 s. Mas no plano gratuito ele aceita poucas buscas seguidas; nas outras,
+o modelo diz que o serviço de mapas está indisponível e volta sem fontes,
+o que vira `SEM_LUGARES` em 3 a 5 s. Tentar outro modelo não ajuda (o
+limite é o mesmo e o `gemini-3.5-flash` tem só 20 pedidos por dia), então a
+função não insiste.
+
+Por isso a tela sempre tem **Abrir no Google Maps**, que abre a mesma busca
+no próprio Maps por um link comum (`google.com/maps/search/?api=1&query=`):
+funciona sem conta, sem IA e sem cota. Na demonstração, ou sem chave no
+servidor, ele vira o botão principal.
+
+Do FinCK of Reality, as alternativas e o bloco de impacto levam para a busca
+já preenchida (`locais.html?tipo=reparo&item=iPhone%20Pro#procurar`); com o
+bairro lembrado no aparelho, ela começa sozinha.
+
+### Códigos de erro dos lugares
+
+| Código | Quando |
+|---|---|
+| `BUSCA_INVALIDA` | tipo fora da lista, ou `onde` vazio ou com menos de 3 caracteres |
+| `SEM_LUGARES` | o Maps não trouxe nenhuma fonte (no plano gratuito, quase sempre o limite) |
+| `IA_OCUPADA` | todos os modelos responderam 429 ou 503, ou estouraram o prazo |
+| `IA_FALHOU` | outro erro do Gemini; o texto original vai em `tecnico` |
+
+### Como testar os lugares
+
+```bash
+node ferramentas/testar-locais.mjs                  # sem rede, Gemini simulado
+GEMINI_API_KEY=<chave> node ferramentas/testar-locais.mjs --ao-vivo "Vila Madalena, São Paulo, SP" usado roupas
 ```
 
 ## Contrato da resposta

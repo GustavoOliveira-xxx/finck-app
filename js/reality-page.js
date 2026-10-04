@@ -105,11 +105,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     metasHost.innerHTML = r.impacto_metas.length ? r.impacto_metas.map(m => `\n          <article class="card-impacto-meta">\n            <h5>${U.escapeHTML(m.nome)}</h5>\n            <p>Faltam ${U.moeda(m.falta)} para concluir.</p>\n            <p>Esta compra equivale a <strong>${U.percentual(m.percentual_da_meta, 1)}</strong> do alvo total\n               e a <strong>${U.percentual(m.percentual_do_restante, 1)}</strong> do que ainda falta,\n               ou cerca de <strong>${U.numero(m.dias_trabalho_extra, 1)} dias</strong> de trabalho a mais para alcançá-la.</p>\n            ${m.cobre_a_meta ? `<p class="destaque">Com este valor você concluiria a meta hoje.</p>` : ""}\n          </article>`).join("") : `<p class="vazio">Você ainda não tem metas cadastradas. <a href="metas.html">Criar uma meta</a> ajuda a comparar prioridades.</p>`;
     document.getElementById("alternativas").innerHTML = r.alternativas.map(a => `\n      <li class="alternativa">\n        <h5>${U.escapeHTML(a.titulo)}</h5>\n        <p>${U.escapeHTML(a.texto)}</p>\n        ${a.faixa ? `<small>Hipótese de design do projeto: entre ${U.moeda(a.faixa.min)} e ${U.moeda(a.faixa.max)} a menos (referência de ${U.percentual(a.percentual * 100, 0)}). Não é dado de pesquisa — confirme com o preço real.</small>` : ""}\n        ${blocoPontos(LOCAIS_POR_ALTERNATIVA[a.id])}\n      </li>`).join("");
   }
-  // ODS-006: cada alternativa aponta para os pontos reais que o usuário cadastrou.
+  // ODS-006: cada alternativa aponta para os pontos reais que o usuário salvou.
   // Não existe base pronta de parceiros: os endereços são os que a própria pessoa
-  // levantou no módulo Ações locais. É isso que fecha o ciclo dentro do app —
-  // preço vira tempo de trabalho, tempo vira alternativa, e a alternativa vira
-  // um lugar concreto do bairro em vez de uma recomendação genérica.
+  // guardou em Ações locais, cadastrados à mão ou achados no Google Maps. É isso
+  // que fecha o ciclo dentro do app: preço vira tempo de trabalho, tempo vira
+  // alternativa, e a alternativa vira um lugar concreto do bairro em vez de uma
+  // recomendação genérica. Sem ponto salvo, o link leva à busca já preenchida.
   const LOCAIS_POR_ALTERNATIVA = {
     usado: {
       tipos: [ "usado", "troca" ],
@@ -164,10 +165,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   function pontosPorTipo(tipos) {
     return locais.filter(l => tipos.indexOf(l.kind) >= 0);
   }
+  // O item analisado vira o "para quê" da busca em Ações locais: as primeiras
+  // palavras, sem modelo nem medida ("iPhone 15 Pro 256GB" vira "iPhone Pro").
+  const LIGACOES = /^(a|o|as|os|de|da|do|das|dos|e|com|sem|para|pra|em)$/i;
+  function itemParaBusca(nome) {
+    const palavras = String(nome || "").replace(/[^\p{L}\p{N}\s-]/gu, " ").split(/\s+/).filter(p => p && !/\d/.test(p)).slice(0, 3);
+    while (palavras.length && LIGACOES.test(palavras[palavras.length - 1])) {
+      palavras.pop();
+    }
+    return palavras.join(" ").slice(0, 60);
+  }
+  function linkProcurar(tipos) {
+    const item = itemParaBusca(entrada && entrada.item_name);
+    return `locais.html?tipo=${encodeURIComponent(tipos[0])}${item ? `&item=${encodeURIComponent(item)}` : ""}#procurar`;
+  }
   function cartaoPonto(l) {
     const t = cfg.TIPOS_ACAO_LOCAL.find(x => x.id === l.kind) || {};
     const detalhe = [ l.address, l.contact ].filter(Boolean).map(U.escapeHTML).join(" · ");
-    return `\n      <li class="ponto-local">\n        <span class="ponto-local__icone" aria-hidden="true">${t.icone || "\ud83d\udccd"}</span>\n        <span class="ponto-local__corpo">\n          <b>${U.escapeHTML(l.name)}</b>\n          <small>${U.escapeHTML(t.rotulo || "")}${detalhe ? ` \u00b7 ${detalhe}` : ""}</small>\n          ${l.verified_at ? `<small class="ponto-local__data">conferido em ${U.dataBR(l.verified_at)}</small>` : `<small class="ponto-local__data">sem data de conferência</small>`}\n        </span>\n      </li>`;
+    // Ponto salvo de uma busca no Maps: o link do lugar fica na observação.
+    const achado = /https:\/\/(?:www\.)?google\.[a-z.]+\/maps\S*|https:\/\/maps\.google\.\S+/.exec(l.notes || "");
+    const mapa = achado && U.urlHttpSegura(achado[0]);
+    return `\n      <li class="ponto-local">\n        <span class="ponto-local__icone" aria-hidden="true">${t.icone || "\ud83d\udccd"}</span>\n        <span class="ponto-local__corpo">\n          <b>${U.escapeHTML(l.name)}</b>\n          <small>${U.escapeHTML(t.rotulo || "")}${detalhe ? ` \u00b7 ${detalhe}` : ""}</small>\n          ${mapa ? `<small><a class="ponto-local__mapa" href="${U.escapeHTML(mapa)}" target="_blank" rel="noopener">Abrir no <span class="marca-maps" translate="no">Google Maps</span></a></small>` : ""}\n          ${l.verified_at ? `<small class="ponto-local__data">conferido em ${U.dataBR(l.verified_at)}</small>` : `<small class="ponto-local__data">sem data de conferência</small>`}\n        </span>\n      </li>`;
   }
   function blocoPontos(mapa) {
     if (!mapa) {
@@ -175,9 +193,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const achados = pontosPorTipo(mapa.tipos);
     if (!achados.length) {
-      return `\n        <p class="alternativa__vazio">${U.escapeHTML(mapa.convite)}\n          <a href="locais.html">Cadastrar um ponto →</a></p>`;
+      return `\n        <p class="alternativa__vazio">${U.escapeHTML(mapa.convite)}\n          <span class="alternativa__links"><a href="${linkProcurar(mapa.tipos)}">Procurar perto de você →</a>\n          <a href="locais.html">Cadastrar um ponto →</a></span></p>`;
     }
-    return `\n        <div class="alternativa__pontos">\n          <p class="alternativa__pontos-rotulo">${U.escapeHTML(mapa.rotulo)}</p>\n          <ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n          <a class="alternativa__local" href="locais.html">${achados.length > 3 ? `Ver os outros ${achados.length - 3} →` : "Gerenciar meus pontos →"}</a>\n        </div>`;
+    return `\n        <div class="alternativa__pontos">\n          <p class="alternativa__pontos-rotulo">${U.escapeHTML(mapa.rotulo)}</p>\n          <ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n          <span class="alternativa__links"><a class="alternativa__local" href="locais.html">${achados.length > 3 ? `Ver os outros ${achados.length - 3} →` : "Gerenciar meus pontos →"}</a>\n          <a class="alternativa__local" href="${linkProcurar(mapa.tipos)}">Procurar mais perto de você →</a></span>\n        </div>`;
   }
   function renderDestino() {
     const host = document.getElementById("blocoDestino");
@@ -187,7 +205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const achados = pontosPorTipo(mapa.tipos);
-    document.getElementById("destinoItem").innerHTML = `\n      <p class="destino-item__titulo">${U.escapeHTML(mapa.titulo)}</p>\n      <p class="destino-item__texto">${U.escapeHTML(mapa.texto)}</p>\n      ${achados.length ? `<ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n        <a class="alternativa__local" href="locais.html">Gerenciar meus pontos →</a>` : `<p class="alternativa__vazio">Você ainda não cadastrou nenhum ponto para isso.\n        <a href="locais.html">Cadastrar um ponto →</a></p>`}`;
+    document.getElementById("destinoItem").innerHTML = `\n      <p class="destino-item__titulo">${U.escapeHTML(mapa.titulo)}</p>\n      <p class="destino-item__texto">${U.escapeHTML(mapa.texto)}</p>\n      ${achados.length ? `<ul class="lista-pontos">${achados.slice(0, 3).map(cartaoPonto).join("")}</ul>\n        <a class="alternativa__local" href="locais.html">Gerenciar meus pontos →</a>` : `<p class="alternativa__vazio">Você ainda não cadastrou nenhum ponto para isso.\n        <span class="alternativa__links"><a href="${linkProcurar(mapa.tipos)}">Procurar perto de você →</a>\n        <a href="locais.html">Cadastrar um ponto →</a></span></p>`}`;
     host.hidden = false;
   }
   const OPCOES = {

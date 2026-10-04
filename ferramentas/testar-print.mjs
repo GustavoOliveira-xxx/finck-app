@@ -300,7 +300,7 @@ process.env.GEMINI_API_KEY = "teste";
 
 let h = await rota("GET");
 
-conferir("GET diz se a IA e a demo estão ligadas", h.corpo, { ok: true, ia: true, demo: false, print: true, impacto: true });
+conferir("GET diz se a IA e a demo estão ligadas", h.corpo, { ok: true, ia: true, demo: false, print: true, impacto: true, locais: true });
 
 conferir("e não fica em cache", h.cabecalhos["cache-control"], "no-store");
 

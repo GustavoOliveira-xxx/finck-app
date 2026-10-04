@@ -13,6 +13,9 @@
 // E estima o impacto ambiental do item analisado ({ impacto }), para a ODS 12:
 // faixa de carbono, água quando for o caso, vida útil, descarte e reparo.
 //
+// E procura no Google Maps ({ locais }) quem conserta, vende usado, troca,
+// aluga, recebe doação ou faz descarte correto perto de onde a pessoa está.
+//
 // GET responde só se a IA está configurada e se o modo demo está liberado,
 // sem gastar cota: a tela usa isso para desligar o botão do print antes de o
 // usuário ir buscar uma imagem na galeria.
@@ -423,7 +426,10 @@ async function chamarGemini({
       const statusUrl = (meta?.urlMetadata ?? [])
         .map((m) => String(m.urlRetrievalStatus ?? "").replace("URL_RETRIEVAL_STATUS_", ""));
 
-      return { json: extrairJson(texto), statusUrl, modelo };
+      // As fontes do grounding (Google Maps) vão junto: a busca de lugares
+      // monta a lista a partir delas, não do texto do modelo.
+      const fontes = candidato?.groundingMetadata?.groundingChunks ?? [];
+      return { json: extrairJson(texto), statusUrl, modelo, fontes };
     } catch (e) {
       ultimoStatus = e?.name === "AbortError" ? "prazo" : "rede";
       ultimoErro = e?.name === "AbortError"
@@ -1012,6 +1018,134 @@ async function estimarImpacto({ chave, impacto }) {
   return { status: 200, corpo };
 }
 
+// ------------------------------------------------------------ lugares (Maps)
+
+// Ações locais: procura no Google Maps, pela ferramenta googleMaps do Gemini,
+// quem conserta, vende usado, troca, aluga, recebe doação ou faz descarte
+// correto perto de onde a pessoa está. Medido em 04/10/2026:
+//   - a chave gratuita consulta o Maps, mas poucas vezes por minuto; passado
+//     o limite, a resposta vem vazia em vez de dar erro;
+//   - pedindo a resposta em JSON, o modelo responde de memória e às vezes
+//     traz um lugar sem fonte nenhuma. Por isso o pedido vai em texto livre e
+//     a lista sai das fontes do Maps (groundingChunks), nunca do texto: todo
+//     lugar mostrado existe no Google Maps e tem o link dele;
+//   - sem o nome do lugar no texto (só coordenadas, ou "perto de mim"), o
+//     modelo nem consulta o Maps. Por isso "onde" é obrigatório.
+// Os termos do Grounding with Google Maps proíbem guardar o conteúdo
+// devolvido, exceto o placeId: esta busca não passa pelo cache.
+
+const BUSCAS_LOCAIS = {
+  reparo: (item) => (item ? `lugares que consertam ${item}` : "assistências técnicas e lugares de conserto"),
+  usado: (item) => (item ? `lojas de usados e seminovos que vendem ${item}` : "brechós e lojas de usados"),
+  troca: (item) => (item ? `lugares para trocar ou emprestar ${item}` : "feiras de troca e lugares para trocar ou emprestar objetos"),
+  aluguel: (item) => (item ? `lugares que alugam ${item}` : "lojas de aluguel de equipamentos e objetos"),
+  doacao: (item) => (item ? `lugares que recebem doação de ${item}` : "instituições que recebem doações"),
+  descarte: (item) => (item ? `pontos de coleta e descarte correto de ${item}` : "ecopontos e pontos de coleta seletiva"),
+};
+
+function lerPedidoLocais(bruto) {
+  const tipo = String(bruto?.tipo ?? "");
+  if (!BUSCAS_LOCAIS[tipo]) {
+    return { erro: "Escolha o que você procura: conserto, usados, troca, aluguel, doação ou descarte." };
+  }
+  const onde = textoLimpo(bruto?.onde, 100);
+  if (!onde || onde.length < 3) {
+    return { erro: "Diga onde procurar: bairro e cidade, por exemplo." };
+  }
+  return { tipo, item: textoLimpo(bruto?.item, 60), onde };
+}
+
+// Texto livre, no formato que fez o modelo consultar o Maps nos testes.
+const promptDosLocais = ({ tipo, item, onde }) =>
+  `Liste até 6 ${BUSCAS_LOCAIS[tipo](item)} perto de ${onde}, com endereço.`;
+
+const urlSegura = (valor) => {
+  try {
+    const url = new URL(String(valor ?? "").trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+};
+
+// Cada fonte do Maps traz título, link e um texto com os dados do lugar:
+//   **Title:** Brechó X
+//   * **Address:** R. Delfina, 94 - Vila Madalena, São Paulo - SP, 05443-010, Brazil
+//   * **Rating:** 3.9 (66 reviews)
+//   * **Phone:** +55 11 96858-6870
+function lugaresDasFontes(fontes) {
+  const vistos = new Set();
+  const lugares = [];
+  for (const fonte of Array.isArray(fontes) ? fontes : []) {
+    const maps = fonte?.maps;
+    const link = urlSegura(maps?.uri);
+    const nome = textoLimpo(String(maps?.title ?? "").replace(/\s*-\s*Google Maps\s*$/i, ""), 80);
+    if (!link || !nome || vistos.has(nome.toLowerCase())) continue;
+    vistos.add(nome.toLowerCase());
+    const texto = String(maps.text ?? "");
+    const campo = (rotulo) => {
+      const achado = new RegExp(`\\*\\*${rotulo}:\\*\\*[ \\t]*([^\\n]+)`).exec(texto);
+      return achado ? textoLimpo(achado[1], 240) : null;
+    };
+    const nota = /([\d.,]+)\s*\(([\d.,]+)/.exec(campo("Rating") ?? "");
+    lugares.push({
+      nome,
+      endereco: (campo("Address") ?? "").replace(/,\s*(Brazil|Brasil)$/i, "") || null,
+      telefone: campo("Phone"),
+      site: urlSegura(campo("Website")),
+      descricao: campo("Description")?.slice(0, 200) ?? null,
+      nota: nota ? Number(nota[1].replace(",", ".")) : null,
+      avaliacoes: nota ? Number(nota[2].replace(/[.,]/g, "")) : null,
+      mapa: link,
+      // O placeId é o único dado do Maps que os termos deixam guardar.
+      placeId: typeof maps.placeId === "string" ? maps.placeId.replace(/^places\//, "") : null,
+    });
+    if (lugares.length === 6) break;
+  }
+  return lugares;
+}
+
+// Procura os lugares e devolve { status, corpo } prontos para responder.
+async function buscarLocais({ chave, locais }) {
+  const pedido = lerPedidoLocais(locais);
+  if (pedido.erro) {
+    return { status: 400, corpo: { ok: false, codigo: "BUSCA_INVALIDA", motivo: pedido.erro } };
+  }
+
+  const modelos = [
+    ...new Set([process.env.GEMINI_MODELO, ...MODELOS_PADRAO].filter(Boolean)),
+  ];
+  const lido = await chamarGemini({
+    chave,
+    modelos,
+    prompt: promptDosLocais(pedido),
+    ferramentas: [{ googleMaps: {} }],
+    ate: Date.now() + PRAZO_IMPACTO_MS,
+    prazoModelo: PRAZO_PRINT_POR_MODELO_MS,
+  });
+
+  if (lido.erro) {
+    return falhaDaIA(lido, {
+      ocupada: "O Google Maps está recebendo muitos pedidos agora. Tente de novo em um minuto ou abra a busca direto no Google Maps.",
+      falhou: "Não consegui procurar agora. Abra a busca direto no Google Maps.",
+    });
+  }
+
+  const lugares = lugaresDasFontes(lido.fontes);
+  if (!lugares.length) {
+    return {
+      status: 200,
+      corpo: {
+        ok: false,
+        codigo: "SEM_LUGARES",
+        motivo: "O Google Maps não trouxe lugares para essa busca agora. Tente de novo em um minuto, mude o bairro ou abra a busca direto no Google Maps.",
+      },
+    };
+  }
+
+  return { status: 200, corpo: { ok: true, fonte: "google-maps", lugares, modelo: lido.modelo } };
+}
+
 // ----------------------------------------------------------------- infra web
 
 const cache = new Map();
@@ -1096,6 +1230,7 @@ module.exports = async function handler(req, res) {
       demo: DEMO_LIBERADO,
       print: true,
       impacto: true,
+      locais: true,
     });
   }
   if (req.method !== "POST") {
@@ -1154,6 +1289,12 @@ module.exports = async function handler(req, res) {
   }
 
   const corpo = await lerCorpo(req);
+
+  // Lugares no Google Maps para as Ações locais: mesma porta, login e limites.
+  if (corpo?.locais !== undefined) {
+    const achados = await buscarLocais({ chave, locais: corpo.locais });
+    return responder(res, achados.corpo, achados.status);
+  }
 
   // Impacto ambiental do item analisado: mesma porta, login e limites.
   if (corpo?.impacto !== undefined) {
@@ -1310,3 +1451,7 @@ module.exports.montarImpacto = montarImpacto;
 module.exports.promptDoImpacto = promptDoImpacto;
 module.exports.esquemaDoImpacto = esquemaDoImpacto;
 module.exports.estimarImpacto = estimarImpacto;
+module.exports.lerPedidoLocais = lerPedidoLocais;
+module.exports.promptDosLocais = promptDosLocais;
+module.exports.lugaresDasFontes = lugaresDasFontes;
+module.exports.buscarLocais = buscarLocais;
