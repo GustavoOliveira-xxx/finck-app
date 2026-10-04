@@ -211,7 +211,7 @@ window.FinckReality = (() => {
     rotulo: "Sinais de consumo por impulso",
     texto: "Suas respostas indicam pouca necessidade, pouco uso ou vida útil curta."
   } ];
-  const LIMITE_RESPONSABILIDADE = "Este indicador resume apenas o que você declarou nas seis perguntas. Ele não mede impacto ambiental real — o FinCK não calcula CO₂, água ou resíduo.";
+  const LIMITE_RESPONSABILIDADE = "Este indicador resume apenas o que você declarou nas seis perguntas. Ele não mede impacto ambiental: o carbono e a água que o FinCK mostra na análise são estimativas feitas por IA, não medição.";
   function indicadorResponsavel(reflexoes = {}) {
     const pesos = cfg.PESOS_RESPONSABILIDADE;
     const criterios = cfg.REFLEXOES.map(q => {
@@ -384,7 +384,7 @@ window.FinckReality = (() => {
     },
     resultado_ambiental: {
       rotulo: "Resultado ambiental",
-      definicao: "Não medido pelo FinCK. O app registra decisões e reflexões; não calcula CO₂, água, resíduo nem prova que um produto deixou de ser fabricado.",
+      definicao: "Não medido pelo FinCK. O app registra decisões e reflexões e mostra, para cada item analisado, uma estimativa de carbono e água feita por IA; não mede o impacto real nem prova que um produto deixou de ser fabricado.",
       referencia: "fora do escopo"
     }
   };
