@@ -3571,6 +3571,98 @@ window.FinckTestes = (() => {
       }))).aFalharCom("não é uma imagem");
     });
   });
+  descrever("Impacto ambiental (FinckImpacto)", () => {
+    const I = window.FinckImpacto;
+    const celular = {
+      carbono: {
+        min: 50,
+        max: 90
+      },
+      vidaUtilMeses: {
+        min: 36,
+        max: 60
+      },
+      fracaoFabricacao: .8
+    };
+    teste("por mês de uso, valem os meses que a pessoa espera", () => {
+      const c = I.calcular(celular, {
+        mesesDeUso: 24
+      });
+      esperar(c.porMes.valor).aSer(2.9);
+      esperar(c.porMes.meses).aSer(24);
+      esperar(c.porMes.daPessoa).aSerVerdadeiro();
+    });
+    teste("sem os meses da pessoa, vale a vida útil típica", () => {
+      const c = I.calcular(celular);
+      esperar(c.porMes.valor).aSer(1.5);
+      esperar(c.porMes.meses).aSer(48);
+      esperar(c.porMes.daPessoa).aSerFalso();
+    });
+    teste("a quantidade multiplica carbono e água", () => {
+      const c = I.calcular({
+        carbono: {
+          min: 5,
+          max: 15
+        },
+        agua: {
+          min: 2e3,
+          max: 4e3
+        }
+      }, {
+        quantidade: 3
+      });
+      esperar(c.carbono.min).aSer(15);
+      esperar(c.carbono.max).aSer(45);
+      esperar(c.agua.max).aSer(12e3);
+      esperar(c.quantidade).aSer(3);
+    });
+    teste("comprar usado evita a fração da fabricação", () => {
+      const c = I.calcular(celular);
+      esperar(c.evitavelUsado.min).aSer(40);
+      esperar(c.evitavelUsado.max).aSer(72);
+      esperar(c.evitavelUsado.percentual).aSer(80);
+    });
+    teste("sem fração de fabricação, a conta do usado não aparece", () => {
+      esperar(I.calcular({
+        carbono: {
+          min: 1,
+          max: 2
+        }
+      }).evitavelUsado).aSer(null);
+    });
+    teste("duração em meses abaixo de dois anos e em anos acima", () => {
+      esperar(I.formatarDuracao({
+        min: 6,
+        max: 18
+      })).aSer("6 a 18 meses");
+      esperar(I.formatarDuracao({
+        min: 36,
+        max: 60
+      })).aSer("3 a 5 anos");
+      esperar(I.formatarDuracao({
+        min: 8,
+        max: 36
+      })).aSer("8 meses a 3 anos");
+      esperar(I.formatarDuracao({
+        min: 18,
+        max: 30
+      })).aSer("1,5 a 2,5 anos");
+    });
+    teste("carbono em kg, e em toneladas a partir de mil kg", () => {
+      esperar(I.formatarCarbono({
+        min: 50,
+        max: 90
+      })).aSer("50 a 90 kg de CO₂e");
+      esperar(I.formatarCarbono({
+        min: .84,
+        max: 1.3
+      })).aSer("0,84 a 1,3 kg de CO₂e");
+      esperar(I.formatarCarbono({
+        min: 1500,
+        max: 3e3
+      })).aSer("1,5 a 3 t de CO₂e");
+    });
+  });
   async function rodar(aoAtualizar) {
     const resultado = {
       total: 0,

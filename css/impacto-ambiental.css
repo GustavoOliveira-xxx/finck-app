@@ -1,0 +1,188 @@
+/* Impacto ambiental estimado (ODS 12) no resultado do FinCK of Reality.
+   Usa o verde da ODS 12 que o app já mostra no card da página inicial. */
+
+.bloco-impacto{
+  border-color:rgba(31,209,143,.28);
+  background:linear-gradient(160deg, rgba(31,209,143,.06), rgba(255,255,255,.015));
+}
+
+.bloco-impacto h4{
+  display:flex;
+  align-items:center;
+  gap:.55rem;
+  flex-wrap:wrap;
+}
+
+.selo-ods12{
+  padding:.12rem .5rem;
+  border-radius:999px;
+  background:var(--verde);
+  color:#07120e;
+  font-family:var(--fonte-display);
+  font-size:.7rem;
+  font-weight:800;
+  letter-spacing:.03em;
+}
+
+.impacto__base{
+  margin:0;
+  font-size:.84rem;
+  color:var(--texto-fraco);
+}
+.impacto__base strong{ color:var(--texto); }
+
+#impactoAmbiental{
+  display:flex;
+  flex-direction:column;
+  gap:.8rem;
+}
+.bloco-impacto .alternativa__vazio,
+.bloco-impacto .alternativa__pontos{ margin-top:0; }
+
+/* Mais largo que o card padrão: "20 a 35 kg de CO₂e" cabe numa linha, e no
+   celular os cards ficam um embaixo do outro. */
+.impacto__numeros{
+  margin-top:.1rem;
+  grid-template-columns:repeat(auto-fit, minmax(210px,1fr));
+}
+
+.impacto__card strong{ font-size:1.15rem; line-height:1.25; }
+.impacto__card small{
+  display:block;
+  margin-top:.3rem;
+  font-size:.76rem;
+  line-height:1.4;
+  color:var(--texto-fraco);
+}
+
+.impacto__contas{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap:.4rem;
+}
+.impacto__contas li{
+  position:relative;
+  padding-left:1.15rem;
+  font-size:.86rem;
+  line-height:1.55;
+  color:var(--texto-fraco);
+}
+.impacto__contas li::before{
+  content:"";
+  position:absolute;
+  left:.2rem;
+  top:.55em;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--verde);
+}
+.impacto__contas strong{ color:var(--texto); }
+.impacto__contas .impacto__premissa{ color:var(--texto-fraquissimo); font-size:.8rem; }
+.impacto__contas .impacto__premissa::before{ background:var(--texto-fraquissimo); }
+
+.impacto__detalhes{
+  margin:0;
+  display:grid;
+  gap:.5rem;
+  padding:.75rem .85rem;
+  border-radius:var(--raio-sm);
+  border:1px solid var(--superficie-borda);
+  background:rgba(255,255,255,.022);
+}
+.impacto__detalhes > div{
+  display:grid;
+  grid-template-columns:6.5rem minmax(0,1fr);
+  gap:.6rem;
+  align-items:baseline;
+}
+.impacto__detalhes dt{
+  font-size:.74rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--texto-fraquissimo);
+}
+.impacto__detalhes dd{
+  margin:0;
+  font-size:.86rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+
+.impacto__nivel{
+  display:inline-block;
+  margin-right:.3rem;
+  padding:.05rem .45rem;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:700;
+  border:1px solid currentColor;
+}
+.impacto__nivel--alto{ color:var(--verde); }
+.impacto__nivel--medio{ color:var(--amarelo); }
+.impacto__nivel--baixo{ color:var(--vermelho); }
+
+.impacto__dicas-titulo{
+  margin:0 0 .35rem;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--verde);
+}
+.impacto__dicas ul{
+  margin:0;
+  padding-left:1.1rem;
+  display:grid;
+  gap:.3rem;
+  font-size:.86rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+
+.impacto__nota{
+  margin:0;
+  padding-top:.6rem;
+  border-top:1px solid var(--superficie-borda);
+  font-size:.76rem;
+  line-height:1.5;
+  color:var(--texto-fraquissimo);
+}
+
+.impacto__carregando{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin:0;
+  font-size:.86rem;
+  color:var(--texto-fraco);
+}
+.impacto__carregando .busca-preco__giro{
+  display:block;
+  animation:busca-preco-giro .7s linear infinite;
+}
+
+.impacto__aviso{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.8rem;
+  flex-wrap:wrap;
+}
+.impacto__aviso p{
+  margin:0;
+  flex:1 1 16rem;
+  font-size:.86rem;
+  line-height:1.5;
+  color:var(--texto-fraco);
+}
+
+@media (max-width: 460px){
+  .impacto__detalhes > div{ grid-template-columns:1fr; gap:.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .impacto__carregando .busca-preco__giro{ animation-duration:2.4s; }
+}

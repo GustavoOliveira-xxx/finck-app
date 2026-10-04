@@ -327,26 +327,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Pergunta à rota, sem gastar cota, se a IA existe aqui e se a demonstração
   // pode usá-la. Assim o botão desliga antes de o usuário escolher a imagem.
   async function conferirPrint() {
-    const ctrl = new AbortController;
-    const alarme = setTimeout(() => ctrl.abort(), 6000);
-    try {
-      const r = await fetch(IA.ENDPOINT, {
-        method: "GET",
-        cache: "no-store",
-        signal: ctrl.signal
-      });
-      // Servidor estático, rota antiga ou fora do ar: quem decide é o clique.
-      const s = r.ok ? await r.json().catch(() => null) : null;
-      if (!s || s.ok !== true) {
-        return;
-      }
-      if (s.ia === false) {
-        desligarPrint(MSG_PRINT_SEM_IA);
-      } else if (S.emDemo() && s.demo === false) {
-        desligarPrint(MSG_PRINT_DEMO);
-      }
-    } catch {} finally {
-      clearTimeout(alarme);
+    // A mesma consulta serve ao impacto ambiental: js/ia-cliente.js faz um GET
+    // só por página. Sem resposta, quem decide é o clique.
+    const s = window.FinckIA ? await window.FinckIA.status() : null;
+    if (!s) {
+      return;
+    }
+    if (s.ia === false) {
+      desligarPrint(MSG_PRINT_SEM_IA);
+    } else if (S.emDemo() && s.demo === false) {
+      desligarPrint(MSG_PRINT_DEMO);
     }
   }
   function trocarMiniatura(blob) {

@@ -1,4 +1,4 @@
-# Busca de preço por IA
+# IA do FinCK: preço e impacto ambiental
 
 `buscar-preco-ia.js` é uma função serverless da Vercel. Ela recebe o link
 que o usuário colou no FinCK of Reality, pede ao Gemini que leia a página
@@ -12,6 +12,10 @@ A mesma função também **lê o print da tela** do produto (veja
 [Leitura do print](#leitura-do-print)). É a saída para Shopee, Amazon,
 Instagram e as outras lojas que recusam a leitura do link: ali o usuário já
 está vendo o preço, e o Gemini lê a imagem.
+
+E **estima o impacto ambiental** do item analisado (veja
+[Impacto ambiental](#impacto-ambiental-ods-12)), o elo do resultado do
+FinCK of Reality com a ODS 12.
 
 ## Por que a chave fica aqui, e não no navegador
 
@@ -194,10 +198,12 @@ faturamento ligado, esse uso deixa de valer.
 
 ### Situação da rota (GET)
 
-`GET /api/buscar-preco-ia` responde `{ ok, ia, demo, print }` sem login e
-sem gastar cota. A tela usa isso para desligar o botão do print antes de o
-usuário ir buscar uma imagem: sem chave no servidor, ou na demonstração
-com `BUSCA_IA_DEMO` desligada.
+`GET /api/buscar-preco-ia` responde `{ ok, ia, demo, print, impacto }` sem
+login e sem gastar cota. A tela usa isso para desligar o botão do print
+antes de o usuário ir buscar uma imagem, e para avisar no bloco de impacto
+ambiental em vez de pedir à toa: sem chave no servidor, ou na demonstração
+com `BUSCA_IA_DEMO` desligada. `js/ia-cliente.js` faz esse GET uma vez por
+página e o print e o impacto usam a mesma resposta.
 
 ### Códigos de erro do print
 
@@ -223,6 +229,99 @@ FINCK_API=https://finck-app.vercel.app FINCK_TOKEN=<jwt> \
 O modo `--ao-vivo` lê os prints de `ferramentas/prints-exemplo` e compara
 com `esperado.json`. Quando um modelo for aposentado ou trocado, é este
 teste que diz se a leitura continua certa.
+
+## Impacto ambiental (ODS 12)
+
+Depois de "Analisar compra", o resultado do FinCK of Reality ganha o bloco
+**Impacto ambiental estimado**. A tela manda o item, a categoria e o preço:
+
+```json
+{ "impacto": { "item": "Calça jeans masculina", "categoria": "Vestuário", "preco": 159.9 } }
+```
+
+e o Gemini devolve faixas e o contexto delas:
+
+```json
+{
+  "ok": true,
+  "metodo": "ia-impacto",
+  "tipo": "calça jeans masculina",
+  "carbono": { "min": 20, "max": 35 },
+  "premissa": "uso por 4 anos com lavagens frequentes em máquina de lavar",
+  "etapaPrincipal": "fabricação",
+  "fracaoFabricacao": 0.75,
+  "agua": { "min": 5000, "max": 11000 },
+  "vidaUtilMeses": { "min": 36, "max": 84 },
+  "materiais": ["algodão", "elastano", "poliéster"],
+  "residuo": "têxtil",
+  "descarte": "Doar para instituições de caridade se estiver em bom estado...",
+  "reparo": { "nivel": "alto", "texto": "Costuma ser facilmente consertado..." },
+  "dicas": ["Lave menos vezes e com água fria...", "..."],
+  "base": "médias de estudos de ciclo de vida de vestuário de algodão",
+  "confianca": "alta",
+  "modelo": "gemini-3.5-flash-lite"
+}
+```
+
+`carbono` é em kg de CO2e e `agua` em litros, por unidade.
+
+### O que é da IA e o que é do app
+
+A IA dá as faixas para um item parecido. As contas que dependem desta compra
+são feitas na tela (`js/impacto-ambiental.js`), sempre a partir dessas
+faixas e sem pedir número novo:
+
+- o total pela quantidade informada;
+- o carbono por mês de uso, com os meses que a pessoa espera (o campo de
+  vida útil do formulário) ou, sem eles, com a vida útil típica. É a mesma
+  ideia do "custo por mês de uso" que o app já mostra;
+- o que se evita comprando usado ou recondicionado: o carbono vezes a fração
+  que vem da fabricação.
+
+O bloco também puxa os pontos que a pessoa cadastrou em Ações locais pelo
+tipo de resíduo (eletrônico: reparo e descarte; têxtil: doação, troca e
+brechó) e termina dizendo o que a estimativa é: ordem de grandeza feita por
+IA a partir de médias, não medição.
+
+### Para não inventar
+
+- faixas largas o bastante para cobrir marcas e modelos, arredondadas para
+  dois algarismos significativos no servidor (43,7 vira 44);
+- na fase de uso, a matriz elétrica brasileira, de baixa emissão (0,04 a
+  0,13 kg de CO2e por kWh nos últimos anos);
+- água só para algodão, couro, papel e alimentos, onde a pegada hídrica é
+  bem documentada;
+- `base` diz o tipo de referência, mas nunca cita estudo, autor ou link: um
+  nome de estudo inventado seria pior que nenhum;
+- item vago ("presente") volta como `SEM_ESTIMATIVA`, com o motivo, e a tela
+  pede um nome mais específico;
+- faixas fora do plausível (carbono acima de 200 t, vida útil acima de 50
+  anos) e valores fora das listas são descartados.
+
+Medido em 03/10/2026 com `gemini-3.5-flash-lite`, em itens com ordem de
+grandeza conhecida de relatórios ambientais de fabricantes e estudos de
+ciclo de vida: 6 de 6 dentro da referência (celular, notebook, camiseta de
+algodão, calça jeans, tênis de corrida e o "presente" recusado), entre 1,5
+e 2,5 s cada.
+
+A mesma estimativa fica 24 horas no cache do servidor, por item e categoria;
+o preço não entra na chave, porque só situa o porte do produto.
+
+### Códigos de erro do impacto
+
+| Código | Quando |
+|---|---|
+| `ITEM_INVALIDO` | item vazio ou com menos de 2 caracteres |
+| `SEM_ESTIMATIVA` | item vago demais; `detalhe` traz o motivo dado pela IA |
+| `IA_OCUPADA` | todos os modelos responderam 429 ou 503, ou estouraram o prazo |
+| `IA_FALHOU` | outro erro do Gemini; o texto original vai em `tecnico` |
+
+### Como testar o impacto
+
+```bash
+node ferramentas/testar-impacto.mjs                 # sem rede, Gemini simulado
+GEMINI_API_KEY=<chave> node ferramentas/testar-impacto.mjs --ao-vivo
+```
 
 ## Contrato da resposta
 

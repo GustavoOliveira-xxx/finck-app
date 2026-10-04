@@ -74,6 +74,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderDestino();
     renderReflexoes();
     renderDecisoes();
+    // ODS 12: o que a compra pesa para o planeta, estimado por IA. Carrega à
+    // parte, depois do resultado, e não segura a análise financeira.
+    window.FinckImpacto?.mostrar({
+      item: item_name,
+      categoria: category,
+      preco: price,
+      quantidade: quantidade,
+      mesesDeUso: mesesDeUso
+    }, document.getElementById("impactoAmbiental"), {
+      pontos: blocoPontos
+    });
     document.getElementById("passoResultado").hidden = false;
     document.getElementById("passoReflexao").hidden = false;
     document.getElementById("passoDecisao").hidden = false;
