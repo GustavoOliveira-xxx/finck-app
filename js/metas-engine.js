@@ -101,7 +101,35 @@ window.FinckMetas = (() => {
       progresso: progresso(movimentos)
     };
   }
+  // Ritmo de aportes de uma meta: quanto entrou nela por mês, em média, nos
+  // últimos `dias`. Retiradas e estornos descontam. Serve para dizer quanto
+  // uma compra atrasa a meta em tempo de calendário, não só em reais.
+  function ritmoMensal(movimentos = [], goalId, {hoje: hoje = new Date, dias: dias = 90} = {}) {
+    const limite = new Date(hoje.getTime() - dias * 864e5);
+    const dataDe = m => new Date(`${String(m.date || "").slice(0, 10)}T12:00:00`);
+    const recentes = daMeta(movimentos, goalId).filter(m => {
+      const d = dataDe(m);
+      return !Number.isNaN(d.getTime()) && d >= limite && d <= hoje;
+    });
+    const liquido = recentes.reduce((s, m) => s + num(m.amount), 0);
+    return liquido > 0 ? liquido / (dias / 30) : 0;
+  }
+  // Quanto falta por mês para chegar no prazo (null sem prazo ou já vencida).
+  function necessarioPorMes(meta, {hoje: hoje = new Date} = {}) {
+    if (!meta?.deadline) {
+      return null;
+    }
+    const prazo = new Date(`${String(meta.deadline).slice(0, 10)}T12:00:00`);
+    const meses = (prazo - hoje) / (30 * 864e5);
+    const falta = Math.max(0, num(meta.target_amount) - num(meta.current_amount));
+    if (!(meses > 0) || falta <= 0) {
+      return null;
+    }
+    return falta / Math.max(meses, 1);
+  }
   return {
+    ritmoMensal: ritmoMensal,
+    necessarioPorMes: necessarioPorMes,
     KINDS: KINDS,
     TOLERANCIA: TOLERANCIA,
     sinalDoTipo: sinalDoTipo,

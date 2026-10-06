@@ -162,7 +162,7 @@ window.FinckImpacto = (() => {
         aviso(pode.demo ? "Na demonstração, a estimativa de impacto ambiental fica desligada. Entre com uma conta para ver o que esta compra pesa para o planeta." : pode.motivo);
         return;
       }
-      desenhar(`<p class="impacto__carregando"><span class="busca-preco__giro" aria-hidden="true"></span> Estimando o impacto ambiental deste item…</p>`);
+      desenhar(`<p class="impacto__carregando"><span class="busca-preco__giro" aria-hidden="true"></span> Calculando uma estimativa ambiental… <small>É uma estimativa feita por IA a partir de estudos de ciclo de vida, não uma medição. O resto da análise já está pronto acima.</small></p>`);
       resposta = await IA.pedir({
         impacto: {
           item: entrada.item,

@@ -6,14 +6,17 @@ window.FinckMoeda = (() => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
-  const soDigitos = texto => String(texto || "").replace(/\D/g, "").slice(0, 13);
-  const AJUDA = "Digite os centavos: 8 vira R$ 0,08 e 80000 vira R$ 800,00. Colar um preço pronto (800 ou R$ 800,00) também funciona.";
-  // PROD-002 — digitar é dígito a dígito, da direita para a esquerda, porque é
-  // assim que o teclado numérico do celular funciona. Colar é outra intenção: o
-  // usuário traz um preço inteiro da loja. "800" colado é R$ 800,00, não R$ 8,00.
+  const TETO_CENTAVOS = 1e13;
+  const AJUDA = "Digite como você vê o preço: 800, 800,50 ou R$ 800,00.";
+  const ERRO = "Digite um valor válido, como R$ 800,00.";
+  // UX-PRECO: o campo aceita o preço do jeito que a pessoa lê na loja.
+  // Antes era centavo a centavo (PROD-002): digitar 800 dava R$ 8,00 e a tela
+  // precisava de uma explicação longa antes de qualquer erro. As duas análises
+  // de UX de 06/10/2026 pediram a troca: "800" agora é R$ 800,00, e a vírgula
+  // (ou o ponto) separa os centavos. Três casas depois do separador são milhar.
   function centavosDeColagem(texto) {
     const limpo = String(texto || "").replace(/[^\d.,]/g, "");
-    if (!limpo) {
+    if (!/\d/.test(limpo)) {
       return null;
     }
     const ultimo = Math.max(limpo.lastIndexOf(","), limpo.lastIndexOf("."));
@@ -31,6 +34,9 @@ window.FinckMoeda = (() => {
   }
   const centavosDe = el => Number(el.dataset.centavos || 0);
   const valorDe = el => centavosDe(el) / 100;
+  // Texto para editar: sem "R$" e sem ",00" sobrando, para que o próximo
+  // dígito digitado continue o número em vez de virar casa decimal.
+  const paraEdicao = c => c <= 0 ? "" : c % 100 === 0 ? String(c / 100) : (c / 100).toFixed(2).replace(".", ",");
   function pintar(el) {
     const c = centavosDe(el);
     el.value = c === 0 && !el.dataset.tocado ? "" : formatar(c);
@@ -38,13 +44,24 @@ window.FinckMoeda = (() => {
   }
   function definir(el, reais) {
     const c = Math.round(Math.abs(Number(reais) || 0) * 100);
-    el.dataset.centavos = String(c);
+    el.dataset.centavos = String(Math.min(c, TETO_CENTAVOS));
     if (c > 0) {
       el.dataset.tocado = "1";
     } else {
       delete el.dataset.tocado;
     }
-    pintar(el);
+    if (document.activeElement === el) {
+      el.value = paraEdicao(c);
+      el.dataset.valor = String(c / 100);
+    } else {
+      pintar(el);
+    }
+  }
+  function ler(el) {
+    const c = centavosDeColagem(el.value);
+    el.dataset.centavos = String(c === null ? 0 : Math.max(0, Math.min(c, TETO_CENTAVOS)));
+    el.dataset.valor = String(centavosDe(el) / 100);
+    return c;
   }
   function ligar(el) {
     if (!el || el.dataset.moedaLigado) {
@@ -54,55 +71,53 @@ window.FinckMoeda = (() => {
     if (el.type === "number") {
       el.type = "text";
     }
-    el.setAttribute("inputmode", "numeric");
+    // "decimal" mostra a vírgula no teclado do celular; "numeric" não mostrava.
+    el.setAttribute("inputmode", "decimal");
     el.setAttribute("autocomplete", "off");
     if (!el.placeholder) {
-      el.placeholder = formatar(0);
+      el.placeholder = "Ex.: 800,00";
     }
     if (!el.title) {
       el.title = AJUDA;
     }
     if (el.dataset.centavos === undefined) {
-      const inicial = soDigitos(el.value) ? Number(el.value.replace(",", ".")) : 0;
-      definir(el, Number.isFinite(inicial) ? inicial : 0);
-      delete el.dataset.tocado;
+      const inicial = centavosDeColagem(el.value);
+      el.dataset.centavos = String(inicial || 0);
       el.value = "";
     }
     el.addEventListener("input", () => {
+      delete el.dataset.manterSelecao;
       el.dataset.tocado = "1";
-      el.dataset.centavos = String(Number(soDigitos(el.value) || 0));
-      pintar(el);
-      requestAnimationFrame(() => {
-        const fim = el.value.length;
-        try {
-          el.setSelectionRange(fim, fim);
-        } catch {}
-      });
-    });
-    el.addEventListener("keydown", e => {
-      if (e.key !== "Backspace" && e.key !== "Delete") {
-        return;
+      // Só números, vírgula, ponto e o "R$" de quem cola da loja.
+      const filtrado = el.value.replace(/[^\d.,R$\s]/g, "");
+      if (filtrado !== el.value) {
+        el.value = filtrado;
       }
-      e.preventDefault();
-      el.dataset.tocado = "1";
-      el.dataset.centavos = String(Math.floor(centavosDe(el) / 10));
-      pintar(el);
+      ler(el);
     });
-    el.addEventListener("paste", e => {
-      e.preventDefault();
-      const texto = (e.clipboardData || window.clipboardData).getData("text");
-      const interpretado = centavosDeColagem(texto);
-      el.dataset.tocado = "1";
-      el.dataset.centavos = String(Number.isFinite(interpretado) && interpretado !== null ? Math.max(0, Math.min(interpretado, 1e13)) : Number(soDigitos(texto) || 0));
-      pintar(el);
-    });
+    // Ao entrar no campo o valor fica selecionado: digitar substitui o preço
+    // antigo em vez de emendar dígitos nele (3500 + 3500 virava 35.003.500).
     el.addEventListener("focus", () => {
-      requestAnimationFrame(() => {
-        const fim = el.value.length;
-        try {
-          el.setSelectionRange(fim, fim);
-        } catch {}
-      });
+      el.value = paraEdicao(centavosDe(el));
+      try {
+        el.select();
+      } catch {}
+      el.dataset.manterSelecao = "1";
+    });
+    // O clique que deu o foco termina num mouseup que, no Chrome, desfaz a
+    // seleção e põe o cursor no lugar clicado. Só esse primeiro é ignorado.
+    el.addEventListener("mouseup", e => {
+      if (el.dataset.manterSelecao) {
+        e.preventDefault();
+        delete el.dataset.manterSelecao;
+      }
+    });
+    el.addEventListener("blur", () => {
+      const lido = ler(el);
+      if (el.value.trim() && lido === null) {
+        el.dataset.centavos = "0";
+      }
+      pintar(el);
     });
   }
   function ligarTodos(raiz = document) {
@@ -114,7 +129,9 @@ window.FinckMoeda = (() => {
     ligarTodos: ligarTodos,
     formatar: formatar,
     AJUDA: AJUDA,
+    ERRO: ERRO,
     centavosDeColagem: centavosDeColagem,
+    paraEdicao: paraEdicao,
     ler: alvo => {
       const el = elemento(alvo);
       return el ? valorDe(el) : 0;
@@ -129,7 +146,8 @@ window.FinckMoeda = (() => {
       const el = elemento(alvo);
       if (el) {
         delete el.dataset.tocado;
-        definir(el, 0);
+        el.dataset.centavos = "0";
+        el.dataset.valor = "0";
         el.value = "";
       }
     }

@@ -16,6 +16,7 @@
       if (botao) {
         botao.classList.toggle("ativa", id === aba);
         botao.setAttribute("aria-selected", String(id === aba));
+        botao.tabIndex = id === aba ? 0 : -1;
       }
     });
     if (history.replaceState) {
@@ -30,7 +31,27 @@
     });
   }
   document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".aba[data-aba]").forEach(b => b.addEventListener("click", () => trocar(b.dataset.aba)));
+    const abas = [ ...document.querySelectorAll(".aba[data-aba]") ];
+    abas.forEach(b => b.addEventListener("click", () => trocar(b.dataset.aba)));
+    // UX-A11Y: padrão de abas do WAI-ARIA: setas trocam de aba, Home e End
+    // vão para a primeira e a última, e só a aba ativa entra no Tab.
+    abas.forEach((b, i) => {
+      b.tabIndex = b.classList.contains("ativa") ? 0 : -1;
+      b.addEventListener("keydown", e => {
+        const destino = {
+          ArrowRight: (i + 1) % abas.length,
+          ArrowLeft: (i - 1 + abas.length) % abas.length,
+          Home: 0,
+          End: abas.length - 1
+        }[e.key];
+        if (destino === undefined) {
+          return;
+        }
+        e.preventDefault();
+        trocar(abas[destino].dataset.aba);
+        abas[destino].focus();
+      });
+    });
     document.addEventListener("click", e => {
       const alvo = e.target.closest("[data-ir-aba]");
       if (!alvo) {

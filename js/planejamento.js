@@ -196,19 +196,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     const qtd = Number($("parcelaQtd").value);
     const pagas = Number($("parcelaPagas").value) || 0;
     if (!$("parcelaDescricao").value.trim()) {
-      return U.toast("Informe a descrição.", "erro");
+      return U.erroCampo("parcelaDescricao", "Informe a descrição.");
     }
     if (!(total > 0)) {
-      return U.toast("Informe um valor total maior que zero.", "erro");
+      return U.erroCampo("parcelaTotal", "Informe um valor total maior que zero.");
     }
     if (!(qtd >= 1)) {
-      return U.toast("Informe ao menos 1 parcela.", "erro");
+      return U.erroCampo("parcelaQtd", "Informe ao menos 1 parcela.");
     }
     if (pagas > qtd) {
-      return U.toast("Parcelas pagas não podem passar do total.", "erro");
+      return U.erroCampo("parcelaPagas", "Parcelas pagas não podem passar do total.");
     }
     if (!window.FinckData.ler("parcelaData")) {
-      return U.toast("Informe o primeiro vencimento.", "erro");
+      return U.erroCampo("parcelaData", "Informe o primeiro vencimento.");
     }
     const dados = {
       description: $("parcelaDescricao").value.trim(),
@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = $("tetoId").value;
     const limite = U.lerMoeda("tetoLimite");
     if (!(limite > 0)) {
-      return U.toast("Informe um limite maior que zero.", "erro");
+      return U.erroCampo("tetoLimite", "Informe um limite maior que zero.");
     }
     const categoria = $("tetoCategoria").value;
     if (!id && tetos.some(t => t.category === categoria)) {

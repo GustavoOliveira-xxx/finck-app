@@ -54,14 +54,22 @@ document.addEventListener("DOMContentLoaded", () => {
     botao.title = "Recurso opcional indisponível aqui — digite o preço no campo acima.";
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--opcional";
-    aviso.innerHTML = `<strong>Busca automática indisponível neste ambiente.</strong> Ela é um recurso opcional: digite o preço no campo acima e siga com a análise normalmente.`;
+    aviso.innerHTML = `<strong>A busca pelo link não está disponível aqui.</strong> Ela é um atalho opcional: digite o preço no campo acima e siga com a análise normalmente.`;
+    if (dicaLink) {
+      dicaLink.textContent = "A busca automática depende da IA do servidor, que não está ligada neste ambiente.";
+    }
     return true;
   }
+  const dicaLink = document.getElementById("dicaLink");
+  const DICA_SEM_LINK = "Cole um link de produto para habilitar a busca. A IA abre a página e mostra o preço encontrado; o campo só muda quando você tocar em <strong>Usar este preço</strong>.";
   function avaliarLink() {
     if (marcarOpcional()) {
       return;
     }
     const valor = campoLink.value.trim();
+    if (dicaLink) {
+      dicaLink.innerHTML = valor ? "A IA abre esta página e mostra o preço encontrado. O campo de preço só muda quando você tocar em <strong>Usar este preço</strong>." : DICA_SEM_LINK;
+    }
     if (!valor) {
       classificacao = {
         status: "desconhecida"
@@ -86,7 +94,26 @@ document.addEventListener("DOMContentLoaded", () => {
   function carregando(ligado) {
     botao.disabled = ligado || OPCIONAL || (classificacao.status === "bloqueada" && !IA_ATIVA);
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
-    botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço do link";
+    botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço neste link";
+  }
+  // UX-PROCESSO: enquanto a IA trabalha, a tela diz o que está acontecendo.
+  // As etapas seguem o que a rota faz de verdade: abrir a página, ler o preço
+  // e conferir parcelas e frete; a última só aparece se demorar.
+  let etapasBusca = [];
+  function mostrarBuscando() {
+    const passos = [ "Abrindo a página da loja…", "Lendo o preço…", "Conferindo parcelas, frete e desconto…", "A loja está demorando para responder. Ainda tentando…" ];
+    const pintar = i => {
+      aviso.hidden = false;
+      aviso.className = "busca-preco__aviso busca-preco__aviso--lendo";
+      aviso.innerHTML = `<p class="processo-ia"><span class="busca-preco__giro" aria-hidden="true"></span> <strong>${passos[i]}</strong></p>`;
+    };
+    pararBuscando();
+    pintar(0);
+    etapasBusca = [ setTimeout(() => pintar(1), 2500), setTimeout(() => pintar(2), 7000), setTimeout(() => pintar(3), 18000) ];
+  }
+  function pararBuscando() {
+    etapasBusca.forEach(clearTimeout);
+    etapasBusca = [];
   }
   function montarPainel(d) {
     const linhas = [];
@@ -125,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // No print, a miniatura mostra qual imagem foi lida, e a loja vai embaixo
     // do nome: ela vem do que a IA reconheceu, não de um endereço.
     const cabecalho = doPrint ? `\n        <div class="panorama__cabecalho panorama__cabecalho--print">\n          ${d.miniatura ? `<img class="panorama__miniatura" src="${U.escapeHTML(d.miniatura)}" alt="Print enviado">` : ""}\n          <div class="panorama__titulos">\n            ${d.titulo ? `<p class="panorama__item">${U.escapeHTML(d.titulo)}</p>` : ""}\n            <span class="panorama__loja">${d.loja ? `${U.escapeHTML(d.loja)} · ` : ""}lido do print</span>\n          </div>\n        </div>` : `\n        <div class="panorama__cabecalho">\n          ${d.titulo ? `<p class="panorama__item">${U.escapeHTML(d.titulo)}</p>` : ""}\n          ${d.loja ? `<span class="panorama__loja">${U.escapeHTML(d.loja)}</span>` : ""}\n        </div>`;
-    return `\n      <div class="panorama">${cabecalho}\n\n        <div class="panorama__valor">\n          <strong>${dinheiro(d.preco)}</strong>${selo}\n        </div>\n        ${de}\n\n        ${linhas.length ? `<dl class="panorama__linhas">${linhas.map(([rotulo, valor]) => `\n          <div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}\n\n        ${trocarPix ? `<div class="panorama__acoes">${trocarPix}</div>` : ""}\n        <p class="panorama__nota">${avisoConfianca(d)}</p>\n      </div>`;
+    return `\n      <div class="panorama">${cabecalho}\n\n        <p class="panorama__achado">✓ Preço encontrado</p>\n        <div class="panorama__valor">\n          <strong>${dinheiro(d.preco)}</strong>${selo}\n        </div>\n        ${de}\n\n        ${linhas.length ? `<dl class="panorama__linhas">${linhas.map(([rotulo, valor]) => `\n          <div><dt>${rotulo}</dt><dd>${valor}</dd></div>`).join("")}</dl>` : ""}\n\n        ${emReais ? `<div class="panorama__acoes"><button type="button" class="btn-primario btn-mini panorama__usar" data-preco="${d.preco}">Usar este preço</button>${trocarPix}</div>` : ""}\n        <p class="panorama__nota">${avisoConfianca(d)}</p>\n      </div>`;
   }
   function avisoConfianca(d) {
     if (d.moeda && d.moeda !== "BRL") {
@@ -163,19 +190,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return "Preço lido do código da página. Confira se bate com o que a loja mostra.";
   }
+  // UX-CONFIRMA: o que a IA encontrou aparece primeiro como sugestão. O
+  // formulário só muda quando a pessoa toca em "Usar este preço" (ou no preço
+  // do Pix): nenhum dado é trocado sem uma confirmação explícita.
   function mostrarResultado(dados) {
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--painel";
     aviso.innerHTML = montarPainel(dados);
-    const troca = aviso.querySelector(".panorama__troca");
-    if (troca) {
-      troca.addEventListener("click", () => {
-        U.escreverMoeda("itemPrice", Number(troca.dataset.preco));
-        troca.disabled = true;
-        troca.textContent = "Preço trocado ✓";
-        U.toast("Campo atualizado com o preço à vista.", "sucesso");
+    aviso.querySelectorAll(".panorama__usar, .panorama__troca").forEach(b => b.addEventListener("click", () => {
+      preencher(dados, Number(b.dataset.preco));
+      aviso.querySelectorAll(".panorama__usar, .panorama__troca").forEach(x => {
+        x.disabled = true;
       });
-    }
+      b.textContent = "✓ Preço aplicado";
+      document.getElementById("itemPrice")?.focus();
+    }));
   }
   async function consultar(endpoint, url, token) {
     try {
@@ -215,10 +244,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const antigo = await consultar(ENDPOINT, url, token);
     return antigo?.ok ? antigo : porIA || antigo;
   }
-  function mostrarErro(motivo) {
+  // UX-ERRO: a mensagem diz o que não deu certo em linguagem comum e já
+  // oferece a saída: digitar o preço ou tentar o outro caminho.
+  function mostrarErro(motivo, {titulo: titulo = null, origem: origem = "link"} = {}) {
+    pararBuscando();
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--erro";
-    aviso.textContent = motivo;
+    const outroCaminho = origem === "link" ? printDisponivel ? `<button type="button" class="btn-secundario btn-mini" data-acao-erro="print">Tentar com um print</button>` : "" : `<button type="button" class="btn-secundario btn-mini" data-acao-erro="print">Tentar outro print</button>`;
+    aviso.innerHTML = `${titulo ? `<p><strong>${U.escapeHTML(titulo)}</strong></p>` : ""}<p>${U.escapeHTML(motivo)}</p>
+      <div class="busca-preco__acoes-erro">
+        <button type="button" class="btn-secundario btn-mini" data-acao-erro="digitar">Digitar o preço</button>
+        ${origem === "print" && !printDisponivel ? "" : outroCaminho}
+      </div>`;
+    aviso.querySelector('[data-acao-erro="digitar"]')?.addEventListener("click", () => document.getElementById("itemPrice")?.focus());
+    aviso.querySelector('[data-acao-erro="print"]')?.addEventListener("click", () => botaoPrint?.click());
   }
   // Corta no limite do campo sem partir palavra ao meio.
   function nomeParaCampo(texto, max = 80) {
@@ -241,30 +280,34 @@ document.addEventListener("DOMContentLoaded", () => {
   // Link e print preenchem o formulário do mesmo jeito. Preço em outra moeda
   // não entra no campo: o FinCK calcula em reais, e um valor em dólar ali
   // viraria uma análise errada sem ninguém perceber.
-  function aplicarResultado(dados) {
-    const emReais = !dados.moeda || dados.moeda === "BRL";
+  function preencher(dados, preco) {
     const preenchidos = [];
     const campoNome = document.getElementById("itemName");
     const nome = nomeParaCampo(dados.nomeCurto || dados.titulo);
     if (campoNome && !campoNome.value.trim() && nome) {
       campoNome.value = nome;
+      campoNome.dispatchEvent(new Event("input", {
+        bubbles: true
+      }));
       preenchidos.push("item");
     }
-    if (emReais) {
-      U.escreverMoeda("itemPrice", dados.preco);
-      preenchidos.push("preço");
-    }
+    U.escreverMoeda("itemPrice", preco);
+    preenchidos.push("preço");
     if (campoCategoria && dados.categoria && !campoCategoria.dataset.escolhida && Array.from(campoCategoria.options).some(o => o.value === dados.categoria)) {
       campoCategoria.value = dados.categoria;
+      campoCategoria.dispatchEvent(new Event("finck:categoria"));
       preenchidos.push("categoria");
     }
+    const frase = listaFalada(preenchidos);
+    U.toast(`${frase.charAt(0).toUpperCase()}${frase.slice(1)} ${preenchidos.length > 1 ? "preenchidos" : "preenchido"}. Confira e toque em Ver o impacto da compra.`, "sucesso");
+  }
+  function aplicarResultado(dados) {
+    pararBuscando();
+    const emReais = !dados.moeda || dados.moeda === "BRL";
     mostrarResultado(dados);
     if (!emReais) {
       U.toast(`O preço está em ${dados.moeda}. Converta para reais e digite o valor.`, "info", 4500);
-      return;
     }
-    const frase = listaFalada(preenchidos);
-    U.toast(`${frase.charAt(0).toUpperCase()}${frase.slice(1)} ${preenchidos.length > 1 ? "preenchidos" : "preenchido"}. Confira antes de analisar.`, "sucesso");
   }
   botao.addEventListener("click", async () => {
     const url = campoLink.value.trim();
@@ -279,27 +322,36 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     carregando(true);
+    mostrarBuscando();
     try {
       const dados = await buscarPreco(url, token);
       if (!dados) {
-        mostrarErro("Não consegui falar com o servidor de busca. Tente de novo em instantes.");
+        mostrarErro("O servidor de busca não respondeu. Você pode digitar o valor ou tentar de novo em instantes.", {
+          titulo: "Não conseguimos buscar o preço agora."
+        });
         return;
       }
       if (!dados.ok) {
         // Servidor sem chave, sem demo liberado ou origem recusada: o recurso
         // não está disponível aqui, e insistir no botão não muda isso.
         if (INDISPONIVEL.has(dados.codigo)) {
+          pararBuscando();
           OPCIONAL = true;
           marcarOpcional();
           return;
         }
-        mostrarErro(dados.motivo || "Não encontrei o preço nessa página.");
+        mostrarErro(dados.motivo || "A página não mostrou um preço que desse para ler.", {
+          titulo: "Não conseguimos ler o preço nesta página."
+        });
         return;
       }
       aplicarResultado(dados);
     } catch {
-      mostrarErro("Falha de conexão. Verifique sua internet e tente de novo.");
+      mostrarErro("A conexão caiu no meio da busca. Confira sua internet; enquanto isso, dá para digitar o valor.", {
+        titulo: "Não conseguimos buscar o preço agora."
+      });
     } finally {
+      pararBuscando();
       carregando(false);
     }
   });
@@ -308,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // login e mesmos limites da busca pelo link; a imagem não é guardada.
   let lendoPrint = false;
   let miniaturaAtual = null;
-  const MSG_PRINT_DEMO = "Na demonstração, a leitura do print fica desligada. Entre com uma conta para usar, ou digite o preço.";
+  const MSG_PRINT_DEMO = "Na demonstração, a leitura de print fica reservada a contas reais, porque usa a IA do servidor. Para seguir, é só digitar o preço.";
   const MSG_PRINT_SEM_IA = "A leitura do print não está disponível neste servidor. Digite o preço no campo acima.";
   function desligarPrint(mensagem) {
     printDisponivel = false;
@@ -354,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function mostrarLendo(demorando = false) {
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--lendo";
-    aviso.innerHTML = `\n      <div class="print-lendo">\n        ${miniaturaAtual ? `<img class="print-lendo__miniatura" src="${U.escapeHTML(miniaturaAtual)}" alt="Print enviado">` : ""}\n        <p><strong>Lendo o print…</strong>\n          ${demorando ? "A IA está mais lenta que o normal agora. Ainda tentando." : "A IA está procurando o produto e o preço. Leva alguns segundos."}</p>\n      </div>`;
+    aviso.innerHTML = `\n      <div class="print-lendo">\n        ${miniaturaAtual ? `<img class="print-lendo__miniatura" src="${U.escapeHTML(miniaturaAtual)}" alt="Print enviado">` : ""}\n        <p><strong>${demorando ? "Ainda lendo o print…" : "Lendo o preço do print…"}</strong>\n          ${demorando ? "A IA está mais lenta que o normal agora. Ainda tentando." : "Procurando o produto, o preço e as condições de pagamento. Leva alguns segundos."}</p>\n      </div>`;
   }
   async function consultarPrint(imagem, token) {
     try {
@@ -416,7 +468,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const dados = await consultarPrint(preparado.dataUrl, token);
       clearTimeout(demora);
       if (!dados) {
-        mostrarErro("Não consegui falar com o servidor. Confira sua internet e tente de novo.");
+        mostrarErro("O servidor não respondeu. Você pode digitar o valor manualmente ou tentar outro print.", {
+          titulo: "Não conseguimos ler esse preço.",
+          origem: "print"
+        });
         return;
       }
       if (!dados.ok) {
@@ -431,7 +486,10 @@ document.addEventListener("DOMContentLoaded", () => {
           mostrarErro("Sua sessão expirou. Entre novamente para ler o print.");
           return;
         }
-        mostrarErro([ dados.motivo || "Não consegui ler o preço nesse print.", dados.detalhe ].filter(Boolean).join(" "));
+        mostrarErro([ dados.motivo || "A imagem pode estar cortada ou pouco nítida.", dados.detalhe ].filter(Boolean).join(" "), {
+          titulo: "Não conseguimos ler esse preço.",
+          origem: "print"
+        });
         return;
       }
       aplicarResultado({
@@ -439,7 +497,10 @@ document.addEventListener("DOMContentLoaded", () => {
         miniatura: miniaturaAtual
       });
     } catch {
-      mostrarErro("Falha de conexão. Verifique sua internet e tente de novo.");
+      mostrarErro("A conexão caiu no meio da leitura. Você pode digitar o valor manualmente ou tentar outro print.", {
+        titulo: "Não conseguimos ler esse preço.",
+        origem: "print"
+      });
     } finally {
       clearTimeout(demora);
       lendoPrint = false;

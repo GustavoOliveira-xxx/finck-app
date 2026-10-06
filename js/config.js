@@ -101,36 +101,50 @@ window.FINCK_CONFIG = {
     id: "investimento",
     rotulo: "Investimento (manual)"
   } ],
+  // UX-DECISAO: cada opção diz o que acontece ao salvar. "grupo" separa as
+  // quatro escolhas principais das três formas de buscar alternativa.
   DECISOES: [ {
     id: "comprar",
     label: "Comprar agora",
     xp: 5,
-    consciente: false
+    consciente: false,
+    grupo: "principal",
+    consequencia: "Registra a saída no seu extrato com a data de hoje."
   }, {
     id: "adiar",
-    label: "Adiar a compra",
+    label: "Esperar",
     xp: 25,
-    consciente: true
+    consciente: true,
+    grupo: "principal",
+    consequencia: "Salva a análise e lembra você de revisar em 30 dias. Nada sai do extrato."
+  }, {
+    id: "desistir",
+    label: "Não comprar",
+    xp: 40,
+    consciente: true,
+    grupo: "principal",
+    consequencia: "Registra uma decisão consciente. Nada sai do extrato."
   }, {
     id: "alternativa",
     label: "Pesquisar alternativa",
     xp: 20,
-    consciente: true
+    consciente: true,
+    grupo: "alternativa",
+    consequencia: "Salva a análise e mostra onde procurar usado, conserto ou aluguel perto de você."
   }, {
     id: "usado",
     label: "Comprar usado",
     xp: 30,
-    consciente: true
+    consciente: true,
+    grupo: "alternativa",
+    consequencia: "Registra a escolha pelo usado. Nada sai do extrato até você lançar a compra."
   }, {
     id: "reparar",
     label: "Reparar o item atual",
     xp: 35,
-    consciente: true
-  }, {
-    id: "desistir",
-    label: "Desistir da compra",
-    xp: 40,
-    consciente: true
+    consciente: true,
+    grupo: "alternativa",
+    consequencia: "Registra a escolha pelo conserto e mostra quem conserta perto de você."
   } ],
   HIPOTESES_ALTERNATIVAS: {
     usado: {

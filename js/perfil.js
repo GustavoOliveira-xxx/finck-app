@@ -61,19 +61,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       initial_balance: U.lerMoeda("perfilSaldoInicial")
     };
     if (!dados.name) {
-      return U.toast("Informe seu nome.", "erro");
+      return U.erroCampo("perfilNome", "Informe seu nome.");
     }
     if (!(dados.income_monthly >= 0)) {
-      return U.toast("A renda não pode ser negativa.", "erro");
+      return U.erroCampo("perfilRenda", "A renda não pode ser negativa.");
     }
     if (!(Number.isInteger(dados.work_days_month) && dados.work_days_month >= 1 && dados.work_days_month <= 31)) {
-      return U.toast("Informe de 1 a 31 dias trabalhados por mês.", "erro");
+      return U.erroCampo("perfilDias", "Informe de 1 a 31 dias trabalhados por mês.");
     }
     if (!(dados.work_hours_day > 0 && dados.work_hours_day <= 16)) {
-      return U.toast("Informe de 0,5 a 16 horas por dia.", "erro");
+      return U.erroCampo("perfilHoras", "Informe de 0,5 a 16 horas por dia.");
     }
     if (!(Number.isInteger(dados.payday) && dados.payday >= 1 && dados.payday <= 31)) {
-      return U.toast("Informe um dia de recebimento entre 1 e 31.", "erro");
+      return U.erroCampo("perfilPayday", "Informe um dia de recebimento entre 1 e 31.");
     }
     try {
       await S.salvarPerfil(dados);
@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("btnMigrarSaldo").addEventListener("click", async () => {
     const conta = $("contaSaldoInicial").value;
     if (!conta) {
-      return U.toast("Escolha a conta que vai receber o saldo.", "erro");
+      return U.erroCampo("contaSaldoInicial", "Escolha a conta que vai receber o saldo.");
     }
     const nome = $("contaSaldoInicial").selectedOptions[0]?.textContent || "conta";
     if (!await U.confirmar("Migrar o saldo inicial?", `O saldo inicial do perfil vai para "${nome}". O valor do perfil vira histórico e nunca mais é somado ao saldo.`, {

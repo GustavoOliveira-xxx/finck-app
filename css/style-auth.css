@@ -28,7 +28,9 @@
 
   --texto:            #f4f1f9;
   --texto-fraco:      #a49bb2;
-  --texto-fraquissimo:#6d6579;
+  /* Mesmo ajuste do CSS principal (UX-001): #6d6579 dava 3,6:1 sobre o
+     fundo; #8b8397 passa de 4,5:1 e mantém o cinza-arroxeado. */
+  --texto-fraquissimo:#8b8397;
   --texto-suave:      #a49bb2;
 
   --grad-marca: linear-gradient(120deg, var(--roxo) 0%, var(--roxo-claro) 48%, var(--roxo-neon) 100%);
@@ -711,4 +713,38 @@ input:-webkit-autofill{
   display:block;
   width:clamp(128px, 24vw, 176px);
   aspect-ratio:1;
+}
+
+/* ==========================================================================
+   Entrada: dois caminhos claros e uma zona de leitura estável
+   ========================================================================== */
+/* Halo escuro atrás das colunas: o fundo continua animado, mas nenhuma
+   partícula disputa com o texto do formulário ou da vitrine. */
+.auth-wrapper::before{
+  content:"";
+  position:absolute; inset:-4rem -2rem;
+  background:
+    radial-gradient(48% 60% at 26% 50%, rgba(4,3,7,.55), transparent 72%),
+    radial-gradient(40% 58% at 76% 50%, rgba(4,3,7,.6), transparent 72%);
+  pointer-events:none; z-index:-1;
+}
+.vitrine__exemplo{
+  margin:0; font-size:.78rem; color:var(--texto-fraco);
+}
+.vitrine__acoes .btn-grande{ padding:.85rem 1.3rem; font-size:1rem; }
+
+.captcha-grupo{ display:grid; gap:.4rem; }
+.captcha-rotulo{
+  margin:0; font-size:.82rem; font-weight:600; letter-spacing:.02em;
+  color:var(--texto-fraco);
+}
+.captcha-dica{ margin:0; font-size:.76rem; line-height:1.4; color:var(--texto-fraquissimo); }
+.captcha-slider:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; }
+
+/* Órbita de decisões: grade pontilhada quase imperceptível, só no primeiro
+   terço da tela. */
+.fundo-finck::after{
+  opacity:.09;
+  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
+  mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
 }

@@ -1309,3 +1309,7 @@ body.finck-carregando{ overflow:hidden; }
   margin-inline:auto;
 }
 .marca3d-cena--auth .marca3d__chao{ opacity:.5; }
+
+/* UX-PERF: assim que o cofre destrava, a tela por baixo já aceita toque e
+   clique; a abertura das folhas continua só como efeito visual. */
+.finck-carga.cofre--destravado{ pointer-events:none; }

@@ -86,6 +86,7 @@
         custa quantas horas da sua realidade?
       </h2>
 
+      <p class="vitrine__exemplo">Exemplo calculado com a renda informada abaixo. Não é recomendação nem avaliação da compra.</p>
       <p class="vitrine__resposta" id="vitrineResposta" aria-live="polite"></p>
 
       <div class="vitrine__barra" aria-hidden="true">
@@ -104,15 +105,15 @@
       </label>
 
       <div class="vitrine__acoes">
-        <button type="button" id="btnDemo" class="btn-primario">Ver o app com dados de exemplo</button>
-        <span class="vitrine__nota">Sem cadastro. Nada sai do seu aparelho.</span>
+        <button type="button" id="btnDemo" class="btn-primario btn-grande">Experimentar com dados de exemplo</button>
+        <span class="vitrine__nota">Sem cadastro. A demonstração não envia seus dados e pode ser encerrada a qualquer momento.</span>
       </div>
     </section>
    </div>
 
     <section class="auth-card cena3d-eco" data-cena3d-eco>
-      <h2>Entrar</h2>
-      <p class="auth-sub">Acesse sua conta para continuar.</p>
+      <h2>Entrar na minha conta</h2>
+      <p class="auth-sub">Para quem já tem cadastro. Seus dados ficam salvos e acessíveis em qualquer aparelho.</p>
 
       <form id="loginForm" novalidate>
         <label for="email">E-mail
@@ -126,9 +127,13 @@
           </span>
         </label>
 
-        <div class="captcha" id="captchaTrack">
-          <div class="captcha-slider" id="captchaSlider" role="slider" aria-label="Deslize para continuar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Aguardando confirmação" tabindex="0">›</div>
-          <span class="captcha-texto" id="captchaText">Deslize para continuar →</span>
+        <div class="captcha-grupo">
+          <p class="captcha-rotulo" id="captchaTrackRotulo">Confirme que você é uma pessoa</p>
+          <div class="captcha" id="captchaTrack">
+            <div class="captcha-slider" id="captchaSlider" role="slider" aria-labelledby="captchaTrackRotulo" aria-describedby="captchaTrackDica" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Ainda não confirmado" tabindex="0"><span aria-hidden="true">→</span></div>
+            <span class="captcha-texto" id="captchaText">Arraste até o fim</span>
+          </div>
+          <p class="captcha-dica" id="captchaTrackDica">Arraste o controle até o fim ou, pelo teclado, selecione-o com Tab e pressione Enter.</p>
         </div>
 
         <p id="mensagem" class="mensagem" role="alert"></p>
@@ -138,7 +143,7 @@
 
       <div class="auth-rodape">
         <p><a href="recuperar.html">Esqueci minha senha</a></p>
-        <p>Não tem conta? <a href="cadastro.html">Criar conta</a></p>
+        <p>Não tem conta? <a href="cadastro.html">Criar minha conta</a></p>
       </div>
     </section>
   </main>

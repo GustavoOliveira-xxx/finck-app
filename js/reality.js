@@ -36,7 +36,10 @@ window.FinckReality = (() => {
     const compromissos = Number(ctx.compromissosAbertos) || 0;
     const disponivelProjetado = saldo - compromissos;
     const disponivelDepois = disponivelProjetado - preco;
-    const impacto_metas = impactoMetas(preco, ctx.metas || [], valorDia);
+    const impacto_metas = impactoMetas(preco, ctx.metas || [], valorDia, {
+      movimentos: ctx.movimentosMeta || [],
+      hoje: ctx.hoje instanceof Date ? ctx.hoje : new Date
+    });
     return {
       price: preco,
       income_monthly: renda,
@@ -74,7 +77,12 @@ window.FinckReality = (() => {
       alternativas: alternativas(preco)
     };
   }
-  function impactoMetas(preco, metas, valorDia) {
+  // UX-METAS: "o que eu deixo de fazer se comprar isso?". Além do peso em
+  // reais, a compra vira atraso em tempo de calendário: pelo ritmo real de
+  // aportes dos últimos 90 dias, ou, sem histórico, pelo ritmo que o prazo
+  // da meta exige. Sem nenhum dos dois, fica o equivalente em dias de trabalho.
+  function impactoMetas(preco, metas, valorDia, {movimentos: movimentos = [], hoje: hoje = new Date} = {}) {
+    const M = window.FinckMetas;
     return metas.map(m => {
       const alvo = Number(m.target_amount) || 0;
       const atual = Number(m.current_amount) || 0;
@@ -82,16 +90,155 @@ window.FinckReality = (() => {
       const percentualDaMeta = alvo > 0 ? preco / alvo * 100 : 0;
       const percentualDoRestante = falta > 0 ? preco / falta * 100 : 0;
       const diasAtraso = valorDia > 0 ? preco / valorDia : 0;
+      const ritmo = M ? M.ritmoMensal(movimentos, m.id, {
+        hoje: hoje
+      }) : 0;
+      const necessario = M ? M.necessarioPorMes(m, {
+        hoje: hoje
+      }) : null;
+      const porMes = ritmo > 0 ? ritmo : necessario || 0;
+      const base = ritmo > 0 ? "ritmo" : necessario ? "prazo" : "trabalho";
       return {
         id: m.id,
         nome: m.name,
+        atual: atual,
+        alvo: alvo,
         falta: falta,
+        progresso: alvo > 0 ? Math.min(100, atual / alvo * 100) : 0,
         percentual_da_meta: percentualDaMeta,
         percentual_do_restante: percentualDoRestante,
         dias_trabalho_extra: diasAtraso,
+        aporte_mensal: porMes,
+        atraso_dias: falta > 0 && porMes > 0 ? Math.min(preco, falta) / porMes * 30 : null,
+        base_atraso: base,
         cobre_a_meta: preco >= falta && falta > 0
       };
     });
+  }
+  // "37 h 20 min" e "4 dias e 5 h": o tempo de trabalho é o número que a
+  // pessoa entende em três segundos, então ele vem sem casas decimais soltas.
+  function formatarTempo(horas, horasPorDia = cfg.PADRAO.work_hours_day) {
+    const totalMin = Math.max(0, Math.round((Number(horas) || 0) * 60));
+    const h = Math.floor(totalMin / 60);
+    const min = totalMin % 60;
+    const porDia = Number(horasPorDia) > 0 ? Number(horasPorDia) : cfg.PADRAO.work_hours_day;
+    const textoHoras = h === 0 ? `${min} min` : min ? `${h} h ${min} min` : `${h} h`;
+    const diasInteiros = Math.floor(totalMin / (porDia * 60));
+    const restoH = Math.round((totalMin - diasInteiros * porDia * 60) / 60);
+    const ajustado = restoH >= porDia ? [ diasInteiros + 1, 0 ] : [ diasInteiros, restoH ];
+    const [d, r] = ajustado;
+    const textoDias = d === 0 ? textoHoras : `${d} ${d === 1 ? "dia" : "dias"}${r ? ` e ${r} h` : ""}`;
+    return {
+      horas: textoHoras,
+      dias: textoDias,
+      horas_inteiras: h,
+      minutos: min,
+      dias_inteiros: d,
+      resto_horas: r
+    };
+  }
+  // UX-SEMAFORO: o semáforo fala de impacto, não de certo ou errado.
+  const ROTULO_IMPACTO = {
+    verde: "Impacto baixo",
+    atencao: "Impacto moderado",
+    alerta: "Impacto alto"
+  };
+  // A frase que resume a análise, para ser dita em voz alta sem interpretar
+  // os cartões: cabe ou não no saldo, e quanto da sobra do mês ela leva.
+  function sintese(r) {
+    const U = window.FinckUtils;
+    const dinheiro = v => U ? U.moeda(v) : `R$ ${Number(v || 0).toFixed(2)}`;
+    const pct = v => `${Math.round(v)}%`;
+    let frase;
+    if (r.compromete_saldo) {
+      frase = `Não cabe no seu saldo atual: faltariam ${dinheiro(Math.abs(r.saldo_depois))}.`;
+    } else if (r.compromete_projetado) {
+      frase = `Cabe no saldo de hoje, mas passa do que pode sobrar depois dos compromissos em ${dinheiro(Math.abs(r.disponivel_depois))}.`;
+    } else if (r.sem_folga) {
+      frase = "Cabe no seu saldo atual, mas sai da reserva: as despesas fixas já consomem toda a renda do mês.";
+    } else if (r.renda_livre > 0) {
+      frase = `Cabe no seu saldo atual e consome ${pct(r.percentual_renda_livre)} do que sobra depois dos fixos.`;
+    } else {
+      frase = "Cabe no seu saldo atual.";
+    }
+    const sobraDepois = r.renda_livre - r.price;
+    return {
+      frase: frase,
+      rotulo_impacto: ROTULO_IMPACTO[r.semaforo.nivel] || "Impacto",
+      sobra_depois: sobraDepois,
+      frase_sobra: r.renda_livre > 0 ? sobraDepois >= 0 ? `Depois desta compra, ainda sobram ${dinheiro(sobraDepois)} da sua sobra mensal (renda menos despesas fixas).` : `A compra passa a sua sobra mensal em ${dinheiro(Math.abs(sobraDepois))}: a diferença sairia do saldo acumulado.` : "Você não tem sobra mensal depois dos fixos, então a compra sai do saldo acumulado."
+    };
+  }
+  // UX-COMPARAR: duas opções lado a lado com os mesmos parâmetros (renda,
+  // jornada, metas). A diferença aparece em reais, em horas de trabalho e,
+  // quando as duas têm vida útil, em custo por mês de uso: é ali que o
+  // barato às vezes perde para o durável.
+  function comparar(a, b) {
+    const ladoDe = x => ({
+      nome: x.nome,
+      preco: x.resultado.price,
+      horas: x.resultado.work_hours,
+      meses: x.resultado.custo_de_uso.meses_de_uso,
+      por_mes: x.resultado.custo_de_uso.por_mes
+    });
+    const A = ladoDe(a), B = ladoDe(b);
+    const maisBarata = A.preco <= B.preco ? A : B;
+    const maisCara = maisBarata === A ? B : A;
+    const comUso = A.por_mes && B.por_mes;
+    const melhorPorMes = comUso ? A.por_mes <= B.por_mes ? A : B : null;
+    return {
+      a: A,
+      b: B,
+      mais_barata: maisBarata.nome,
+      economia: maisCara.preco - maisBarata.preco,
+      horas_economizadas: maisCara.horas - maisBarata.horas,
+      empate: Math.abs(A.preco - B.preco) < .005,
+      compara_uso: Boolean(comUso),
+      melhor_por_mes: melhorPorMes ? melhorPorMes.nome : null,
+      inverte: Boolean(melhorPorMes && melhorPorMes.nome !== maisBarata.nome)
+    };
+  }
+  // UX-MUDOU: ao refazer a análise do mesmo item, o que mudou na conta.
+  function oQueMudou(anterior, atual) {
+    if (!anterior || !atual) {
+      return [];
+    }
+    const mudancas = [];
+    const diferente = (x, y) => Math.abs((Number(x) || 0) - (Number(y) || 0)) > .004;
+    if (diferente(anterior.price, atual.price)) {
+      mudancas.push({
+        campo: "preco",
+        antes: anterior.price,
+        agora: atual.price
+      });
+    }
+    if (diferente(anterior.work_hours, atual.work_hours)) {
+      mudancas.push({
+        campo: "horas",
+        antes: anterior.work_hours,
+        agora: atual.work_hours
+      });
+    }
+    const pa = anterior.custo_de_uso?.por_mes, pb = atual.custo_de_uso?.por_mes;
+    if ((pa || pb) && diferente(pa, pb)) {
+      mudancas.push({
+        campo: "por_mes",
+        antes: pa || null,
+        agora: pb || null
+      });
+    }
+    return mudancas;
+  }
+  // UX-CATEGORIA: a categoria deixa de ser obrigação e vira confirmação:
+  // o FinCK sugere pelo nome do item e a pessoa só altera se não for essa.
+  const PISTAS_CATEGORIA = [ [ "Eletrônicos", /(?<![\p{L}\p{N}])(celular|smartphone|iphone|galaxy|xiaomi|motorola|redmi|fone|headset|airpods?|earbuds?|notebook|laptop|macbook|computador|pc(?![\p{L}\p{N}])|gamer|monitor|teclado|mouse|tablet|ipad|kindle|tv(?![\p{L}\p{N}])|televis|smart ?tv|console|playstation|ps[45]|xbox|nintendo|switch|caixa de som|jbl|carregador|cabo usb|power ?bank|smartwatch|rel[oó]gio inteligente|apple watch|c[aâ]mera|drone|impressora|roteador|ssd|hd externo|pendrive|placa de v[ií]deo|air ?fryer|fritadeira|liquidificador|micro-?ondas|geladeira|ventilador|ar[- ]condicionado|aspirador|cafeteira)/iu ], [ "Saúde", /(?<![\p{L}\p{N}])(rem[eé]dio|medicamento|farm[aá]cia|consulta|m[eé]dico|dentista|exame|academia|suplemento|whey|vitamina|[oó]culos de grau|lente de contato|plano de sa[uú]de|terapia|psic[oó]log)/iu ], [ "Vestuário", /(?<![\p{L}\p{N}])(t[eê]nis|sapato|sand[aá]lia|chinelo|bota|camis[ae]|camiseta|blusa|cal[cç]a|jeans|bermuda|short|vestido|saia|jaqueta|casaco|moletom|meia|cueca|calcinha|suti[aã]|bon[eé]|chap[eé]u|bolsa|mochila|carteira|cinto|[oó]culos|roupa|nike|adidas|puma)/iu ], [ "Alimentação", /(?<![\p{L}\p{N}])(mercado|supermercado|comida|lanche|pizza|hamb[uú]rguer|ifood|restaurante|caf[eé](?![\p{L}\p{N}])|padaria|a[cç]ougue|feira|chocolate|bebida|cerveja|vinho|refrigerante|marmita|delivery)/iu ], [ "Transporte", /(?<![\p{L}\p{N}])(carro|moto|bicicleta|bike|patinete|uber|99(?![\p{L}\p{N}])|t[aá]xi|gasolina|combust[ií]vel|[oô]nibus|metr[oô]|passagem|pneu|capacete|estacionamento|ped[aá]gio|seguro do carro)/iu ], [ "Moradia", /(?<![\p{L}\p{N}])(aluguel|condom[ií]nio|sof[aá]|cama|colch[aã]o|guarda-?roupa|arm[aá]rio|mesa|cadeira|estante|cortina|tapete|lumin[aá]ria|panela|reforma|tinta|ferramenta|furadeira|m[oó]vel|m[oó]veis|decora[cç][aã]o)/iu ], [ "Educação", /(?<![\p{L}\p{N}])(livro|curso|faculdade|mensalidade escolar|apostila|caderno|material escolar|idioma|ingl[eê]s|udemy|alura|certifica[cç][aã]o|vestibular|enem)/iu ], [ "Lazer", /(?<![\p{L}\p{N}])(jogo|game|steam|ingresso|show|cinema|teatro|viagem|hotel|passeio|netflix|spotify|streaming|assinatura|brinquedo|lego|bola|camping|festa|presente|instrumento|viol[aã]o|guitarra)/iu ] ];
+  function inferirCategoria(nome) {
+    const texto = String(nome || "").normalize("NFC");
+    if (!texto.trim()) {
+      return null;
+    }
+    const achada = PISTAS_CATEGORIA.find(([, padrao]) => padrao.test(texto));
+    return achada ? achada[0] : null;
   }
   const MOTIVOS = [ "deficit_fixos", "sem_caixa", "sem_projetado", "renda_livre", "percentual_renda", "impacto_meta", "folga" ];
   function semaforo({incomePercent: incomePercent = 0, saldoDepois: saldoDepois = 0, disponivelDepois: disponivelDepois = 0, compromissos: compromissos = 0, percentualRendaLivre: percentualRendaLivre = 0, semFolga: semFolga = false, deficitFixos: deficitFixos = 0, rendaLivre: rendaLivre = 0, preco: preco = 0, impactoMetas: impactoMetas = []} = {}) {
@@ -390,6 +537,12 @@ window.FinckReality = (() => {
   };
   return {
     calcular: calcular,
+    formatarTempo: formatarTempo,
+    sintese: sintese,
+    comparar: comparar,
+    oQueMudou: oQueMudou,
+    inferirCategoria: inferirCategoria,
+    ROTULO_IMPACTO: ROTULO_IMPACTO,
     paraRegistro: paraRegistro,
     resumoHistorico: resumoHistorico,
     custoDeUso: custoDeUso,

@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="metas">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -72,7 +73,7 @@
     <section class="bloco">
       <div class="bloco-cabecalho">
         <h3>Suas metas</h3>
-        <button type="button" class="btn-primario" id="btnNovaMeta">Nova meta</button>
+        <button type="button" class="btn-primario" id="btnNovaMeta">Criar meta</button>
       </div>
       <div id="listaMetas" class="grade-metas"></div>
       <p class="vazio" id="vazioMetas" hidden>Nenhuma meta cadastrada. Crie a primeira para acompanhar seu progresso.</p>
@@ -92,10 +93,10 @@
         </label>
         <div class="linha-dupla">
           <label>Valor total (R$)
-            <input type="text" inputmode="numeric" data-moeda id="metaAlvo">
+            <input type="text" inputmode="decimal" data-moeda id="metaAlvo">
           </label>
           <label>Valor já guardado (R$)
-            <input type="text" inputmode="numeric" data-moeda id="metaAtual">
+            <input type="text" inputmode="decimal" data-moeda id="metaAtual">
           </label>
         </div>
         <div class="linha-dupla">
@@ -119,7 +120,7 @@
         <input type="hidden" id="aporteMetaId">
         <p id="aporteInfo" class="descricao"></p>
         <label>Valor (R$)
-          <input type="text" inputmode="numeric" data-moeda id="aporteValor">
+          <input type="text" inputmode="decimal" data-moeda id="aporteValor">
         </label>
         <button type="submit" class="btn-salvar" id="btnConfirmarAporte">Registrar aporte</button>
       </form>

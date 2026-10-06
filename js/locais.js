@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const U = window.FinckUtils;
   const IA = window.FinckIA;
   const user = await window.FinckNav.iniciarPagina({
-    titulo: "Ações locais",
+    titulo: "Alternativas perto de você",
     subtitulo: "Onde a decisão vira ação"
   });
   if (!user) {

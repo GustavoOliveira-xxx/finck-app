@@ -1,6 +1,12 @@
 (() => {
   "use strict";
-  const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches || (() => {
+    try {
+      return localStorage.getItem("finck-animacoes") === "desligada";
+    } catch {
+      return false;
+    }
+  })();
   const toque = window.matchMedia("(hover: none)").matches;
   const raf = window.requestAnimationFrame.bind(window);
   function criarAgendador(aplicar) {
@@ -39,8 +45,21 @@
       }
     });
   }
-  const MIN_EM_TELA = 1500;
-  const TETO = 5e3;
+  // UX-PERF: o cofre é assinatura da marca, mas não pode parecer travamento.
+  // Na primeira tela da sessão ele abre inteiro; nas seguintes, só um relance,
+  // porque a pessoa já viu a abertura e quer o conteúdo.
+  const primeiraDaSessao = (() => {
+    try {
+      const vista = sessionStorage.getItem("finck-cofre-visto");
+      sessionStorage.setItem("finck-cofre-visto", "1");
+      return !vista;
+    } catch {
+      return true;
+    }
+  })();
+  const MIN_EM_TELA = primeiraDaSessao ? 1200 : 250;
+  const ESPERA_ABRIR = primeiraDaSessao ? 320 : 80;
+  const TETO = 4e3;
   const COFRE_HTML = `\n    <div class="cofre">\n      <div class="cofre__folha cofre__folha--topo">\n        <span class="cofre__grade"></span>\n        <span class="cofre__borda"></span>\n      </div>\n      <div class="cofre__folha cofre__folha--base">\n        <span class="cofre__grade"></span>\n        <span class="cofre__borda"></span>\n      </div>\n\n      <div class="cofre__nucleo">\n        <div class="cofre__selo">\n          <svg class="cofre__anel" viewBox="0 0 120 120" aria-hidden="true">\n            <circle class="cofre__anel-base" cx="60" cy="60" r="52"></circle>\n            <circle class="cofre__anel-arco" cx="60" cy="60" r="52"\n                    stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>\n          </svg>\n          <img class="cofre__logo" src="assets/logo-ck-256.png" alt="" decoding="async">\n        </div>\n        <p class="cofre__marca">FinCK</p>\n        <p class="cofre__pct" data-cofre-pct>0%</p>\n      </div>\n\n      <span class="cofre__fresta"></span>\n    </div>`;
   function abertura() {
     const tela = document.querySelector("[data-finck-carga]");
@@ -92,7 +111,7 @@
       setTimeout(() => {
         tela.classList.add("cofre--aberto");
         setTimeout(() => tela.remove(), reduzido ? 0 : 900);
-      }, reduzido ? 0 : 320);
+      }, reduzido ? 0 : ESPERA_ABRIR);
     };
     const agendarSaida = () => {
       const decorrido = performance.now() - nasceu;
@@ -167,6 +186,22 @@
       corpo.style.setProperty("--py", py.toFixed(3));
     };
     const agendar = criarAgendador(aplicar);
+    // UX-A11Y: o prisma também gira pelo teclado: setas trocam de face.
+    cena.tabIndex = 0;
+    cena.addEventListener("keydown", e => {
+      const passo = {
+        ArrowRight: -.25,
+        ArrowLeft: .25
+      }[e.key];
+      if (passo === undefined) {
+        return;
+      }
+      e.preventDefault();
+      px += passo;
+      py = 0;
+      cena.classList.add("prisma-cena--conduzindo");
+      agendar();
+    });
     if (!toque) {
       cena.addEventListener("pointermove", e => {
         const r = cena.getBoundingClientRect();

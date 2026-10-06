@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="planejamento">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -55,7 +56,7 @@
 
     <section class="hero">
       <h2>Planejamento</h2>
-      <p>O que já está comprometido daqui para frente: parcelas, contas do mês, tetos por categoria e para onde o saldo caminha.</p>
+      <p>O que já está comprometido daqui para frente: parcelas, contas do mês, tetos por categoria e para onde o saldo caminha. Comece pelos próximos compromissos ou cadastre uma compra parcelada.</p>
     </section>
 
     <section id="alertaProjecao" aria-live="polite"></section>
@@ -134,7 +135,7 @@
         </label>
         <div class="linha-dupla">
           <label>Valor total (R$)
-            <input type="text" inputmode="numeric" data-moeda id="parcelaTotal">
+            <input type="text" inputmode="decimal" data-moeda id="parcelaTotal">
           </label>
           <label>Número de parcelas
             <input type="number" id="parcelaQtd" min="1" max="120" step="1" required placeholder="12">
@@ -167,7 +168,7 @@
           <select id="tetoCategoria"></select>
         </label>
         <label>Limite por mês (R$)
-          <input type="text" inputmode="numeric" data-moeda id="tetoLimite">
+          <input type="text" inputmode="decimal" data-moeda id="tetoLimite">
         </label>
         <p class="nota" id="notaTeto"></p>
         <button type="submit" class="btn-salvar">Salvar teto</button>

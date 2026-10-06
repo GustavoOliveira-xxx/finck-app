@@ -1082,22 +1082,28 @@ window.FinckTestes = (() => {
       }
       return M.ler(el);
     };
-    teste("um dígito vira centavo", () => {
-      comCampo(el => esperar(digitar(el, "3")).aSerPerto(.03, 2));
+    // UX-PRECO: o campo aceita o preço do jeito que a pessoa lê na loja.
+    teste("digitar 800 vale R$ 800,00, não R$ 8,00", () => {
+      comCampo(el => esperar(digitar(el, "800")).aSerPerto(800, 2));
     });
-    teste("dois dígitos ainda são centavos", () => {
-      comCampo(el => esperar(digitar(el, "32")).aSerPerto(.32, 2));
+    teste("um dígito é um real", () => {
+      comCampo(el => esperar(digitar(el, "3")).aSerPerto(3, 2));
     });
-    teste("quatro dígitos viram reais com centavos zerados", () => {
-      comCampo(el => esperar(digitar(el, "3200")).aSer(32));
-    });
-    teste("valor grande mantém a separação de milhar", () => {
+    teste("vírgula separa os centavos ao digitar", () => {
       comCampo(el => {
-        esperar(digitar(el, "123456")).aSerPerto(1234.56, 2);
-        esperar(el.value).aConter("1.234,56");
+        esperar(digitar(el, "800,5")).aSerPerto(800.5, 2);
+        esperar(digitar(el, "19,90")).aSerPerto(19.9, 2);
+        esperar(digitar(el, "0,08")).aSerPerto(.08, 2);
       });
     });
-    teste("texto colado aproveita só os dígitos", () => {
+    teste("ponto também separa centavos, e três casas são milhar", () => {
+      comCampo(el => {
+        esperar(digitar(el, "12.5")).aSerPerto(12.5, 2);
+        esperar(digitar(el, "1.500")).aSerPerto(1500, 2);
+        esperar(digitar(el, "1.234,56")).aSerPerto(1234.56, 2);
+      });
+    });
+    teste("texto colado aproveita o preço da loja", () => {
       comCampo(el => {
         el.dataset.centavos = "0";
         el.value = "R$ 1.500,90 aprox";
@@ -1107,55 +1113,56 @@ window.FinckTestes = (() => {
         esperar(M.ler(el)).aSerPerto(1500.9, 2);
       });
     });
-    teste("colar um preço inteiro vale reais, não centavos", () => {
-      comCampo(el => {
-        const colar = texto => {
-          const evento = new Event("paste", {
-            bubbles: true,
-            cancelable: true
-          });
-          evento.clipboardData = {
-            getData: () => texto
-          };
-          el.dispatchEvent(evento);
-          return M.ler(el);
-        };
-        esperar(colar("800")).aSerPerto(800, 2);
-        esperar(colar("800,00")).aSerPerto(800, 2);
-        esperar(colar("R$ 800,00")).aSerPerto(800, 2);
-        esperar(colar("R$ 1.234,56")).aSerPerto(1234.56, 2);
-        esperar(colar("1.500")).aSerPerto(1500, 2);
-      });
+    teste("colar um preço inteiro vale reais", () => {
+      esperar(M.centavosDeColagem("800")).aSer(8e4);
+      esperar(M.centavosDeColagem("800,00")).aSer(8e4);
+      esperar(M.centavosDeColagem("R$ 800,00")).aSer(8e4);
+      esperar(M.centavosDeColagem("R$ 1.234,56")).aSer(123456);
+      esperar(M.centavosDeColagem("1.500")).aSer(15e4);
     });
     teste("separador de milhar colado não vira centavo", () => {
       esperar(M.centavosDeColagem("1.500")).aSer(15e4);
       esperar(M.centavosDeColagem("1.500,90")).aSer(150090);
       esperar(M.centavosDeColagem("1,500.90")).aSer(150090);
     });
-    teste("colagem sem número não muda o campo", () => {
+    teste("texto sem número não vale preço", () => {
       esperar(M.centavosDeColagem("sem preço aqui")).aSer(null);
       esperar(M.centavosDeColagem("")).aSer(null);
+      esperar(M.centavosDeColagem(",")).aSer(null);
     });
-    teste("digitar continua sendo centavo a centavo", () => {
+    teste("ao sair do campo o valor aparece formatado", () => {
       comCampo(el => {
-        esperar(digitar(el, "800")).aSerPerto(8, 2);
-        esperar(digitar(el, "80000")).aSerPerto(800, 2);
+        digitar(el, "1234,5");
+        el.dispatchEvent(new Event("blur"));
+        esperar(el.value).aConter("1.234,50");
+        esperar(M.ler(el)).aSerPerto(1234.5, 2);
       });
     });
-    teste("o campo carrega a explicação do formato", () => {
+    teste("ao voltar ao campo dá para continuar digitando", () => {
+      esperar(M.paraEdicao(8e4)).aSer("800");
+      esperar(M.paraEdicao(80050)).aSer("800,50");
+      esperar(M.paraEdicao(0)).aSer("");
+    });
+    teste("o campo explica o formato sem falar em centavos", () => {
       comCampo(el => {
-        esperar(el.title).aConter("80000");
+        esperar(el.title).aConter("800");
         esperar(el.title).aConter("R$ 800,00");
+        esperar(/centavo/i.test(el.title)).aSerFalso();
       });
     });
-    teste("backspace remove um dígito, não a formatação", () => {
+    teste("apagar um dígito recalcula o valor", () => {
       comCampo(el => {
         digitar(el, "3200");
-        el.dispatchEvent(new KeyboardEvent("keydown", {
-          key: "Backspace",
+        el.value = "320";
+        el.dispatchEvent(new Event("input", {
           bubbles: true
         }));
-        esperar(M.ler(el)).aSerPerto(3.2, 2);
+        esperar(M.ler(el)).aSerPerto(320, 2);
+      });
+    });
+    teste("letras digitadas são ignoradas", () => {
+      comCampo(el => {
+        esperar(digitar(el, "8a0b0")).aSerPerto(800, 2);
       });
     });
     teste("escrever de código formata e é lido de volta igual", () => {
@@ -3661,6 +3668,185 @@ window.FinckTestes = (() => {
         min: 1500,
         max: 3e3
       })).aSer("1,5 a 3 t de CO₂e");
+    });
+  });
+  descrever("Reality: categoria, tempo, síntese e comparação (UX)", () => {
+    const R = window.FinckReality;
+    const perfil = {
+      income_monthly: 3520,
+      work_days_month: 22,
+      work_hours_day: 8
+    };
+    teste("categoria sugerida pelo nome do item", () => {
+      esperar(R.inferirCategoria("iPhone 17")).aSer("Eletrônicos");
+      esperar(R.inferirCategoria("Tênis de corrida")).aSer("Vestuário");
+      esperar(R.inferirCategoria("Passagem de ônibus")).aSer("Transporte");
+      esperar(R.inferirCategoria("Curso de inglês")).aSer("Educação");
+    });
+    teste("palavra com acento no começo também é reconhecida", () => {
+      esperar(R.inferirCategoria("Óculos de grau")).aSer("Saúde");
+      esperar(R.inferirCategoria("ônibus")).aSer("Transporte");
+    });
+    teste("item vago fica sem categoria sugerida", () => {
+      esperar(R.inferirCategoria("coisa aleatória")).aSer(null);
+      esperar(R.inferirCategoria("")).aSer(null);
+      esperar(R.inferirCategoria("pcs")).aSer(null);
+    });
+    teste("tempo de trabalho em horas e minutos", () => {
+      esperar(R.formatarTempo(37 + 1 / 3, 8).horas).aSer("37 h 20 min");
+      esperar(R.formatarTempo(.5, 8).horas).aSer("30 min");
+      esperar(R.formatarTempo(40, 8).horas).aSer("40 h");
+    });
+    teste("tempo de trabalho em dias da jornada da pessoa", () => {
+      esperar(R.formatarTempo(37 + 1 / 3, 8).dias).aSer("4 dias e 5 h");
+      esperar(R.formatarTempo(8, 8).dias).aSer("1 dia");
+      esperar(R.formatarTempo(12, 6).dias).aSer("2 dias");
+    });
+    teste("síntese diz quando a compra não cabe no saldo", () => {
+      const r = R.calcular(5e3, perfil, {
+        saldo: 1e3,
+        despesasFixas: 1500
+      });
+      esperar(R.sintese(r).frase).aConter("Não cabe no seu saldo atual");
+      esperar(R.sintese(r).rotulo_impacto).aSer("Impacto alto");
+    });
+    teste("síntese diz quanto da sobra a compra consome", () => {
+      const r = R.calcular(500, perfil, {
+        saldo: 1e4,
+        despesasFixas: 1520
+      });
+      const s = R.sintese(r);
+      esperar(s.frase).aConter("25% do que sobra depois dos fixos");
+      esperar(s.sobra_depois).aSerPerto(1500, 2);
+      esperar(s.frase_sobra).aConter("ainda sobram");
+    });
+    teste("semáforo vira rótulo de impacto, não de certo ou errado", () => {
+      esperar(R.ROTULO_IMPACTO.verde).aSer("Impacto baixo");
+      esperar(R.ROTULO_IMPACTO.atencao).aSer("Impacto moderado");
+      esperar(R.ROTULO_IMPACTO.alerta).aSer("Impacto alto");
+    });
+    teste("comparar: o barato pode custar mais por mês de uso", () => {
+      const iphone = R.calcular(5e3, perfil, {
+        saldo: 2e4,
+        mesesDeUso: 36
+      });
+      const samsung = R.calcular(3500, perfil, {
+        saldo: 2e4,
+        mesesDeUso: 24
+      });
+      const c = R.comparar({
+        nome: "iPhone",
+        resultado: iphone
+      }, {
+        nome: "Samsung",
+        resultado: samsung
+      });
+      esperar(c.mais_barata).aSer("Samsung");
+      esperar(c.economia).aSerPerto(1500, 2);
+      esperar(c.compara_uso).aSerVerdadeiro();
+      esperar(c.melhor_por_mes).aSer("iPhone");
+      esperar(c.inverte).aSerVerdadeiro();
+    });
+    teste("comparar sem vida útil não inventa custo por mês", () => {
+      const a = R.calcular(100, perfil, {});
+      const b = R.calcular(80, perfil, {});
+      const c = R.comparar({
+        nome: "A",
+        resultado: a
+      }, {
+        nome: "B",
+        resultado: b
+      });
+      esperar(c.compara_uso).aSerFalso();
+      esperar(c.melhor_por_mes).aSer(null);
+    });
+    teste("o que mudou ao refazer a conta do mesmo item", () => {
+      const antes = R.calcular(5499, perfil, {
+        mesesDeUso: 36
+      });
+      const agora = R.calcular(4999, perfil, {
+        mesesDeUso: 36
+      });
+      const m = R.oQueMudou(antes, agora);
+      esperar(m.map(x => x.campo).join(",")).aSer("preco,horas,por_mes");
+      esperar(R.oQueMudou(antes, antes)).aTerTamanho(0);
+    });
+  });
+  descrever("Metas: ritmo de aportes e atraso de uma compra", () => {
+    const M = window.FinckMetas;
+    const R = window.FinckReality;
+    const hoje = new Date("2026-10-15T12:00:00");
+    const mov = (goal_id, date, amount) => ({
+      goal_id: goal_id,
+      date: date,
+      amount: amount,
+      kind: amount >= 0 ? "aporte" : "retirada"
+    });
+    const movimentos = [ mov("n", "2026-08-01", 300), mov("n", "2026-09-01", 300), mov("n", "2026-10-01", 300), mov("n", "2026-03-01", 5e3), mov("x", "2026-10-01", 999) ];
+    teste("ritmo mensal usa só os últimos 90 dias e só a própria meta", () => {
+      esperar(M.ritmoMensal(movimentos, "n", {
+        hoje: hoje
+      })).aSerPerto(300, 2);
+    });
+    teste("retirada desconta do ritmo", () => {
+      esperar(M.ritmoMensal([ ...movimentos, mov("n", "2026-10-10", -600) ], "n", {
+        hoje: hoje
+      })).aSerPerto(100, 2);
+    });
+    teste("prazo da meta vira valor necessário por mês", () => {
+      const meta = {
+        target_amount: 3e3,
+        current_amount: 1800,
+        deadline: "2027-04-13"
+      };
+      esperar(M.necessarioPorMes(meta, {
+        hoje: hoje
+      })).aSerPerto(200, 0);
+      esperar(M.necessarioPorMes({
+        ...meta,
+        deadline: null
+      }, {
+        hoje: hoje
+      })).aSer(null);
+    });
+    teste("compra vira atraso em dias pelo ritmo real", () => {
+      const r = R.calcular(600, {
+        income_monthly: 3520,
+        work_days_month: 22,
+        work_hours_day: 8
+      }, {
+        metas: [ {
+          id: "n",
+          name: "Notebook",
+          target_amount: 5e3,
+          current_amount: 900
+        } ],
+        movimentosMeta: movimentos,
+        hoje: hoje
+      });
+      const m = r.impacto_metas[0];
+      esperar(m.base_atraso).aSer("ritmo");
+      esperar(m.atraso_dias).aSerPerto(60, 0);
+      esperar(m.progresso).aSerPerto(18, 0);
+    });
+    teste("sem aporte e sem prazo, o atraso fica em dias de trabalho", () => {
+      const r = R.calcular(600, {
+        income_monthly: 3520,
+        work_days_month: 22,
+        work_hours_day: 8
+      }, {
+        metas: [ {
+          id: "z",
+          name: "Viagem",
+          target_amount: 5e3,
+          current_amount: 0
+        } ],
+        movimentosMeta: [],
+        hoje: hoje
+      });
+      esperar(r.impacto_metas[0].base_atraso).aSer("trabalho");
+      esperar(r.impacto_metas[0].atraso_dias).aSer(null);
+      esperar(r.impacto_metas[0].dias_trabalho_extra).aSerPerto(3.75, 2);
     });
   });
   async function rodar(aoAtualizar) {

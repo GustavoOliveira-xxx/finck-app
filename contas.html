@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="contas">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -55,7 +56,7 @@
 
     <section class="hero">
       <h2>Contas</h2>
-      <p>Organize onde seu dinheiro está.</p>
+      <p>Onde o seu dinheiro está: banco, carteira digital ou espécie. A soma das contas precisa bater com o saldo geral, e esta tela mostra quando não bate.</p>
     </section>
 
     <p class="aviso-privacidade">
@@ -149,7 +150,7 @@
 
         <div class="linha-dupla">
           <label>Saldo inicial
-            <input type="text" inputmode="numeric" data-moeda id="contaSaldo">
+            <input type="text" inputmode="decimal" data-moeda id="contaSaldo">
           </label>
           <label>Data do saldo inicial
             <input type="date" id="contaData" required>
@@ -192,7 +193,7 @@
         </div>
         <div class="linha-dupla">
           <label>Valor
-            <input type="text" inputmode="numeric" data-moeda id="transferValor" required>
+            <input type="text" inputmode="decimal" data-moeda id="transferValor" required>
           </label>
           <label>Data
             <input type="date" id="transferData" required>
@@ -218,7 +219,7 @@
         <p class="previa-parcela" id="saldoEsperado" aria-live="polite"></p>
         <div class="linha-dupla">
           <label>Saldo real na conta
-            <input type="text" inputmode="numeric" data-moeda id="ajusteSaldo" required>
+            <input type="text" inputmode="decimal" data-moeda id="ajusteSaldo" required>
           </label>
           <label>Data da conferência
             <input type="date" id="ajusteData" required>

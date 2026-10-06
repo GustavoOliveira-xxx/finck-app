@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="cenarios">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -55,7 +56,7 @@
 
     <section class="hero">
       <h2>Cenários</h2>
-      <p>Simule sem mudar nada. Nenhum número daqui entra no seu histórico — são hipóteses lado a lado, para você escolher com o quadro inteiro à vista.</p>
+      <p>Compare alternativas antes de decidir: à vista ou parcelado, agora ou depois de juntar. Nada daqui entra no seu histórico; são hipóteses lado a lado, para escolher com o quadro inteiro à vista.</p>
     </section>
 
     <section class="bloco">
@@ -65,8 +66,8 @@
           <input type="text" id="cenarioItem" maxlength="40" placeholder="Ex.: Fone de ouvido">
         </label>
         <label>Preço
-          <input type="text" inputmode="numeric" data-moeda id="cenarioPreco" aria-describedby="ajudaPrecoCenario">
-          <small class="ajuda-campo" id="ajudaPrecoCenario">Digite os centavos: <strong>80000</strong> vira R$ 800,00. Colar <strong>800</strong> também funciona.</small>
+          <input type="text" inputmode="decimal" data-moeda id="cenarioPreco" aria-describedby="ajudaPrecoCenario">
+          <small class="ajuda-campo" id="ajudaPrecoCenario">Digite como você vê o preço: <strong>800</strong> ou <strong>R$ 800,00</strong>.</small>
         </label>
       </div>
       <div class="linha-dupla">
@@ -74,7 +75,7 @@
           <input type="number" id="cenarioParcelas" min="2" max="48" step="1" value="12">
         </label>
         <label>Preço real da alternativa <small>(usado, reparo ou aluguel — opcional)</small>
-          <input type="text" inputmode="numeric" data-moeda id="cenarioPrecoAlternativo">
+          <input type="text" inputmode="decimal" data-moeda id="cenarioPrecoAlternativo">
         </label>
       </div>
       <p class="nota">Sem esse preço, o FinCK usa uma faixa de hipótese do próprio projeto — não um dado de pesquisa. Informar o preço real torna a comparação verdadeira.</p>

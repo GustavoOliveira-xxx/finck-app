@@ -37,12 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const validar = () => {
       if (texto) {
-        texto.textContent = "✅ Pronto para continuar";
+        texto.textContent = "Confirmado";
       }
       track.classList.add("verificado");
       slider.style.transform = `translateX(${max}px)`;
       slider.setAttribute("aria-valuenow", "100");
-      slider.setAttribute("aria-valuetext", "Pronto para continuar");
+      slider.setAttribute("aria-valuetext", "Confirmado");
       if (btn) {
         btn.disabled = false;
       }
@@ -50,11 +50,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const resetar = () => {
       slider.style.transform = "translateX(0px)";
       if (texto) {
-        texto.textContent = "Deslize para continuar →";
+        texto.textContent = "Arraste até o fim";
       }
       track.classList.remove("verificado");
       slider.setAttribute("aria-valuenow", "0");
-      slider.setAttribute("aria-valuetext", "Aguardando confirmação");
+      slider.setAttribute("aria-valuetext", "Ainda não confirmado");
       if (btn) {
         btn.disabled = true;
       }

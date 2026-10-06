@@ -39,8 +39,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Calcular uma compra",
-      "short_name": "Calcular",
+      "name": "Analisar uma compra",
+      "short_name": "Analisar",
       "description": "Traduzir o preço de um item em horas de trabalho",
       "url": "reality.html",
       "icons": [{ "src": "assets/icone-192.png", "sizes": "192x192" }]

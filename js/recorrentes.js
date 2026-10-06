@@ -160,10 +160,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const category = type === "saida" ? $("recCategoria").value : null;
     const account_id = $("recConta").value || null;
     if (!description) {
-      return U.toast("Informe a descrição.", "erro");
+      return U.erroCampo("recDescricao", "Informe a descrição.");
     }
     if (!(amount > 0)) {
-      return U.toast("Informe um valor maior que zero.", "erro");
+      return U.erroCampo("recValor", "Informe um valor maior que zero.");
     }
     if (day_of_month < 1 || day_of_month > 31) {
       return U.toast("O dia precisa estar entre 1 e 31.", "erro");

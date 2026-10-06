@@ -122,6 +122,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalMeta");
   }
   document.getElementById("btnNovaMeta").addEventListener("click", () => abrirMeta(null));
+  // Atalho dos estados vazios ("Criar minha primeira meta"): metas.html#nova
+  // já abre o formulário, sem a pessoa procurar o botão.
+  if (location.hash === "#nova") {
+    history.replaceState?.(null, "", location.pathname);
+    abrirMeta(null);
+  }
   document.getElementById("formMeta").addEventListener("submit", async e => {
     e.preventDefault();
     const id = document.getElementById("metaId").value;
@@ -133,10 +139,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       rate: Number(document.getElementById("metaTaxa").value) || 0
     };
     if (!dados.name) {
-      return U.toast("Informe o nome da meta.", "erro");
+      return U.erroCampo("metaNome", "Informe o nome da meta.");
     }
     if (!(dados.target_amount > 0)) {
-      return U.toast("Informe um valor total maior que zero.", "erro");
+      return U.erroCampo("metaAlvo", "Informe um valor total maior que zero.");
     }
     try {
       const {current_amount: current_amount, ...semSaldo} = dados;
@@ -184,7 +190,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = document.getElementById("aporteMetaId").value;
     const valor = U.lerMoeda("aporteValor");
     if (!(valor > 0)) {
-      return U.toast("Informe um valor maior que zero.", "erro");
+      return U.erroCampo("aporteValor", "Informe um valor maior que zero.");
     }
     const meta = metas.find(x => String(x.id) === String(id));
     const guardado = Number(meta?.current_amount || 0);

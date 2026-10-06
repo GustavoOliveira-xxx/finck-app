@@ -1,0 +1,479 @@
+@charset "UTF-8";
+/* ==========================================================================
+   Camada de clareza (UX, 06/10/2026)
+   Aplica as recomendações das duas análises de UX sem trocar a identidade:
+   mesma paleta, mesmas fontes, mesmos componentes. O que muda é hierarquia,
+   explicação visível dos números, feedback e acessibilidade.
+   ========================================================================== */
+
+/* --- Erro junto ao campo (WCAG 3.3.1): não só no toast ------------------- */
+.erro-campo{
+  display:block; margin-top:.35rem;
+  font-size:.82rem; line-height:1.4; font-weight:600;
+  color:#ff8a95;
+}
+.erro-campo::before{ content:"⚠ "; }
+[aria-invalid="true"]{
+  border-color:var(--vermelho) !important;
+  box-shadow:0 0 0 3px var(--vermelho-fraco) !important;
+}
+
+/* --- Preferência de animação do Perfil ----------------------------------- */
+html[data-animacoes="desligada"] *,
+html[data-animacoes="desligada"] *::before,
+html[data-animacoes="desligada"] *::after{
+  animation-duration:.001ms !important;
+  animation-iteration-count:1 !important;
+  transition-duration:.001ms !important;
+  scroll-behavior:auto !important;
+}
+html[data-animacoes="desligada"] [data-revelar]{ opacity:1; transform:none; }
+/* Reduzida: some o movimento contínuo dos cartões; o fundo fica mais calmo
+   pelo próprio canvas (ui-fx.js). */
+html[data-animacoes="reduzida"] .semaforo-card::before,
+html[data-animacoes="reduzida"] .card-indicador::before{ animation:none !important; }
+
+/* --- Prisma sem movimento: as quatro faces viram cartões ----------------- */
+@media (prefers-reduced-motion: reduce){
+  .prisma-cena{ height:auto; perspective:none; }
+  .prisma-orbita,.prisma{ transform:none !important; animation:none !important; }
+  .prisma{
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem;
+    width:100%; height:auto;
+  }
+  .prisma__face{ position:relative; inset:auto; transform:none !important; min-height:8.5rem; }
+  .prisma__face--topo,.prisma__face--base,.prisma__sombra,.prisma-dica{ display:none; }
+}
+html[data-animacoes="desligada"] .prisma-cena{ height:auto; perspective:none; }
+html[data-animacoes="desligada"] .prisma-orbita,
+html[data-animacoes="desligada"] .prisma{ transform:none !important; animation:none !important; }
+html[data-animacoes="desligada"] .prisma{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem;
+  width:100%; height:auto;
+}
+html[data-animacoes="desligada"] .prisma__face{ position:relative; inset:auto; transform:none !important; min-height:8.5rem; }
+html[data-animacoes="desligada"] .prisma__face--topo,
+html[data-animacoes="desligada"] .prisma__face--base,
+html[data-animacoes="desligada"] .prisma__sombra,
+html[data-animacoes="desligada"] .prisma-dica{ display:none; }
+
+.prisma-cena:focus-visible{
+  outline:2px solid var(--amarelo); outline-offset:6px; border-radius:var(--raio-lg);
+}
+.prisma-cena:focus-visible .prisma-dica{ opacity:1; }
+
+/* --- Alvos de toque (WCAG 2.5.8; 44px para ações frequentes) ------------- */
+@media (pointer: coarse){
+  .nav-item{ min-height:44px; }
+  .busca-preco__ajuda,.ajuda-link,.link-explica{ min-height:44px; display:inline-flex; align-items:center; }
+  .chip{ min-height:44px; }
+  input[type="date"],input[type="month"]{ min-height:44px; }
+}
+
+/* --- Perfil: preferência de animação ------------------------------------- */
+.preferencia-animacao{ border:0; padding:0; margin:0; display:grid; gap:.55rem; }
+.preferencia-animacao legend{ font-weight:700; margin-bottom:.2rem; }
+.preferencia-animacao__opcao{
+  display:flex; gap:.75rem; align-items:flex-start;
+  padding:.75rem .9rem; border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda); background:var(--superficie-alta);
+  cursor:pointer;
+}
+.preferencia-animacao__opcao:has(input:checked){ border-color:var(--roxo-neon); background:var(--roxo-vidro); }
+.preferencia-animacao__opcao input{ margin-top:.25rem; accent-color:var(--amarelo); }
+.preferencia-animacao__opcao span{ display:grid; gap:.15rem; }
+.preferencia-animacao__opcao small{ color:var(--texto-fraco); font-size:.84rem; }
+
+/* ==========================================================================
+   Home: agrupada pela pergunta que cada bloco responde
+   ========================================================================== */
+.hero--curto{ padding-block:clamp(.9rem,.8rem + .6vw,1.3rem); }
+.hero--curto p{ max-width:60ch; }
+
+.reality-cta--principal{ margin-block:1rem 1.6rem; }
+.reality-cta--principal .reality-cta__acoes{
+  display:grid; gap:.55rem; justify-items:center; flex:0 0 auto;
+}
+.reality-cta__ods{
+  display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+  font-size:.84rem; color:var(--texto-fraco);
+}
+.reality-cta__ods .selo-ods12{
+  padding:.12rem .5rem; border-radius:999px;
+  background:var(--verde); color:#07120e;
+  font-family:var(--fonte-display); font-size:.7rem; font-weight:700; letter-spacing:.04em;
+}
+
+.grupo-home{ margin-block:1.6rem; display:grid; gap:.9rem; }
+.grupo-home__cabecalho{ display:grid; gap:.15rem; }
+.grupo-home__cabecalho h2{ font-size:clamp(1.15rem,1.05rem + .5vw,1.4rem); }
+.grupo-home__papel{
+  font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+  color:var(--roxo-neon);
+}
+
+/* Linha de contexto visível em cada número essencial (sem depender de hover). */
+.explica-numero{
+  display:block; margin-top:.3rem;
+  font-size:.78rem; line-height:1.4; font-weight:400;
+  color:var(--texto-fraco);
+  font-family:var(--fonte-corpo);
+  letter-spacing:0; text-transform:none;
+}
+.explica-numero a{ color:var(--amarelo); }
+.explica-numero--cartao{ margin-top:-.2rem; margin-bottom:.4rem; color:var(--texto-fraco); }
+.balance-info > div{ display:flex; flex-direction:column; }
+.card-indicador .explica-numero{ margin-top:.45rem; }
+
+/* Atenção necessária: alertas viram tarefas. */
+.lista-tarefas{ list-style:none; margin:0; padding:0; display:grid; gap:.6rem; }
+.tarefa{
+  display:flex; align-items:center; justify-content:space-between; gap:.8rem; flex-wrap:wrap;
+  padding:.85rem 1rem; border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda-forte); background:var(--superficie-alta);
+}
+.tarefa__texto{ flex:1 1 16rem; font-size:.92rem; line-height:1.5; }
+.tarefa--alerta{ border-left:4px solid var(--vermelho); }
+.tarefa--info{ border-left:4px solid var(--amarelo); }
+.tarefa--em-dia{ border-left:4px solid var(--verde); }
+.tarefa--em-dia strong{ color:var(--verde); }
+/* Se a revisão de previsões apareceu, "em dia" deixa de ser verdade. */
+.bloco--atencao:has(.aviso-fechamento:not([hidden])) .tarefa--em-dia{ display:none; }
+.aviso-revisao__texto{ flex:1 1 18rem; display:grid; gap:.4rem; }
+.aviso-revisao__lista{ margin:0; padding-left:1.1rem; display:grid; gap:.25rem; font-size:.88rem; }
+
+/* Cartão do Assistente FinCK (IA). Secundário em relação ao Reality. */
+.cartao-assistente{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  margin-block:1.2rem; padding:1.1rem 1.25rem;
+  border-radius:var(--raio-lg);
+  border:1px solid rgba(180,92,240,.3);
+  background:linear-gradient(140deg, rgba(147,51,196,.16), rgba(18,14,24,.7) 60%);
+}
+.cartao-assistente__texto{ flex:1 1 20rem; display:grid; gap:.35rem; }
+.cartao-assistente__texto h2{ font-size:clamp(1.05rem,1rem + .4vw,1.3rem); }
+.cartao-assistente__texto p{ color:var(--texto-fraco); font-size:.9rem; max-width:62ch; }
+.cartao-assistente__sinais{ list-style:none; margin:.2rem 0 0; padding:0; display:grid; gap:.3rem; }
+.sinal{ display:flex; align-items:baseline; gap:.5rem; font-size:.88rem; }
+.sinal__ponto{ width:.55rem; height:.55rem; border-radius:50%; flex:0 0 auto; background:var(--texto-fraco); transform:translateY(-.05rem); }
+.sinal--critico .sinal__ponto,.sinal--alerta .sinal__ponto{ background:var(--vermelho); }
+.sinal--atencao .sinal__ponto{ background:var(--amarelo); }
+.sinal--saudavel .sinal__ponto,.sinal--bom .sinal__ponto{ background:var(--verde); }
+
+/* Estado vazio: o que é, por que importa, próximo passo. */
+.vazio--guia{ display:grid; gap:.55rem; justify-items:start; text-align:left; }
+.vazio--guia p{ margin:0; line-height:1.5; }
+.vazio--guia strong{ color:var(--texto); }
+
+/* Mais ferramentas: navegação secundária, com menos peso que o Reality. */
+.mais-ferramentas{ margin-block:2rem 1rem; }
+.mais-ferramentas h2{ font-size:1rem; color:var(--texto-fraco); margin-bottom:.7rem; }
+.mais-ferramentas__lista{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:.55rem;
+}
+.mais-ferramentas__lista a{
+  display:flex; align-items:center; gap:.7rem; min-height:44px;
+  padding:.7rem .85rem; border-radius:14px;
+  border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.025);
+  color:var(--texto); text-decoration:none;
+  transition:border-color var(--dur-media), background var(--dur-media);
+}
+.mais-ferramentas__lista a:hover,.mais-ferramentas__lista a:focus-visible{
+  border-color:rgba(254,200,0,.35); background:rgba(104,12,144,.14);
+}
+.mais-ferramentas__lista a > span:last-child{ display:grid; gap:.1rem; }
+.mais-ferramentas__lista strong{ font-size:.92rem; }
+.mais-ferramentas__lista small{ font-size:.78rem; color:var(--texto-fraco); }
+
+.lista-transacoes .acoes-rapidas{ margin-block:.2rem .9rem; }
+.balance-card .explica-numero{
+  font-size:.78rem; font-weight:400; letter-spacing:0; text-transform:none;
+  font-family:var(--fonte-corpo); color:var(--texto-fraco);
+}
+.balance-info span{ color:var(--texto-fraco); }
+.reality-cta__rodape{
+  flex:1 1 100%; display:grid; gap:.35rem;
+  padding-top:.75rem; border-top:1px solid var(--superficie-borda);
+}
+/* Celular: o botão principal precisa caber na primeira tela. */
+@media (max-width: 600px){
+  .hero--curto{ padding:.8rem 1rem; }
+  .hero--curto h2{ font-size:1.25rem; }
+  .hero--curto p{ font-size:.9rem; }
+  .reality-cta--principal{
+    display:grid; grid-template-columns:auto minmax(0,1fr); gap:.4rem .9rem;
+    align-items:center; margin-top:.6rem;
+  }
+  .reality-cta--principal .reality-cta__marca{ grid-row:1; grid-column:1; }
+  .reality-cta--principal .marca3d-cena{ --marca-d:84px; width:84px; }
+  .reality-cta--principal .reality-cta__texto{ display:contents; }
+  .reality-cta--principal .reality-cta__selo{ grid-row:1; grid-column:2; align-self:center; font-size:.62rem; }
+  .reality-cta--principal h2,
+  .reality-cta--principal .reality-cta__texto > p,
+  .reality-cta--principal .reality-cta__acoes,
+  .reality-cta--principal .reality-cta__rodape{ grid-column:1 / -1; }
+  .reality-cta--principal .reality-cta__texto > p{ font-size:.9rem; }
+  .reality-cta--principal .reality-cta__acoes{ justify-items:stretch; }
+  .reality-cta--principal .btn-grande{ width:100%; }
+}
+.bloco-cabecalho h2{ font-size:clamp(1.15rem,1.05rem + .5vw,1.4rem); }
+
+/* Órbita de decisões: grade pontilhada quase imperceptível, só no primeiro
+   terço da tela. */
+.fundo-finck::after{
+  opacity:.09;
+  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
+  mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
+}
+
+.sr-only{
+  position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* ==========================================================================
+   Onboarding: progresso nomeado e revisão antes de concluir
+   ========================================================================== */
+.progresso-etapas{ margin-block:.6rem 1rem; }
+.progresso-etapas ol{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.4rem;
+}
+.progresso-etapas li{
+  display:grid; justify-items:center; gap:.15rem; text-align:center;
+  padding:.5rem .3rem; border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda); background:var(--superficie-alta);
+  font-size:.8rem; color:var(--texto-fraco);
+}
+.progresso-etapas__num{
+  display:grid; place-items:center; width:1.6rem; height:1.6rem; border-radius:50%;
+  font-family:var(--fonte-dados); font-weight:700; font-size:.78rem;
+  background:rgba(255,255,255,.06); color:var(--texto-fraco);
+}
+.progresso-etapas__nome{ font-weight:600; color:var(--texto); }
+.progresso-etapas__estado{ font-size:.7rem; }
+.progresso-etapas li[data-estado="atual"]{ border-color:var(--roxo-neon); background:var(--roxo-vidro); }
+.progresso-etapas li[data-estado="atual"] .progresso-etapas__num{ background:var(--grad-marca); color:#fff; }
+.progresso-etapas li[data-estado="atual"] .progresso-etapas__estado{ color:var(--amarelo); font-weight:700; }
+.progresso-etapas li[data-estado="feita"] .progresso-etapas__num{ background:var(--verde); color:#07120e; }
+.progresso-etapas li[data-estado="pulada"]{ opacity:.65; }
+
+.resumo-onboarding{
+  padding:1rem 1.1rem; border-radius:var(--raio-lg);
+  border:1px solid rgba(254,200,0,.35);
+  background:linear-gradient(150deg, rgba(254,200,0,.08), rgba(18,14,24,.6));
+}
+.resumo-onboarding h3{ color:var(--amarelo); margin-bottom:.5rem; }
+.btn-editar-etapa{
+  margin-left:.4rem; padding:0 .2rem; font-size:.78rem; color:var(--roxo-neon);
+  background:none; border:0; cursor:pointer; text-decoration:underline;
+}
+.plano-opcional > summary{ font-weight:600; }
+.plano-opcional[open] > summary{ margin-bottom:.6rem; }
+
+/* ==========================================================================
+   FinCK of Reality: duas informações, resposta no topo, detalhes depois
+   ========================================================================== */
+.etapas-reality{
+  position:sticky; top:calc(3.9rem + env(safe-area-inset-top)); z-index:20;
+  margin-block:.6rem .8rem;
+  padding:.35rem; border-radius:999px;
+  background:rgba(12,9,18,.86); border:1px solid var(--superficie-borda);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.etapas-reality ol{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; }
+.etapas-reality a{
+  display:flex; align-items:center; justify-content:center; gap:.35rem; min-height:36px;
+  padding:.3rem .4rem; border-radius:999px;
+  font-size:.8rem; font-weight:600; color:var(--texto-fraco); text-decoration:none;
+}
+.etapas-reality__num{
+  display:grid; place-items:center; width:1.35rem; height:1.35rem; border-radius:50%;
+  font-family:var(--fonte-dados); font-size:.72rem; background:rgba(255,255,255,.07);
+}
+.etapas-reality li[data-estado="atual"] a{ background:var(--roxo-vidro); color:var(--texto); box-shadow:inset 0 0 0 1px var(--roxo-neon); }
+.etapas-reality li[data-estado="atual"] .etapas-reality__num{ background:var(--grad-marca); color:#fff; }
+.etapas-reality li[data-estado="feita"] .etapas-reality__num{ background:var(--verde); color:#07120e; }
+.etapas-reality li[data-estado="feita"] .etapas-reality__num{ font-size:0; }
+.etapas-reality li[data-estado="feita"] .etapas-reality__num::after{ content:"✓"; font-size:.72rem; }
+.etapas-reality li[data-estado="bloqueada"] a{ opacity:.45; cursor:default; }
+@media (pointer: coarse){ .etapas-reality a{ min-height:44px; } }
+
+.categoria-inferida{
+  display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+  margin:-.35rem 0 0; font-size:.85rem; color:var(--texto-fraco);
+}
+.categoria-inferida strong{ color:var(--amarelo); }
+.btn-texto{ color:var(--roxo-neon); background:none; border:0; padding:.1rem .2rem; font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+
+/* Print e link como alternativa ao preço digitado, com peso secundário. */
+.atalho-preco{
+  display:grid; gap:.45rem;
+  padding:.75rem .9rem; border-radius:var(--raio-md);
+  border:1px dashed var(--superficie-borda-forte); background:rgba(255,255,255,.02);
+}
+.atalho-preco__titulo{ margin:0; font-size:.84rem; font-weight:600; color:var(--texto-fraco); }
+.atalho-preco__botoes{ display:flex; flex-wrap:wrap; gap:.5rem; }
+.atalho-preco .busca-preco__dica{ margin:0; font-size:.78rem; }
+.area-link{ display:grid; gap:.5rem; margin-top:.3rem; }
+.busca-preco__acoes-erro{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.5rem; }
+.processo-ia{ display:flex; align-items:center; gap:.5rem; margin:0; }
+.panorama__achado{ margin:0 0 .2rem; font-size:.82rem; font-weight:700; color:var(--verde); }
+.panorama__acoes{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+
+.alerta-fluxo{
+  display:flex; align-items:center; justify-content:space-between; gap:.7rem; flex-wrap:wrap;
+  padding:.8rem 1rem; border-radius:var(--raio-md);
+  border:1px solid rgba(255,77,94,.45); background:var(--vermelho-fraco);
+}
+.alerta-fluxo p{ margin:0; flex:1 1 16rem; }
+.status-processo{ margin:0; min-height:1.2em; font-size:.84rem; color:var(--texto-fraco); }
+#btnVerImpacto{ width:100%; }
+@media (min-width: 720px){ #btnVerImpacto{ width:auto; justify-self:start; } }
+
+.detalhes-precisao > summary{ display:grid; gap:.1rem; cursor:pointer; }
+.detalhes-precisao > summary span{ font-weight:700; color:var(--texto); }
+.detalhes-precisao > summary small{ font-size:.8rem; color:var(--texto-fraco); }
+.detalhes-precisao[open]{ display:grid; gap:.8rem; }
+.grupo-vida-util{ border:0; padding:0; margin:0; display:grid; gap:.5rem; }
+.grupo-vida-util legend{ font-weight:700; color:var(--amarelo); margin-bottom:.2rem; }
+
+.comparando{
+  display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap;
+  margin-bottom:.8rem; padding:.7rem .9rem; border-radius:var(--raio-md);
+  border:1px solid rgba(254,200,0,.35); background:var(--amarelo-fraco); font-size:.88rem;
+}
+.comparando p{ margin:0; flex:1 1 16rem; }
+
+/* A resposta: tempo de trabalho como protagonista, quase estática. */
+.resposta-reality{
+  display:grid; gap:.35rem;
+  margin-bottom:1rem; padding:clamp(1.1rem,1rem + 1vw,1.7rem);
+  border-radius:var(--raio-xl);
+  border:1px solid rgba(180,92,240,.4);
+  background:
+    radial-gradient(520px 220px at 100% 0%, rgba(254,200,0,.1), transparent 60%),
+    linear-gradient(150deg, rgba(104,12,144,.4), rgba(14,10,20,.94) 65%);
+  outline:none;
+}
+.resposta-reality__item{ margin:0; font-size:.88rem; color:var(--texto-fraco); }
+.resposta-reality__rotulo{ margin:.3rem 0 0; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--roxo-neon); }
+.resposta-reality__tempo{ margin:0; font-family:var(--fonte-display); font-size:clamp(1.2rem,1rem + 1vw,1.6rem); color:var(--texto); }
+.resposta-reality__tempo strong{
+  display:block; font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+  font-size:clamp(2.1rem,1.6rem + 3vw,3.3rem); line-height:1.05; color:var(--amarelo);
+}
+.resposta-reality__dias{ margin:0; font-size:.95rem; color:var(--texto); }
+.resposta-reality__renda{ margin:.35rem 0 0; font-size:1rem; }
+.resposta-reality__renda strong{ color:var(--amarelo); font-family:var(--fonte-dados); }
+.resposta-reality__sintese{ margin:.2rem 0 .5rem; font-size:1rem; font-weight:600; color:var(--texto); max-width:62ch; }
+.impacto-nivel{ margin-top:.2rem; }
+.impacto-nivel__rotulo{
+  font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; font-weight:800; color:currentColor;
+}
+.impacto-nivel__nao-julga{ font-size:.82rem !important; font-style:italic; }
+.resposta-reality__categoria{ margin:.4rem 0 0; font-size:.86rem; color:var(--texto-fraco); }
+.resposta-reality__mais{ justify-self:start; margin-top:.2rem; }
+.o-que-mudou{
+  margin-top:.4rem; padding:.65rem .8rem; border-radius:var(--raio-md);
+  background:rgba(254,200,0,.08); border:1px solid rgba(254,200,0,.3);
+}
+.o-que-mudou__titulo{ margin:0 0 .3rem; font-size:.78rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--amarelo); }
+.o-que-mudou ul{ list-style:none; margin:0; padding:0; display:grid; gap:.2rem; font-size:.88rem; }
+.o-que-mudou s{ color:var(--texto-fraco); }
+.o-que-mudou strong{ font-family:var(--fonte-dados); }
+
+/* Orçamento em linguagem de conta: compra, sobra, impacto, o que fica. */
+.orcamento-concreto{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.6rem; }
+.orcamento-concreto > div{
+  display:grid; gap:.2rem; padding:.7rem .85rem; border-radius:var(--raio-md);
+  background:rgba(0,0,0,.28); border:1px solid var(--superficie-borda);
+}
+.orcamento-concreto span{ font-size:.78rem; color:var(--texto-fraco); }
+.orcamento-concreto strong{ font-family:var(--fonte-dados); font-size:1.15rem; }
+.orcamento-concreto__frase{ margin:.7rem 0; font-weight:600; }
+.lista-resumo--glossario .explica-numero{ margin-top:.15rem; }
+
+.titulo-secao-ods{ display:flex; align-items:center; gap:.5rem; margin-top:1.4rem; font-size:1.05rem; }
+.descricao--ods{ margin-top:.2rem; }
+.titulo-secao-ods .selo-ods12{
+  padding:.12rem .5rem; border-radius:999px; background:var(--verde); color:#07120e;
+  font-family:var(--fonte-display); font-size:.7rem; font-weight:700;
+}
+
+/* Comparar duas opções. */
+.comparacao{
+  margin-bottom:1rem; padding:1rem 1.1rem; border-radius:var(--raio-lg);
+  border:1px solid rgba(254,200,0,.35); background:linear-gradient(150deg, rgba(254,200,0,.07), rgba(14,10,20,.9));
+}
+.comparacao h4{ margin-bottom:.6rem; }
+.comparacao__grade{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
+.comparacao__opcao{ padding:.75rem .85rem; border-radius:var(--raio-md); background:rgba(0,0,0,.28); border:1px solid var(--superficie-borda); }
+.comparacao__opcao--barata{ border-color:rgba(31,209,143,.5); }
+.comparacao__opcao h5{ margin:0 0 .4rem; font-size:.95rem; overflow-wrap:anywhere; }
+.comparacao__opcao dl{ margin:0; display:grid; gap:.3rem; }
+.comparacao__opcao dl div{ display:flex; justify-content:space-between; gap:.5rem; font-size:.84rem; }
+.comparacao__opcao dt{ color:var(--texto-fraco); }
+.comparacao__opcao dd{ margin:0; font-family:var(--fonte-dados); text-align:right; }
+.comparacao__conclusao{ margin:.7rem 0 .2rem; line-height:1.5; }
+
+/* Reflexão e decisão. */
+.mais-reflexoes{ margin-top:.6rem; }
+.mais-reflexoes[open]{ display:grid; gap:.8rem; }
+.botao-decisao{ display:grid; gap:.25rem; text-align:left; }
+.botao-decisao__consequencia{ font-size:.8rem; line-height:1.4; color:var(--texto-fraco); font-weight:400; }
+.botao-decisao.ativo .botao-decisao__consequencia{ color:var(--texto); }
+.opcoes-decisao--alternativas{ grid-column:1 / -1; padding:.6rem; border-radius:var(--raio-md); border:1px dashed var(--superficie-borda-forte); }
+.confirmacao-decisao{
+  margin-top:.8rem; padding:.85rem 1rem; border-radius:var(--raio-md);
+  border:2px solid var(--roxo-neon); background:var(--roxo-vidro);
+}
+.confirmacao-decisao p{ margin:0 0 .3rem; }
+.confirmacao-decisao--compra{ border-color:var(--amarelo); background:var(--amarelo-fraco); }
+.confirmacao-decisao--salva{ border-color:var(--verde); background:var(--verde-fraco); }
+.confirmacao-decisao--erro{ border-color:var(--vermelho); background:var(--vermelho-fraco); }
+.confirmacao-decisao .acoes-etapa{ margin-top:.5rem; }
+
+/* Histórico: resumo de comportamento. */
+.resumo-decisoes:empty{ display:none; }
+.resumo-decisoes{
+  margin-bottom:1rem; padding:1rem 1.15rem; border-radius:var(--raio-lg);
+  border:1px solid rgba(180,92,240,.35); background:linear-gradient(150deg, rgba(104,12,144,.25), rgba(14,10,20,.9));
+}
+.resumo-decisoes__numeros{
+  list-style:none; margin:.6rem 0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.6rem;
+}
+.resumo-decisoes__numeros li{ display:grid; gap:.1rem; font-size:.84rem; color:var(--texto-fraco); }
+.resumo-decisoes__numeros strong{ font-family:var(--fonte-dados); font-size:1.35rem; color:var(--amarelo); }
+.resumo-decisoes__frase{ margin:.3rem 0; }
+.atalho-preco__botoes > button{ flex:1 1 12rem; justify-content:center; font-size:.88rem; min-height:44px; }
+/* Celular: o formulário do Reality começa na primeira tela. */
+@media (max-width: 600px){
+  .hero--reality{
+    display:grid !important; grid-template-columns:72px minmax(0,1fr); gap:.8rem; align-items:center;
+    padding:.9rem 1rem;
+  }
+  .hero--reality .hero-marca{ --marca-d:72px; }
+  .hero--reality .hero-marca .marca3d-cena{ width:72px; }
+  .hero--reality h2{ font-size:1.2rem; }
+  .hero--reality p{ grid-column:1 / -1; font-size:.88rem; margin-top:.2rem; }
+  .hero--reality > div:last-child{ display:contents; }
+  .etapas-reality a{ font-size:.74rem; gap:.25rem; padding:.3rem .2rem; }
+}
+@media (max-width: 520px){
+  .comparacao__grade{ gap:.45rem; }
+  .comparacao__opcao{ padding:.6rem .65rem; }
+  .comparacao__opcao dl div{ display:grid; gap:0; }
+  .comparacao__opcao dt{ font-size:.74rem; }
+  .comparacao__opcao dd{ text-align:left; font-size:.86rem; }
+}
+
+.hero__subtitulo{
+  display:block; margin-top:.2rem;
+  font-family:var(--fonte-corpo); font-size:.85rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--roxo-neon); -webkit-text-fill-color:var(--roxo-neon);
+}
+.hero--jornada .btn-primario{ justify-self:start; margin-top:.4rem; }
+.resposta-reality__links{ display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; margin-top:.2rem; }

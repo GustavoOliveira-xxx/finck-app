@@ -165,10 +165,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = $("contaId").value;
     const nome = $("contaNome").value.trim();
     if (!nome) {
-      return U.toast("Dê um nome para a conta.", "erro");
+      return U.erroCampo("contaNome", "Dê um nome para a conta.");
     }
     if (!window.FinckData.ler("contaData")) {
-      return U.toast("Informe a data do saldo inicial.", "erro");
+      return U.erroCampo("contaData", "Informe a data do saldo inicial.");
     }
     const digitos = $("contaDigitos").value.replace(/\D/g, "").slice(0, 4);
     const bruto = U.lerMoeda("contaSaldo");
@@ -265,7 +265,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (acao === "mover") {
           const destino = $("contaDestinoMover").value;
           if (!destino) {
-            return U.toast("Escolha a conta de destino.", "erro");
+            return U.erroCampo("contaDestinoMover", "Escolha a conta de destino.");
           }
           for (const t of transacoes.filter(x => String(x.account_id) === String(id))) {
             await S.atualizar("transactions", t.id, {
@@ -317,7 +317,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return U.toast(erro, "erro");
     }
     if (!window.FinckData.ler("transferData")) {
-      return U.toast("Informe a data.", "erro");
+      return U.erroCampo("transferData", "Informe a data.");
     }
     const data = window.FinckData.ler("transferData");
     const botao = e.submitter || $("formTransferencia").querySelector('button[type="submit"]');
@@ -387,10 +387,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("formAjuste").addEventListener("submit", async e => {
     e.preventDefault();
     if (!$("ajusteConfirma").checked) {
-      return U.toast("Confirme que conferiu o saldo.", "erro");
+      return U.erroCampo("ajusteConfirma", "Confirme que conferiu o saldo.");
     }
     if (!window.FinckData.ler("ajusteData")) {
-      return U.toast("Informe a data da conferência.", "erro");
+      return U.erroCampo("ajusteData", "Informe a data da conferência.");
     }
     const esperado = saldoEsperadoDaConta();
     const bruto = U.lerMoeda("ajusteSaldo");

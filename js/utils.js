@@ -53,6 +53,41 @@ window.FinckUtils = (() => {
     setTimeout(() => el.remove(), ms);
   }
   const focoAnterior = new Map;
+  // UX-A11Y: pilha dos modais abertos. Esc fecha só o de cima, e o Tab fica
+  // preso dentro dele: sem isso o teclado escapava para a página de trás.
+  const pilhaModais = [];
+  const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const focaveisDe = el => [ ...el.querySelectorAll(FOCAVEIS) ].filter(f => !f.closest("[hidden]") && f.offsetParent !== null);
+  function prenderFoco(e) {
+    if (e.key !== "Tab" || !pilhaModais.length) {
+      return;
+    }
+    const topo = document.getElementById(pilhaModais[pilhaModais.length - 1]);
+    if (!topo || topo.hidden) {
+      return;
+    }
+    const lista = focaveisDe(topo);
+    if (!lista.length) {
+      e.preventDefault();
+      return;
+    }
+    const primeiro = lista[0];
+    const ultimo = lista[lista.length - 1];
+    if (!topo.contains(document.activeElement)) {
+      e.preventDefault();
+      primeiro.focus();
+    } else if (e.shiftKey && document.activeElement === primeiro) {
+      e.preventDefault();
+      ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault();
+      primeiro.focus();
+    }
+  }
+  if (typeof document !== "undefined") {
+    document.addEventListener("keydown", prenderFoco);
+  }
+  const modalDoTopo = () => pilhaModais.length ? pilhaModais[pilhaModais.length - 1] : null;
   const abrirModal = id => {
     const el = document.getElementById(id);
     if (!el) {
@@ -60,9 +95,14 @@ window.FinckUtils = (() => {
     }
     focoAnterior.set(id, document.activeElement);
     el.hidden = false;
+    const i = pilhaModais.indexOf(id);
+    if (i >= 0) {
+      pilhaModais.splice(i, 1);
+    }
+    pilhaModais.push(id);
     document.body.classList.add("modal-aberto");
     requestAnimationFrame(() => {
-      const foco = el.querySelector('[autofocus], button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      const foco = el.querySelector('[autofocus]') || focaveisDe(el).find(f => !f.classList.contains("fechar")) || focaveisDe(el)[0];
       if (foco) {
         foco.focus();
       } else {
@@ -77,6 +117,10 @@ window.FinckUtils = (() => {
       return;
     }
     el.hidden = true;
+    const i = pilhaModais.indexOf(id);
+    if (i >= 0) {
+      pilhaModais.splice(i, 1);
+    }
     if (!document.querySelector(".modal-overlay:not([hidden])")) {
       document.body.classList.remove("modal-aberto");
     }
@@ -86,6 +130,43 @@ window.FinckUtils = (() => {
     }
     focoAnterior.delete(id);
   };
+  // UX-A11Y: erro de campo fica junto do campo, não só no toast: a mensagem é
+  // ligada ao input por aria-describedby e o foco vai para quem precisa de ajuste.
+  function erroCampo(alvo, mensagem) {
+    const campo = typeof alvo === "string" ? document.getElementById(alvo) : alvo;
+    if (!campo) {
+      toast(mensagem, "erro");
+      return false;
+    }
+    const idErro = `${campo.id || uid()}Erro`;
+    let aviso = document.getElementById(idErro);
+    if (!aviso) {
+      aviso = document.createElement("small");
+      aviso.id = idErro;
+      aviso.className = "erro-campo";
+      aviso.setAttribute("role", "alert");
+      const ancora = campo.closest(".campo-com-icone") || campo;
+      ancora.insertAdjacentElement("afterend", aviso);
+    }
+    aviso.textContent = mensagem;
+    campo.setAttribute("aria-invalid", "true");
+    const ligados = (campo.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+    if (!ligados.includes(idErro)) {
+      campo.setAttribute("aria-describedby", [ idErro, ...ligados ].join(" "));
+    }
+    campo.focus();
+    const limpar = () => {
+      aviso.remove();
+      campo.removeAttribute("aria-invalid");
+      const resto = (campo.getAttribute("aria-describedby") || "").split(/\s+/).filter(x => x && x !== idErro);
+      resto.length ? campo.setAttribute("aria-describedby", resto.join(" ")) : campo.removeAttribute("aria-describedby");
+      campo.removeEventListener("input", limpar);
+      campo.removeEventListener("change", limpar);
+    };
+    campo.addEventListener("input", limpar);
+    campo.addEventListener("change", limpar);
+    return false;
+  }
   // UX-002 — confirm/prompt nativos quebram a identidade visual e ficam ruins no
   // celular. Um único diálogo HTML, montado sob demanda, serve todas as telas.
   // Se o DOM não estiver disponível, cai no nativo em vez de travar o fluxo.
@@ -198,7 +279,12 @@ window.FinckUtils = (() => {
       if (e.key !== "Escape") {
         return;
       }
-      document.querySelectorAll(".modal-overlay:not([hidden])").forEach(m => fecharModal(m.id));
+      // Só o modal de cima. O diálogo de confirmação tem o próprio Esc, que
+      // também resolve a pergunta pendente.
+      const topo = modalDoTopo() || [ ...document.querySelectorAll(".modal-overlay:not([hidden])") ].map(m => m.id).pop();
+      if (topo && topo !== ID_DIALOGO) {
+        fecharModal(topo);
+      }
     });
   }
   // CODE-010 — escapeHTML protege a marcação, mas não impede um href
@@ -252,6 +338,7 @@ window.FinckUtils = (() => {
     confirmar: confirmar,
     perguntar: perguntar,
     fecharModal: fecharModal,
+    erroCampo: erroCampo,
     ligarModais: ligarModais,
     saudacao: saudacao,
     progresso: progresso,

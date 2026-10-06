@@ -110,7 +110,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const faixa = document.getElementById("avisoRevisao");
     if (S.emDemo() && faixa) {
       faixa.hidden = false;
-      faixa.innerHTML = `\n        <span>${pendentes.length} movimentação(ões) prevista(s) esperam sua confirmação. Elas ainda não mexeram no saldo.</span>\n        <button type="button" class="btn-secundario" id="btnRevisarAgora">Revisar agora</button>\n        <button type="button" class="btn-texto" id="btnVerAppPrimeiro">Ver o app primeiro</button>`;
+      // UX-HOME: o alerta vira tarefa: o que revisar, de quanto, e só depois
+      // a opção de deixar para mais tarde.
+      const tarefa = oc => `<li><strong>${oc.type === "entrada" ? "Confirmar entrada" : "Confirmar saída"} de ${U.moeda(oc.planned_amount)}</strong> · ${U.escapeHTML(oc.description)}, venceu em ${U.dataBR(oc.due_date)}</li>`;
+      faixa.innerHTML = `\n        <div class="aviso-revisao__texto">\n          <p><strong>${pendentes.length === 1 ? "1 previsão venceu" : `${pendentes.length} previsões venceram`}</strong> e espera${pendentes.length === 1 ? "" : "m"} você dizer se aconteceu. Elas ainda não mexeram no saldo.</p>\n          <ul class="aviso-revisao__lista">${pendentes.slice(0, 3).map(tarefa).join("")}</ul>\n          ${pendentes.length > 3 ? `<p class="nota">e mais ${pendentes.length - 3}.</p>` : ""}\n        </div>\n        <button type="button" class="btn-primario" id="btnRevisarAgora">Revisar lançamentos pendentes</button>\n        <button type="button" class="btn-texto" id="btnVerAppPrimeiro">Decidir depois</button>`;
       document.getElementById("btnRevisarAgora").addEventListener("click", () => {
         faixa.hidden = true;
         abrirRevisao();
@@ -127,7 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       faixa.hidden = false;
       faixa.innerHTML = `\n        <span>Seu ciclo de ${new Date(`${aFechar}-15T12:00:00`).toLocaleDateString("pt-BR", {
         month: "long"
-      })} está pronto para fechamento.</span>\n        <button type="button" class="btn-secundario" id="btnAbrirFechamento">Ver fechamento</button>`;
+      })} está pronto para fechamento.</span>\n        <button type="button" class="btn-secundario" id="btnAbrirFechamento">Ver o fechamento do mês</button>`;
       document.getElementById("btnAbrirFechamento").addEventListener("click", () => abrirFechamento(aFechar));
     }
   }

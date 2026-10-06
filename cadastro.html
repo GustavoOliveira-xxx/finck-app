@@ -92,9 +92,13 @@
           <span>Concordo em usar o FinCK como ferramenta educacional de finanças pessoais.</span>
         </label>
 
-        <div class="captcha" id="captchaTrackCad">
-          <div class="captcha-slider" id="captchaSliderCad" role="slider" aria-label="Deslize para continuar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Aguardando confirmação" tabindex="0">›</div>
-          <span class="captcha-texto" id="captchaTextCad">Deslize para continuar →</span>
+        <div class="captcha-grupo">
+          <p class="captcha-rotulo" id="captchaTrackCadRotulo">Confirme que você é uma pessoa</p>
+          <div class="captcha" id="captchaTrackCad">
+            <div class="captcha-slider" id="captchaSliderCad" role="slider" aria-labelledby="captchaTrackCadRotulo" aria-describedby="captchaTrackCadDica" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Ainda não confirmado" tabindex="0"><span aria-hidden="true">→</span></div>
+            <span class="captcha-texto" id="captchaTextCad">Arraste até o fim</span>
+          </div>
+          <p class="captcha-dica" id="captchaTrackCadDica">Arraste o controle até o fim ou, pelo teclado, selecione-o com Tab e pressione Enter.</p>
         </div>
 
         <p id="mensagemCad" class="mensagem" role="alert"></p>

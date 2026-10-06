@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("btnLevarReality").addEventListener("click", () => {
     const e = entrada();
     if (!(e.preco > 0)) {
-      return U.toast("Informe um valor para simular primeiro.", "erro");
+      return U.erroCampo("cenarioPreco", "Informe um valor para simular primeiro.");
     }
     const params = new URLSearchParams({
       item: e.item || "",

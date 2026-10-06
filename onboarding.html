@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="onboarding" class="pagina-onboarding">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -53,6 +54,16 @@
 
   <main class="conteudo" id="conteudo" tabindex="-1">
 
+    <!-- UX-ONB: progresso com nome e estado de cada etapa, não só porcentagem. -->
+    <nav class="progresso-etapas" id="progressoEtapas" aria-label="Etapas da configuração" hidden>
+      <ol>
+        <li data-passo="1"><span class="progresso-etapas__num">1</span><span class="progresso-etapas__nome">Renda</span><span class="progresso-etapas__estado"></span></li>
+        <li data-passo="2"><span class="progresso-etapas__num">2</span><span class="progresso-etapas__nome">Despesas fixas</span><span class="progresso-etapas__estado"></span></li>
+        <li data-passo="3"><span class="progresso-etapas__num">3</span><span class="progresso-etapas__nome">Saldo</span><span class="progresso-etapas__estado"></span></li>
+        <li data-passo="4"><span class="progresso-etapas__num">✓</span><span class="progresso-etapas__nome">Concluído</span><span class="progresso-etapas__estado"></span></li>
+      </ol>
+    </nav>
+
     <section class="etapa" id="etapaFluxo" data-etapa="0">
       <h2>Como você quer começar?</h2>
       <p class="descricao">Escolha o caminho que combina com o seu momento. Dá para mudar depois.</p>
@@ -80,11 +91,12 @@
 
     <section class="etapa" id="etapaRenda" data-etapa="1" hidden>
       <h2>Sua renda</h2>
-      <p class="descricao">Esses dados alimentam o FinCK of Reality: é com eles que calculamos o preço de uma compra em horas de trabalho.</p>
+      <p class="descricao">Esses dados alimentam o FinCK of Reality: é com eles que o preço de uma compra vira horas de trabalho.</p>
 
       <form id="formRenda" novalidate>
-        <label>Renda mensal (R$) <small>pode ser zero</small>
-          <input type="text" inputmode="numeric" data-moeda id="incomeMonthly">
+        <label>Renda mensal (R$)
+          <input type="text" inputmode="decimal" data-moeda id="incomeMonthly" aria-describedby="porqueRenda">
+          <small class="ajuda-campo" id="porqueRenda">Usada para transformar preços em horas e dias de trabalho. Sem uma renda mensal, o FinCK ainda registra gastos, mas não consegue fazer essa conversão.</small>
         </label>
 
         <label>Tipo de renda
@@ -96,15 +108,18 @@
         </label>
 
         <label>Dia do recebimento
-          <input type="number" id="payday" min="1" max="31" value="5">
+          <input type="number" id="payday" min="1" max="31" value="5" aria-describedby="porquePayday">
+          <small class="ajuda-campo" id="porquePayday">Usado para saber quando começa o seu mês financeiro.</small>
         </label>
 
         <div class="linha-dupla">
           <label>Dias trabalhados por mês
-            <input type="number" id="workDays" min="1" max="31" value="22" required>
+            <input type="number" id="workDays" min="1" max="31" value="22" required aria-describedby="porqueDias">
+            <small class="ajuda-campo" id="porqueDias">Usado para transformar dinheiro em dias de trabalho.</small>
           </label>
           <label>Horas por dia
-            <input type="number" id="workHours" min="1" max="16" step="0.5" value="8" required>
+            <input type="number" id="workHours" min="1" max="16" step="0.5" value="8" required aria-describedby="porqueHoras">
+            <small class="ajuda-campo" id="porqueHoras">Usado para calcular o custo em horas.</small>
           </label>
         </div>
 
@@ -126,7 +141,7 @@
           <input type="text" id="despesaDescricao" placeholder="Ex.: Aluguel" required>
         </label>
         <label>Valor (R$)
-          <input type="text" inputmode="numeric" data-moeda id="despesaValor">
+          <input type="text" inputmode="decimal" data-moeda id="despesaValor">
         </label>
         <label>Dia
           <input type="number" id="despesaDia" min="1" max="31" value="10">
@@ -149,11 +164,16 @@
 
       <form id="formSaldo" novalidate>
         <label>Saldo inicial (R$)
-          <input type="text" inputmode="numeric" data-moeda id="initialBalance">
+          <input type="text" inputmode="decimal" data-moeda id="initialBalance" aria-describedby="porqueSaldo">
+          <small class="ajuda-campo" id="porqueSaldo">Usado para mostrar o impacto imediato das compras no que você tem hoje.</small>
         </label>
 
+        <section class="resumo-onboarding" id="resumoOnboarding" aria-live="polite"></section>
+
+        <details class="detalhes-hipoteses plano-opcional">
+          <summary>Planejamento opcional: como você pretende organizar sua renda</summary>
         <fieldset class="plano-renda">
-          <legend>Como você pretende organizar sua renda</legend>
+          <legend class="sr-only">Como você pretende organizar sua renda</legend>
           <p class="descricao">
             É uma referência sua, não uma regra. Serve para o fechamento do mês
             comparar o que você planejou com o que aconteceu. Pode deixar em branco.
@@ -170,7 +190,7 @@
                 <input type="number" id="livrePercent" min="0" max="100" step="1" placeholder="30">
               </label>
               <label data-campo="valor" hidden>R$
-                <input type="text" inputmode="numeric" data-moeda id="livreValor">
+                <input type="text" inputmode="decimal" data-moeda id="livreValor">
               </label>
             </div>
           </div>
@@ -186,15 +206,14 @@
                 <input type="number" id="economiaPercent" min="0" max="100" step="1" placeholder="20">
               </label>
               <label data-campo="valor" hidden>R$
-                <input type="text" inputmode="numeric" data-moeda id="economiaValor">
+                <input type="text" inputmode="decimal" data-moeda id="economiaValor">
               </label>
             </div>
           </div>
 
           <p class="plano-renda__previa" id="previaPlano"></p>
         </fieldset>
-
-        <section class="resumo-onboarding" id="resumoOnboarding"></section>
+        </details>
 
         <div class="acoes-etapa">
           <button type="button" class="btn-secundario" data-voltar="2">Voltar</button>

@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     const orfaos = CT.semConta(ctx.transacoesRealizadas);
     const diferenca = ctx.saldo - resumoContas.disponivel;
-    document.getElementById("cardContas").innerHTML = contas.length ? `<article class="card-contas">\n           <div class="card-contas__topo">\n             <h2>Minhas contas</h2>\n             <span class="card-contas__total ${resumoContas.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">\n               ${U.moeda(resumoContas.disponivel)}</span>\n           </div>\n           <p class="descricao">${resumoContas.quantidade} conta(s) ativa(s)${orfaos ? ` · ${orfaos} lançamento(s) sem conta` : ""}</p>\n           ${Math.abs(diferenca) >= .01 ? `<p class="nota nota--conciliacao">\n                  O saldo geral (${U.moeda(ctx.saldo)}) e a soma das contas (${U.moeda(resumoContas.disponivel)})\n                  diferem em ${U.moeda(Math.abs(diferenca))}${orfaos ? ` porque ${orfaos} lançamento(s) ainda não têm conta` : " por causa de ajustes de saldo"}.\n                  <a href="contas.html">Conferir</a>\n                </p>` : `<p class="nota">Saldo geral e soma das contas estão conciliados.</p>`}\n           ${resumoContas.contas.slice(0, 3).map(c => `\n             <div class="card-contas__linha">\n               <span class="ponto-banco" style="--cor:${c.instituicao.cor}"></span>\n               <span>${U.escapeHTML(c.name)}</span>\n               <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>\n             </div>`).join("")}\n           <a class="link-mais" href="contas.html">Ver contas</a>\n         </article>` : `<article class="card-contas">\n           <div class="card-contas__topo"><h2>Minhas contas</h2></div>\n           <p class="descricao">Você ainda não cadastrou onde seu dinheiro está. O FinCK não acessa seu banco — você informa e edita quando quiser.</p>\n           <a class="link-mais" href="contas.html">Cadastrar minha primeira conta</a>\n         </article>`;
+    document.getElementById("cardContas").innerHTML = contas.length ? `<article class="card-contas">\n           <div class="card-contas__topo">\n             <h3>Minhas contas</h3>\n             <span class="card-contas__total ${resumoContas.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">\n               ${U.moeda(resumoContas.disponivel)}</span>\n           </div>\n           <p class="descricao">${resumoContas.quantidade} conta(s) ativa(s)${orfaos ? ` · ${orfaos} lançamento(s) sem conta` : ""}</p>\n           ${Math.abs(diferenca) >= .01 ? `<p class="nota nota--conciliacao">\n                  O saldo geral (${U.moeda(ctx.saldo)}) e a soma das contas (${U.moeda(resumoContas.disponivel)})\n                  diferem em ${U.moeda(Math.abs(diferenca))}${orfaos ? ` porque ${orfaos} lançamento(s) ainda não têm conta` : " por causa de ajustes de saldo"}.\n                  <a href="contas.html">Conferir</a>\n                </p>` : `<p class="nota">Saldo geral e soma das contas estão conciliados.</p>`}\n           ${resumoContas.contas.slice(0, 3).map(c => `\n             <div class="card-contas__linha">\n               <span class="ponto-banco" style="--cor:${c.instituicao.cor}"></span>\n               <span>${U.escapeHTML(c.name)}</span>\n               <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>\n             </div>`).join("")}\n           <a class="link-mais" href="contas.html">Ver contas</a>\n         </article>` : `<article class="card-contas vazio--guia">\n           <div class="card-contas__topo"><h3>Minhas contas</h3></div>\n           <p class="descricao">Contas mostram <strong>onde</strong> o seu saldo está: banco, carteira digital ou dinheiro em espécie. Assim fica fácil conferir com o extrato do banco.</p>\n           <p class="nota">O FinCK não acessa seu banco: você informa e edita quando quiser.</p>\n           <a class="btn-secundario" href="contas.html">Adicionar minha primeira conta</a>\n         </article>`;
     document.getElementById("contaSelecionada").innerHTML = `<option value="">Escolha a conta…</option>` + contas.filter(c => c.active !== false).map(c => `<option value="${c.id}"${c.is_default ? " selected" : ""}>${U.escapeHTML(c.name)}</option>`).join("") + `<option value="__sem_conta">Fora das contas — só no saldo geral</option>`;
     const previstoSaida = ctx.despesasFixas;
     const previstoEntrada = ctx.previstoEntradas || Number(ctx.perfil?.income_monthly || 0);
@@ -95,7 +95,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     metasHost.innerHTML = ctx.metas.length ? ctx.metas.slice(0, 3).map(m => {
       const p = U.progresso(m.current_amount, m.target_amount);
       return `\n            <article class="card-meta">\n              <h3>${U.escapeHTML(m.name)}</h3>\n              <div class="barra"><div class="barra-preenchida" style="width:${p}%"></div></div>\n              <p>${U.moeda(m.current_amount)} de ${U.moeda(m.target_amount)} · ${U.percentual(p, 0)}</p>\n            </article>`;
-    }).join("") : `<p class="vazio">Você ainda não criou metas. <a href="metas.html">Criar a primeira</a>.</p>`;
+    }).join("") : `<div class="vazio vazio--guia">\n          <p><strong>Suas metas transformam compras em escolhas concretas.</strong> Com uma meta, o FinCK of Reality mostra quanto cada compra atrasa aquilo que importa para você.</p>\n          <a class="btn-secundario" href="metas.html#nova">Criar minha primeira meta</a>\n        </div>`;
+    renderTarefas(ctx);
     const lista = document.getElementById("lista");
     const vazio = document.getElementById("vazio");
     const ultimas = ctx.transacoes.slice(0, 8);
@@ -139,6 +140,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     document.getElementById("metaSelecionada").innerHTML = `<option value="">Nenhuma meta</option>` + ctx.metas.map(m => `<option value="${m.id}">${U.escapeHTML(m.name)}</option>`).join("");
   }
+  // UX-HOME: "Atenção necessária": alertas viram tarefas com um verbo
+  // concreto. Primeiro o próximo passo; a autonomia da pessoa vem depois, no
+  // próprio destino ("o que fazer com isso é decisão sua"). A revisão de
+  // previsões vencidas é desenhada à parte por fechamento-ui.js, na mesma seção.
+  function renderTarefas(ctx) {
+    const host = document.getElementById("tarefasHome");
+    if (!host) {
+      return;
+    }
+    const tarefas = [];
+    const renda = Number(ctx.perfil?.income_monthly) || 0;
+    if (!(renda > 0)) {
+      tarefas.push({
+        nivel: "alerta",
+        texto: "Sem renda mensal, o FinCK não converte compras em horas de trabalho.",
+        acao: "Informar minha renda",
+        href: "perfil.html"
+      });
+    }
+    if (ctx.semFolga) {
+      tarefas.push({
+        nivel: "alerta",
+        texto: `Suas despesas fixas passam da renda em ${U.moeda(ctx.deficitFixos)} por mês.`,
+        acao: "Revisar despesas fixas",
+        href: "recorrentes.html"
+      });
+    }
+    if (ctx.disponivelProjetado < 0) {
+      tarefas.push({
+        nivel: "alerta",
+        texto: `Parcelas e previsões em aberto somam ${U.moeda(Math.abs(ctx.disponivelProjetado))} a mais que o seu saldo.`,
+        acao: "Ver compromissos",
+        href: "planejamento.html"
+      });
+    }
+    const acompanhar = R.paraAcompanhar(ctx.analises);
+    if (acompanhar.length) {
+      const a = acompanhar[0];
+      tarefas.push({
+        nivel: "info",
+        texto: acompanhar.length === 1 ? `Faz mais de 30 dias que você analisou "${a.item_name}". O que aconteceu depois?` : `${acompanhar.length} decisões de compra completaram 30 dias. O que aconteceu depois?`,
+        acao: "Contar o que aconteceu",
+        href: "decisoes.html"
+      });
+    }
+    const semConta = ctx.contas.length ? ctx.transacoesRealizadas.filter(t => !t.account_id && !t.unallocated).length : 0;
+    if (semConta) {
+      tarefas.push({
+        nivel: "info",
+        texto: `${semConta} movimentação(ões) ainda sem conta: o saldo geral e a soma das contas não fecham.`,
+        acao: "Conferir contas",
+        href: "contas.html"
+      });
+    }
+    const item = t => `\n      <li class="tarefa tarefa--${t.nivel}">\n        <span class="tarefa__texto">${U.escapeHTML(t.texto)}</span>\n        <a class="btn-secundario btn-mini" href="${t.href}">${U.escapeHTML(t.acao)}</a>\n      </li>`;
+    host.innerHTML = tarefas.length ? tarefas.slice(0, 4).map(item).join("") : `\n      <li class="tarefa tarefa--em-dia">\n        <span class="tarefa__texto"><strong>Você está em dia.</strong> Nenhuma revisão pendente, saldo cobre os compromissos e as decisões estão acompanhadas.</span>\n      </li>`;
+  }
   const abrir = tipo => {
     document.getElementById("tipoTransacao").value = tipo;
     document.getElementById("tituloModal").textContent = tipo === "entrada" ? "Nova entrada" : "Nova saída";
@@ -163,20 +221,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const goalSel = document.getElementById("metaSelecionada");
     const goal_id = goalSel.value || null;
     if (!(amount > 0)) {
-      return U.toast("Informe um valor maior que zero.", "erro");
+      return U.erroCampo("valor", "Informe um valor maior que zero.");
     }
     if (!description) {
-      return U.toast("Informe uma descrição.", "erro");
+      return U.erroCampo("descricao", "Informe uma descrição.");
     }
     if (!date) {
-      return U.toast("Informe a data.", "erro");
+      return U.erroCampo("data", "Informe a data.");
     }
     const contaSel = document.getElementById("contaSelecionada");
     const semConta = contaSel.value === "__sem_conta";
     const account_id = semConta ? null : contaSel.value || null;
     const temContas = contaSel.options.length > 2;
     if (temContas && !account_id && !semConta) {
-      return U.toast("Escolha a conta ou marque que a movimentação fica fora das contas.", "erro");
+      return U.erroCampo("contaSelecionada", "Escolha a conta ou marque que a movimentação fica fora das contas.");
     }
     pendente = {
       type: type,

@@ -14,10 +14,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   const etapas = [ ...document.querySelectorAll(".etapa") ];
   const despesas = [];
   let fluxo = "perfil";
+  // UX-ONB: cada etapa mostra nome e estado: feita, atual, a seguir ou
+  // pulada (no fluxo manual, as despesas fixas ficam para depois).
+  const progresso = document.getElementById("progressoEtapas");
+  function marcarProgresso(n) {
+    if (!progresso) {
+      return;
+    }
+    progresso.hidden = Number(n) === 0;
+    progresso.querySelectorAll("[data-passo]").forEach(li => {
+      const passo = Number(li.dataset.passo);
+      const pulada = fluxo === "manual" && passo === 2;
+      const estado = pulada ? "pulada" : passo < n ? "feita" : passo === Number(n) ? "atual" : "proxima";
+      li.dataset.estado = estado;
+      li.querySelector(".progresso-etapas__estado").textContent = {
+        feita: "concluída",
+        atual: "agora",
+        proxima: "a seguir",
+        pulada: "para depois"
+      }[estado];
+      if (estado === "atual") {
+        li.setAttribute("aria-current", "step");
+      } else {
+        li.removeAttribute("aria-current");
+      }
+    });
+  }
   const mostrar = n => {
     etapas.forEach(e => {
       e.hidden = Number(e.dataset.etapa) !== Number(n);
     });
+    marcarProgresso(Number(n));
     window.scrollTo({
       top: 0,
       behavior: "smooth"
@@ -58,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dias = Number(diasEl.value);
     const horas = Number(horasEl.value);
     if (renda <= 0) {
-      dicaEl.textContent = "Sem renda no momento? Você pode seguir: os cálculos em tempo ficam indisponíveis até atualizar este valor.";
+      dicaEl.textContent = "Sem uma renda mensal, o FinCK ainda pode registrar gastos, mas não conseguirá convertê-los em horas de trabalho. Dá para informar depois, no Perfil.";
       return;
     }
     if (!(dias >= 1 && dias <= 31 && horas > 0 && horas <= 16)) {
@@ -76,16 +103,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const horas = Number(horasEl.value);
     const pagamento = Number(document.getElementById("payday").value);
     if (!(renda >= 0)) {
-      return U.toast("A renda não pode ser negativa.", "erro");
+      return U.erroCampo("incomeMonthly", "A renda não pode ser negativa.");
     }
     if (!(Number.isInteger(dias) && dias >= 1 && dias <= 31)) {
-      return U.toast("Informe de 1 a 31 dias trabalhados por mês.", "erro");
+      return U.erroCampo("workDays", "Informe de 1 a 31 dias trabalhados por mês.");
     }
     if (!(horas > 0 && horas <= 16)) {
-      return U.toast("Informe de 0,5 a 16 horas por dia.", "erro");
+      return U.erroCampo("workHours", "Informe de 0,5 a 16 horas por dia.");
     }
     if (!(Number.isInteger(pagamento) && pagamento >= 1 && pagamento <= 31)) {
-      return U.toast("Informe um dia de recebimento entre 1 e 31.", "erro");
+      return U.erroCampo("payday", "Informe um dia de recebimento entre 1 e 31.");
     }
     mostrar(fluxo === "manual" ? 3 : 2);
     renderResumo();
@@ -198,7 +225,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const livre = Math.max(0, renda - fixas);
     const valorDia = renda > 0 ? renda / dias : 0;
     const valorHora = renda > 0 ? valorDia / horas : 0;
-    document.getElementById("resumoOnboarding").innerHTML = `\n      <h3>Resumo</h3>\n      <ul class="lista-resumo">\n        <li><span>Renda mensal</span><strong>${U.moeda(renda)}</strong></li>\n        <li><span>Despesas fixas</span><strong class="cor-vermelha">${U.moeda(fixas)}</strong></li>\n        <li><span>Renda livre estimada</span><strong class="cor-verde">${U.moeda(livre)}</strong></li>\n        <li><span>Valor do seu dia de trabalho</span><strong>${renda > 0 ? U.moeda(valorDia) : "Indisponível"}</strong></li>\n        <li><span>Valor da sua hora</span><strong>${renda > 0 ? U.moeda(valorHora) : "Indisponível"}</strong></li>\n        <li><span>Saldo inicial</span><strong>${U.moeda(U.lerMoeda(saldoEl) || 0)}</strong></li>\n      </ul>\n      <p class="nota">${renda > 0 ? "Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho." : "Você pode usar o restante do FinCK normalmente e informar uma renda depois no perfil."}</p>`;
+    // UX-ONB: o resumo é a revisão antes de salvar: cada linha volta para a
+    // etapa em que o valor foi informado, sem perder o que já foi digitado.
+    const editar = etapa => `<button type="button" class="btn-texto btn-editar-etapa" data-ir-etapa="${etapa}">Editar</button>`;
+    document.getElementById("resumoOnboarding").innerHTML = `\n      <h3>Revise antes de concluir</h3>\n      <ul class="lista-resumo">\n        <li><span>Renda mensal ${editar(1)}</span><strong>${U.moeda(renda)}</strong></li>\n        <li><span>Jornada ${editar(1)}</span><strong>${dias} dias × ${U.numero(horas, horas % 1 ? 1 : 0)} h</strong></li>\n        <li><span>Despesas fixas ${fluxo === "manual" ? "<small>(cadastre depois em Recorrentes)</small>" : editar(2)}</span><strong class="cor-vermelha">${U.moeda(fixas)}</strong></li>\n        <li><span>Renda livre estimada</span><strong class="cor-verde">${U.moeda(livre)}</strong></li>\n        <li><span>Valor do seu dia de trabalho</span><strong>${renda > 0 ? U.moeda(valorDia) : "Indisponível"}</strong></li>\n        <li><span>Valor da sua hora</span><strong>${renda > 0 ? U.moeda(valorHora) : "Indisponível"}</strong></li>\n        <li><span>Saldo inicial</span><strong>${U.moeda(U.lerMoeda(saldoEl) || 0)}</strong></li>\n      </ul>\n      <p class="nota">${renda > 0 ? "Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho." : "Sem renda informada, o FinCK registra gastos normalmente, mas não converte compras em horas. Você pode informar a renda depois, no Perfil."}</p>`;
+    document.querySelectorAll("[data-ir-etapa]").forEach(b => b.addEventListener("click", () => mostrar(b.dataset.irEtapa)));
   }
   document.getElementById("formSaldo").addEventListener("submit", async e => {
     e.preventDefault();

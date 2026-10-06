@@ -1,10 +1,27 @@
 (() => {
   "use strict";
-  const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // UX-MOV: além do prefers-reduced-motion do sistema, a pessoa escolhe no
+  // Perfil: animações completas, reduzidas ou desligadas.
+  const lerPreferencia = () => {
+    try {
+      return localStorage.getItem("finck-animacoes") || "completa";
+    } catch {
+      return "completa";
+    }
+  };
+  let preferencia = lerPreferencia();
+  document.documentElement.dataset.animacoes = preferencia;
+  const sistemaReduz = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduzido = sistemaReduz || preferencia === "desligada";
   const toque = window.matchMedia("(hover: none)").matches;
   const raf = window.requestAnimationFrame.bind(window);
   const TAU = Math.PI * 2;
   const sorteio = (a, b) => a + Math.random() * (b - a);
+  // Em telas de formulário o fundo fica mais calmo (cerca de 35% menos
+  // partículas): ali o conteúdo é a leitura. Login e o topo do Reality são
+  // telas de apresentação e ficam com a versão mais expressiva.
+  const PAGINAS_FORMULARIO = new Set([ "reality", "onboarding", "cadastro", "perfil", "metas", "contas", "recorrentes", "planejamento", "locais", "assistente", "cenarios", "decisoes", "relatorios", "analises" ]);
+  const PAGINAS_COM_HEROI = new Set([ "reality" ]);
   function montarFundo() {
     if (document.querySelector(".fundo-finck")) {
       return null;
@@ -14,20 +31,48 @@
     fundo.setAttribute("aria-hidden", "true");
     fundo.innerHTML = `<canvas class="fundo-finck__tela"></canvas>`;
     document.body.appendChild(fundo);
-    iniciarCofre(fundo.querySelector(".fundo-finck__tela"));
+    iniciarOrbita(fundo.querySelector(".fundo-finck__tela"));
     return fundo;
   }
-  function iniciarCofre(tela) {
+  // "Órbita de decisões": três órbitas finas (dinheiro, tempo de trabalho e
+  // metas) com pontos que dão uma volta a cada 35 a 60 segundos. Roxo é o
+  // fluxo de análise, amarelo é decisão, e o verde só aparece quando a tela
+  // sinaliza um resultado de equilíbrio (FinckFundo.tom("positivo")). Nada no
+  // fundo brilha a ponto de parecer um botão.
+  function iniciarOrbita(tela) {
     const ctx = tela && tela.getContext && tela.getContext("2d", {
       alpha: false
     });
     if (!ctx) {
       return;
     }
+    const pagina = document.body?.dataset.page || "";
     let L = 0, A = 0, escala = 1;
     let pontos = [];
     let t = 0, anterior = 0, laco = 0;
-    const cores = [ [ 180, 92, 240 ], [ 254, 200, 0 ], [ 31, 209, 143 ], [ 147, 51, 196 ] ];
+    let parado = reduzido;
+    let semPonteiro = preferencia === "reduzida";
+    // 0 = neutro, 1 = positivo; transita devagar para não piscar.
+    let verde = 0, verdeAlvo = 0;
+    const ROXO = [ 180, 92, 240 ], ROXO_FUNDO = [ 147, 51, 196 ], AMARELO = [ 254, 200, 0 ], VERDE = [ 31, 209, 143 ];
+    // Uma órbita para cada ideia: dinheiro (roxo), tempo de trabalho (amarelo)
+    // e metas (roxo profundo). Raio relativo, achatamento e inclinação.
+    const ORBITAS = [ {
+      raio: .62,
+      achatado: .4,
+      giro: -.16,
+      cor: ROXO
+    }, {
+      raio: .86,
+      achatado: .42,
+      giro: -.1,
+      cor: AMARELO
+    }, {
+      raio: 1.1,
+      achatado: .44,
+      giro: -.05,
+      cor: ROXO_FUNDO
+    } ];
     const mira = {
       x: .5,
       y: .45,
@@ -35,15 +80,24 @@
       atualY: .45,
       ativa: false
     };
-    const novoPonto = (i, total) => ({
-      angulo: i / total * TAU + sorteio(-.18, .18),
-      faixa: i % 4,
-      profundidade: sorteio(.58, 1.16),
-      velocidade: sorteio(.035, .095) * (i % 3 === 0 ? -1 : 1),
-      tamanho: sorteio(.8, 2.5),
-      fase: sorteio(0, TAU),
-      cor: cores[i % cores.length]
-    });
+    const novoPonto = (i, total) => {
+      const orbita = i % ORBITAS.length;
+      // Uma volta a cada 35 a 60 s; algumas no sentido contrário.
+      const periodo = sorteio(35, 60);
+      return {
+        angulo: i / total * TAU + sorteio(-.2, .2),
+        orbita: orbita,
+        profundidade: sorteio(.94, 1.06),
+        velocidade: TAU / periodo * (i % 5 === 0 ? -1 : 1),
+        // Um ponto maior a cada 8 a 12 pequenos.
+        tamanho: i % 10 === 0 ? sorteio(2.2, 2.8) : sorteio(.7, 1.4),
+        fase: sorteio(0, TAU),
+        // A cor do ponto segue a órbita; amarelo aparece também como
+        // "decisão" em alguns pontos das outras órbitas.
+        cor: orbita === 1 || i % 7 === 0 ? AMARELO : i % 2 ? ROXO : ROXO_FUNDO,
+        podeVerde: i % 3 === 0
+      };
+    };
     function medir() {
       L = window.innerWidth;
       A = window.innerHeight;
@@ -54,12 +108,22 @@
       escala = Math.max(.68, Math.min(1.18, Math.min(L / 900, A / 720)));
     }
     function povoar() {
-      const total = Math.max(20, Math.min(54, Math.round(L * A / 26e3)));
+      // Menos pontos em telas pequenas: a densidade acompanha a área.
+      const total = Math.max(18, Math.min(54, Math.round(L * A / 26e3)));
       pontos = Array.from({
         length: total
       }, (_, i) => novoPonto(i, total));
     }
+    // Quantos pontos desenhar agora. No Reality, a versão expressiva vale
+    // enquanto o herói está na tela; ao descer para o formulário, acalma.
+    function visiveis() {
+      const leve = preferencia === "reduzida" || PAGINAS_FORMULARIO.has(pagina) && !(PAGINAS_COM_HEROI.has(pagina) && window.scrollY < 220);
+      return leve ? Math.round(pontos.length * .65) : pontos.length;
+    }
     function luz(x, y, raio, cor, opacidade) {
+      if (opacidade <= .001) {
+        return;
+      }
       const gradiente = ctx.createRadialGradient(x, y, 0, x, y, raio);
       gradiente.addColorStop(0, `rgba(${cor[0]},${cor[1]},${cor[2]},${opacidade})`);
       gradiente.addColorStop(.42, `rgba(${cor[0]},${cor[1]},${cor[2]},${opacidade * .34})`);
@@ -67,84 +131,107 @@
       ctx.fillStyle = gradiente;
       ctx.fillRect(x - raio, y - raio, raio * 2, raio * 2);
     }
+    const misturar = (a, b, k) => [ 0, 1, 2 ].map(i => Math.round(a[i] + (b[i] - a[i]) * k));
     function quadro(dt) {
-      const repousoX = .5 + Math.sin(t * .12) * .12;
-      const repousoY = .46 + Math.cos(t * .09) * .08;
-      const alvoX = mira.ativa ? mira.x : repousoX;
-      const alvoY = mira.ativa ? mira.y : repousoY;
-      mira.atualX += (alvoX - mira.atualX) * Math.min(1, dt * 3.8 + .025);
-      mira.atualY += (alvoY - mira.atualY) * Math.min(1, dt * 3.8 + .025);
-      const centroX = L * (.5 + (mira.atualX - .5) * .16);
-      const centroY = A * (.53 + (mira.atualY - .5) * .12);
+      verde += (verdeAlvo - verde) * Math.min(1, dt * 1.2 + (parado ? 1 : 0));
+      const alvoX = mira.ativa ? mira.x : .5;
+      const alvoY = mira.ativa ? mira.y : .45;
+      mira.atualX += (alvoX - mira.atualX) * Math.min(1, dt * 2.5 + .02);
+      mira.atualY += (alvoY - mira.atualY) * Math.min(1, dt * 2.5 + .02);
+      // O ponteiro desloca a órbita em no máximo 6 px: o fundo responde, mas
+      // nunca parece estar por cima do conteúdo.
+      const centroX = L * .5 + (mira.atualX - .5) * 12;
+      const centroY = A * .53 + (mira.atualY - .5) * 10;
       const base = ctx.createLinearGradient(0, 0, L, A);
       base.addColorStop(0, "#09050f");
       base.addColorStop(.52, "#07060a");
       base.addColorStop(1, "#040307");
       ctx.fillStyle = base;
       ctx.fillRect(0, 0, L, A);
-      luz(L * (.12 + mira.atualX * .18), A * .08, Math.max(L, A) * .68, cores[0], .22);
-      luz(L * (.9 - mira.atualX * .12), A * (.82 + mira.atualY * .08), Math.max(L, A) * .54, cores[1], .075);
-      luz(centroX, centroY, Math.min(L, A) * .62, cores[2], .055);
-      const raioBase = Math.min(L * .58, A * .62);
-      ctx.save();
-      ctx.translate(centroX, centroY);
-      ctx.rotate(-.14 + (mira.atualX - .5) * .12);
-      for (let i = 0; i < 5; i++) {
-        const raio = raioBase * (.54 + i * .16);
-        const pulso = .5 + .5 * Math.sin(t * .24 + i * 1.2);
+      // Halo roxo no canto superior esquerdo e amarelo, mais discreto, no
+      // inferior direito. Oscilam em intensidade, não em posição.
+      const respiro = .5 + .5 * Math.sin(t * .2);
+      luz(L * .14, A * .1, Math.max(L, A) * .68, ROXO, .18 + respiro * .04);
+      luz(L * .9, A * .9, Math.max(L, A) * .5, AMARELO, .05 + respiro * .015);
+      luz(centroX, centroY, Math.min(L, A) * .6, VERDE, .06 * verde);
+      const raioBase = Math.min(L * .5, A * .56);
+      ORBITAS.forEach((o, i) => {
+        // Opacidade entre 0,06 e 0,14, pulsando devagar.
+        const pulso = .5 + .5 * Math.sin(t * .18 + i * 2.1);
+        ctx.save();
+        ctx.translate(centroX, centroY);
+        ctx.rotate(o.giro);
         ctx.beginPath();
-        ctx.ellipse(0, 0, raio * 1.42, raio * .58, 0, -2.72 + i * .38, 1.42 + i * .5);
-        ctx.lineWidth = .65 + i * .16;
-        ctx.strokeStyle = `rgba(${i % 2 ? "254,200,0" : "180,92,240"},${.035 + pulso * .045})`;
+        ctx.ellipse(0, 0, raioBase * o.raio * 1.45, raioBase * o.raio * o.achatado * 1.45, 0, 0, TAU);
+        ctx.lineWidth = .8;
+        ctx.strokeStyle = `rgba(${o.cor[0]},${o.cor[1]},${o.cor[2]},${(.06 + pulso * .08).toFixed(3)})`;
         ctx.stroke();
-      }
-      ctx.restore();
+        ctx.restore();
+      });
+      ctx.globalCompositeOperation = "lighter";
       const ponteiroX = mira.atualX * L;
       const ponteiroY = mira.atualY * A;
-      ctx.globalCompositeOperation = "lighter";
-      for (const p of pontos) {
+      const quantos = visiveis();
+      for (let n = 0; n < quantos; n++) {
+        const p = pontos[n];
+        const o = ORBITAS[p.orbita];
         p.angulo += p.velocidade * dt;
-        const faixa = .48 + p.faixa * .17;
-        const raio = raioBase * faixa * p.profundidade;
-        const angulo = p.angulo + Math.sin(t * .07 + p.fase) * .12;
-        let x = centroX + Math.cos(angulo) * raio * 1.48;
-        let y = centroY + Math.sin(angulo) * raio * .62;
-        const dx = x - ponteiroX;
-        const dy = y - ponteiroY;
-        const distancia = Math.hypot(dx, dy) || 1;
-        const alcance = Math.min(L, A) * .24;
-        if (mira.ativa && distancia < alcance) {
-          const forca = (1 - distancia / alcance) * 26 * escala;
-          x += dx / distancia * forca;
-          y += dy / distancia * forca;
+        const rx = raioBase * o.raio * 1.45 * p.profundidade;
+        const ry = raioBase * o.raio * o.achatado * 1.45 * p.profundidade;
+        const posicao = ang => {
+          const ex = Math.cos(ang) * rx;
+          const ey = Math.sin(ang) * ry;
+          return [ centroX + ex * Math.cos(o.giro) - ey * Math.sin(o.giro), centroY + ex * Math.sin(o.giro) + ey * Math.cos(o.giro) ];
+        };
+        let [x, y] = posicao(p.angulo);
+        if (mira.ativa) {
+          const dx = x - ponteiroX;
+          const dy = y - ponteiroY;
+          const distancia = Math.hypot(dx, dy) || 1;
+          const alcance = Math.min(L, A) * .2;
+          if (distancia < alcance) {
+            const forca = (1 - distancia / alcance) * 6;
+            x += dx / distancia * forca;
+            y += dy / distancia * forca;
+          }
         }
-        const brilho = .38 + .28 * Math.sin(t * .8 + p.fase);
+        const brilho = .4 + .2 * Math.sin(t * .6 + p.fase);
         const tamanho = p.tamanho * escala;
-        const [r, g, b] = p.cor;
-        const trilhaX = centroX + Math.cos(angulo - p.velocidade * 8) * raio * 1.48;
-        const trilhaY = centroY + Math.sin(angulo - p.velocidade * 8) * raio * .62;
-        const trilha = ctx.createLinearGradient(trilhaX, trilhaY, x, y);
+        const [r, g, b] = p.podeVerde && verde > .01 ? misturar(p.cor, VERDE, verde) : p.cor;
+        // Trilha curta: um trecho fixo de arco, sem rastro longo.
+        const [tx, ty] = posicao(p.angulo - Math.sign(p.velocidade) * .07);
+        const trilha = ctx.createLinearGradient(tx, ty, x, y);
         trilha.addColorStop(0, `rgba(${r},${g},${b},0)`);
-        trilha.addColorStop(1, `rgba(${r},${g},${b},${brilho * .34})`);
+        trilha.addColorStop(1, `rgba(${r},${g},${b},${(brilho * .28).toFixed(3)})`);
         ctx.beginPath();
-        ctx.moveTo(trilhaX, trilhaY);
+        ctx.moveTo(tx, ty);
         ctx.lineTo(x, y);
-        ctx.lineWidth = Math.max(.55, tamanho * .48);
+        ctx.lineWidth = Math.max(.5, tamanho * .45);
         ctx.strokeStyle = trilha;
         ctx.stroke();
-        const halo = ctx.createRadialGradient(x, y, 0, x, y, tamanho * 7);
-        halo.addColorStop(0, `rgba(${r},${g},${b},${brilho * .7})`);
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, tamanho * 5);
+        halo.addColorStop(0, `rgba(${r},${g},${b},${(brilho * .4).toFixed(3)})`);
         halo.addColorStop(1, `rgba(${r},${g},${b},0)`);
         ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.arc(x, y, tamanho * 7, 0, TAU);
+        ctx.arc(x, y, tamanho * 5, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = `rgba(${r},${g},${b},${.5 + brilho * .5})`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${(.4 + brilho * .45).toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(x, y, tamanho, 0, TAU);
         ctx.fill();
       }
       ctx.globalCompositeOperation = "source-over";
+      // Zona de leitura: vinheta escura na coluna do conteúdo e no rodapé,
+      // para que nenhum ponto pareça estar por cima de texto.
+      const coluna = Math.min(L, 1180);
+      const leituraX = ctx.createLinearGradient((L - coluna) / 2, 0, (L + coluna) / 2, 0);
+      leituraX.addColorStop(0, "rgba(4,3,7,0)");
+      leituraX.addColorStop(.18, "rgba(4,3,7,.22)");
+      leituraX.addColorStop(.82, "rgba(4,3,7,.22)");
+      leituraX.addColorStop(1, "rgba(4,3,7,0)");
+      ctx.fillStyle = leituraX;
+      ctx.fillRect(0, 0, L, A);
       const leitura = ctx.createLinearGradient(0, 0, 0, A);
       leitura.addColorStop(0, "rgba(4,3,7,.04)");
       leitura.addColorStop(.42, "rgba(4,3,7,.18)");
@@ -160,7 +247,7 @@
       laco = raf(passo);
     }
     function tocar() {
-      if (laco || reduzido || document.hidden) {
+      if (laco || parado || document.hidden) {
         return;
       }
       anterior = performance.now();
@@ -176,51 +263,62 @@
     medir();
     povoar();
     quadro(0);
-    if (!reduzido) {
-      tocar();
-      document.addEventListener("visibilitychange", () => document.hidden ? parar() : tocar());
-    }
-    if (!reduzido) {
-      const mover = e => {
-        if (e.pointerType === "touch" && e.buttons === 0 && e.pressure === 0) {
-          return;
-        }
-        mira.x = Math.max(0, Math.min(1, e.clientX / Math.max(1, window.innerWidth)));
-        mira.y = Math.max(0, Math.min(1, e.clientY / Math.max(1, window.innerHeight)));
-        mira.ativa = true;
-      };
-      window.addEventListener("pointermove", mover, {
-        passive: true
-      });
-      window.addEventListener("pointerdown", mover, {
-        passive: true
-      });
-      window.addEventListener("pointerleave", () => {
-        mira.ativa = false;
-      }, {
-        passive: true
-      });
-      window.addEventListener("pointerup", e => {
-        if (e.pointerType === "touch") {
-          mira.ativa = false;
-        }
-      }, {
-        passive: true
-      });
-    }
+    tocar();
+    // Pausa quando a aba some; nada roda em segundo plano.
+    document.addEventListener("visibilitychange", () => document.hidden ? parar() : tocar());
+    const mover = e => {
+      // Toque não move o fundo: no celular o dedo está lendo, não apontando.
+      if (parado || semPonteiro || e.pointerType === "touch") {
+        return;
+      }
+      mira.x = Math.max(0, Math.min(1, e.clientX / Math.max(1, window.innerWidth)));
+      mira.y = Math.max(0, Math.min(1, e.clientY / Math.max(1, window.innerHeight)));
+      mira.ativa = true;
+    };
+    window.addEventListener("pointermove", mover, {
+      passive: true
+    });
+    document.addEventListener("pointerleave", () => {
+      mira.ativa = false;
+    }, {
+      passive: true
+    });
     let aguardando;
     window.addEventListener("resize", () => {
       clearTimeout(aguardando);
       aguardando = setTimeout(() => {
         medir();
         povoar();
-        if (reduzido) {
+        if (parado) {
           quadro(0);
         }
       }, 160);
     }, {
       passive: true
     });
+    window.FinckFundo = {
+      // Troca de preferência no Perfil vale na hora, sem recarregar.
+      preferencia(nova) {
+        preferencia = nova;
+        semPonteiro = nova === "reduzida";
+        mira.ativa = false;
+        parado = sistemaReduz || nova === "desligada";
+        if (parado) {
+          parar();
+          quadro(0);
+        } else {
+          tocar();
+        }
+      },
+      // "positivo" acende o verde de equilíbrio; qualquer outro valor apaga.
+      tom(nome) {
+        verdeAlvo = nome === "positivo" ? 1 : 0;
+        if (parado) {
+          verde = verdeAlvo;
+          quadro(0);
+        }
+      }
+    };
   }
   const SELETOR_REVELAR = [ ".hero", ".bloco", ".balance-card", ".reality-cta", ".cards-indicadores", ".acoes-rapidas", ".card-nivel", ".filtros", ".etapa", ".link-rodape" ].join(",");
   function revelar() {

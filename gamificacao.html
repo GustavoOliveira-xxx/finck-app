@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/clareza.css">
 </head>
 <body data-page="gamificacao">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -59,9 +60,10 @@
            width="256" height="256"
            alt="Financial CK" loading="lazy" decoding="async"></div>
       <div>
-        <h2>Sua jornada</h2>
+        <h2>Sua jornada <small class="hero__subtitulo">Conquistas e hábitos</small></h2>
         <p>Títulos, XP e conquistas por constância no registro, metas alcançadas e decisões conscientes registradas. Os limites diários existem para que o XP acompanhe <strong>uso real do app</strong>, não repetição de cliques.</p>
         <p class="nota">XP é uma mecânica educativa, não prova de impacto. Registrar uma saída é organizar-se; adiar, reparar ou reutilizar é reduzir consumo. As duas coisas rendem pontos, e a lista abaixo mostra qual é qual.</p>
+        <a class="btn-primario" href="#conquistas">Ver próxima conquista</a>
       </div>
     </section>
 
@@ -74,7 +76,7 @@
       <ol class="trilha-niveis" id="trilhaNiveis"></ol>
     </section>
 
-    <section class="bloco">
+    <section class="bloco" id="conquistas" tabindex="-1">
       <h3>Conquistas</h3>
       <div class="grade-conquistas" id="listaConquistas"></div>
     </section>
