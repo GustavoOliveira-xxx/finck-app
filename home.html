@@ -130,6 +130,16 @@
       <ul class="lista-tarefas" id="tarefasHome" aria-live="polite"></ul>
     </section>
 
+    <section class="cartao-assistente" id="cartaoAssistente" aria-labelledby="tituloAssistente">
+      <div class="cartao-assistente__texto">
+        <span class="grupo-home__papel">Planejamento pessoal · IA</span>
+        <h2 id="tituloAssistente">Seu raio-X financeiro</h2>
+        <p id="resumoAssistente">O FinCK olha renda, gastos, compromissos, reserva, metas e decisões juntos e mostra onde agir primeiro.</p>
+        <ul class="cartao-assistente__sinais" id="sinaisAssistente"></ul>
+      </div>
+      <a class="btn-secundario" href="assistente.html">Ver meu planejamento</a>
+    </section>
+
     <section class="grupo-home" aria-labelledby="tituloPrevisao">
       <div class="grupo-home__cabecalho">
         <span class="grupo-home__papel">Previsão</span>
@@ -250,6 +260,7 @@
       <ul class="mais-ferramentas__lista">
         <li><a href="contas.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg></span><span><strong>Contas</strong><small>Onde seu dinheiro está</small></span></a></li>
         <li><a href="planejamento.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15h2M14 15h2"/></svg></span><span><strong>Planejamento</strong><small>Parcelas e compromissos futuros</small></span></a></li>
+        <li><a href="assistente.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></span><span><strong>Assistente FinCK</strong><small>Raio-X e plano com IA</small></span></a></li>
         <li><a href="analises.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/></svg></span><span><strong>Análises</strong><small>Para onde vai seu dinheiro</small></span></a></li>
         <li><a href="relatorios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span><span><strong>Relatórios</strong><small>Fechamento do mês e exportação</small></span></a></li>
         <li><a href="decisoes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><span><strong>Decisões</strong><small>O que você decidiu e o que aconteceu</small></span></a></li>
@@ -353,6 +364,7 @@
   <script src="js/ocorrencias-ui.js"></script>
   <script src="js/programacao.js"></script>
   <script src="js/programacao-home.js"></script>
+  <script src="js/diagnostico-engine.js"></script>
   <script src="js/home.js"></script>
   <script src="js/fechamento-ui.js"></script>
   <script src="js/ui-fx.js"></script>

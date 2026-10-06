@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return `\n            <article class="card-meta">\n              <h3>${U.escapeHTML(m.name)}</h3>\n              <div class="barra"><div class="barra-preenchida" style="width:${p}%"></div></div>\n              <p>${U.moeda(m.current_amount)} de ${U.moeda(m.target_amount)} · ${U.percentual(p, 0)}</p>\n            </article>`;
     }).join("") : `<div class="vazio vazio--guia">\n          <p><strong>Suas metas transformam compras em escolhas concretas.</strong> Com uma meta, o FinCK of Reality mostra quanto cada compra atrasa aquilo que importa para você.</p>\n          <a class="btn-secundario" href="metas.html#nova">Criar minha primeira meta</a>\n        </div>`;
     renderTarefas(ctx);
+    renderRaioX(ctx);
     const lista = document.getElementById("lista");
     const vazio = document.getElementById("vazio");
     const ultimas = ctx.transacoes.slice(0, 8);
@@ -196,6 +197,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const item = t => `\n      <li class="tarefa tarefa--${t.nivel}">\n        <span class="tarefa__texto">${U.escapeHTML(t.texto)}</span>\n        <a class="btn-secundario btn-mini" href="${t.href}">${U.escapeHTML(t.acao)}</a>\n      </li>`;
     host.innerHTML = tarefas.length ? tarefas.slice(0, 4).map(item).join("") : `\n      <li class="tarefa tarefa--em-dia">\n        <span class="tarefa__texto"><strong>Você está em dia.</strong> Nenhuma revisão pendente, saldo cobre os compromissos e as decisões estão acompanhadas.</span>\n      </li>`;
+  }
+  // Cartão do Assistente FinCK: o diagnóstico é local e determinístico
+  // (diagnostico-engine.js); a IA só entra na página do assistente.
+  function renderRaioX(ctx) {
+    const D = window.FinckDiagnostico;
+    const host = document.getElementById("sinaisAssistente");
+    if (!D || !host) {
+      return;
+    }
+    const d = D.diagnosticar(ctx);
+    const resumo = document.getElementById("resumoAssistente");
+    if (resumo) {
+      resumo.textContent = d.resumo;
+    }
+    host.innerHTML = d.prioridades.slice(0, 2).map(p => `\n      <li class="sinal sinal--${p.nivel}"><span class="sinal__ponto" aria-hidden="true"></span>${U.escapeHTML(p.titulo)}</li>`).join("");
   }
   const abrir = tipo => {
     document.getElementById("tipoTransacao").value = tipo;

@@ -1,0 +1,8 @@
+{
+  "name": "finck-app",
+  "private": true,
+  "description": "FinCK: consumo consciente. Site estático com funções serverless na Vercel.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  }
+}

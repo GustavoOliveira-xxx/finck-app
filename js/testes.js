@@ -3849,6 +3849,181 @@ window.FinckTestes = (() => {
       esperar(r.impacto_metas[0].dias_trabalho_extra).aSerPerto(3.75, 2);
     });
   });
+  descrever("Assistente: diagnóstico da vida financeira (FinckDiagnostico)", () => {
+    const D = window.FinckDiagnostico;
+    const hoje = new Date("2026-10-15T12:00:00");
+    const t = (date, type, amount, extra = {}) => ({
+      date: date,
+      type: type,
+      amount: amount,
+      description: "Lançamento XPTO-PRIVADO",
+      ...extra
+    });
+    const base = (extra = {}) => ({
+      perfil: {
+        income_monthly: 4e3,
+        income_type: "fixa"
+      },
+      transacoesRealizadas: [ t("2026-09-05", "entrada", 4e3), t("2026-09-10", "saida", 1500, {
+        category: "Moradia"
+      }), t("2026-09-20", "saida", 800, {
+        category: "Alimentação"
+      }), t("2026-09-25", "saida", 400, {
+        goal_id: "m1"
+      }), t("2026-08-05", "entrada", 4e3), t("2026-08-10", "saida", 1500, {
+        category: "Moradia"
+      }), t("2026-08-20", "saida", 500, {
+        category: "Alimentação"
+      }) ],
+      despesasFixas: 1500,
+      saldo: 9e3,
+      compromissosAbertos: 0,
+      disponivelProjetado: 9e3,
+      metas: [],
+      movimentosMeta: [],
+      parcelamentos: [],
+      analises: [],
+      ...extra
+    });
+    const dim = (d, id) => d.dimensoes.find(x => x.id === id);
+    teste("janela usa os meses completos com movimento, do mais recente", () => {
+      const j = D.janelaDeMeses(base().transacoesRealizadas, hoje, 3);
+      esperar(j.meses.join(",")).aSer("2026-09,2026-08");
+      esperar(j.parcial).aSerFalso();
+    });
+    teste("sem mês completo, vale o mês atual marcado como parcial", () => {
+      const j = D.janelaDeMeses([ t("2026-10-02", "saida", 50) ], hoje, 3);
+      esperar(j.meses.join(",")).aSer("2026-10");
+      esperar(j.parcial).aSerVerdadeiro();
+    });
+    teste("dinheiro guardado em meta não conta como gasto", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      esperar(d.retrato.media_gastos).aSerPerto(2150, 2);
+      esperar(d.retrato.media_aportes).aSerPerto(200, 2);
+      esperar(d.retrato.taxa_poupanca).aSerPerto(46.25, 2);
+    });
+    teste("tendência compara o último mês com a média dos anteriores", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      const alim = d.retrato.categorias.find(c => c.nome === "Alimentação");
+      esperar(alim.tendencia_pct).aSerPerto(60, 2);
+    });
+    teste("fluxo saudável até 50% da renda em fixos", () => {
+      const f = dim(D.diagnosticar(base(), {
+        hoje: hoje
+      }), "fluxo");
+      esperar(f.nivel).aSer("saudavel");
+      esperar(f.nota).aSer(100);
+    });
+    teste("fixos acima da renda deixam o fluxo crítico", () => {
+      const f = dim(D.diagnosticar(base({
+        despesasFixas: 4200
+      }), {
+        hoje: hoje
+      }), "fluxo");
+      esperar(f.nivel).aSer("critico");
+    });
+    teste("reserva em meses de custo fixo, somando metas de reserva", () => {
+      const d = D.diagnosticar(base({
+        saldo: 1500,
+        metas: [ {
+          id: "r",
+          name: "Reserva de emergência",
+          target_amount: 9e3,
+          current_amount: 3e3
+        } ]
+      }), {
+        hoje: hoje
+      });
+      esperar(d.retrato.reserva_meses).aSerPerto(3, 2);
+      esperar(dim(d, "reserva").nivel).aSer("atencao");
+    });
+    teste("parcelas acima de 30% da renda são críticas", () => {
+      const parcelamentos = [ {
+        active: true,
+        paid_count: 1,
+        installments_count: 10,
+        installment_amount: 1400
+      } ];
+      esperar(dim(D.diagnosticar(base({
+        parcelamentos: parcelamentos
+      }), {
+        hoje: hoje
+      }), "compromissos").nivel).aSer("critico");
+      parcelamentos[0].installment_amount = 800;
+      esperar(dim(D.diagnosticar(base({
+        parcelamentos: parcelamentos
+      }), {
+        hoje: hoje
+      }), "compromissos").nivel).aSer("atencao");
+    });
+    teste("compromissos maiores que o saldo tornam a dimensão crítica", () => {
+      esperar(dim(D.diagnosticar(base({
+        compromissosAbertos: 12e3,
+        disponivelProjetado: -3e3
+      }), {
+        hoje: hoje
+      }), "compromissos").nivel).aSer("critico");
+    });
+    teste("sem renda: dimensão sem dados e prioridade de informar a renda", () => {
+      const d = D.diagnosticar(base({
+        perfil: {}
+      }), {
+        hoje: hoje
+      });
+      esperar(dim(d, "fluxo").nivel).aSer("sem_dados");
+      esperar(d.prioridades[0].titulo).aSer("Informar a sua renda mensal");
+    });
+    teste("índice ignora as dimensões sem dados", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      const p = window.FINCK_CONFIG.DIAGNOSTICO.PESOS;
+      const com = d.dimensoes.filter(x => x.nota !== null);
+      const esperado = com.reduce((s, x) => s + x.nota * p[x.id], 0) / com.reduce((s, x) => s + p[x.id], 0);
+      esperar(d.indice).aSer(Math.round(esperado));
+      esperar(dim(d, "metas").nivel).aSer("sem_dados");
+    });
+    teste("meta de reserva atrasada não repete a prioridade da reserva", () => {
+      const d = D.diagnosticar(base({
+        saldo: 0,
+        metas: [ {
+          id: "r",
+          name: "Reserva de emergência",
+          target_amount: 9e3,
+          current_amount: 100,
+          deadline: "2027-01-01"
+        } ]
+      }), {
+        hoje: hoje
+      });
+      const sobreReserva = d.prioridades.filter(x => /reserva/i.test(x.titulo));
+      esperar(sobreReserva).aTerTamanho(1);
+    });
+    teste("o retrato para a IA não leva descrição de lançamento", () => {
+      const ia = JSON.stringify(D.paraIA(D.diagnosticar(base(), {
+        hoje: hoje
+      })));
+      esperar(ia.includes("XPTO-PRIVADO")).aSerFalso();
+      esperar(ia.includes("description")).aSerFalso();
+      esperar(ia).aConter("\"renda_mensal\":4000");
+    });
+    teste("plano por regras: no máximo 4 passos e meta que cabe na sobra", () => {
+      const d = D.diagnosticar(base({
+        saldo: 1500
+      }), {
+        hoje: hoje
+      });
+      const p = D.planoLocal(d);
+      esperar(p.origem).aSer("regras");
+      esperar(p.prioridades.length <= 4).aSerVerdadeiro();
+      const folga = d.retrato.base_renda - d.retrato.media_gastos;
+      esperar(p.metas_sugeridas.every(m => m.valor_mensal <= folga)).aSerVerdadeiro();
+    });
+  });
   async function rodar(aoAtualizar) {
     const resultado = {
       total: 0,

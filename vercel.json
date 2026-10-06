@@ -3,6 +3,9 @@
   "functions": {
     "api/buscar-preco-ia.js": {
       "maxDuration": 60
+    },
+    "api/assistente-ia.js": {
+      "maxDuration": 60
     }
   }
 }

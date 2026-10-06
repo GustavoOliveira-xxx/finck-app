@@ -21,6 +21,10 @@ E **procura lugares no Google Maps** para Ações locais: quem conserta, vende
 usado, troca, aluga, recebe doação ou faz descarte correto perto da pessoa
 (veja [Lugares no Google Maps](#lugares-no-google-maps-ações-locais)).
 
+E há uma segunda rota, `assistente-ia.js`, para o **Assistente FinCK**: o
+plano de ação e a conversa sobre a vida financeira inteira, com o Claude, da
+Anthropic (veja [Assistente de planejamento](#assistente-de-planejamento-claude)).
+
 ## Por que a chave fica aqui, e não no navegador
 
 Chave de API no `js/config.js` é chave pública — qualquer pessoa lê o
@@ -488,3 +492,89 @@ passa por um extrator tolerante, que aceita o JSON embrulhado em
 O print não usa ferramenta nenhuma, então ali o esquema vai e o JSON chega
 no formato. `chamarGemini` só manda o esquema quando a lista de
 ferramentas está vazia, para essa trava não voltar por descuido.
+
+## Assistente de planejamento (Claude)
+
+`assistente-ia.js` é outra função da Vercel, separada desta. O navegador
+calcula o raio-X da pessoa com `js/diagnostico-engine.js` e manda só o
+retrato agregado (`FinckDiagnostico.paraIA()`): números arredondados, nomes
+de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou
+nome da pessoa sai do aparelho. A tela mostra esse JSON em "O que é enviado
+para a IA".
+
+A IA interpreta os números, não os calcula. A resposta vem num esquema JSON
+fixo (structured outputs, `output_config.format`), e a função confere tudo
+antes de devolver: prioridade apontando para uma dimensão que não existe é
+descartada, e meta sugerida com valor mensal acima do que sobra no mês
+também.
+
+Usa o SDK oficial `@anthropic-ai/sdk` (declarado em `package.json`, que a
+Vercel instala sozinha). A função pede `fallbacks: "default"` com o beta
+`server-side-fallback-2026-07-01`: se um classificador de segurança recusar
+um pedido comum por engano, a própria API refaz no modelo recomendado para
+aquela categoria. Recusa que sobra e resposta cortada viram mensagem para a
+pessoa, nunca erro técnico.
+
+Exige conta: sem token válido do Supabase a resposta é 401. Na demonstração
+a tela nem chama esta rota; o plano sai pelas regras do FinCK, no
+navegador, no mesmo formato.
+
+### Variáveis de ambiente
+
+| Variável | Obrigatória | Para que serve |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | sim | Chave criada em console.anthropic.com. Sem ela, o GET responde `ia: false` e a tela usa o plano por regras. |
+| `ASSISTENTE_MODELO` | não | `claude-opus-5-5` (padrão) ou `claude-sonnet-5-5`, mais barato. Outro valor é ignorado. |
+| `ASSISTENTE_TETO_DIA` | não | Teto global de pedidos por dia. Padrão 100. |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | não | Iguais às da rota de preço; o padrão é o projeto de `js/config.js`. |
+
+Além do teto do dia, cada pessoa tem até 20 pedidos por hora, e o mesmo
+retrato não gera um plano novo por 10 minutos (cache na instância).
+
+### Pedidos
+
+```json
+{ "planejamento": { "modo": "plano", "retrato": { ... } } }
+{ "planejamento": { "modo": "pergunta", "retrato": { ... },
+                    "pergunta": "Quanto consigo guardar por mês?",
+                    "historico": [{ "papel": "pessoa", "texto": "..." }] } }
+```
+
+O plano usa esforço `medium`; a pergunta, `low`. O prompt de sistema é fixo
+e marcado para cache. O retrato e a pergunta vão entre marcadores
+(`<retrato_financeiro>`, `<pergunta_da_pessoa>`) e o sistema avisa que esse
+conteúdo é dado, nunca instrução.
+
+### Códigos de erro do assistente
+
+| Código | Status | Quando |
+|---|---|---|
+| `IA_INDISPONIVEL` | 503 | Sem `ANTHROPIC_API_KEY`, ou chave recusada pela Anthropic |
+| `SEM_LOGIN` | 401 | Sem token ou sessão vencida |
+| `LIMITE` | 429 | Teto do dia ou limite por hora |
+| `PEDIDO_INVALIDO` | 400 | Retrato fora do formato, pergunta vazia |
+| `OCUPADA` | 429 | A API da Anthropic pediu para esperar |
+| `REDE` | 503 | A IA não respondeu dentro do prazo |
+| `RECUSA` | 200 | O modelo (e o fallback) recusou o pedido |
+| `CORTADA` | 200 | A resposta passou de `max_tokens` |
+| `FORMATO` | 502 | JSON inválido ou sem o conteúdo mínimo |
+
+### Custo
+
+Com `claude-opus-5-5` (US$ 4 por milhão de tokens de entrada e US$ 20 por
+milhão de saída), um plano usa algo como 3 mil tokens de entrada e de 2 a 3
+mil de saída, contando o raciocínio: perto de US$ 0,07. Uma pergunta, com
+esforço baixo, fica perto de US$ 0,02. Com o teto padrão de 100 pedidos por
+dia, o pior caso é de uns US$ 7 por dia. `claude-sonnet-5-5` custa metade.
+
+### Como testar o assistente
+
+```
+node ferramentas/testar-assistente.mjs
+ANTHROPIC_API_KEY=... node ferramentas/testar-assistente.mjs --ao-vivo
+```
+
+O primeiro roda sem rede: validação do pedido, prompt, esquemas,
+guarda-corpo, recusa, resposta cortada, cache e a rota inteira com o SDK
+oficial falando com uma API simulada. O segundo gera um plano e responde uma
+pergunta de verdade, e mostra tempo e resultado.

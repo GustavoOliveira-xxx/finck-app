@@ -8,6 +8,12 @@ window.FINCK_CONFIG = {
     // por exemplo "https://finck-app.vercel.app/api/buscar-preco-ia".
     ENDPOINT: "/api/buscar-preco-ia"
   },
+  // Assistente FinCK: plano e conversa com IA (Claude, da Anthropic). Exige
+  // conta; na demonstração o plano é montado pelas regras, no navegador.
+  ASSISTENTE_IA: {
+    ATIVA: true,
+    ENDPOINT: "/api/assistente-ia"
+  },
   // O aplicativo chama-se FinCK. "FinCK of Reality" é o nome do motor de
   // decisão que vive dentro dele — uma função, não o produto. Use MOTOR_NOME
   // apenas quando estiver falando desse cálculo especificamente.
@@ -101,6 +107,31 @@ window.FINCK_CONFIG = {
     id: "investimento",
     rotulo: "Investimento (manual)"
   } ],
+  // Assistente FinCK: parâmetros do diagnóstico, todos num lugar só para
+  // poderem ser lidos, discutidos e ajustados. São referências didáticas,
+  // não regras: a regra 50/30/20 (Warren e Tyagi, 2005) para o peso das
+  // despesas fixas e da poupança, de 3 a 6 meses de custo fixo como reserva
+  // de emergência, e um teto prudencial para parcelas.
+  DIAGNOSTICO: {
+    JANELA_MESES: 3,
+    FIXOS_REFERENCIA_PCT: 50,
+    FIXOS_LIMITE_PCT: 70,
+    POUPANCA_MINIMA_PCT: 10,
+    POUPANCA_IDEAL_PCT: 20,
+    RESERVA_MINIMA_MESES: 3,
+    RESERVA_IDEAL_MESES: 6,
+    PARCELAS_ATENCAO_PCT: 15,
+    PARCELAS_LIMITE_PCT: 30,
+    TENDENCIA_ALTA_PCT: 25,
+    PESOS: {
+      fluxo: .25,
+      poupanca: .2,
+      reserva: .2,
+      compromissos: .15,
+      metas: .1,
+      consumo: .1
+    }
+  },
   // UX-DECISAO: cada opção diz o que acontece ao salvar. "grupo" separa as
   // quatro escolhas principais das três formas de buscar alternativa.
   DECISOES: [ {

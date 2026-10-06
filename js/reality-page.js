@@ -288,6 +288,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <button type="button" class="btn-texto" data-alterar-categoria>Alterar</button></p>
       <div class="resposta-reality__links">
         <a class="link-mais resposta-reality__mais" href="#detalhesAnalise">Ver análise completa</a>
+        <a class="link-mais" href="assistente.html?pergunta=${encodeURIComponent(`Posso comprar ${entrada.item_name} de ${U.moeda(r.price * (qtd || 1))} sem atrapalhar o meu planejamento?`)}">Ver como esta compra cabe no seu planejamento</a>
       </div>`;
   }
 
