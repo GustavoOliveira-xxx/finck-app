@@ -596,5 +596,11 @@ O roteador gratuito às vezes sorteia um modelo que não conversa (um
 classificador de segurança que só devolve "User Safety: safe"). A rota
 reconhece esse caso e tenta de novo, até três vezes dentro do prazo.
 
+Para responder rápido, o prompt pede no máximo 150 palavras e texto
+simples. Como alguns modelos formatam mesmo assim, `limparMarkdown` tira
+`#`, `**`, `---` e afins antes de devolver, e troca marcadores por "•".
+Cada resposta traz `tempo_ms`, e os logs da Vercel registram modelo e
+tempo de cada chamada, o que ajuda a escolher os modelos de `IA_MODELOS`.
+
 Um `GET /api/ia` responde se a chave está configurada. A página
 `teste-ia.html` serve só para conferir a conexão de ponta a ponta.
