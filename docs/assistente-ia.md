@@ -202,9 +202,10 @@ desenhado a partir disso:
   no próprio aparelho.
 - **Escolha**: a IA só é chamada quando a pessoa toca em "Gerar meu plano"
   ou envia uma pergunta. Na demonstração, nada é enviado.
-- **Provedor externo**: o retrato é processado pela API da Anthropic. A
-  política de uso e retenção de dados do provedor deve constar do termo de
-  uso do app.
+- **Provedor externo**: o retrato é processado pela API da Anthropic ou,
+  sem a chave dela, pelo OpenRouter e pelo provedor do modelo gratuito que
+  responder. Modelos gratuitos podem ter política de retenção diferente; a
+  política dos provedores deve constar do termo de uso do app.
 
 ## 6. Ética e segurança
 
@@ -278,8 +279,13 @@ passo?"), e aplicar o SUS (Brooke, 1996) ao final.
 
 ## 9. Configuração e custo
 
-Variáveis na Vercel: `ANTHROPIC_API_KEY` (obrigatória),
-`ASSISTENTE_MODELO` e `ASSISTENTE_TETO_DIA` (opcionais). Detalhes,
+Variáveis na Vercel: `ANTHROPIC_API_KEY` ou `OPENROUTER_API_KEY` (uma das
+duas), `ASSISTENTE_MODELO` e `ASSISTENTE_TETO_DIA` (opcionais). Com a chave
+da Anthropic, o assistente usa o Claude; sem ela, os modelos gratuitos do
+OpenRouter, os mesmos da FINCK AI. Como esses modelos não têm saída em
+esquema, o pedido leva um molde do JSON e a resposta só é aceita se passar
+por `montarPlano` / `montarResposta`; fora do formato, há nova tentativa
+(até três), e depois disso a tela segue com o plano pelas regras. Detalhes,
 códigos de erro e estimativa de custo em `api/README.md`. Em resumo: com
 `claude-opus-5-5`, um plano custa perto de US$ 0,07 e uma pergunta perto
 de US$ 0,02.

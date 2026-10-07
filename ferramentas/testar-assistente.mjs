@@ -6,6 +6,9 @@
 //     rota HTTP inteira com o SDK oficial falando com uma API simulada (o
 //     fetch é trocado só para api.anthropic.com e para o Supabase).
 //
+//     Também cobre o caminho sem chave da Anthropic, pelos modelos gratuitos
+//     do OpenRouter (fetch simulado para openrouter.ai).
+//
 //   ANTHROPIC_API_KEY=<chave> node ferramentas/testar-assistente.mjs --ao-vivo
 //     Gera um plano e responde uma pergunta de verdade, com um retrato de
 //     exemplo, e mostra tempo, tokens e o resultado já limpo. Gasta duas
@@ -240,11 +243,21 @@ conferir("mesmo retrato não chama a IA duas vezes", contador.length, 1);
 // pelo Supabase. Assim o SDK de verdade monta, envia e lê a mensagem.
 const fetchOriginal = globalThis.fetch;
 const chamadasAnthropic = [];
+const chamadasOpenRouter = [];
+let respostaOpenRouter = () => "";
 globalThis.fetch = async (entrada, init = {}) => {
   const url = String(entrada?.url ?? entrada);
   if (url.includes("/auth/v1/user")) {
     const token = (init.headers?.Authorization ?? "").replace("Bearer ", "");
     return token === "valido" ? new Response(JSON.stringify({ id: "usuario-1" }), { status: 200 }) : new Response("{}", { status: 401 });
+  }
+  if (url.includes("openrouter.ai")) {
+    const corpo = JSON.parse(init.body);
+    chamadasOpenRouter.push({ url, corpo, headers: new Headers(init.headers) });
+    return new Response(JSON.stringify({
+      model: "nvidia/nemotron-3-super-120b-a12b:free",
+      choices: [{ message: { content: respostaOpenRouter(chamadasOpenRouter.length) } }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
   }
   if (url.includes("api.anthropic.com")) {
     const corpo = JSON.parse(init.body);
@@ -270,6 +283,7 @@ function res() {
 const req = (method, body, token) => ({ method, body, headers: token ? { authorization: `Bearer ${token}` } : {} });
 
 delete process.env.ANTHROPIC_API_KEY;
+delete process.env.OPENROUTER_API_KEY;
 let r = res();
 await api(req("GET"), r);
 conferir("GET sem chave diz que a IA está desligada", [r.statusCode, r.corpo.ia], [200, false]);
@@ -295,6 +309,29 @@ conferir("SDK chama a Messages API", http?.url.endsWith("/v1/messages?beta=true"
 conferir("SDK manda o cabeçalho beta do fallback", http?.headers.get("anthropic-beta"), "server-side-fallback-2026-07-01");
 conferir("SDK manda a chave pelo cabeçalho", http?.headers.get("x-api-key"), "chave-de-teste");
 conferir("corpo leva fallbacks e o esquema", [http?.corpo.fallbacks, http?.corpo.output_config?.format?.type, "betas" in (http?.corpo ?? {})], ["default", "json_schema", false]);
+
+// ------------------------------------------------------------------ OpenRouter (gratuito)
+
+delete process.env.ANTHROPIC_API_KEY;
+process.env.OPENROUTER_API_KEY = "chave-openrouter";
+r = res();
+await api(req("GET"), r);
+conferir("GET só com OpenRouter diz que a IA está ligada", [r.corpo.ia, r.corpo.provedor], [true, "openrouter"]);
+
+// Primeira resposta fora do formato, segunda em JSON dentro de cerca de código.
+respostaOpenRouter = (n) => (n === 1 ? "Claro, vou ajudar!" : "```json\n" + JSON.stringify(brutoPlano) + "\n```");
+r = res();
+await api(req("POST", { planejamento: { modo: "plano", retrato: { ...RETRATO, saldo: 123 } } }, "valido"), r);
+conferir("plano pelo OpenRouter, com nova tentativa quando vem fora do formato", [r.statusCode, r.corpo.ok, r.corpo.origem, chamadasOpenRouter.length], [200, true, "ia", 2]);
+const or = chamadasOpenRouter[0];
+conferir("OpenRouter recebe a chave no cabeçalho", or?.headers.get("authorization"), "Bearer chave-openrouter");
+conferir("OpenRouter recebe os modelos gratuitos preferidos e o molde do JSON", [Array.isArray(or?.corpo.models), or?.corpo.models?.at(-1), or?.corpo.messages?.[1]?.content.includes("Responda APENAS com um objeto JSON")], [true, "openrouter/free", true]);
+
+respostaOpenRouter = () => JSON.stringify({ resposta: "Cabe, mas use a **reserva** com cuidado.", baseado_em: ["reserva"], proximo_passo: "", fora_do_escopo: false });
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Posso parcelar uma geladeira?" } }, "valido"), r);
+conferir("pergunta pelo OpenRouter, sem Markdown na resposta", [r.statusCode, r.corpo.resposta], [200, "Cabe, mas use a reserva com cuidado."]);
+delete process.env.OPENROUTER_API_KEY;
 
 globalThis.fetch = fetchOriginal;
 

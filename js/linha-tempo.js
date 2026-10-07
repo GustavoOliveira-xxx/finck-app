@@ -298,8 +298,23 @@ window.FinckLinhaTempoUI = (() => {
       </div>`;
   }
 
+  // O link do Reality para o Assistente leva a pergunta já com os números
+  // da linha do tempo, para a resposta considerar os próximos meses.
+  function atualizarLinkAssistente() {
+    const link = document.querySelector('#respostaReality a[href^="assistente.html"]');
+    if (!link) return;
+    const e = analise.escolhido.resumo;
+    const forma = e.forma === "avista" ? `à vista por ${moeda(e.total)}` : `em ${e.parcelas}x de ${moeda(e.parcela)}`;
+    const ap = e.mes_mais_apertado;
+    const pergunta = `Posso comprar ${estado.item || "este item"} ${forma} sem atrapalhar o meu planejamento? ` +
+      `Pela linha do tempo do FinCK, o mês mais apertado é ${ap.rotulo}, com ${ap.sobra < 0 ? `falta de ${moeda(-ap.sobra)}` : `sobra de ${moeda(ap.sobra)}`}, ` +
+      `e a folga para imprevistos é de ${moeda(e.cabe_sem_imprevisto ? e.margem_geral.valor : 0)}.`;
+    link.href = `assistente.html?pergunta=${encodeURIComponent(pergunta.slice(0, 390))}`;
+  }
+
   function desenhar() {
     const a = analise;
+    atualizarLinkAssistente();
     $("linhaTempoResultado").innerHTML = `
       ${cartoes()}
       <p class="orcamento-concreto__frase linha-tempo__frase">${frase()}</p>

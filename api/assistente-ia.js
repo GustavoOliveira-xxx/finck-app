@@ -1,4 +1,8 @@
-// Assistente FinCK: planejamento pessoal com IA (Claude, da Anthropic).
+// Assistente FinCK: planejamento pessoal com IA.
+//
+// Dois provedores, escolhidos pelas variáveis de ambiente: o Claude, da
+// Anthropic, quando há ANTHROPIC_API_KEY; senão, os modelos gratuitos do
+// OpenRouter (OPENROUTER_API_KEY), os mesmos da FINCK AI (api/_openrouter.js).
 //
 // O navegador calcula o diagnóstico da vida financeira inteira
 // (js/diagnostico-engine.js) e manda para cá só o retrato agregado que
@@ -20,7 +24,12 @@
 //
 // Variáveis de ambiente (Vercel → Settings → Environment Variables):
 //
-//   ANTHROPIC_API_KEY     obrigatória. Chave do console da Anthropic.
+//   ANTHROPIC_API_KEY     opcional. Chave do console da Anthropic. Com ela,
+//                         o assistente usa o Claude.
+//   OPENROUTER_API_KEY    opcional. Sem a chave da Anthropic, o assistente usa
+//                         os modelos gratuitos do OpenRouter. Uma das duas é
+//                         obrigatória; sem nenhuma, a tela usa o plano pelas
+//                         regras do FinCK.
 //   ASSISTENTE_MODELO     opcional. "claude-opus-5-5" (padrão) ou
 //                         "claude-sonnet-5-5", mais barato.
 //   ASSISTENTE_TETO_DIA   opcional. Teto global de pedidos por dia. Padrão 100.
@@ -30,6 +39,7 @@
 const { createHash } = require("node:crypto");
 const SDK = require("@anthropic-ai/sdk");
 const A = require("./_acesso.js");
+const OR = require("./_openrouter.js");
 
 const Anthropic = SDK.default || SDK.Anthropic;
 
@@ -51,7 +61,7 @@ const TIPOS_RENDA = ["fixa", "variavel", "mista"];
 // Texto de uma linha, sem caractere de controle e com tamanho máximo.
 function textoLimpo(valor, max) {
   if (valor === null || valor === undefined) return null;
-  const texto = String(valor).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
+  const texto = String(valor).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\*\*|__|`/g, "").replace(/^#+\s*/, "").replace(/\s+/g, " ").trim();
   return texto ? texto.slice(0, max) : null;
 }
 
@@ -342,7 +352,12 @@ function montarResposta(bruto) {
 
 // ------------------------------------------------------------ Claude
 
-const modeloAtual = () => (MODELOS_ACEITOS.has(process.env.ASSISTENTE_MODELO) ? process.env.ASSISTENTE_MODELO : MODELO_PADRAO);
+// Claude quando há chave da Anthropic; senão, o OpenRouter gratuito.
+const provedor = () => (process.env.ANTHROPIC_API_KEY ? "anthropic" : OR.configurado() ? "openrouter" : null);
+
+const modeloAtual = () => (provedor() === "openrouter"
+  ? OR.MODELO
+  : MODELOS_ACEITOS.has(process.env.ASSISTENTE_MODELO) ? process.env.ASSISTENTE_MODELO : MODELO_PADRAO);
 
 function criarCliente() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: PRAZO_MS, maxRetries: 1 });
@@ -398,14 +413,80 @@ async function chamarClaude({ cliente, modelo, conteudo, esquema, effort }) {
   }
 }
 
+// ------------------------------------------------------------ OpenRouter
+
+// Modelos gratuitos não têm o modo de saída em esquema do Claude. Em vez
+// dele, o pedido leva um molde do JSON, e a resposta só é aceita se passar
+// pelas mesmas conferências (montarPlano / montarResposta); senão, nova
+// tentativa.
+const MOLDE_PLANO = JSON.stringify({
+  diagnostico: "texto",
+  pontos_fortes: ["texto"],
+  prioridades: [{ titulo: "texto", porque: "texto", baseado_em: DIMENSOES.join("|"), passos: ["texto"], prazo: PRAZOS.join("|") }],
+  metas_sugeridas: [{ nome: "texto", valor_mensal: 0, motivo: "texto" }],
+  habito_da_semana: "texto",
+  alerta: "texto",
+  faltam_dados: ["texto"],
+});
+const MOLDE_RESPOSTA = JSON.stringify({
+  resposta: "texto",
+  baseado_em: [DIMENSOES.join("|")],
+  proximo_passo: "texto",
+  fora_do_escopo: false,
+});
+
+function instrucaoJson(plano) {
+  return [
+    "",
+    `Hoje é ${OR.hoje()}.`,
+    "Responda APENAS com um objeto JSON válido, sem Markdown e sem texto antes ou depois, com exatamente estas chaves:",
+    plano ? MOLDE_PLANO : MOLDE_RESPOSTA,
+    "Onde aparece \"a|b|c\", escolha um único valor da lista. Textos em português do Brasil.",
+  ].join("\n");
+}
+
+async function chamarOpenRouter({ pedido, buscar = fetch }) {
+  const plano = pedido.modo === "plano";
+  const r = await OR.conversar({
+    sistema: SISTEMA,
+    usuario: conteudoDoPedido(pedido) + "\n" + instrucaoJson(plano),
+    maxTokens: plano ? 3000 : 1200,
+    rotulo: "assistente",
+    buscar,
+    aceitar: (texto) => {
+      const json = OR.extrairJson(texto);
+      if (!json) return null;
+      return plano ? montarPlano(json, pedido.retrato) : montarResposta(json);
+    },
+  });
+  if (r.status === 200) return { montado: r.valor, modelo: r.modelo };
+  if (r.status === 429) return { erro: falha(429, "OCUPADA", "O assistente está com muitos pedidos agora. Tente de novo em um minuto.") };
+  if (r.status === 401 || r.status === 403) {
+    console.error("assistente-ia: chave do OpenRouter recusada", r.status);
+    return { erro: falha(503, "IA_INDISPONIVEL", "O assistente com IA não está disponível neste servidor agora.") };
+  }
+  if (r.status === 504) return { erro: falha(503, "REDE", "A IA demorou demais para responder. Tente de novo em instantes.") };
+  return { erro: falha(502, "FALHOU", "A IA não conseguiu responder agora. Tente de novo em instantes.") };
+}
+
 const cache = new Map();
 
-async function planejar({ cliente, pedido, modelo = modeloAtual(), chaveCache = null }) {
+async function planejar({ cliente, pedido, modelo = modeloAtual(), chaveCache = null, via = provedor(), buscar = fetch }) {
   if (pedido.modo === "plano" && chaveCache) {
     const guardado = cache.get(chaveCache);
     if (guardado && Date.now() - guardado.em < CACHE_PLANO_MS) return { status: 200, corpo: guardado.corpo };
   }
   const plano = pedido.modo === "plano";
+  if (via === "openrouter") {
+    const lido = await chamarOpenRouter({ pedido, buscar });
+    if (lido.erro) return lido.erro;
+    const corpo = { ok: true, modo: pedido.modo, ...lido.montado, modelo: lido.modelo };
+    if (plano && chaveCache) {
+      cache.set(chaveCache, { em: Date.now(), corpo });
+      if (cache.size > 300) cache.delete(cache.keys().next().value);
+    }
+    return { status: 200, corpo };
+  }
   const lido = await chamarClaude({
     cliente,
     modelo,
@@ -434,10 +515,10 @@ const limites = A.criarLimites({
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return A.preflight(res);
   if (req.method === "GET") {
-    return A.responder(res, { ok: true, ia: Boolean(process.env.ANTHROPIC_API_KEY), modelo: modeloAtual() });
+    return A.responder(res, { ok: true, ia: Boolean(provedor()), provedor: provedor(), modelo: modeloAtual() });
   }
   if (req.method !== "POST") return A.responder(res, { ok: false, motivo: "Método não suportado." }, 405);
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!provedor()) {
     return A.responder(res, { ok: false, codigo: "IA_INDISPONIVEL", motivo: "O assistente com IA não está configurado neste servidor." }, 503);
   }
   const token = A.tokenDoPedido(req);
@@ -462,7 +543,7 @@ module.exports = async function handler(req, res) {
     ? createHash("sha256").update(`${userId}|${modeloAtual()}|${JSON.stringify(pedido.retrato)}`).digest("hex")
     : null;
   try {
-    const resultado = await planejar({ cliente: criarCliente(), pedido, chaveCache });
+    const resultado = await planejar({ cliente: provedor() === "anthropic" ? criarCliente() : null, pedido, chaveCache });
     return A.responder(res, resultado.corpo, resultado.status);
   } catch (e) {
     console.error("assistente-ia: falha inesperada", e?.message);
@@ -471,6 +552,8 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.SISTEMA = SISTEMA;
+module.exports.provedor = provedor;
+module.exports.chamarOpenRouter = chamarOpenRouter;
 module.exports.DIMENSOES = DIMENSOES;
 module.exports.limparRetrato = limparRetrato;
 module.exports.lerPedido = lerPedido;
