@@ -523,7 +523,8 @@ navegador, no mesmo formato.
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | sim | Chave criada em console.anthropic.com. Sem ela, o GET responde `ia: false` e a tela usa o plano por regras. |
+| `ANTHROPIC_API_KEY` | uma das duas | Chave criada em console.anthropic.com. Com ela, o assistente usa o Claude. |
+| `OPENROUTER_API_KEY` | uma das duas | Sem a chave da Anthropic, o assistente usa os modelos gratuitos do OpenRouter (`api/_openrouter.js`), com molde de JSON e até três tentativas. Sem nenhuma das duas, o GET responde `ia: false` e a tela usa o plano por regras. |
 | `ASSISTENTE_MODELO` | não | `claude-opus-5-5` (padrão) ou `claude-sonnet-5-5`, mais barato. Outro valor é ignorado. |
 | `ASSISTENTE_TETO_DIA` | não | Teto global de pedidos por dia. Padrão 100. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | não | Iguais às da rota de preço; o padrão é o projeto de `js/config.js`. |
@@ -580,6 +581,11 @@ oficial falando com uma API simulada. O segundo gera um plano e responde uma
 pergunta de verdade, e mostra tempo e resultado.
 
 ## FINCK AI (OpenRouter, modelos gratuitos)
+
+A conversa com o OpenRouter (modelos preferidos, descarte de
+classificadores, novas tentativas, data no prompt) fica em
+`_openrouter.js`, compartilhado com o Assistente quando não há chave da
+Anthropic.
 
 `ia.js` é a rota `/api/ia`: recebe `{ "pergunta": "..." }` por POST e
 devolve `{ resposta, modelo }`. Usa o roteador `openrouter/free` do
