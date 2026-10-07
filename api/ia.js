@@ -21,8 +21,26 @@ const TENTATIVAS = 3;
 
 const MAX_TOKENS = 1500;
 
-const SISTEMA =
+// Modelos gratuitos testados em 7/10/2026: bons e rápidos (5 a 6 s). O
+// OpenRouter usa o primeiro e só passa ao seguinte se ele der erro; o
+// roteador gratuito fica como último recurso. IA_MODELOS na Vercel troca
+// esta lista sem mexer no código.
+const PREFERIDOS_PADRAO = [
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "inclusionai/ling-3.0-flash-sante:free",
+];
+
+// Modelos que responderam errado nos testes. Se o sorteio cair num deles,
+// a rota tenta de novo.
+const MODELOS_EVITADOS = /liquid\/lfm-2\.5-2\.6b/i;
+
+// A data entra no prompt para a IA conseguir contar meses ("até dezembro").
+const hoje = (agora = new Date()) =>
+  agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "numeric", month: "long", year: "numeric" });
+
+const sistema = () =>
   "Você é a FINCK AI, assistente financeira do aplicativo FINCK. " +
+  `Hoje é ${hoje()}. ` +
   "Responda sempre em português do Brasil, de forma clara, educada e objetiva. " +
   "Seja breve: no máximo 150 palavras, indo direto ao ponto. " +
   "Escreva em texto simples, sem Markdown: não use #, *, negrito, títulos, tabelas nem linhas separadoras. " +
@@ -51,14 +69,19 @@ const MODELO_NAO_CONVERSA = /(safety|guard|moderat|classif|decid|decision|clef|r
 const RESPOSTA_DE_CLASSIFICADOR = /^\s*(user|response|prompt)\s+safety\s*:/i;
 
 const naoConversa = (modelo, texto) =>
-  MODELO_NAO_CONVERSA.test(String(modelo || "")) || RESPOSTA_DE_CLASSIFICADOR.test(texto);
+  MODELO_NAO_CONVERSA.test(String(modelo || "")) ||
+  MODELOS_EVITADOS.test(String(modelo || "")) ||
+  RESPOSTA_DE_CLASSIFICADOR.test(texto);
 
-// Opcional: IA_MODELOS na Vercel com ids de modelos gratuitos preferidos,
-// separados por vírgula. O roteador gratuito fica sempre como último recurso.
-function corpoDoModelo() {
-  const preferidos = String(process.env.IA_MODELOS || "")
+function preferidos() {
+  const daVercel = String(process.env.IA_MODELOS || "")
     .split(",").map((m) => m.trim()).filter(Boolean);
-  return preferidos.length ? { models: [...preferidos, MODELO] } : { model: MODELO };
+  return daVercel.length ? daVercel : PREFERIDOS_PADRAO;
+}
+
+function corpoDoModelo(usarPreferidos = true) {
+  const lista = usarPreferidos ? preferidos() : [];
+  return lista.length ? { models: [...lista, MODELO] } : { model: MODELO };
 }
 
 // Por IP: freio contra abuso numa rota pública, não contabilidade exata.
@@ -70,7 +93,7 @@ const limites = A.criarLimites({
 const ipDoPedido = (req) =>
   String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() || "anonimo";
 
-async function chamarUmaVez(pergunta, prazoMs, buscar) {
+async function chamarUmaVez(pergunta, prazoMs, buscar, usarPreferidos) {
   const controle = new AbortController();
   const relogio = setTimeout(() => controle.abort(), prazoMs);
   try {
@@ -84,17 +107,25 @@ async function chamarUmaVez(pergunta, prazoMs, buscar) {
         "X-Title": "FINCK",
       },
       body: JSON.stringify({
-        ...corpoDoModelo(),
+        ...corpoDoModelo(usarPreferidos),
         max_tokens: MAX_TOKENS,
         messages: [
-          { role: "system", content: SISTEMA },
+          { role: "system", content: sistema() },
           { role: "user", content: pergunta },
         ],
       }),
     });
     const dados = await r.json().catch(() => ({}));
     if (!r.ok) {
-      return { status: r.status, erro: dados?.error?.message || "Falha ao consultar a IA." };
+      // Um id da lista de preferidos pode deixar de existir: aí a próxima
+      // tentativa vai direto ao roteador gratuito.
+      const semLista = r.status === 400 || r.status === 404;
+      return {
+        status: r.status,
+        erro: dados?.error?.message || "Falha ao consultar a IA.",
+        repetir: usarPreferidos && semLista,
+        semPreferidos: usarPreferidos && semLista,
+      };
     }
     const texto = String(dados?.choices?.[0]?.message?.content ?? "").trim();
     if (!texto) return { status: 502, erro: "A IA respondeu vazio. Tente de novo.", repetir: true };
@@ -115,13 +146,15 @@ async function perguntar(pergunta, { buscar = fetch, agora = Date.now } = {}) {
   const inicio = agora();
   const fim = inicio + PRAZO_TOTAL_MS;
   let ultimo = { status: 504, erro: "A IA demorou demais. Tente de novo." };
+  let usarPreferidos = true;
   for (let i = 0; i < TENTATIVAS; i++) {
     const resta = fim - agora();
     if (resta < 5000) break;
-    ultimo = await chamarUmaVez(pergunta, resta, buscar);
+    ultimo = await chamarUmaVez(pergunta, resta, buscar, usarPreferidos);
+    if (ultimo.semPreferidos) usarPreferidos = false;
     if (!ultimo.repetir) break;
   }
-  const { repetir, ...resultado } = ultimo;
+  const { repetir, semPreferidos, ...resultado } = ultimo;
   if (resultado.status !== 200) delete resultado.modelo;
   resultado.tempo_ms = agora() - inicio;
   // Aparece nos logs da Vercel: ajuda a escolher os modelos mais rápidos.
@@ -160,5 +193,6 @@ module.exports = async function handler(req, res) {
 
 module.exports.perguntar = perguntar;
 module.exports.MODELO = MODELO;
+module.exports.PREFERIDOS_PADRAO = PREFERIDOS_PADRAO;
 module.exports.naoConversa = naoConversa;
 module.exports.limparMarkdown = limparMarkdown;

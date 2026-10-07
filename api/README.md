@@ -590,7 +590,15 @@ depende de um modelo específico continuar no ar.
 - `IA_TETO_DIA`: opcional. Padrão 40 chamadas por dia, abaixo das 50
   diárias do plano gratuito, para sobrar margem nos testes.
 - `IA_MODELOS`: opcional. Ids de modelos gratuitos preferidos, separados
-  por vírgula. O `openrouter/free` fica sempre como último recurso.
+  por vírgula, no lugar da lista padrão do código (`PREFERIDOS_PADRAO`:
+  Nemotron 3 Super e Ling 3.0 Flash, os mais rápidos entre os que
+  responderam certo nos testes de 7/10/2026). O `openrouter/free` fica
+  sempre como último recurso, e se um id da lista sumir do OpenRouter a
+  rota cai direto para ele.
+
+Modelos que erraram nos testes (`MODELOS_EVITADOS`, hoje o Liquid LFM
+2.6B) são descartados como os classificadores: a rota tenta de novo. O
+prompt também leva a data de hoje, para a IA conseguir contar meses.
 
 O roteador gratuito às vezes sorteia um modelo que não conversa (um
 classificador de segurança que só devolve "User Safety: safe"). A rota
