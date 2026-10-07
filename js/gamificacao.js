@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `\n      <article class="conquista${ativa ? " conquista--ativa" : " conquista--bloqueada"}">\n        <span class="conquista-icone" aria-hidden="true">${ativa ? c.icone : "🔒"}</span>\n        <h4>${U.escapeHTML(c.titulo)}</h4>\n        <p>${U.escapeHTML(c.descricao)}</p>\n      </article>`;
   }).join("");
   document.getElementById("chipTeto").textContent = `${diario.total} / ${diario.teto} XP hoje`;
-  // PROD-007 — registrar uma saída é organização, não redução de consumo. As
+  // Registrar uma saída é organização, não redução de consumo. As
   // duas coisas rendem XP, mas aparecem separadas para não se confundirem.
   const linhaXP = a => {
     const limite = a.unico ? "1 vez na vida" : `${a.usados}/${a.limite} hoje`;

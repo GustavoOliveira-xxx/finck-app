@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let classificacao = {
     status: "desconhecida"
   };
-  // PROD-009 — a busca automática continua sendo um extra: depende de chave no
+  // A busca automática continua sendo um extra: depende de chave no
   // servidor e de sites de terceiros que podem recusar a leitura. Digitar o
   // preço segue funcionando sempre. O que mudou é que ela roda em todos os
   // modos, demo incluído: sem sessão, o pedido vai sem token e o servidor
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
     botao.classList.toggle("busca-preco__botao--carregando", ligado);
     botao.querySelector(".busca-preco__rotulo").textContent = ligado ? "Buscando…" : "Buscar preço neste link";
   }
-  // UX-PROCESSO: enquanto a IA trabalha, a tela diz o que está acontecendo.
+  // Enquanto a IA trabalha, a tela diz o que está acontecendo.
   // As etapas seguem o que a rota faz de verdade: abrir a página, ler o preço
   // e conferir parcelas e frete; a última só aparece se demorar.
   let etapasBusca = [];
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return "Preço lido do código da página. Confira se bate com o que a loja mostra.";
   }
-  // UX-CONFIRMA: o que a IA encontrou aparece primeiro como sugestão. O
+  // O que a IA encontrou aparece primeiro como sugestão. O
   // formulário só muda quando a pessoa toca em "Usar este preço" (ou no preço
   // do Pix): nenhum dado é trocado sem uma confirmação explícita.
   function mostrarResultado(dados) {
@@ -244,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const antigo = await consultar(ENDPOINT, url, token);
     return antigo?.ok ? antigo : porIA || antigo;
   }
-  // UX-ERRO: a mensagem diz o que não deu certo em linguagem comum e já
+  // A mensagem diz o que não deu certo em linguagem comum e já
   // oferece a saída: digitar o preço ou tentar o outro caminho.
   function mostrarErro(motivo, {titulo: titulo = null, origem: origem = "link"} = {}) {
     pararBuscando();

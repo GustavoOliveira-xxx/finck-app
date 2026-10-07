@@ -132,7 +132,7 @@ window.FINCK_CONFIG = {
       consumo: .1
     }
   },
-  // UX-DECISAO: cada opção diz o que acontece ao salvar. "grupo" separa as
+  // Cada opção diz o que acontece ao salvar. "grupo" separa as
   // quatro escolhas principais das três formas de buscar alternativa.
   DECISOES: [ {
     id: "comprar",

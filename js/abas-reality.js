@@ -33,7 +33,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     const abas = [ ...document.querySelectorAll(".aba[data-aba]") ];
     abas.forEach(b => b.addEventListener("click", () => trocar(b.dataset.aba)));
-    // UX-A11Y: padrão de abas do WAI-ARIA: setas trocam de aba, Home e End
+    // Padrão de abas do WAI-ARIA: setas trocam de aba, Home e End
     // vão para a primeira e a última, e só a aba ativa entra no Tab.
     abas.forEach((b, i) => {
       b.tabIndex = b.classList.contains("ativa") ? 0 : -1;

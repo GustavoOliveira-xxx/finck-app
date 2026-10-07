@@ -619,7 +619,7 @@ window.FinckFinance = (() => {
       operacao: "transferir_contas"
     });
   }
-  // CODE-005 / PROD-003 — fonte única dos dados de demonstração.
+  // Fonte única dos dados de demonstração.
   //
   // As datas são deslocamentos em dias a partir de hoje, não dias fixos do mês:
   // assim o conjunto continua coerente em qualquer data do sistema, com sempre

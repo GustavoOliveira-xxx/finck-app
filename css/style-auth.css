@@ -28,7 +28,7 @@
 
   --texto:            #f4f1f9;
   --texto-fraco:      #a49bb2;
-  /* Mesmo ajuste do CSS principal (UX-001): #6d6579 dava 3,6:1 sobre o
+  /* Mesmo ajuste do CSS principal: #6d6579 dava 3,6:1 sobre o
      fundo; #8b8397 passa de 4,5:1 e mantém o cinza-arroxeado. */
   --texto-fraquissimo:#8b8397;
   --texto-suave:      #a49bb2;

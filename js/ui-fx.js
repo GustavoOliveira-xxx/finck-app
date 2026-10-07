@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  // UX-MOV: além do prefers-reduced-motion do sistema, a pessoa escolhe no
+  // Além do prefers-reduced-motion do sistema, a pessoa escolhe no
   // Perfil: animações completas, reduzidas ou desligadas.
   const lerPreferencia = () => {
     try {

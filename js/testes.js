@@ -1082,7 +1082,7 @@ window.FinckTestes = (() => {
       }
       return M.ler(el);
     };
-    // UX-PRECO: o campo aceita o preço do jeito que a pessoa lê na loja.
+    // O campo aceita o preço do jeito que a pessoa lê na loja.
     teste("digitar 800 vale R$ 800,00, não R$ 8,00", () => {
       comCampo(el => esperar(digitar(el, "800")).aSerPerto(800, 2));
     });

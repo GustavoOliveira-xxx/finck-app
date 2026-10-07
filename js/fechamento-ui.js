@@ -103,14 +103,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
   if (pendentes.length) {
-    // UX-003 — na demonstração ninguém pediu para revisar nada: abrir o modal de
+    // Na demonstração ninguém pediu para revisar nada: abrir o modal de
     // cara esconde o app de quem está conhecendo (ou apresentando) o FinCK. A
     // faixa deixa a escolha explícita. Em conta real, o dinheiro é de verdade e
     // a revisão continua vindo na frente.
     const faixa = document.getElementById("avisoRevisao");
     if (S.emDemo() && faixa) {
       faixa.hidden = false;
-      // UX-HOME: o alerta vira tarefa: o que revisar, de quanto, e só depois
+      // O alerta vira tarefa: o que revisar, de quanto, e só depois
       // a opção de deixar para mais tarde.
       const tarefa = oc => `<li><strong>${oc.type === "entrada" ? "Confirmar entrada" : "Confirmar saída"} de ${U.moeda(oc.planned_amount)}</strong> · ${U.escapeHTML(oc.description)}, venceu em ${U.dataBR(oc.due_date)}</li>`;
       faixa.innerHTML = `\n        <div class="aviso-revisao__texto">\n          <p><strong>${pendentes.length === 1 ? "1 previsão venceu" : `${pendentes.length} previsões venceram`}</strong> e espera${pendentes.length === 1 ? "" : "m"} você dizer se aconteceu. Elas ainda não mexeram no saldo.</p>\n          <ul class="aviso-revisao__lista">${pendentes.slice(0, 3).map(tarefa).join("")}</ul>\n          ${pendentes.length > 3 ? `<p class="nota">e mais ${pendentes.length - 3}.</p>` : ""}\n        </div>\n        <button type="button" class="btn-primario" id="btnRevisarAgora">Revisar lançamentos pendentes</button>\n        <button type="button" class="btn-texto" id="btnVerAppPrimeiro">Decidir depois</button>`;

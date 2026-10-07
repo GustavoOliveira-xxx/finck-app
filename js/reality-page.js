@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let entrada = null;
   let decisao = null;
   let registroId = null;
-  // UX-COMPARAR e UX-MUDOU: a opção guardada para comparar e a última
+  // A opção guardada para comparar e a última
   // análise do mesmo item, para mostrar o que mudou ao refazer a conta.
   let comparando = null;
   let anterior = null;
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("itemDestino").innerHTML = `<option value="">Prefiro não dizer</option>` + cfg.DESTINOS_ITEM.map(d => `<option value="${d.id}">${U.escapeHTML(d.rotulo)}</option>`).join("");
   const horasPorDia = () => Number(ctx.perfil?.work_hours_day) || cfg.PADRAO.work_hours_day;
 
-  // UX-CATEGORIA: sugerida pelo nome do item; vira confirmação, não tarefa.
+  // Sugerida pelo nome do item; vira confirmação, não tarefa.
   const pilulaCategoria = $("categoriaInferida");
   function mostrarCategoria() {
     const escolhida = Boolean(campoCategoria.dataset.escolhida);
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // UX-ETAPAS: 1 Dados, 2 Impacto, 3 Reflexão, 4 Decisão.
+  // 1 Dados, 2 Impacto, 3 Reflexão, 4 Decisão.
   const ORDEM_ETAPAS = [ "passoDados", "passoResultado", "passoReflexao", "passoDecisao" ];
   function marcarEtapas() {
     const nav = $("etapasReality");
@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     botaoVer.disabled = true;
     botaoVer.setAttribute("aria-busy", "true");
     try {
-      // UX-PROCESSO: cada etapa real aparece enquanto acontece, sem espera
+      // Cada etapa real aparece enquanto acontece, sem espera
       // inventada: dados, conta, metas e alternativas.
       etapa("Lendo seus dados financeiros…");
       ctx = await F.carregarContexto();
@@ -305,7 +305,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ${r.custo_de_uso.quantidade > 1 ? `<article class="card-indicador"><span>Total por ${r.custo_de_uso.quantidade} unidades</span><strong>${U.moeda(r.custo_de_uso.total)}</strong></article>` : ""}`;
   }
 
-  // UX-ORCAMENTO: primeiro a conta concreta (compra, sobra, impacto e o que
+  // Primeiro a conta concreta (compra, sobra, impacto e o que
   // fica); a lista completa de indicadores vem depois, com a definição de
   // cada um visível, sem depender de passar o mouse.
   function renderOrcamento() {
@@ -385,7 +385,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       </li>`).join("");
   }
 
-  // UX-COMPARAR
   function renderComparacao() {
     const host = $("comparacao");
     if (!comparando) {
@@ -468,7 +467,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // ODS-006: cada alternativa aponta para os pontos reais que o usuário salvou.
+  // Cada alternativa aponta para os pontos reais que o usuário salvou.
   // Não existe base pronta de parceiros: os endereços são os que a própria pessoa
   // guardou em Ações locais, cadastrados à mão ou achados no Google Maps. É isso
   // que fecha o ciclo dentro do app: preço vira tempo de trabalho, tempo vira
@@ -491,7 +490,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       convite: "Você ainda não cadastrou ninguém que aluga ou empresta."
     }
   };
-  // ODS-007: o destino declarado no formulário deixa de ser só um dado guardado
+  // O destino declarado no formulário deixa de ser só um dado guardado
   // e passa a ter consequência na tela — é o elo com a meta 12.5 da ODS 12.
   const DESTINOS_LOCAIS = {
     doar_revender: {
@@ -579,7 +578,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     orcamento: [ "Não compromete nada", "Aperta um pouco", "Compromete o essencial" ],
     descarte: [ "Uso por muitos anos", "Doo ou revendo depois", "Vai virar descarte rápido" ]
   };
-  // UX-REFLEXAO: três perguntas rápidas primeiro; as outras três ficam a
+  // Três perguntas rápidas primeiro; as outras três ficam a
   // um toque, para não virar formulário depois do formulário.
   const RAPIDAS = [ "necessidade", "uso", "durabilidade" ];
   const perguntaHTML = q => `
@@ -625,7 +624,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     return dados;
   };
-  // UX-DECISAO: a decisão como conclusão da análise: quatro escolhas
+  // A decisão como conclusão da análise: quatro escolhas
   // principais, cada uma dizendo o que acontece ao salvar, e uma confirmação
   // visível antes de gravar.
   const DECISAO = id => cfg.DECISOES.find(d => d.id === id);
@@ -727,7 +726,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const jaRegistrado = Boolean(registroId);
       const reflexoes = coletarReflexoes();
-      // PROD-010 — a análise e a saída eram duas gravações soltas: se a segunda
+      // A análise e a saída eram duas gravações soltas: se a segunda
       // falhasse, ficava uma decisão de "comprar" sem dinheiro saindo. Agora a
       // análise é gravada sem decisão, o lançamento vem antes (idempotente pela
       // chave da análise, então clicar duas vezes não duplica) e a decisão só é

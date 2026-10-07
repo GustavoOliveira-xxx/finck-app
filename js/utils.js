@@ -53,7 +53,7 @@ window.FinckUtils = (() => {
     setTimeout(() => el.remove(), ms);
   }
   const focoAnterior = new Map;
-  // UX-A11Y: pilha dos modais abertos. Esc fecha só o de cima, e o Tab fica
+  // Pilha dos modais abertos. Esc fecha só o de cima, e o Tab fica
   // preso dentro dele: sem isso o teclado escapava para a página de trás.
   const pilhaModais = [];
   const FOCAVEIS = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -130,7 +130,7 @@ window.FinckUtils = (() => {
     }
     focoAnterior.delete(id);
   };
-  // UX-A11Y: erro de campo fica junto do campo, não só no toast: a mensagem é
+  // Erro de campo fica junto do campo, não só no toast: a mensagem é
   // ligada ao input por aria-describedby e o foco vai para quem precisa de ajuste.
   function erroCampo(alvo, mensagem) {
     const campo = typeof alvo === "string" ? document.getElementById(alvo) : alvo;
@@ -167,7 +167,7 @@ window.FinckUtils = (() => {
     campo.addEventListener("change", limpar);
     return false;
   }
-  // UX-002 — confirm/prompt nativos quebram a identidade visual e ficam ruins no
+  // Confirm/prompt nativos quebram a identidade visual e ficam ruins no
   // celular. Um único diálogo HTML, montado sob demanda, serve todas as telas.
   // Se o DOM não estiver disponível, cai no nativo em vez de travar o fluxo.
   const ID_DIALOGO = "finckDialogo";
@@ -287,7 +287,7 @@ window.FinckUtils = (() => {
       }
     });
   }
-  // CODE-010 — escapeHTML protege a marcação, mas não impede um href
+  // EscapeHTML protege a marcação, mas não impede um href
   // "javascript:" vindo de um backup antigo ou importado. Só http(s) vira link.
   function urlHttpSegura(bruta) {
     const texto = String(bruta || "").trim();

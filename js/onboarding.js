@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const etapas = [ ...document.querySelectorAll(".etapa") ];
   const despesas = [];
   let fluxo = "perfil";
-  // UX-ONB: cada etapa mostra nome e estado: feita, atual, a seguir ou
+  // Cada etapa mostra nome e estado: feita, atual, a seguir ou
   // pulada (no fluxo manual, as despesas fixas ficam para depois).
   const progresso = document.getElementById("progressoEtapas");
   function marcarProgresso(n) {
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const livre = Math.max(0, renda - fixas);
     const valorDia = renda > 0 ? renda / dias : 0;
     const valorHora = renda > 0 ? valorDia / horas : 0;
-    // UX-ONB: o resumo é a revisão antes de salvar: cada linha volta para a
+    // O resumo é a revisão antes de salvar: cada linha volta para a
     // etapa em que o valor foi informado, sem perder o que já foi digitado.
     const editar = etapa => `<button type="button" class="btn-texto btn-editar-etapa" data-ir-etapa="${etapa}">Editar</button>`;
     document.getElementById("resumoOnboarding").innerHTML = `\n      <h3>Revise antes de concluir</h3>\n      <ul class="lista-resumo">\n        <li><span>Renda mensal ${editar(1)}</span><strong>${U.moeda(renda)}</strong></li>\n        <li><span>Jornada ${editar(1)}</span><strong>${dias} dias × ${U.numero(horas, horas % 1 ? 1 : 0)} h</strong></li>\n        <li><span>Despesas fixas ${fluxo === "manual" ? "<small>(cadastre depois em Recorrentes)</small>" : editar(2)}</span><strong class="cor-vermelha">${U.moeda(fixas)}</strong></li>\n        <li><span>Renda livre estimada</span><strong class="cor-verde">${U.moeda(livre)}</strong></li>\n        <li><span>Valor do seu dia de trabalho</span><strong>${renda > 0 ? U.moeda(valorDia) : "Indisponível"}</strong></li>\n        <li><span>Valor da sua hora</span><strong>${renda > 0 ? U.moeda(valorHora) : "Indisponível"}</strong></li>\n        <li><span>Saldo inicial</span><strong>${U.moeda(U.lerMoeda(saldoEl) || 0)}</strong></li>\n      </ul>\n      <p class="nota">${renda > 0 ? "Com esses dados, o FinCK of Reality já consegue traduzir qualquer preço em tempo de trabalho." : "Sem renda informada, o FinCK registra gastos normalmente, mas não converte compras em horas. Você pode informar a renda depois, no Perfil."}</p>`;

@@ -31,7 +31,7 @@
 
   --texto:            #f4f1f9;
   --texto-fraco:      #a49bb2;
-  /* UX-001: #6d6579 dava 3,6:1 sobre o fundo #07060a — abaixo do mínimo de 4,5:1
+  /* #6d6579 dava 3,6:1 sobre o fundo #07060a — abaixo do mínimo de 4,5:1
      da WCAG AA para texto normal, e pior ainda em projetor. #8b8397 dá 5,6:1
      mantendo o cinza-arroxeado da identidade. */
   --texto-fraquissimo:#8b8397;
@@ -4021,7 +4021,7 @@ table th{
 }
 
 
-/* PROD-001 — a ação central do app vem antes do painel financeiro. */
+/* A ação central do app vem antes do painel financeiro. */
 .chamada-reality{
   display:grid; gap:1.2rem;
   grid-template-columns:minmax(0,1fr);
@@ -4065,10 +4065,9 @@ a.btn-grande, a.btn-secundario{ text-decoration:none; display:inline-block; text
   font-size:.85rem; font-weight:600; color:var(--roxo-neon);
 }
 
-/* ODS-006/007 — a alternativa deixa de ser conselho genérico e vira endereço.
-   Estes são os pontos que o próprio usuário cadastrou em Ações locais: é o
-   trecho em que o ciclo preço → tempo → alternativa → território fica visível
-   dentro do produto, e não só no discurso. */
+/* A alternativa não é conselho genérico: é endereço. Estes são os pontos que o
+   próprio usuário cadastrou em Ações locais, e é aqui que o ciclo
+   preço → tempo → alternativa → território fica visível dentro do produto. */
 .alternativa__pontos{
   margin-top:.7rem;
   padding:.7rem .8rem;
@@ -4117,20 +4116,20 @@ a.btn-grande, a.btn-secundario{ text-decoration:none; display:inline-block; text
   font-size:.85rem; line-height:1.55; color:var(--texto-fraco);
 }
 
-/* PROD-002 — a regra da máscara precisa estar visível, não só no title. */
+/* A regra da máscara precisa estar visível, não só no title. */
 .ajuda-campo{
   display:block; margin-top:.35rem;
   font-size:.8rem; line-height:1.4; color:var(--texto-fraquissimo);
 }
 .ajuda-campo strong{ color:var(--texto-fraco); font-family:var(--fonte-dados); }
 
-/* UX-002 — diálogo único que substitui confirm/prompt nativos. */
+/* Diálogo único que substitui confirm/prompt nativos. */
 .modal--dialogo{ max-width:34rem; }
 .modal--dialogo h3{ margin-bottom:.5rem; }
 .modal--dialogo .acoes-etapa{ margin-top:1.1rem; }
 .modal--dialogo label{ display:block; margin-top:.9rem; }
 
-/* PROD-007 — separadores entre XP de organização e de consumo responsável. */
+/* Separadores entre XP de organização e de consumo responsável. */
 .item-lista--titulo{
   margin-top:.6rem; padding-top:.7rem;
   border-top:1px solid var(--superficie-borda);

@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     document.getElementById("metaSelecionada").innerHTML = `<option value="">Nenhuma meta</option>` + ctx.metas.map(m => `<option value="${m.id}">${U.escapeHTML(m.name)}</option>`).join("");
   }
-  // UX-HOME: "Atenção necessária": alertas viram tarefas com um verbo
+  // "Atenção necessária": alertas viram tarefas com um verbo
   // concreto. Primeiro o próximo passo; a autonomia da pessoa vem depois, no
   // próprio destino ("o que fazer com isso é decisão sua"). A revisão de
   // previsões vencidas é desenhada à parte por fechamento-ui.js, na mesma seção.

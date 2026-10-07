@@ -9,11 +9,9 @@ window.FinckMoeda = (() => {
   const TETO_CENTAVOS = 1e13;
   const AJUDA = "Digite como você vê o preço: 800, 800,50 ou R$ 800,00.";
   const ERRO = "Digite um valor válido, como R$ 800,00.";
-  // UX-PRECO: o campo aceita o preço do jeito que a pessoa lê na loja.
-  // Antes era centavo a centavo (PROD-002): digitar 800 dava R$ 8,00 e a tela
-  // precisava de uma explicação longa antes de qualquer erro. As duas análises
-  // de UX de 06/10/2026 pediram a troca: "800" agora é R$ 800,00, e a vírgula
-  // (ou o ponto) separa os centavos. Três casas depois do separador são milhar.
+  // O campo aceita o preço do jeito que a pessoa lê na loja: "800" vale
+  // R$ 800,00, e a vírgula (ou o ponto) separa os centavos. Três casas depois
+  // do separador são milhar, não centavo.
   function centavosDeColagem(texto) {
     const limpo = String(texto || "").replace(/[^\d.,]/g, "");
     if (!/\d/.test(limpo)) {

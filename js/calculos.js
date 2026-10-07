@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderResumo();
     renderLista();
   }
-  // UX-HISTORICO: o histórico vira retorno sobre o próprio comportamento:
+  // O histórico vira retorno sobre o próprio comportamento:
   // quantas compras passaram pela análise, quanto tempo de trabalho elas
   // representam e em quantas a decisão foi não comprar na hora.
   function renderResumo() {

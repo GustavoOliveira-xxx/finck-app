@@ -1,4 +1,4 @@
-// UX-MOV: preferência de animação escolhida no Perfil. Fica neste aparelho
+// Preferência de animação escolhida no Perfil. Fica neste aparelho
 // (localStorage), como o próprio prefers-reduced-motion do sistema, e vale
 // para todas as telas: ui-fx.js e finck-fx.js leem a mesma chave.
 window.FinckPreferencias = (() => {

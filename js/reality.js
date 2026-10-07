@@ -1,6 +1,6 @@
 window.FinckReality = (() => {
   const cfg = window.FINCK_CONFIG;
-  // PROD-006 — preço sozinho não separa o barato descartável do caro durável.
+  // Preço sozinho não separa o barato descartável do caro durável.
   // Quantidade e vida útil são opcionais; quando informadas, viram custo por mês
   // de uso, que é o número que muda a conversa sobre consumo.
   function custoDeUso(preco, {quantidade: quantidade = null, mesesDeUso: mesesDeUso = null} = {}) {
@@ -77,7 +77,7 @@ window.FinckReality = (() => {
       alternativas: alternativas(preco)
     };
   }
-  // UX-METAS: "o que eu deixo de fazer se comprar isso?". Além do peso em
+  // "o que eu deixo de fazer se comprar isso?". Além do peso em
   // reais, a compra vira atraso em tempo de calendário: pelo ritmo real de
   // aportes dos últimos 90 dias, ou, sem histórico, pelo ritmo que o prazo
   // da meta exige. Sem nenhum dos dois, fica o equivalente em dias de trabalho.
@@ -137,7 +137,7 @@ window.FinckReality = (() => {
       resto_horas: r
     };
   }
-  // UX-SEMAFORO: o semáforo fala de impacto, não de certo ou errado.
+  // O semáforo fala de impacto, não de certo ou errado.
   const ROTULO_IMPACTO = {
     verde: "Impacto baixo",
     atencao: "Impacto moderado",
@@ -169,7 +169,7 @@ window.FinckReality = (() => {
       frase_sobra: r.renda_livre > 0 ? sobraDepois >= 0 ? `Depois desta compra, ainda sobram ${dinheiro(sobraDepois)} da sua sobra mensal (renda menos despesas fixas).` : `A compra passa a sua sobra mensal em ${dinheiro(Math.abs(sobraDepois))}: a diferença sairia do saldo acumulado.` : "Você não tem sobra mensal depois dos fixos, então a compra sai do saldo acumulado."
     };
   }
-  // UX-COMPARAR: duas opções lado a lado com os mesmos parâmetros (renda,
+  // Duas opções lado a lado com os mesmos parâmetros (renda,
   // jornada, metas). A diferença aparece em reais, em horas de trabalho e,
   // quando as duas têm vida útil, em custo por mês de uso: é ali que o
   // barato às vezes perde para o durável.
@@ -198,7 +198,7 @@ window.FinckReality = (() => {
       inverte: Boolean(melhorPorMes && melhorPorMes.nome !== maisBarata.nome)
     };
   }
-  // UX-MUDOU: ao refazer a análise do mesmo item, o que mudou na conta.
+  // Ao refazer a análise do mesmo item, o que mudou na conta.
   function oQueMudou(anterior, atual) {
     if (!anterior || !atual) {
       return [];
@@ -229,7 +229,7 @@ window.FinckReality = (() => {
     }
     return mudancas;
   }
-  // UX-CATEGORIA: a categoria deixa de ser obrigação e vira confirmação:
+  // A categoria deixa de ser obrigação e vira confirmação:
   // o FinCK sugere pelo nome do item e a pessoa só altera se não for essa.
   const PISTAS_CATEGORIA = [ [ "Eletrônicos", /(?<![\p{L}\p{N}])(celular|smartphone|iphone|galaxy|xiaomi|motorola|redmi|fone|headset|airpods?|earbuds?|notebook|laptop|macbook|computador|pc(?![\p{L}\p{N}])|gamer|monitor|teclado|mouse|tablet|ipad|kindle|tv(?![\p{L}\p{N}])|televis|smart ?tv|console|playstation|ps[45]|xbox|nintendo|switch|caixa de som|jbl|carregador|cabo usb|power ?bank|smartwatch|rel[oó]gio inteligente|apple watch|c[aâ]mera|drone|impressora|roteador|ssd|hd externo|pendrive|placa de v[ií]deo|air ?fryer|fritadeira|liquidificador|micro-?ondas|geladeira|ventilador|ar[- ]condicionado|aspirador|cafeteira)/iu ], [ "Saúde", /(?<![\p{L}\p{N}])(rem[eé]dio|medicamento|farm[aá]cia|consulta|m[eé]dico|dentista|exame|academia|suplemento|whey|vitamina|[oó]culos de grau|lente de contato|plano de sa[uú]de|terapia|psic[oó]log)/iu ], [ "Vestuário", /(?<![\p{L}\p{N}])(t[eê]nis|sapato|sand[aá]lia|chinelo|bota|camis[ae]|camiseta|blusa|cal[cç]a|jeans|bermuda|short|vestido|saia|jaqueta|casaco|moletom|meia|cueca|calcinha|suti[aã]|bon[eé]|chap[eé]u|bolsa|mochila|carteira|cinto|[oó]culos|roupa|nike|adidas|puma)/iu ], [ "Alimentação", /(?<![\p{L}\p{N}])(mercado|supermercado|comida|lanche|pizza|hamb[uú]rguer|ifood|restaurante|caf[eé](?![\p{L}\p{N}])|padaria|a[cç]ougue|feira|chocolate|bebida|cerveja|vinho|refrigerante|marmita|delivery)/iu ], [ "Transporte", /(?<![\p{L}\p{N}])(carro|moto|bicicleta|bike|patinete|uber|99(?![\p{L}\p{N}])|t[aá]xi|gasolina|combust[ií]vel|[oô]nibus|metr[oô]|passagem|pneu|capacete|estacionamento|ped[aá]gio|seguro do carro)/iu ], [ "Moradia", /(?<![\p{L}\p{N}])(aluguel|condom[ií]nio|sof[aá]|cama|colch[aã]o|guarda-?roupa|arm[aá]rio|mesa|cadeira|estante|cortina|tapete|lumin[aá]ria|panela|reforma|tinta|ferramenta|furadeira|m[oó]vel|m[oó]veis|decora[cç][aã]o)/iu ], [ "Educação", /(?<![\p{L}\p{N}])(livro|curso|faculdade|mensalidade escolar|apostila|caderno|material escolar|idioma|ingl[eê]s|udemy|alura|certifica[cç][aã]o|vestibular|enem)/iu ], [ "Lazer", /(?<![\p{L}\p{N}])(jogo|game|steam|ingresso|show|cinema|teatro|viagem|hotel|passeio|netflix|spotify|streaming|assinatura|brinquedo|lego|bola|camping|festa|presente|instrumento|viol[aã]o|guitarra)/iu ] ];
   function inferirCategoria(nome) {

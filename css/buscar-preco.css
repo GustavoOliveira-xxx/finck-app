@@ -327,7 +327,7 @@
   .busca-preco__ajuda{ flex:1 1 100%; text-align:left; }
 }
 
-/* PROD-009 — a busca automática é extra; o aviso não pode parecer erro. */
+/* A busca automática é extra; o aviso não pode parecer erro. */
 .busca-preco__aviso--opcional{
   border-left:3px solid var(--texto-fraquissimo);
   color:var(--texto-fraco);

@@ -45,7 +45,7 @@
       }
     });
   }
-  // UX-PERF: o cofre é assinatura da marca, mas não pode parecer travamento.
+  // O cofre é assinatura da marca, mas não pode parecer travamento.
   // Na primeira tela da sessão ele abre inteiro; nas seguintes, só um relance,
   // porque a pessoa já viu a abertura e quer o conteúdo.
   const primeiraDaSessao = (() => {
@@ -186,7 +186,7 @@
       corpo.style.setProperty("--py", py.toFixed(3));
     };
     const agendar = criarAgendador(aplicar);
-    // UX-A11Y: o prisma também gira pelo teclado: setas trocam de face.
+    // O prisma também gira pelo teclado: setas trocam de face.
     cena.tabIndex = 0;
     cena.addEventListener("keydown", e => {
       const passo = {
