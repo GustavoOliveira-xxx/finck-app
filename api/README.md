@@ -578,3 +578,17 @@ O primeiro roda sem rede: validação do pedido, prompt, esquemas,
 guarda-corpo, recusa, resposta cortada, cache e a rota inteira com o SDK
 oficial falando com uma API simulada. O segundo gera um plano e responde uma
 pergunta de verdade, e mostra tempo e resultado.
+
+## FINCK AI (OpenRouter, modelos gratuitos)
+
+`ia.js` é a rota `/api/ia`: recebe `{ "pergunta": "..." }` por POST e
+devolve `{ resposta, modelo }`. Usa o roteador `openrouter/free` do
+OpenRouter, que escolhe sozinho um modelo gratuito disponível, então não
+depende de um modelo específico continuar no ar.
+
+- `OPENROUTER_API_KEY`: obrigatória. Chave do painel do OpenRouter.
+- `IA_TETO_DIA`: opcional. Padrão 40 chamadas por dia, abaixo das 50
+  diárias do plano gratuito, para sobrar margem nos testes.
+
+Um `GET /api/ia` responde se a chave está configurada. A página
+`teste-ia.html` serve só para conferir a conexão de ponta a ponta.

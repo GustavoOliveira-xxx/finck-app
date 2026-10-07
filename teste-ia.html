@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste FINCK AI</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f1115; color: #e8e8e8; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 22px; }
+    textarea { width: 100%; height: 100px; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #1a1d23; color: #e8e8e8; font-size: 15px; box-sizing: border-box; }
+    button { margin-top: 10px; padding: 10px 18px; border: none; border-radius: 8px; background: #4ade80; color: #0f1115; font-weight: bold; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    #saida { margin-top: 20px; padding: 14px; border-radius: 8px; background: #1a1d23; white-space: pre-wrap; min-height: 40px; }
+    #modelo { margin-top: 8px; font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Teste da FINCK AI</h1>
+  <p>Página só para confirmar a conexão FINCK → Vercel → OpenRouter.</p>
+
+  <textarea id="pergunta">Me dê 3 dicas curtas para economizar dinheiro no mês.</textarea>
+  <button id="enviar">Perguntar</button>
+
+  <div id="saida">A resposta vai aparecer aqui.</div>
+  <div id="modelo"></div>
+
+  <script>
+    const botao = document.getElementById('enviar');
+    const saida = document.getElementById('saida');
+    const modelo = document.getElementById('modelo');
+
+    botao.addEventListener('click', async () => {
+      const pergunta = document.getElementById('pergunta').value;
+      botao.disabled = true;
+      saida.textContent = 'Pensando...';
+      modelo.textContent = '';
+
+      try {
+        const r = await fetch('/api/ia', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pergunta })
+        });
+        const dados = await r.json();
+
+        if (dados.resposta) {
+          saida.textContent = dados.resposta;
+          modelo.textContent = 'Modelo usado: ' + dados.modelo;
+        } else {
+          saida.textContent = 'Erro: ' + (dados.erro || 'resposta vazia');
+        }
+      } catch (e) {
+        saida.textContent = 'Erro de conexão: ' + e.message;
+      } finally {
+        botao.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
