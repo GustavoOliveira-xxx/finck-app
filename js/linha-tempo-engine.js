@@ -1,0 +1,361 @@
+// Linha do tempo da compra: o que uma compra faz com os próximos meses.
+//
+// O FinCK of Reality mostra a compra como uma foto (horas de trabalho, peso
+// no mês). Esta camada mostra o filme: mês a mês, com a renda, as despesas
+// fixas, os gastos do dia a dia, as parcelas que a pessoa já tem e a parcela
+// nova. E testa o imprevisto: se num mês faltar dinheiro, a diferença vira
+// dívida no cartão, que cresce com juros compostos.
+//
+// Tudo aqui é conta determinística, sem IA: as mesmas entradas dão sempre o
+// mesmo resultado, e cada fórmula está escrita em "Como calculamos" na tela.
+// A IA só explica os números prontos (a pessoa escolhe pedir).
+//
+// Regra de cada mês i (i = 1 é o mês que vem):
+//   sobra_i  = renda − fixos − dia a dia − parcelas existentes_i − parcela nova_i − imprevisto_i
+//   caixa_i  = caixa_(i−1) + sobra_i − pagamento da dívida
+//   Se o caixa ficaria negativo, a falta vira dívida no cartão.
+//   Dívida: 1º mês com juros do rotativo, depois do parcelamento da fatura
+//   (regra do Banco Central desde 2017), e o total de juros limitado a 100%
+//   do valor devido (Lei 14.690/2023). Toda sobra seguinte quita a dívida.
+// O mês 0 é hoje: só sai do saldo o que é pago na hora (compra à vista).
+
+window.FinckLinhaTempo = (() => {
+  const cfg = window.FINCK_CONFIG || {};
+  const num = v => Number(v || 0);
+  const centavos = v => Math.round(num(v) * 100) / 100;
+
+  const PADRAO = {
+    HORIZONTE_MESES: 12,
+    HORIZONTE_MAX: 24,
+    PARCELAS_PADRAO: 10,
+    IMPREVISTO_PCT_RENDA: 15,
+    IMPREVISTO_MES_PADRAO: 3,
+    JANELA_MESES: 3,
+    CARTAO: { ROTATIVO_AA: 436.2, PARCELADO_AA: 191.4, TETO_JUROS_PCT: 100, FONTE: "" }
+  };
+  const P = () => ({ ...PADRAO, ...(cfg.LINHA_DO_TEMPO || {}), CARTAO: { ...PADRAO.CARTAO, ...((cfg.LINHA_DO_TEMPO || {}).CARTAO || {}) } });
+
+  // Taxa anual em % → taxa mensal equivalente (juros compostos):
+  // (1 + a)^(1/12) − 1. Ex.: 436,2% ao ano ≈ 15,0% ao mês.
+  const taxaMensal = anualPct => Math.pow(1 + num(anualPct) / 100, 1 / 12) - 1;
+
+  // Parcela pela Tabela Price: PMT = V · i / (1 − (1 + i)^−n). Sem juros,
+  // é só V / n.
+  function parcelaPrice(valor, n, i) {
+    const q = Math.max(1, Math.floor(num(n)));
+    const taxa = num(i);
+    if (taxa <= 0) return num(valor) / q;
+    return num(valor) * taxa / (1 - Math.pow(1 + taxa, -q));
+  }
+
+  const chaveMes = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const mesMais = (hoje, n) => new Date(hoje.getFullYear(), hoje.getMonth() + n, 1);
+  const rotuloMes = d => `${d.toLocaleDateString(cfg.LOCALE || "pt-BR", { month: "short" }).replace(".", "")}/${String(d.getFullYear()).slice(2)}`;
+
+  // Gasto do dia a dia: saídas que não são despesa fixa, parcela nem
+  // aporte em meta, na média dos últimos meses completos com movimento.
+  const ehDiaADia = t => t.type === "saida" && !t.goal_id && !t.recurring_id &&
+    t.source !== "recorrente" && t.source !== "parcela" && !t.reversed_at;
+
+  function gastoDiaADiaTipico(transacoes = [], hoje = new Date(), quantos = P().JANELA_MESES) {
+    const lista = (transacoes || []).filter(ehDiaADia);
+    const porMes = new Map();
+    lista.forEach(t => {
+      const m = String(t.date || "").slice(0, 7);
+      porMes.set(m, (porMes.get(m) || 0) + num(t.amount));
+    });
+    const comMovimento = new Set((transacoes || []).map(t => String(t.date || "").slice(0, 7)));
+    const meses = [];
+    for (let i = 1; i <= 12 && meses.length < quantos; i++) {
+      const chave = chaveMes(mesMais(hoje, -i));
+      if (comMovimento.has(chave)) meses.push(chave);
+    }
+    if (!meses.length) {
+      // Ninguém com mês completo registrado ainda: vale o que já saiu neste
+      // mês, sem extrapolar, marcado como parcial para a pessoa ajustar.
+      const atual = porMes.get(chaveMes(hoje)) || 0;
+      return { valor: centavos(atual), meses: 0, estimado: atual > 0, parcial: atual > 0 };
+    }
+    const total = meses.reduce((s, m) => s + (porMes.get(m) || 0), 0);
+    return { valor: centavos(total / meses.length), meses: meses.length, estimado: true, parcial: false };
+  }
+
+  // Retrato de partida, a partir do contexto do app (FinckFinance).
+  function base(ctx = {}, { hoje = new Date(), horizonte = P().HORIZONTE_MESES } = {}) {
+    const H = Math.max(1, Math.min(P().HORIZONTE_MAX, Math.floor(horizonte)));
+    const Plano = window.FinckPlano;
+    // parcelasPorMes começa no mês de hoje: índice 0 = mês atual.
+    const mapa = Plano ? Plano.parcelasPorMes(ctx.parcelamentos || [], H + 1, hoje, ctx.pagamentos || []) : {};
+    const meses = [];
+    const parcelas = [];
+    for (let i = 0; i <= H; i++) {
+      const d = mesMais(hoje, i);
+      meses.push({ indice: i, chave: chaveMes(d), rotulo: rotuloMes(d) });
+      parcelas.push(centavos(mapa[chaveMes(d)] || 0));
+    }
+    const diaADia = gastoDiaADiaTipico(ctx.transacoesRealizadas || ctx.transacoes || [], hoje);
+    return {
+      renda: num(ctx.perfil?.income_monthly ?? ctx.renda),
+      fixos: num(ctx.despesasFixas),
+      dia_a_dia: diaADia.valor,
+      dia_a_dia_meses: diaADia.meses,
+      dia_a_dia_estimado: diaADia.estimado,
+      dia_a_dia_parcial: Boolean(diaADia.parcial),
+      saldo: num(ctx.saldo),
+      parcelas_existentes: parcelas,
+      meses: meses,
+      horizonte: H
+    };
+  }
+
+  // Detalhes da compra numa forma de pagamento.
+  function detalharCompra(compra = {}) {
+    const preco = num(compra.preco);
+    const forma = compra.forma || "nenhuma";
+    if (forma === "avista") {
+      const desconto = Math.min(95, Math.max(0, num(compra.desconto_avista))) / 100;
+      const total = centavos(preco * (1 - desconto));
+      return { forma, preco, total, hoje: total, parcela: 0, parcelas: 0, juros_parcelamento: 0 };
+    }
+    if (forma === "parcelado") {
+      const n = Math.max(1, Math.floor(num(compra.parcelas) || P().PARCELAS_PADRAO));
+      const i = Math.max(0, num(compra.juros_am)) / 100;
+      const parcela = centavos(parcelaPrice(preco, n, i));
+      const total = centavos(parcela * n);
+      return { forma, preco, total, hoje: 0, parcela, parcelas: n, juros_parcelamento: centavos(Math.max(0, total - preco)) };
+    }
+    return { forma: "nenhuma", preco: 0, total: 0, hoje: 0, parcela: 0, parcelas: 0, juros_parcelamento: 0 };
+  }
+
+  // O mês a mês de um cenário.
+  function simular(b, compra = {}, { imprevisto = null, taxas = null } = {}) {
+    const c = detalharCompra(compra);
+    const cartao = P().CARTAO;
+    const t = taxas || { rotativo: taxaMensal(cartao.ROTATIVO_AA), parcelado: taxaMensal(cartao.PARCELADO_AA) };
+    const teto = num(cartao.TETO_JUROS_PCT) / 100;
+    const imp = imprevisto && num(imprevisto.valor) > 0 ? { valor: num(imprevisto.valor), mes: Math.max(1, Math.floor(num(imprevisto.mes) || 1)) } : null;
+
+    let caixa = num(b.saldo) - c.hoje;
+    let divida = 0;
+    let principal = 0;
+    let jurosAcumulados = 0;
+    let mesesDeJuros = 0;
+    let jurosTotal = 0;
+    if (caixa < 0) {
+      divida = -caixa;
+      principal = divida;
+      caixa = 0;
+    }
+    const linhas = [ {
+      indice: 0, chave: b.meses[0].chave, rotulo: b.meses[0].rotulo, hoje: true,
+      pago_hoje: c.hoje, juros: 0, divida: centavos(divida), caixa: centavos(caixa)
+    } ];
+
+    for (let i = 1; i <= b.horizonte; i++) {
+      const m = b.meses[i];
+      const parcelaNova = c.forma === "parcelado" && i <= c.parcelas ? c.parcela : 0;
+      const existentes = num(b.parcelas_existentes[i]);
+      const imprevistoMes = imp && imp.mes === i ? imp.valor : 0;
+      const sobra = b.renda - b.fixos - b.dia_a_dia - existentes - parcelaNova - imprevistoMes;
+
+      // Juros sobre a dívida que veio do mês anterior.
+      let juros = 0;
+      if (divida > 0) {
+        const taxa = mesesDeJuros === 0 ? t.rotativo : t.parcelado;
+        juros = divida * taxa;
+        const limite = Math.max(0, principal * teto - jurosAcumulados);
+        juros = Math.min(juros, limite);
+        divida += juros;
+        jurosAcumulados += juros;
+        jurosTotal += juros;
+        mesesDeJuros += 1;
+      }
+
+      caixa += sobra;
+      let pagamento = 0;
+      if (caixa < 0) {
+        if (divida <= 0.005) mesesDeJuros = 0;
+        divida += -caixa;
+        principal += -caixa;
+        caixa = 0;
+      } else if (divida > 0) {
+        pagamento = Math.min(divida, caixa);
+        divida -= pagamento;
+        caixa -= pagamento;
+        if (divida <= 0.005) {
+          divida = 0;
+          principal = 0;
+          jurosAcumulados = 0;
+          mesesDeJuros = 0;
+        }
+      }
+
+      linhas.push({
+        indice: i, chave: m.chave, rotulo: m.rotulo,
+        renda: centavos(b.renda), fixos: centavos(b.fixos), dia_a_dia: centavos(b.dia_a_dia),
+        parcelas_existentes: centavos(existentes), parcela_nova: centavos(parcelaNova),
+        imprevisto: centavos(imprevistoMes), sobra: centavos(sobra),
+        juros: centavos(juros), pagamento_divida: centavos(pagamento),
+        divida: centavos(divida), caixa: centavos(caixa)
+      });
+    }
+
+    const meses = linhas.slice(1);
+    const comDivida = linhas.filter(l => l.divida > 0);
+    const apertado = meses.reduce((pior, l) => (l.sobra < pior.sobra ? l : pior), meses[0]);
+    return {
+      compra: c,
+      imprevisto: imp,
+      linhas: linhas,
+      resumo: {
+        juros_cartao: centavos(jurosTotal),
+        entra_no_cartao: comDivida.length > 0,
+        primeiro_mes_divida: comDivida[0] || null,
+        meses_com_divida: comDivida.length,
+        maior_divida: centavos(Math.max(0, ...linhas.map(l => l.divida))),
+        divida_final: centavos(linhas[linhas.length - 1].divida),
+        caixa_final: centavos(linhas[linhas.length - 1].caixa),
+        mes_mais_apertado: apertado,
+        custo_total: centavos(c.total + jurosTotal)
+      }
+    };
+  }
+
+  // Maior imprevisto que cabe no mês k sem virar dívida: um gasto no mês k
+  // tira o mesmo valor do caixa de todos os meses seguintes, então a margem
+  // é o menor caixa de k em diante (num cenário que ainda não tem dívida).
+  function margemDeSeguranca(cenario, mes = 1) {
+    if (cenario.resumo.entra_no_cartao) return { valor: 0, mes: cenario.resumo.primeiro_mes_divida };
+    const k = Math.max(1, Math.floor(num(mes) || 1));
+    const seguintes = cenario.linhas.filter(l => l.indice >= k);
+    if (!seguintes.length) return { valor: 0, mes: null };
+    const pior = seguintes.reduce((a, l) => (l.caixa < a.caixa ? l : a), seguintes[0]);
+    return { valor: centavos(Math.max(0, pior.caixa)), mes: pior };
+  }
+
+  // Juntar antes e comprar à vista: em quantos meses o caixa, sem a
+  // compra, chega ao valor (e ainda sobra o que a pessoa tinha de folga).
+  function juntarAntes(semCompra, alvo) {
+    const valor = num(alvo);
+    if (valor <= 0) return { meses: 0, linha: semCompra.linhas[0] };
+    const linha = semCompra.linhas.find(l => l.caixa >= valor && !(l.divida > 0));
+    if (linha) return { meses: linha.indice, linha: linha };
+    const sobraMedia = semCompra.linhas.slice(1).reduce((s, l) => s + l.sobra, 0) / Math.max(1, semCompra.linhas.length - 1);
+    if (sobraMedia <= 0) return { meses: null, linha: null };
+    const falta = valor - semCompra.resumo.caixa_final;
+    return { meses: semCompra.linhas.length - 1 + Math.ceil(falta / sobraMedia), linha: null, alem_do_horizonte: true };
+  }
+
+  // A análise completa que a tela mostra.
+  function analisar(b, entrada = {}) {
+    const forma = entrada.forma === "avista" ? "avista" : "parcelado";
+    const compraAvista = { preco: entrada.preco, forma: "avista", desconto_avista: entrada.desconto_avista };
+    const compraParcelada = { preco: entrada.preco, forma: "parcelado", parcelas: entrada.parcelas, juros_am: entrada.juros_am };
+    const imp = entrada.imprevisto && num(entrada.imprevisto.valor) > 0 ? entrada.imprevisto : null;
+
+    const cenario = compra => ({
+      normal: simular(b, compra),
+      imprevisto: imp ? simular(b, compra, { imprevisto: imp }) : null
+    });
+    const sem = cenario({ forma: "nenhuma" });
+    const avista = cenario(compraAvista);
+    const parcelado = cenario(compraParcelada);
+    const escolhido = forma === "avista" ? avista : parcelado;
+    const outro = forma === "avista" ? parcelado : avista;
+
+    // Juros que só existem por causa da compra: a mesma vida (e o mesmo
+    // imprevisto), com e sem a compra. Custo real = total pago + esses juros.
+    const jurosExtras = (com, semC) => centavos(Math.max(0, com.resumo.juros_cartao - semC.resumo.juros_cartao));
+
+    const limiteParcelas = num((cfg.DIAGNOSTICO || {}).PARCELAS_LIMITE_PCT || 30);
+    const pesoParcelas = c => {
+      if (b.renda <= 0) return 0;
+      return Math.max(0, ...c.normal.linhas.slice(1).map(l => (l.parcelas_existentes + l.parcela_nova) / b.renda * 100));
+    };
+
+    const resumoDe = c => ({
+      forma: c.normal.compra.forma,
+      total: c.normal.compra.total,
+      parcela: c.normal.compra.parcela,
+      parcelas: c.normal.compra.parcelas,
+      juros_parcelamento: c.normal.compra.juros_parcelamento,
+      // À vista só é à vista de verdade se o saldo de hoje cobre o valor.
+      cabe_hoje: c.normal.compra.forma !== "avista" || num(b.saldo) >= c.normal.compra.total,
+      cabe_sem_imprevisto: !c.normal.resumo.entra_no_cartao,
+      mes_mais_apertado: c.normal.resumo.mes_mais_apertado,
+      margem_geral: margemDeSeguranca(c.normal, 1),
+      margem_no_mes_do_imprevisto: imp ? margemDeSeguranca(c.normal, imp.mes) : null,
+      com_imprevisto: c.imprevisto ? c.imprevisto.resumo : null,
+      juros_da_compra_normal: jurosExtras(c.normal, sem.normal),
+      custo_real_normal: centavos(c.normal.compra.total + jurosExtras(c.normal, sem.normal)),
+      juros_da_compra: c.imprevisto ? jurosExtras(c.imprevisto, sem.imprevisto) : 0,
+      custo_real: c.imprevisto ? centavos(c.normal.compra.total + jurosExtras(c.imprevisto, sem.imprevisto)) : centavos(c.normal.compra.total + jurosExtras(c.normal, sem.normal)),
+      peso_parcelas_pct: pesoParcelas(c)
+    });
+
+    const sobraLivre = b.renda - b.fixos - b.dia_a_dia;
+    const alertas = [];
+    if (sobraLivre <= 0) {
+      alertas.push("Mesmo sem esta compra, renda menos despesas fixas e gastos do dia a dia já não fecha. Qualquer compra sai da reserva ou vira dívida.");
+    }
+    const r = resumoDe(escolhido);
+    if (r.peso_parcelas_pct > limiteParcelas) {
+      alertas.push(`No mês mais carregado, as parcelas somadas chegam a ${Math.round(r.peso_parcelas_pct)}% da renda, acima da referência de ${limiteParcelas}%.`);
+    }
+
+    return {
+      base: b,
+      entrada: { ...entrada, forma, imprevisto: imp },
+      taxas: { rotativo_am: taxaMensal(P().CARTAO.ROTATIVO_AA), parcelado_am: taxaMensal(P().CARTAO.PARCELADO_AA), ...P().CARTAO },
+      sobra_livre: centavos(sobraLivre),
+      sem_compra: sem,
+      escolhido: { ...escolhido, resumo: r },
+      outro: { ...outro, resumo: resumoDe(outro) },
+      juntar_antes: juntarAntes(sem.normal, avista.normal.compra.total),
+      alertas: alertas
+    };
+  }
+
+  // Resumo em texto para a FINCK AI explicar. Só números já calculados:
+  // a IA não refaz conta nenhuma.
+  function paraIA(a, { item = "o item", moeda = v => `R$ ${num(v).toFixed(2)}` } = {}) {
+    const e = a.escolhido.resumo;
+    const o = a.outro.resumo;
+    const forma = r => (r.forma === "avista" ? `à vista por ${moeda(r.total)}${r.cabe_hoje ? "" : " (o saldo de hoje não cobre)"}` : `em ${r.parcelas}x de ${moeda(r.parcela)} (total ${moeda(r.total)})`);
+    const linhas = [
+      `Compra: ${item}, preço ${moeda(a.entrada.preco)}. Forma escolhida: ${forma(e)}. Alternativa: ${forma(o)}.`,
+      `Mês típico da pessoa: renda ${moeda(a.base.renda)}, despesas fixas ${moeda(a.base.fixos)}, gastos do dia a dia ${moeda(a.base.dia_a_dia)}, sobra livre ${moeda(a.sobra_livre)}. Saldo hoje ${moeda(a.base.saldo)}.`,
+      `Mês mais apertado com a compra: ${e.mes_mais_apertado?.rotulo}, sobra de ${moeda(e.mes_mais_apertado?.sobra)}.`,
+      e.cabe_sem_imprevisto
+        ? `Sem imprevisto, a compra cabe sem dívida. Maior imprevisto que aguenta sem entrar no cartão: ${moeda(e.margem_geral.valor)} (pior mês: ${e.margem_geral.mes?.rotulo || "-"}).`
+        : `Mesmo sem imprevisto, a compra leva a dívida no cartão: juros de ${moeda(a.escolhido.normal.resumo.juros_cartao)}.`
+    ];
+    if (a.entrada.imprevisto && e.com_imprevisto) {
+      const ci = e.com_imprevisto;
+      linhas.push(ci.entra_no_cartao
+        ? `Com um imprevisto de ${moeda(a.entrada.imprevisto.valor)} no mês ${a.entrada.imprevisto.mes}: entra no cartão, dívida máxima ${moeda(ci.maior_divida)}, ${ci.meses_com_divida} meses com dívida, juros de ${moeda(ci.juros_cartao)}. Juros que existem por causa da compra: ${moeda(e.juros_da_compra)}. Custo real da compra nesse cenário: ${moeda(e.custo_real)}.`
+        : `Com um imprevisto de ${moeda(a.entrada.imprevisto.valor)} no mês ${a.entrada.imprevisto.mes}: ainda cabe sem dívida.`);
+      if (o.com_imprevisto) {
+        linhas.push(`Na alternativa (${o.forma === "avista" ? "à vista" : "parcelado"}), com o mesmo imprevisto: ${o.com_imprevisto.entra_no_cartao ? `juros de ${moeda(o.com_imprevisto.juros_cartao)}, custo real ${moeda(o.custo_real)}` : "cabe sem dívida"}.`);
+      }
+    }
+    const j = a.juntar_antes;
+    if (j.meses === 0) linhas.push("Juntar antes: o saldo de hoje já cobre a compra à vista.");
+    else if (j.meses) linhas.push(`Juntar antes: com a sobra atual, dá para pagar à vista em cerca de ${j.meses} meses.`);
+    a.alertas.forEach(t => linhas.push(`Alerta: ${t}`));
+    return linhas.join("\n");
+  }
+
+  return {
+    taxaMensal,
+    parcelaPrice,
+    gastoDiaADiaTipico,
+    base,
+    detalharCompra,
+    simular,
+    margemDeSeguranca,
+    juntarAntes,
+    analisar,
+    paraIA
+  };
+})();

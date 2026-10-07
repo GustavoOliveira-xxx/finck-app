@@ -4024,6 +4024,117 @@ window.FinckTestes = (() => {
       esperar(p.metas_sugeridas.every(m => m.valor_mensal <= folga)).aSerVerdadeiro();
     });
   });
+  descrever("Linha do tempo da compra (FinckLinhaTempo)", () => {
+    const L = window.FinckLinhaTempo;
+    const hoje = new Date(2026, 9, 7);
+    // O exemplo da geladeira: renda 2.500, fixos 1.600, dia a dia 500,
+    // sobra livre de 400 por mês, saldo zero.
+    const ctx = (extra = {}) => ({
+      perfil: { income_monthly: 2500 },
+      despesasFixas: 1600,
+      saldo: 0,
+      parcelamentos: [],
+      pagamentos: [],
+      transacoesRealizadas: [
+        { type: "saida", amount: 500, date: "2026-09-10", category: "Mercado" },
+        { type: "saida", amount: 500, date: "2026-08-10", category: "Mercado" },
+        { type: "saida", amount: 500, date: "2026-07-10", category: "Mercado" },
+        { type: "saida", amount: 1600, date: "2026-09-05", source: "recorrente" },
+        { type: "saida", amount: 300, date: "2026-09-06", source: "parcela" },
+        { type: "saida", amount: 200, date: "2026-09-07", goal_id: "m1" }
+      ],
+      ...extra
+    });
+    teste("taxa anual vira mensal por juros compostos", () => {
+      esperar(L.taxaMensal(436.2) * 100).aSerPerto(15.02, 2);
+      esperar(L.taxaMensal(191.4) * 100).aSerPerto(9.32, 2);
+      esperar(L.taxaMensal(0)).aSer(0);
+    });
+    teste("parcela pela Tabela Price, e V/n sem juros", () => {
+      esperar(L.parcelaPrice(3000, 10, 0)).aSer(300);
+      esperar(L.parcelaPrice(1000, 12, .02)).aSerPerto(94.56, 2);
+    });
+    teste("dia a dia ignora fixos, parcelas e aportes em metas", () => {
+      const g = L.gastoDiaADiaTipico(ctx().transacoesRealizadas, hoje);
+      esperar(g.valor).aSer(500);
+      esperar(g.meses).aSer(3);
+      esperar(L.gastoDiaADiaTipico([], hoje).estimado).aSerFalso();
+      const soEsteMes = L.gastoDiaADiaTipico([ { type: "saida", amount: 120, date: "2026-10-03" } ], hoje);
+      esperar(soEsteMes.valor).aSer(120);
+      esperar(soEsteMes.parcial).aSerVerdadeiro();
+    });
+    teste("parcelas que a pessoa já tem entram nos meses certos", () => {
+      const b = L.base(ctx({
+        parcelamentos: [ { id: "p1", total_amount: 600, installments_count: 3, first_due_date: "2026-11-10", paid_count: 0 } ]
+      }), { hoje: hoje });
+      esperar(b.parcelas_existentes[0]).aSer(0);
+      esperar(b.parcelas_existentes[1]).aSer(200);
+      esperar(b.parcelas_existentes[3]).aSer(200);
+      esperar(b.parcelas_existentes[4]).aSer(0);
+    });
+    teste("sem imprevisto, a geladeira em 10x cabe e o mês mais apertado sobra 100", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10 });
+      esperar(a.escolhido.resumo.cabe_sem_imprevisto).aSerVerdadeiro();
+      esperar(a.escolhido.resumo.mes_mais_apertado.sobra).aSer(100);
+      esperar(a.escolhido.resumo.margem_geral.valor).aSer(100);
+      esperar(a.escolhido.resumo.custo_real).aSer(3000);
+    });
+    teste("imprevisto de 400 no 1º mês: rotativo, depois parcelado, R$ 91,35 de juros", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10, imprevisto: { valor: 400, mes: 1 } });
+      const linhas = a.escolhido.imprevisto.linhas;
+      esperar(linhas[1].divida).aSer(300);
+      esperar(linhas[2].juros).aSerPerto(45.06, 2);
+      esperar(linhas[3].juros).aSerPerto(22.84, 2);
+      esperar(a.escolhido.resumo.juros_da_compra).aSerPerto(91.35, 2);
+      esperar(a.escolhido.resumo.custo_real).aSerPerto(3091.35, 2);
+      esperar(a.escolhido.resumo.com_imprevisto.meses_com_divida).aSer(4);
+    });
+    teste("sem a compra, o mesmo imprevisto não gera juros", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10, imprevisto: { valor: 400, mes: 1 } });
+      esperar(a.sem_compra.imprevisto.resumo.juros_cartao).aSer(0);
+    });
+    teste("juros do cartão nunca passam de 100% do valor devido", () => {
+      const b = L.base(ctx({ despesasFixas: 2000 }), { hoje: hoje });
+      const s = L.simular(b, { preco: 1000, forma: "avista" });
+      const devido = 1000;
+      esperar(s.resumo.juros_cartao <= devido * 1.0001).aSerVerdadeiro();
+    });
+    teste("à vista sem saldo para cobrir é marcado como não cabe hoje", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10 });
+      esperar(a.outro.resumo.forma).aSer("avista");
+      esperar(a.outro.resumo.cabe_hoje).aSerFalso();
+      const comSaldo = L.analisar(L.base(ctx({ saldo: 5000 }), { hoje: hoje }), { preco: 3000, forma: "avista" });
+      esperar(comSaldo.escolhido.resumo.cabe_hoje).aSerVerdadeiro();
+    });
+    teste("juntar antes: 400 por mês chega a 3.000 no 8º mês", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10 });
+      esperar(a.juntar_antes.meses).aSer(8);
+    });
+    teste("desconto à vista e juros no parcelamento mudam o total", () => {
+      const avista = L.detalharCompra({ preco: 2000, forma: "avista", desconto_avista: 10 });
+      esperar(avista.total).aSer(1800);
+      const parc = L.detalharCompra({ preco: 1000, forma: "parcelado", parcelas: 12, juros_am: 2 });
+      esperar(parc.juros_parcelamento > 0).aSerVerdadeiro();
+    });
+    teste("parcelas somadas acima de 30% da renda geram alerta", () => {
+      const b = L.base(ctx({ saldo: 10000 }), { hoje: hoje });
+      const a = L.analisar(b, { preco: 9000, forma: "parcelado", parcelas: 10 });
+      esperar(a.alertas.some(t => t.includes("parcelas somadas"))).aSerVerdadeiro();
+    });
+    teste("resumo para a IA leva só números prontos", () => {
+      const b = L.base(ctx(), { hoje: hoje });
+      const a = L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10, imprevisto: { valor: 400, mes: 1 } });
+      const texto = L.paraIA(a, { item: "geladeira" });
+      esperar(texto).aConter("geladeira");
+      esperar(texto).aConter("Custo real");
+      esperar(texto.length < 1900).aSerVerdadeiro();
+    });
+  });
   async function rodar(aoAtualizar) {
     const resultado = {
       total: 0,

@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="css/buscar-preco.css">
   <link rel="stylesheet" href="css/impacto-ambiental.css">
   <link rel="stylesheet" href="css/clareza.css">
+  <link rel="stylesheet" href="css/linha-tempo.css">
 </head>
 <body data-page="reality">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -192,6 +193,52 @@
         <div id="impactoMetas"></div>
       </div>
 
+      <!-- Linha do tempo da compra: o que a compra faz com os próximos meses,
+           com as parcelas que a pessoa já tem e um imprevisto de teste.
+           Contas em js/linha-tempo-engine.js; tela em js/linha-tempo.js. -->
+      <div class="bloco-interno linha-tempo" id="blocoLinhaTempo" hidden>
+        <h4>E nos próximos meses?</h4>
+        <p class="descricao">A compra não termina no dia em que você paga. Veja, mês a mês, como ela convive com a sua renda, as despesas fixas, os gastos do dia a dia e as parcelas que você já tem. E teste o que acontece se aparecer um imprevisto.</p>
+        <form id="formLinhaTempo" class="linha-tempo__controles" novalidate>
+          <fieldset class="linha-tempo__forma">
+            <legend>Como você pagaria?</legend>
+            <div class="linha-tempo__opcoes">
+              <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="parcelado" checked> <span>Parcelado</span></label>
+              <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="avista"> <span>À vista</span></label>
+            </div>
+          </fieldset>
+          <div class="linha-dupla" data-lt-parcelado>
+            <label>Parcelas
+              <input type="number" id="ltParcelas" min="1" max="24" step="1" value="10" inputmode="numeric">
+            </label>
+            <label>Juros do parcelamento (% ao mês)
+              <input type="number" id="ltJuros" min="0" max="20" step="0.01" value="0" inputmode="decimal" aria-describedby="ajudaLtJuros">
+              <small class="ajuda-campo" id="ajudaLtJuros">Deixe 0 se for "sem juros".</small>
+            </label>
+          </div>
+          <label data-lt-avista hidden>Desconto à vista (%)
+            <input type="number" id="ltDesconto" min="0" max="95" step="0.5" value="0" inputmode="decimal">
+          </label>
+          <label>Gastos do dia a dia por mês
+            <input type="text" inputmode="decimal" data-moeda id="ltDiaADia" aria-describedby="ajudaLtDiaADia">
+            <small class="ajuda-campo" id="ajudaLtDiaADia"></small>
+          </label>
+          <fieldset class="linha-tempo__imprevisto">
+            <legend>E se aparecer um imprevisto?</legend>
+            <div class="linha-dupla">
+              <label>Valor do imprevisto
+                <input type="text" inputmode="decimal" data-moeda id="ltImprevisto" aria-describedby="ajudaLtImprevisto">
+              </label>
+              <label>Em qual mês
+                <select id="ltMesImprevisto"></select>
+              </label>
+            </div>
+            <small class="ajuda-campo" id="ajudaLtImprevisto">Um conserto, um remédio, uma conta que veio maior. Deixe zero para ver só a compra.</small>
+          </fieldset>
+        </form>
+        <div id="linhaTempoResultado" aria-live="polite"></div>
+      </div>
+
       <h4 class="titulo-secao-ods">Sustentabilidade <span class="selo-ods12" title="Objetivo de Desenvolvimento Sustentável 12: consumo e produção responsáveis">ODS 12</span></h4>
       <p class="descricao descricao--ods">Para enriquecer a decisão, não para interrompê-la.</p>
 
@@ -318,6 +365,8 @@
   <script src="js/nav.js"></script>
   <script src="js/ia-cliente.js"></script>
   <script src="js/impacto-ambiental.js"></script>
+  <script src="js/linha-tempo-engine.js"></script>
+  <script src="js/linha-tempo.js"></script>
   <script src="js/reality-page.js"></script>
   <script src="js/imagem-print.js"></script>
   <script src="js/buscar-preco.js"></script>

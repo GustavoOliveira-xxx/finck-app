@@ -212,6 +212,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderIndicadores();
       renderOrcamento();
       renderMetas();
+      // O filme da compra: os próximos meses, parcelas e o teste do imprevisto.
+      window.FinckLinhaTempoUI?.mostrar({
+        ctx: ctx,
+        item: item_name,
+        preco: price * (quantidade || 1)
+      });
       renderAlternativas();
       renderDestino();
       renderReflexoes();
