@@ -132,6 +132,26 @@ window.FINCK_CONFIG = {
       consumo: .1
     }
   },
+  // Linha do tempo da compra (js/linha-tempo-engine.js). As taxas do cartão
+  // são as médias do Banco Central; o rotativo vale só no primeiro mês da
+  // dívida e depois entra o parcelamento da fatura (Resolução CMN 4.549/2017).
+  // Desde janeiro de 2024 os juros e encargos dessas duas modalidades não
+  // passam de 100% do valor devido (Lei 14.690/2023). Atualize as taxas
+  // quando o BC divulgar números novos.
+  LINHA_DO_TEMPO: {
+    HORIZONTE_MESES: 12,
+    HORIZONTE_MAX: 24,
+    PARCELAS_PADRAO: 10,
+    IMPREVISTO_PCT_RENDA: 15,
+    IMPREVISTO_MES_PADRAO: 3,
+    JANELA_MESES: 3,
+    CARTAO: {
+      ROTATIVO_AA: 436.2,
+      PARCELADO_AA: 191.4,
+      TETO_JUROS_PCT: 100,
+      FONTE: "Taxas médias do Banco Central: rotativo do cartão em julho de 2026 (436,2% ao ano) e parcelamento da fatura em junho de 2026 (191,4% ao ano)."
+    }
+  },
   // Cada opção diz o que acontece ao salvar. "grupo" separa as
   // quatro escolhas principais das três formas de buscar alternativa.
   DECISOES: [ {

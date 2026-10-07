@@ -15,7 +15,7 @@ const A = require("./_acesso.js");
 
 const MODELO = "openrouter/free";
 const ENDERECO = "https://openrouter.ai/api/v1/chat/completions";
-const MAX_PERGUNTA = 2000;
+const MAX_PERGUNTA = 3000;
 const PRAZO_TOTAL_MS = 55000;
 const TENTATIVAS = 3;
 
