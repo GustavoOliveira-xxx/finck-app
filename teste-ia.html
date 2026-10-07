@@ -45,7 +45,8 @@
 
         if (dados.resposta) {
           saida.textContent = dados.resposta;
-          modelo.textContent = 'Modelo usado: ' + dados.modelo;
+          const seg = (dados.tempo_ms / 1000).toFixed(1).replace('.', ',');
+          modelo.textContent = 'Modelo usado: ' + dados.modelo + ' · ' + seg + ' s';
         } else {
           saida.textContent = 'Erro: ' + (dados.erro || 'resposta vazia');
         }

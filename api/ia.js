@@ -19,9 +19,30 @@ const MAX_PERGUNTA = 2000;
 const PRAZO_TOTAL_MS = 55000;
 const TENTATIVAS = 3;
 
+const MAX_TOKENS = 1500;
+
 const SISTEMA =
   "Você é a FINCK AI, assistente financeira do aplicativo FINCK. " +
-  "Responda sempre em português do Brasil, de forma clara, educada e objetiva.";
+  "Responda sempre em português do Brasil, de forma clara, educada e objetiva. " +
+  "Seja breve: no máximo 150 palavras, indo direto ao ponto. " +
+  "Escreva em texto simples, sem Markdown: não use #, *, negrito, títulos, tabelas nem linhas separadoras. " +
+  "Quando uma lista ajudar, use linhas numeradas simples (1., 2., 3.).";
+
+// Rede de segurança: alguns modelos formatam mesmo pedindo texto simples.
+// A tela do FINCK mostra o texto como está, então os símbolos sairiam crus.
+function limparMarkdown(texto) {
+  return String(texto)
+    .replace(/^[ \t]*```[^\n]*$/gm, "")
+    .replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, "")
+    .replace(/^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/^([ \t]*)[*+-][ \t]+/gm, "$1• ")
+    .replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?!\w)/g, "$1$2")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 // O roteador gratuito às vezes sorteia um modelo que não conversa: um
 // classificador de segurança ou de decisão, que devolve só um rótulo como
@@ -64,6 +85,7 @@ async function chamarUmaVez(pergunta, prazoMs, buscar) {
       },
       body: JSON.stringify({
         ...corpoDoModelo(),
+        max_tokens: MAX_TOKENS,
         messages: [
           { role: "system", content: SISTEMA },
           { role: "user", content: pergunta },
@@ -80,7 +102,7 @@ async function chamarUmaVez(pergunta, prazoMs, buscar) {
     if (naoConversa(modelo, texto)) {
       return { status: 502, erro: "A IA não conseguiu responder agora. Tente de novo.", repetir: true, modelo };
     }
-    return { status: 200, resposta: texto, modelo };
+    return { status: 200, resposta: limparMarkdown(texto), modelo };
   } catch (e) {
     const tempo = e && e.name === "AbortError";
     return { status: 504, erro: tempo ? "A IA demorou demais. Tente de novo." : "Não foi possível conectar com a IA agora." };
@@ -90,7 +112,8 @@ async function chamarUmaVez(pergunta, prazoMs, buscar) {
 }
 
 async function perguntar(pergunta, { buscar = fetch, agora = Date.now } = {}) {
-  const fim = agora() + PRAZO_TOTAL_MS;
+  const inicio = agora();
+  const fim = inicio + PRAZO_TOTAL_MS;
   let ultimo = { status: 504, erro: "A IA demorou demais. Tente de novo." };
   for (let i = 0; i < TENTATIVAS; i++) {
     const resta = fim - agora();
@@ -100,6 +123,9 @@ async function perguntar(pergunta, { buscar = fetch, agora = Date.now } = {}) {
   }
   const { repetir, ...resultado } = ultimo;
   if (resultado.status !== 200) delete resultado.modelo;
+  resultado.tempo_ms = agora() - inicio;
+  // Aparece nos logs da Vercel: ajuda a escolher os modelos mais rápidos.
+  console.log(`[ia] ${resultado.status} ${resultado.modelo || "-"} ${resultado.tempo_ms}ms`);
   return resultado;
 }
 
@@ -135,3 +161,4 @@ module.exports = async function handler(req, res) {
 module.exports.perguntar = perguntar;
 module.exports.MODELO = MODELO;
 module.exports.naoConversa = naoConversa;
+module.exports.limparMarkdown = limparMarkdown;
