@@ -589,6 +589,12 @@ depende de um modelo específico continuar no ar.
 - `OPENROUTER_API_KEY`: obrigatória. Chave do painel do OpenRouter.
 - `IA_TETO_DIA`: opcional. Padrão 40 chamadas por dia, abaixo das 50
   diárias do plano gratuito, para sobrar margem nos testes.
+- `IA_MODELOS`: opcional. Ids de modelos gratuitos preferidos, separados
+  por vírgula. O `openrouter/free` fica sempre como último recurso.
+
+O roteador gratuito às vezes sorteia um modelo que não conversa (um
+classificador de segurança que só devolve "User Safety: safe"). A rota
+reconhece esse caso e tenta de novo, até três vezes dentro do prazo.
 
 Um `GET /api/ia` responde se a chave está configurada. A página
 `teste-ia.html` serve só para conferir a conexão de ponta a ponta.

@@ -16,11 +16,29 @@ const A = require("./_acesso.js");
 const MODELO = "openrouter/free";
 const ENDERECO = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_PERGUNTA = 2000;
-const PRAZO_MS = 50000;
+const PRAZO_TOTAL_MS = 55000;
+const TENTATIVAS = 3;
 
 const SISTEMA =
   "Você é a FINCK AI, assistente financeira do aplicativo FINCK. " +
   "Responda sempre em português do Brasil, de forma clara, educada e objetiva.";
+
+// O roteador gratuito às vezes sorteia um modelo que não conversa: um
+// classificador de segurança ou de decisão, que devolve só um rótulo como
+// "User Safety: safe". Quando isso acontece, a rota tenta outra vez.
+const MODELO_NAO_CONVERSA = /(safety|guard|moderat|classif|decid|decision|clef|rerank|embed)/i;
+const RESPOSTA_DE_CLASSIFICADOR = /^\s*(user|response|prompt)\s+safety\s*:/i;
+
+const naoConversa = (modelo, texto) =>
+  MODELO_NAO_CONVERSA.test(String(modelo || "")) || RESPOSTA_DE_CLASSIFICADOR.test(texto);
+
+// Opcional: IA_MODELOS na Vercel com ids de modelos gratuitos preferidos,
+// separados por vírgula. O roteador gratuito fica sempre como último recurso.
+function corpoDoModelo() {
+  const preferidos = String(process.env.IA_MODELOS || "")
+    .split(",").map((m) => m.trim()).filter(Boolean);
+  return preferidos.length ? { models: [...preferidos, MODELO] } : { model: MODELO };
+}
 
 // Por IP: freio contra abuso numa rota pública, não contabilidade exata.
 const limites = A.criarLimites({
@@ -31,9 +49,9 @@ const limites = A.criarLimites({
 const ipDoPedido = (req) =>
   String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() || "anonimo";
 
-async function perguntar(pergunta, { buscar = fetch } = {}) {
+async function chamarUmaVez(pergunta, prazoMs, buscar) {
   const controle = new AbortController();
-  const relogio = setTimeout(() => controle.abort(), PRAZO_MS);
+  const relogio = setTimeout(() => controle.abort(), prazoMs);
   try {
     const r = await buscar(ENDERECO, {
       method: "POST",
@@ -45,7 +63,7 @@ async function perguntar(pergunta, { buscar = fetch } = {}) {
         "X-Title": "FINCK",
       },
       body: JSON.stringify({
-        model: MODELO,
+        ...corpoDoModelo(),
         messages: [
           { role: "system", content: SISTEMA },
           { role: "user", content: pergunta },
@@ -57,14 +75,32 @@ async function perguntar(pergunta, { buscar = fetch } = {}) {
       return { status: r.status, erro: dados?.error?.message || "Falha ao consultar a IA." };
     }
     const texto = String(dados?.choices?.[0]?.message?.content ?? "").trim();
-    if (!texto) return { status: 502, erro: "A IA respondeu vazio. Tente de novo." };
-    return { status: 200, resposta: texto, modelo: dados.model || MODELO };
+    if (!texto) return { status: 502, erro: "A IA respondeu vazio. Tente de novo.", repetir: true };
+    const modelo = dados.model || MODELO;
+    if (naoConversa(modelo, texto)) {
+      return { status: 502, erro: "A IA não conseguiu responder agora. Tente de novo.", repetir: true, modelo };
+    }
+    return { status: 200, resposta: texto, modelo };
   } catch (e) {
     const tempo = e && e.name === "AbortError";
     return { status: 504, erro: tempo ? "A IA demorou demais. Tente de novo." : "Não foi possível conectar com a IA agora." };
   } finally {
     clearTimeout(relogio);
   }
+}
+
+async function perguntar(pergunta, { buscar = fetch, agora = Date.now } = {}) {
+  const fim = agora() + PRAZO_TOTAL_MS;
+  let ultimo = { status: 504, erro: "A IA demorou demais. Tente de novo." };
+  for (let i = 0; i < TENTATIVAS; i++) {
+    const resta = fim - agora();
+    if (resta < 5000) break;
+    ultimo = await chamarUmaVez(pergunta, resta, buscar);
+    if (!ultimo.repetir) break;
+  }
+  const { repetir, ...resultado } = ultimo;
+  if (resultado.status !== 200) delete resultado.modelo;
+  return resultado;
 }
 
 module.exports = async function handler(req, res) {
@@ -98,3 +134,4 @@ module.exports = async function handler(req, res) {
 
 module.exports.perguntar = perguntar;
 module.exports.MODELO = MODELO;
+module.exports.naoConversa = naoConversa;
