@@ -1,6 +1,11 @@
 // Tela da linha do tempo da compra, dentro do resultado do FinCK of Reality.
 // As contas são do motor (js/linha-tempo-engine.js); aqui só se lê o
-// formulário, se desenha o resultado e se pede à FINCK AI a explicação.
+// formulário e se desenha o resultado. A explicação em palavras fica na
+// conversa da Análise FinCK, a única entrada da FINCK AI no resultado.
+//
+// Ordem da leitura: primeiro uma conclusão curta e os quatro cartões, depois
+// os controles para testar outros cenários, e por fim a simulação completa
+// (de onde vem cada número, comparação, gráfico, conta mês a mês e fórmulas).
 
 window.FinckLinhaTempoUI = (() => {
   const L = window.FinckLinhaTempo;
@@ -21,6 +26,13 @@ window.FinckLinhaTempoUI = (() => {
   let analise = null;
   let ligado = false;
   let relogio = null;
+  // Campos que a pessoa (ou outra parte do Reality, a pedido dela) mudou na
+  // simulação. Ao refazer a análise do mesmo item, eles voltam como estavam,
+  // e o resto volta ao padrão calculado com os dados novos.
+  const editados = new Set();
+  let itemAtual = null;
+  // A forma só é "sua escolha" depois que a pessoa escolhe; antes, é exemplo.
+  const escolheuForma = () => editados.has("ltForma");
 
   // ----------------------------------------------------------- formulário
 
@@ -69,9 +81,9 @@ window.FinckLinhaTempoUI = (() => {
     $("ltDesconto").value = "0";
     U.escreverMoeda("ltDiaADia", b.dia_a_dia);
     $("ajudaLtDiaADia").textContent = b.dia_a_dia_parcial
-      ? "Por enquanto é só o que já saiu neste mês fora das despesas fixas e das parcelas. Ajuste para o valor de um mês inteiro (mercado, transporte, lazer)."
+      ? "Estimativa: por enquanto é só o que já saiu neste mês fora das despesas fixas e das parcelas. Ajuste para o valor de um mês inteiro (mercado, transporte, lazer)."
       : b.dia_a_dia_estimado
-        ? `Média dos seus gastos fora das despesas fixas e das parcelas nos últimos ${b.dia_a_dia_meses} ${b.dia_a_dia_meses === 1 ? "mês" : "meses"}. Ajuste se não for o seu normal.`
+        ? `Estimativa pela média dos seus gastos fora das despesas fixas e das parcelas nos últimos ${b.dia_a_dia_meses} ${b.dia_a_dia_meses === 1 ? "mês" : "meses"}. Ajuste se não for o seu normal.`
         : "O FinCK ainda não tem histórico dos seus gastos do dia a dia (mercado, transporte, lazer). Informe uma estimativa para a conta ficar realista.";
     const sugestao = Math.round(renda * (LT.IMPREVISTO_PCT_RENDA || 15) / 100 / 50) * 50;
     U.escreverMoeda("ltImprevisto", sugestao > 0 ? sugestao : 0);
@@ -79,22 +91,85 @@ window.FinckLinhaTempoUI = (() => {
     mostrarCamposDaForma();
   }
 
+  // Os dois campos que não vêm do FinCK ganham o selo "Estimativa" no próprio
+  // rótulo, para a pessoa ver o que é palpite antes de ler o resultado.
+  function marcarEstimativas() {
+    const alvos = [ $("ltDiaADia")?.closest("label"), document.querySelector("#formLinhaTempo .linha-tempo__imprevisto legend") ];
+    alvos.forEach(alvo => {
+      if (!alvo || alvo.querySelector(".linha-tempo__tipo")) return;
+      const selo = document.createElement("span");
+      selo.className = "linha-tempo__tipo linha-tempo__tipo--estimativa linha-tempo__tipo--mini";
+      selo.textContent = "Estimativa";
+      const texto = [ ...alvo.childNodes ].find(n => n.nodeType === 3 && n.textContent.trim());
+      if (!texto) {
+        alvo.prepend(selo);
+        return;
+      }
+      // Texto e selo numa linha só, para o rótulo em grade não virar duas.
+      const linha = document.createElement("span");
+      linha.className = "linha-tempo__rotulo-campo";
+      alvo.insertBefore(linha, texto);
+      linha.append(document.createTextNode(texto.textContent.trim()), selo);
+      texto.remove();
+    });
+  }
+
+  // Monta, uma vez, o resumo antes dos controles. Se a página já tiver o
+  // elemento com esse id, usa o dela.
+  function montarAreas() {
+    const form = $("formLinhaTempo");
+    if (!$("ltResumo")) {
+      const resumo = document.createElement("div");
+      resumo.id = "ltResumo";
+      resumo.className = "linha-tempo__resumo";
+      form.insertAdjacentElement("beforebegin", resumo);
+    }
+    $("ltResumo").innerHTML = `
+      <p class="linha-tempo__exemplo" id="ltExemplo" hidden></p>
+      <p class="linha-tempo__conclusao" id="ltConclusao" aria-live="polite"></p>
+      <p class="nota linha-tempo__selo" id="ltSelo" hidden></p>
+      <div class="linha-tempo__falta" id="ltFalta" hidden>
+        <p id="ltFaltaTexto"></p>
+        <button type="button" class="btn-secundario btn-mini" data-lt-informar="ltDiaADia">Informar os gastos do dia a dia</button>
+      </div>
+      <p class="nota linha-tempo__simulacao">Cálculo do FinCK, sem IA. É uma simulação com os números desta tela, não previsão garantida: se a renda ou os gastos mudarem, o resultado muda.</p>
+      <div class="orcamento-concreto linha-tempo__cartoes" id="ltCartoes"></div>
+      <p class="nota linha-tempo__dica-controles">Para testar outro cenário, mude abaixo a forma de pagamento, as parcelas ou o imprevisto. <button type="button" class="btn-texto linha-tempo__perguntar" data-lt-perguntar>Perguntar à FINCK AI sobre esta simulação</button></p>`;
+    // Só a conclusão é anunciada a cada mudança; ler o resultado inteiro a
+    // cada número digitado cansaria quem usa leitor de tela.
+    $("linhaTempoResultado").removeAttribute("aria-live");
+  }
+
   function ligar() {
     if (ligado) return;
     ligado = true;
     const form = $("formLinhaTempo");
+    montarAreas();
+    marcarEstimativas();
     const agendar = () => {
       clearTimeout(relogio);
       relogio = setTimeout(calcular, 180);
     };
-    form.addEventListener("input", agendar);
+    const anotar = e => editados.add(e.target.name === "ltForma" ? "ltForma" : e.target.id);
+    form.addEventListener("input", e => {
+      anotar(e);
+      agendar();
+    });
     form.addEventListener("change", e => {
+      anotar(e);
       if (e.target.name === "ltForma") mostrarCamposDaForma();
       agendar();
     });
     form.addEventListener("submit", e => e.preventDefault());
-    $("linhaTempoResultado").addEventListener("click", e => {
-      if (e.target.closest("[data-lt-explicar]")) explicar();
+    // O botão da pergunta leva ao campo que falta; o scroll-padding do html
+    // deixa o campo abaixo das barras presas. "Perguntar à FINCK AI" abre a
+    // conversa da Análise FinCK com a pergunta escrita, sem enviar.
+    $("ltResumo").addEventListener("click", e => {
+      const alvo = e.target.closest("[data-lt-informar]");
+      if (alvo) $(alvo.dataset.ltInformar)?.focus();
+      if (e.target.closest("[data-lt-perguntar]")) {
+        window.FinckInteligenciaUI?.perguntar?.("Explique em linguagem simples o que a simulação dos próximos meses mostra sobre esta compra.");
+      }
     });
   }
 
@@ -118,63 +193,55 @@ window.FinckLinhaTempoUI = (() => {
 
   const rotuloDoMes = i => analise.base.meses[i]?.rotulo || `mês ${i}`;
 
-  function frase() {
-    const a = analise;
-    const e = a.escolhido.resumo;
-    const imp = a.entrada.imprevisto;
-    const partes = [];
-    const ap = e.mes_mais_apertado;
-    const comoFica = ap ? (ap.sobra < 0 ? `faltam ${moeda(-ap.sobra)}` : `sobram ${moeda(ap.sobra)}`) : "";
-
-    if (e.forma === "avista" && !e.cabe_hoje) {
-      partes.push(`O saldo de hoje (${moeda(a.base.saldo)}) não cobre o pagamento à vista de ${moeda(e.total)}. Passar no cartão sem ter o dinheiro da fatura vira rotativo, o crédito mais caro do país.`);
-    } else if (e.forma === "avista") {
-      partes.push(`Pagando à vista ${moeda(e.total)}, o dinheiro sai hoje e os próximos meses ficam livres. O mês mais apertado é ${ap.rotulo}, quando ${comoFica}.`);
-    } else {
-      partes.push(`Parcelando em ${e.parcelas}x de ${moeda(e.parcela)}${e.juros_parcelamento > 0 ? ` (total de ${moeda(e.total)}, com ${moeda(e.juros_parcelamento)} de juros do parcelamento)` : ""}, o mês mais apertado é ${ap.rotulo}, quando ${comoFica}.`);
-    }
-
-    if (!e.cabe_sem_imprevisto) {
-      const p = a.escolhido.normal.resumo.primeiro_mes_divida;
-      partes.push(`Mesmo sem imprevisto, a conta não fecha: a partir de ${p ? p.rotulo : "agora"} a diferença iria para o cartão e geraria ${moeda(e.juros_da_compra_normal)} de juros.`);
-    } else if (imp && e.com_imprevisto) {
-      const ci = e.com_imprevisto;
-      if (ci.entra_no_cartao) {
-        const soDaCompra = e.juros_da_compra < ci.juros_cartao - .01 ? ` (${moeda(e.juros_da_compra)} deles só existem por causa desta compra)` : "";
-        partes.push(`Um imprevisto de ${moeda(imp.valor)} em ${rotuloDoMes(imp.mes)} não caberia: até ${moeda(ci.maior_divida)} iriam para o cartão. Com os juros do rotativo e do parcelamento da fatura, isso gera ${moeda(ci.juros_cartao)} de juros${soDaCompra} e ${ci.meses_com_divida} ${ci.meses_com_divida === 1 ? "mês" : "meses"} pagando dívida.`);
-        if (e.juros_da_compra > 0) {
-          partes.push(`Nesse cenário, esta compra de ${moeda(e.total)} passa a custar <strong>${moeda(e.custo_real)}</strong>.`);
-        }
-        if (ci.divida_final > 0) {
-          partes.push(`E no fim da linha do tempo ainda restariam ${moeda(ci.divida_final)} de dívida.`);
-        }
-      } else {
-        partes.push(`Um imprevisto de ${moeda(imp.valor)} em ${rotuloDoMes(imp.mes)} ainda caberia sem usar o cartão.`);
-      }
-    }
-    return partes.join(" ");
-  }
+  // "Juros do cartão" ganha uma frase no próprio cartão que mostra juros, sem
+  // mandar a pessoa abrir as fórmulas. Aparece uma vez só.
+  const JUROS_DO_CARTAO = "Juros do cartão: cobrados quando a fatura não é paga inteira.";
 
   function cartoes() {
     const e = analise.escolhido.resumo;
     const imp = analise.entrada.imprevisto;
     const ap = e.mes_mais_apertado;
     const ci = e.com_imprevisto;
+    const jurosNoImprevisto = Boolean(imp && e.cabe_sem_imprevisto && ci && ci.entra_no_cartao);
+    const custoComJuros = e.custo_real > e.total + .01;
     const cartao = (rotulo, valor, explica, classe = "") =>
       `<div><span>${rotulo}</span><strong class="${classe}">${valor}</strong><small>${explica}</small></div>`;
     const imprevisto = !imp
-      ? cartao("Com o imprevisto", "—", "Informe um valor acima para testar.")
+      ? cartao("Com o imprevisto", "Não testado", "Informe um valor no campo do imprevisto, logo abaixo, para testar.")
       : !e.cabe_sem_imprevisto
-        ? cartao("Com o imprevisto", "Já no cartão", "A conta não fecha nem sem imprevisto.", "cor-vermelha")
-        : ci.entra_no_cartao
-          ? cartao("Com o imprevisto", `${moeda(ci.juros_cartao)} de juros`, `${ci.meses_com_divida} ${ci.meses_com_divida === 1 ? "mês" : "meses"} pagando o cartão.`, "cor-vermelha")
-          : cartao("Com o imprevisto", "Cabe sem dívida", `${moeda(imp.valor)} em ${rotuloDoMes(imp.mes)}.`, "cor-verde");
-    return `<div class="orcamento-concreto linha-tempo__cartoes">
+        ? cartao("Com o imprevisto", "Já no cartão", "Neste cenário, falta dinheiro mesmo sem imprevisto.", "cor-vermelha")
+        : jurosNoImprevisto
+          ? cartao("Com o imprevisto", `${moeda(ci.juros_cartao)} de juros`, `${ci.meses_com_divida} ${ci.meses_com_divida === 1 ? "mês" : "meses"} pagando o cartão. ${JUROS_DO_CARTAO}`, "cor-vermelha")
+          : cartao("Com o imprevisto", "Cabe sem dívida", `${moeda(imp.valor)} em ${U.escapeHTML(rotuloDoMes(imp.mes))}.`, "cor-verde");
+    const explicaCusto = `Total pago mais os juros do cartão que só existem por causa dela${imp ? ", com o imprevisto testado" : ""}.${custoComJuros && !jurosNoImprevisto ? ` ${JUROS_DO_CARTAO}` : ""}`;
+    return `
       ${cartao("Mês mais apertado", U.escapeHTML(ap.rotulo), `${ap.sobra < 0 ? `Faltam ${moeda(-ap.sobra)}` : `Sobram ${moeda(ap.sobra)}`} nesse mês, sem contar o imprevisto.`, ap.sobra < 0 ? "cor-vermelha" : "")}
       ${cartao("Folga para imprevistos", e.cabe_sem_imprevisto ? moeda(e.margem_geral.valor) : moeda(0), "Maior gasto extra que cabe sem usar o cartão, no pior mês.", e.margem_geral.valor > 0 ? "" : "cor-vermelha")}
       ${imprevisto}
-      ${cartao("Custo real da compra", moeda(e.custo_real), "Total pago mais os juros que só existem por causa dela.", e.custo_real > e.total + .01 ? "cor-vermelha" : "")}
-    </div>`;
+      ${cartao("Custo real da compra", moeda(e.custo_real), explicaCusto, custoComJuros ? "cor-vermelha" : "")}`;
+  }
+
+  // De onde vem cada número: dado confirmado (registrado no FinCK ou
+  // informado nesta análise) separado de estimativa.
+  function numerosDaSimulacao() {
+    const u = L.numerosUsados(analise);
+    const item = i => `
+      <div>
+        <dt>${U.escapeHTML(i.rotulo)}</dt>
+        <dd>${i.valor === null ? `${pct(i.taxa_am)} ao mês` : moeda(i.valor)}<small>${U.escapeHTML(i.detalhe)}</small></dd>
+      </div>`;
+    return `
+      <h5 class="linha-tempo__subtitulo">Números desta simulação</h5>
+      <div class="linha-tempo__origem">
+        <div class="linha-tempo__origem-grupo">
+          <p class="linha-tempo__origem-titulo"><span class="linha-tempo__tipo linha-tempo__tipo--confirmado">Dado confirmado</span> registrado no FinCK ou informado por você</p>
+          <dl>${u.confirmados.map(item).join("")}</dl>
+        </div>
+        <div class="linha-tempo__origem-grupo linha-tempo__origem-grupo--estimativa">
+          <p class="linha-tempo__origem-titulo"><span class="linha-tempo__tipo linha-tempo__tipo--estimativa">Estimativa</span> pode ser diferente na vida real</p>
+          <dl>${u.estimativas.map(item).join("")}</dl>
+        </div>
+      </div>`;
   }
 
   function comparacao() {
@@ -189,7 +256,7 @@ window.FinckLinhaTempoUI = (() => {
     };
     const linha = r => `
       <tr class="${r.forma === escolhida ? "linha-tempo__escolhida" : ""}">
-        <th scope="row">${r.forma === "avista" ? "À vista" : `Parcelado em ${r.parcelas}x`}${r.forma === escolhida ? ' <span class="chip">sua escolha</span>' : ""}</th>
+        <th scope="row">${r.forma === "avista" ? "À vista" : `Parcelado em ${r.parcelas}x`}${r.forma === escolhida ? ` <span class="chip">${escolheuForma() ? "sua escolha" : "exemplo"}</span>` : ""}</th>
         <td>${r.forma === "avista" ? (r.cabe_hoje ? moeda(r.total) : `<span class="cor-vermelha">${moeda(r.total)}, o saldo não cobre</span>`) : moeda(0)}</td>
         <td>${r.forma === "avista" ? "—" : moeda(r.parcela)}</td>
         <td>${celulaImprevisto(r)}</td>
@@ -243,10 +310,11 @@ window.FinckLinhaTempoUI = (() => {
       <p class="nota linha-tempo__legenda"><span class="linha-tempo__ponto"></span> dinheiro guardado <span class="linha-tempo__ponto linha-tempo__ponto--divida"></span> dívida no cartão</p>`;
   }
 
+  // A conta mês a mês é a parte mais densa: fica recolhida.
   function mesAMes() {
     const s = cenarioDoGrafico();
     return `
-      <details class="detalhes-hipoteses">
+      <details class="detalhes-hipoteses" data-lt-detalhe="mes-a-mes">
         <summary>Ver a conta mês a mês</summary>
         <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Conta mês a mês; deslize para ver todas as colunas">
           <table class="tabela linha-tempo__tabela">
@@ -273,7 +341,7 @@ window.FinckLinhaTempoUI = (() => {
   function comoCalculamos() {
     const t = analise.taxas;
     return `
-      <details class="detalhes-hipoteses linha-tempo__formulas">
+      <details class="detalhes-hipoteses linha-tempo__formulas" data-lt-detalhe="formulas">
         <summary>Como calculamos</summary>
         <ol>
           <li><strong>Sobra de cada mês</strong> = renda − despesas fixas − gastos do dia a dia − parcelas que você já tem − parcela desta compra − imprevisto.</li>
@@ -286,94 +354,121 @@ window.FinckLinhaTempoUI = (() => {
           <li><strong>Custo real</strong> = total pago + juros do cartão que só existem por causa desta compra (a mesma vida, com o mesmo imprevisto, com e sem ela).</li>
           <li><strong>Folga para imprevistos</strong> = o menor valor guardado nos meses seguintes: um gasto extra tira esse mesmo valor de todos os meses depois dele.</li>
         </ol>
-        <p class="nota">Simplificações: renda, despesas fixas e gastos do dia a dia iguais todo mês; entradas extras e lançamentos agendados não entram. ${U.escapeHTML(t.FONTE || "")}</p>
+        <p class="nota">É uma simulação, não uma previsão garantida. Simplificações: renda, despesas fixas e gastos do dia a dia iguais todo mês; entradas extras e lançamentos agendados não entram. ${U.escapeHTML(t.FONTE || "")}</p>
       </details>`;
   }
 
-  function blocoIA() {
-    return `
-      <div class="linha-tempo__ia">
-        <button type="button" class="btn-secundario" data-lt-explicar>Explicar estes números com a FINCK AI</button>
-        <div class="linha-tempo__ia-resposta" id="ltRespostaIA" aria-live="polite" hidden></div>
-      </div>`;
-  }
-
-  // O link do Reality para o Assistente leva a pergunta já com os números
-  // da linha do tempo, para a resposta considerar os próximos meses.
+  // O link do Reality para o Assistente leva uma pergunta neutra, só com
+  // valores: sem o nome do item e sem pedir veredito. A forma entra depois
+  // que a pessoa escolhe uma.
   function atualizarLinkAssistente() {
-    const link = document.querySelector('#respostaReality a[href^="assistente.html"]');
+    const link = document.querySelector("#respostaReality a[data-link-assistente]");
     if (!link) return;
     const e = analise.escolhido.resumo;
-    const forma = e.forma === "avista" ? `à vista por ${moeda(e.total)}` : `em ${e.parcelas}x de ${moeda(e.parcela)}`;
-    const ap = e.mes_mais_apertado;
-    const pergunta = `Posso comprar ${estado.item || "este item"} ${forma} sem atrapalhar o meu planejamento? ` +
-      `Pela linha do tempo do FinCK, o mês mais apertado é ${ap.rotulo}, com ${ap.sobra < 0 ? `falta de ${moeda(-ap.sobra)}` : `sobra de ${moeda(ap.sobra)}`}, ` +
-      `e a folga para imprevistos é de ${moeda(e.cabe_sem_imprevisto ? e.margem_geral.valor : 0)}.`;
-    link.href = `assistente.html?pergunta=${encodeURIComponent(pergunta.slice(0, 390))}`;
+    const forma = !escolheuForma() ? "" : e.forma === "avista" ? " à vista" : ` em ${e.parcelas}x de ${moeda(e.parcela)}`;
+    link.href = `assistente.html?pergunta=${encodeURIComponent(`Como uma compra de ${moeda(estado.preco)}${forma} mexe no meu planejamento?`)}`;
+  }
+
+  // O selo do Reality mede o peso no dinheiro de agora; a simulação mede o
+  // fôlego dos próximos meses. Quando os dois parecem dizer coisas opostas,
+  // a tela explica a diferença em vez de deixá-los lado a lado.
+  function textoSelo(situacao) {
+    const cabe = situacao === "cabe" || situacao === "cabe-com-imprevisto";
+    if (cabe && (estado.nivel === "alerta" || estado.nivel === "atencao")) {
+      return "O selo de impacto, lá em cima, mede o peso da compra no seu dinheiro de agora; esta simulação mede o fôlego dos próximos meses. Parcelada, uma compra pode pesar muito hoje e ainda caber mês a mês.";
+    }
+    if (!cabe && estado.nivel === "verde") {
+      return "O selo de impacto, lá em cima, mede o peso da compra no seu dinheiro de agora; esta simulação mede o fôlego dos próximos meses. Mesmo leve hoje, a compra pode apertar os meses seguintes.";
+    }
+    return "";
   }
 
   function desenhar() {
     const a = analise;
+    const leitura = L.leitura(a, { moeda });
     atualizarLinkAssistente();
-    $("linhaTempoResultado").innerHTML = `
-      ${cartoes()}
-      <p class="orcamento-concreto__frase linha-tempo__frase">${frase()}</p>
+    const conclusao = $("ltConclusao");
+    // Só troca o texto quando ele muda, para o leitor de tela não repetir a
+    // mesma frase a cada número digitado.
+    if (conclusao.textContent !== leitura.conclusao) conclusao.textContent = leitura.conclusao;
+    conclusao.dataset.situacao = leitura.situacao;
+    const e = a.escolhido.resumo;
+    const exemplo = escolheuForma() ? "" : `Exemplo: ${e.forma === "avista" ? "à vista" : `${e.parcelas}x${e.juros_parcelamento > 0 ? "" : " sem juros"}`}. Escolha em “Como você pagaria?”, logo abaixo, a forma que você usaria.`;
+    $("ltExemplo").hidden = !exemplo;
+    if ($("ltExemplo").textContent !== exemplo) $("ltExemplo").textContent = exemplo;
+    const selo = textoSelo(leitura.situacao);
+    $("ltSelo").hidden = !selo;
+    if ($("ltSelo").textContent !== selo) $("ltSelo").textContent = selo;
+    const resumo = document.querySelector('#blocoLinhaTempo [data-resumo="linha"]');
+    if (resumo) resumo.textContent = `${escolheuForma() ? "" : "Exemplo. "}${leitura.conclusao}`;
+    const falta = leitura.perguntas[0];
+    $("ltFalta").hidden = !falta;
+    if (falta && $("ltFaltaTexto").textContent !== falta.texto) $("ltFaltaTexto").textContent = falta.texto;
+    $("ltCartoes").innerHTML = cartoes();
+    // Cada número digitado redesenha o resultado; o que a pessoa abriu
+    // (conta mês a mês, fórmulas) continua aberto.
+    const host = $("linhaTempoResultado");
+    const abertos = new Set([ ...host.querySelectorAll("details[data-lt-detalhe][open]") ].map(d => d.dataset.ltDetalhe));
+    host.innerHTML = `
+      <p class="orcamento-concreto__frase linha-tempo__frase">${U.escapeHTML(leitura.explicacao.join(" "))}</p>
       ${a.alertas.map(t => `<p class="alerta">${U.escapeHTML(t)}</p>`).join("")}
-      ${comparacao()}
-      ${grafico()}
-      ${mesAMes()}
-      ${comoCalculamos()}
-      ${blocoIA()}`;
-  }
-
-  // ------------------------------------------------------------- FINCK AI
-
-  async function explicar() {
-    const botao = document.querySelector("[data-lt-explicar]");
-    const caixa = $("ltRespostaIA");
-    if (!analise || !botao) return;
-    const numeros = L.paraIA(analise, { item: estado.item, moeda: v => moeda(v) });
-    const pergunta =
-      "Você recebe uma análise de compra já calculada pelo FinCK. Explique para a pessoa, em linguagem simples e em até 120 palavras, o que esses números significam para a decisão dela. " +
-      "Não refaça contas e não invente números: use só os que estão abaixo. Não diga se ela deve ou não comprar; mostre o que muda entre os caminhos e dê um cuidado prático.\n\n" + numeros;
-    botao.disabled = true;
-    caixa.hidden = false;
-    caixa.classList.remove("linha-tempo__ia-resposta--erro");
-    caixa.textContent = "A FINCK AI está lendo os números…";
-    try {
-      const r = await fetch("/api/ia", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pergunta })
-      });
-      const dados = await r.json().catch(() => ({}));
-      if (dados.resposta) {
-        caixa.textContent = dados.resposta;
-        const rodape = document.createElement("small");
-        rodape.className = "explica-numero";
-        rodape.textContent = "Texto escrito por IA a partir dos números acima. As contas são do FinCK.";
-        caixa.appendChild(rodape);
-      } else {
-        throw new Error(dados.erro || "A FINCK AI não respondeu agora.");
-      }
-    } catch (e) {
-      caixa.classList.add("linha-tempo__ia-resposta--erro");
-      caixa.textContent = `${e.message || "Não consegui falar com a FINCK AI."} Os números acima continuam valendo.`;
-    } finally {
-      botao.disabled = false;
-    }
+      <details class="detalhes-hipoteses linha-tempo__completa" data-lt-detalhe="completa">
+        <summary>Ver a simulação completa</summary>
+        ${numerosDaSimulacao()}
+        ${comparacao()}
+        ${grafico()}
+        ${mesAMes()}
+        ${comoCalculamos()}
+      </details>`;
+    host.querySelectorAll("details[data-lt-detalhe]").forEach(d => { d.open = abertos.has(d.dataset.ltDetalhe); });
   }
 
   // --------------------------------------------------------------- entrada
 
-  // Chamado pelo Reality a cada análise.
-  function mostrar({ ctx, item, preco }) {
+  // Valores atuais dos campos que a pessoa mudou, para devolver depois. Campo
+  // de dinheiro guarda o valor em centavos, então passa pelo FinckMoeda.
+  const ehMoeda = id => Boolean($(id)?.hasAttribute("data-moeda"));
+  function lerEditados() {
+    return [ ...editados ]
+      .map(id => [ id, id === "ltForma" ? formaEscolhida() : ehMoeda(id) ? U.lerMoeda(id) : $(id)?.value ])
+      .filter(([ , v ]) => v !== undefined && v !== null);
+  }
+
+  function devolverEditados(lista) {
+    lista.forEach(([ id, valor ]) => {
+      if (id === "ltForma") {
+        document.querySelectorAll('input[name="ltForma"]').forEach(r => { r.checked = r.value === valor; });
+      } else if (ehMoeda(id)) {
+        U.escreverMoeda(id, valor);
+      } else if ($(id)) {
+        $(id).value = valor;
+      }
+    });
+    mostrarCamposDaForma();
+  }
+
+  // Chamado pelo Reality a cada análise. Outro item: tudo volta ao padrão e
+  // a explicação da FINCK AI some. O mesmo item de novo (a pessoa mudou a
+  // quantidade, a vida útil ou o preço): a forma de pagamento e os outros
+  // campos que ela mexeu continuam como estavam.
+  function mostrar({ ctx, item, preco, nivel = null }) {
     const bloco = $("blocoLinhaTempo");
-    if (!bloco || !L || !(Number(preco) > 0)) return;
-    estado = { ctx, item, preco: Number(preco) };
+    if (!bloco || !$("formLinhaTempo") || !L || !(Number(preco) > 0)) return;
+    const chave = String(item || "").trim().toLowerCase();
+    const mesmoItem = ligado && Boolean(chave) && chave === itemAtual;
+    const guardados = mesmoItem ? lerEditados() : [];
+    itemAtual = chave;
+    estado = { ctx, item, preco: Number(preco), nivel };
     bloco.hidden = false;
     ligar();
-    preencherPadroes(L.base(ctx, { horizonte: horizontePara(LT.PARCELAS_PADRAO || 10) }));
+    if (!mesmoItem) {
+      editados.clear();
+    }
+    // O número de meses depende das parcelas: com as parcelas que a pessoa
+    // escolheu, a lista de meses do imprevisto já nasce do tamanho certo.
+    const parcelasGuardadas = Number((guardados.find(([ id ]) => id === "ltParcelas") || [])[1]) || 0;
+    preencherPadroes(L.base(ctx, { horizonte: horizontePara(parcelasGuardadas || LT.PARCELAS_PADRAO || 10) }));
+    devolverEditados(guardados);
     calcular();
   }
 

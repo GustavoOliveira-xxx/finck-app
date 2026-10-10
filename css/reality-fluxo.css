@@ -1,0 +1,344 @@
+@charset "UTF-8";
+/* ==========================================================================
+   FinCK of Reality: o fluxo da análise (compra, revelação, contexto,
+   decisão e registro). Só usa os tokens do app (style-principal.css) e
+   completa o que já existe em clareza.css; nada aqui muda a identidade.
+   ========================================================================== */
+
+/* --- Carregamento com as etapas reais da análise -------------------------- */
+.progresso-analise{
+  display:grid; gap:.4rem;
+  padding:.7rem .9rem; border-radius:var(--raio-md);
+  border:1px solid rgba(180,92,240,.32);
+  background:linear-gradient(150deg, rgba(104,12,144,.2), rgba(14,10,20,.55));
+}
+.progresso-analise--pronta{ border-color:rgba(31,209,143,.38); }
+.progresso-analise__marca{
+  margin:0; font-family:var(--fonte-display); font-size:.76rem; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--texto);
+}
+.progresso-analise__marca span{ color:var(--amarelo); text-shadow:0 0 12px var(--amarelo-glow); }
+.progresso-analise__etapas{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .8rem;
+  font-size:.86rem; color:var(--texto-fraco);
+}
+@media (min-width: 720px){
+  .progresso-analise__etapas{ grid-template-columns:repeat(4,auto); justify-content:start; column-gap:1.3rem; }
+}
+.progresso-analise__etapas li{ display:flex; align-items:center; gap:.45rem; min-height:1.6rem; }
+.progresso-analise__etapas li::before{
+  content:"○"; content:"○" / "";
+  flex:0 0 1rem; text-align:center; color:var(--texto-fraquissimo);
+}
+.progresso-analise__etapas li[data-estado="feita"]{ color:var(--texto); }
+.progresso-analise__etapas li[data-estado="feita"]::before{ content:"✓"; content:"✓" / ""; color:var(--verde); font-weight:700; }
+.progresso-analise__etapas li[data-estado="atual"]{ color:var(--texto); font-weight:600; }
+.progresso-analise__etapas li[data-estado="atual"]::before{
+  content:"◉"; content:"◉" / ""; color:var(--amarelo);
+  animation:respira-progresso 1.4s ease-in-out infinite;
+}
+@keyframes respira-progresso{ 50%{ opacity:.35; } }
+
+/* Ocupado não é desabilitado: o botão segue na cor da marca, com o texto
+   da etapa, e não aceita um segundo toque. */
+#btnVerImpacto[aria-busy="true"][disabled]{ filter:saturate(.85) brightness(.9); cursor:progress; }
+#btnVerImpacto[aria-busy="true"]::before{ animation:varre-botao 1.3s linear infinite; }
+@keyframes varre-botao{
+  from{ transform:translateX(-120%); }
+  to  { transform:translateX(120%); }
+}
+
+/* --- Categoria: sugestão com confirmação ---------------------------------- */
+.categoria-inferida{ row-gap:.1rem; }
+.categoria-inferida__acoes{ display:inline-flex; align-items:center; gap:.4rem; }
+.categoria-inferida__ok{ color:var(--verde); font-weight:600; font-size:.8rem; white-space:nowrap; }
+.categoria-inferida .btn-texto,
+.resposta-reality__categoria .btn-texto{ color:var(--roxo-neon); }
+@media (pointer: coarse){
+  .categoria-inferida .btn-texto,
+  .resposta-reality__categoria .btn-texto{ min-height:44px; padding-inline:.45rem; }
+}
+
+/* --- Vida útil: pergunta, atalhos e o campo ------------------------------- */
+.campo-meses{ display:grid; gap:.45rem; }
+.campo-meses .ajuda-campo{ margin:0; }
+.chips-meses{ display:flex; flex-wrap:wrap; gap:.45rem; }
+.chip-meses{
+  display:inline-flex; justify-content:center; min-height:40px;
+  padding-inline:.8rem; font-size:.82rem;
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+}
+.chip-meses[aria-pressed="true"]{
+  color:#fff; background:var(--grad-marca); border-color:transparent;
+  box-shadow:0 8px 22px -12px var(--roxo-glow);
+}
+.chip-meses:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; }
+@media (pointer: coarse){ .chip-meses{ min-height:44px; } }
+
+/* --- Indicador de etapas: a etapa 2 acende quando abre -------------------- */
+.etapas-reality li.etapas-reality__liberada a{ animation:etapa-liberada 1.8s ease-out 1; }
+@keyframes etapa-liberada{
+  0%  { box-shadow:inset 0 0 0 1px var(--amarelo), 0 0 0 0 rgba(254,200,0,.65); }
+  100%{ box-shadow:inset 0 0 0 1px var(--roxo-neon), 0 0 0 14px rgba(254,200,0,0); }
+}
+
+/* --- A revelação: o momento em que o preço vira vida ---------------------- */
+.revelacao{
+  display:grid; gap:.2rem .9rem; align-items:start;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:"item marca" "cadeia cadeia";
+}
+.revelacao .resposta-reality__item{ grid-area:item; align-self:center; font-size:.92rem; color:var(--texto); font-weight:600; overflow-wrap:anywhere; }
+.revelacao__marca{ grid-area:marca; justify-self:end; }
+.marca3d-cena--resultado{ --marca-d:clamp(64px, 17vw, 150px); }
+.marca3d-cena--resultado .marca3d__chao{ opacity:.6; }
+.cadeia-impacto{
+  grid-area:cadeia;
+  list-style:none; margin:.15rem 0 0; padding:0;
+  display:grid; gap:0;
+}
+@media (min-width: 720px){
+  .revelacao{
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-areas:"marca item" "marca cadeia";
+  }
+  .revelacao__marca{ justify-self:start; align-self:center; }
+}
+
+/* Uma linha do tempo vertical: cada passo leva ao próximo. */
+.cadeia-impacto__passo{
+  position:relative;
+  padding:.32rem 0 .32rem 1.55rem;
+  line-height:1.4;
+}
+.cadeia-impacto__passo::before{
+  content:""; position:absolute; left:.32rem; top:.78rem;
+  width:.55rem; height:.55rem; border-radius:50%;
+  background:var(--roxo-neon); box-shadow:0 0 10px var(--roxo-glow);
+}
+.cadeia-impacto__passo::after{
+  content:""; position:absolute; left:.58rem; top:1.4rem; bottom:-.8rem;
+  width:1px; background:linear-gradient(var(--roxo-neon), rgba(180,92,240,.12));
+}
+.cadeia-impacto__passo:last-child::after{ display:none; }
+.cadeia-impacto__valor{
+  margin-right:.35rem;
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+  font-size:1.08rem; font-weight:600; color:var(--texto);
+}
+.cadeia-impacto__rotulo{ font-size:.88rem; color:var(--texto-fraco); }
+.cadeia-impacto__passo--horas{ padding-block:.45rem .5rem; }
+.cadeia-impacto__passo--horas::before{
+  top:1.15rem; width:.7rem; height:.7rem; left:.25rem;
+  background:var(--amarelo); box-shadow:0 0 14px var(--amarelo-glow);
+}
+.cadeia-impacto__passo--horas::after{ top:2rem; }
+.cadeia-impacto__passo--horas .cadeia-impacto__valor{
+  display:block; margin:0;
+  font-size:clamp(2rem,1.55rem + 2.6vw,3.1rem); line-height:1.05; color:var(--amarelo);
+}
+.cadeia-impacto__passo--horas .cadeia-impacto__rotulo{ font-family:var(--fonte-display); font-size:1.05rem; color:var(--texto); }
+.cadeia-impacto__passo--meta::before{ background:var(--amarelo); box-shadow:0 0 10px var(--amarelo-glow); }
+.cadeia-impacto__selo{
+  display:inline-block; margin-left:.2rem; padding:.02rem .45rem; border-radius:99px;
+  font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; vertical-align:.1em;
+  color:var(--amarelo); border:1px solid rgba(254,200,0,.45); background:var(--amarelo-fraco);
+}
+
+/* O selo de impacto e a frase que resume tudo. */
+.revelacao__veredito{
+  display:grid; gap:.4rem; justify-items:start;
+  margin-top:.45rem; padding-top:.75rem;
+  border-top:1px solid var(--superficie-borda-forte);
+}
+.selo-impacto{
+  display:inline-flex; align-items:center; gap:.45rem;
+  padding:.28rem .75rem; border-radius:99px;
+  font-size:.74rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+  border:1px solid currentColor;
+}
+.selo-impacto::before{ content:""; width:.5rem; height:.5rem; border-radius:50%; background:currentColor; }
+.selo-impacto--verde{ color:var(--verde); background:var(--verde-fraco); }
+.selo-impacto--atencao{ color:var(--amarelo); background:var(--amarelo-fraco); }
+.selo-impacto--alerta{ color:var(--vermelho); background:var(--vermelho-fraco); }
+.revelacao__veredito .resposta-reality__sintese{ margin:0; font-size:1.02rem; }
+.resposta-reality .semaforo-card{ margin-top:.35rem; }
+.resposta-reality .impacto-nivel__nao-julga{ font-style:normal; }
+
+/* O custo por mês de uso é o único cartão que sobra fora da revelação. */
+#indicadores:empty{ display:none; }
+
+/* --- Contexto: a reflexão em cartões -------------------------------------- */
+.reflexao--cartao{
+  border-radius:var(--raio-lg);
+  background:linear-gradient(160deg, rgba(147,51,196,.09), rgba(255,255,255,.012));
+  transition:border-color var(--dur-media, .3s) var(--ease-out, ease);
+}
+.reflexao--cartao > legend{
+  float:left; width:100%;
+  margin:0 0 .15rem; padding:0;
+  font-family:var(--fonte-corpo); font-size:1rem; font-weight:600; line-height:1.45;
+  color:var(--texto);
+}
+.reflexao__tema{
+  display:flex; align-items:center; gap:.4rem; margin-bottom:.2rem;
+  font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--roxo-neon);
+}
+.reflexao--respondida{ border-color:rgba(31,209,143,.38); }
+.reflexao--respondida .reflexao__tema::after{ content:"✓"; content:"✓" / " respondida"; color:var(--verde); letter-spacing:0; }
+.mais-reflexoes > summary{ line-height:1.45; }
+
+/* --- Decisão: o ciclo que ela fecha --------------------------------------- */
+.ciclo-decisao{
+  display:grid; gap:.45rem;
+  padding:.7rem .9rem; border-radius:var(--raio-md);
+  border:1px dashed var(--superficie-borda-forte); background:rgba(255,255,255,.015);
+}
+.ciclo-decisao__passos{
+  list-style:none; margin:0; padding:0;
+  display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .35rem;
+  font-size:.78rem; font-weight:600; color:var(--texto-fraquissimo);
+}
+.ciclo-decisao__passos li{ display:inline-flex; align-items:center; gap:.3rem; }
+.ciclo-decisao__passos li:not(:last-child)::after{ content:"→"; content:"→" / ""; color:var(--texto-fraquissimo); font-weight:400; }
+.ciclo-decisao__passos li[data-estado="feito"]{ color:var(--texto-fraco); }
+.ciclo-decisao__passos li[data-estado="feito"]::before{ content:"✓"; content:"✓" / "feito: "; color:var(--verde); }
+.ciclo-decisao__passos li[data-estado="atual"]{ color:var(--amarelo); }
+.ciclo-decisao__passos li[data-estado="atual"]::before{ content:"◉"; content:"◉" / "agora: "; }
+.ciclo-decisao__passos li[data-estado="opcional"]{ font-weight:500; }
+.ciclo-decisao__frase{ margin:0; font-size:.86rem; line-height:1.5; color:var(--texto-fraco); }
+
+/* --- Registro: o que aconteceu de verdade --------------------------------- */
+.confirmacao-decisao__titulo{
+  display:flex; flex-wrap:wrap; align-items:center; gap:.4rem;
+  font-family:var(--fonte-display); font-size:1.02rem; font-weight:700; color:var(--texto);
+}
+.confirmacao-decisao__titulo > span[aria-hidden="true"]{ color:var(--verde); }
+.confirmacao-decisao__escolha{
+  padding:.08rem .55rem; border-radius:99px;
+  font-family:var(--fonte-corpo); font-size:.76rem; font-weight:600;
+  background:rgba(255,255,255,.08); color:var(--texto-fraco);
+}
+.confirmacao-decisao .acoes-etapa{ flex-wrap:wrap; }
+.status-registro{ line-height:1.5; }
+.status-registro > span[aria-hidden="true"]{ color:var(--verde); font-weight:700; }
+.status-registro a, .confirmacao-decisao p a{ color:var(--amarelo); text-decoration:underline; text-underline-offset:2px; }
+
+/* --- Minhas análises: estado inicial e o histórico como aprendizado ------- */
+/* js/calculos.js marca o total de análises em data-contador no primeiro
+   cartão do resumo. Zero análises é o estado inicial: sem cartões zerados,
+   sem filtros, sem exportar, só o convite para a primeira análise. */
+.vazio__sem-analises{ display:grid; gap:.55rem; justify-items:start; }
+.vazio__sem-analises p{ margin:0; line-height:1.5; }
+.vazio__sem-analises a.btn-primario{ margin-top:.3rem; }
+.vazio__sem-filtro{ display:none; margin:0; }
+#painelCalculos:has(#resumoCalculos [data-contador]:not([data-contador="0"])) .vazio__sem-analises{ display:none; }
+#painelCalculos:has(#resumoCalculos [data-contador]:not([data-contador="0"])) .vazio__sem-filtro{ display:block; }
+#painelCalculos:has(#resumoCalculos [data-contador="0"]) #resumoCalculos,
+#painelCalculos:has(#resumoCalculos [data-contador="0"]) .filtros,
+#painelCalculos:has(#resumoCalculos [data-contador="0"]) #vazioCalculos ~ .acoes-etapa{ display:none; }
+#painelCalculos:has(#resumoCalculos [data-contador="0"]) #vazioCalculos{
+  padding:1.4rem 1.2rem;
+  border-style:solid; border-color:rgba(180,92,240,.3);
+  background:radial-gradient(420px 160px at 0% 0%, rgba(147,51,196,.16), transparent 70%), rgba(255,255,255,.015);
+  color:var(--texto-fraco);
+}
+.resumo-decisoes__numeros li span{ color:var(--texto-fraco); }
+.resumo-decisoes__numeros li small{ display:block; font-size:.72rem; color:var(--texto-fraquissimo); }
+.resumo-decisoes__frase{ font-weight:600; color:var(--texto); }
+
+/* --- Movimento: o 3D reage de leve enquanto a conta roda ------------------ */
+@media (prefers-reduced-motion: no-preference){
+  html:not([data-animacoes="reduzida"]):not([data-animacoes="desligada"]) .marca3d-cena--analisando .marca3d__halo{ animation-duration:1.4s; }
+  html:not([data-animacoes="reduzida"]):not([data-animacoes="desligada"]) .marca3d-cena--analisando .marca3d__anel--1{ animation-duration:5s; }
+  html:not([data-animacoes="reduzida"]):not([data-animacoes="desligada"]) .marca3d-cena--analisando .marca3d__anel--2{ animation-duration:4s; }
+}
+/* Na leitura do resultado o 3D fica parado se a pessoa pediu menos
+   movimento; com movimento desligado, nada se mexe. */
+html[data-animacoes="reduzida"] .marca3d-cena--resultado,
+html[data-animacoes="reduzida"] .marca3d-cena--resultado *,
+html[data-animacoes="reduzida"] .progresso-analise__etapas li::before,
+html[data-animacoes="reduzida"] #btnVerImpacto::before,
+html[data-animacoes="reduzida"] .etapas-reality li a{ animation:none !important; }
+html[data-animacoes="desligada"] .progresso-analise__etapas li::before,
+html[data-animacoes="desligada"] #btnVerImpacto::before{ animation:none !important; }
+@media (prefers-reduced-motion: reduce){
+  .progresso-analise__etapas li::before,
+  #btnVerImpacto[aria-busy="true"]::before,
+  .etapas-reality li.etapas-reality__liberada a{ animation:none !important; }
+}
+
+/* --- Telas estreitas ------------------------------------------------------ */
+.cadeia-impacto__passo--horas .cadeia-impacto__valor{ white-space:nowrap; }
+/* No celular a frase-síntese precisa caber na primeira tela depois da
+   rolagem, acima da navegação: a revelação fica mais compacta. */
+@media (max-width: 480px){
+  .marca3d-cena--resultado{ --marca-d:56px; }
+  .cadeia-impacto__passo{ padding-block:.24rem; }
+  .cadeia-impacto__passo::before{ top:.7rem; }
+  .cadeia-impacto__passo::after{ top:1.3rem; bottom:-.72rem; }
+  .cadeia-impacto__passo--horas{ padding-block:.3rem .35rem; }
+  .cadeia-impacto__passo--horas::before{ top:1rem; }
+  .cadeia-impacto__passo--horas::after{ top:1.8rem; }
+  .cadeia-impacto__passo--horas .cadeia-impacto__valor{ font-size:clamp(1.55rem, .55rem + 6vw, 2.1rem); }
+  .revelacao__veredito{ margin-top:.3rem; padding-top:.6rem; gap:.3rem; }
+}
+@media (max-width: 380px){
+  .ciclo-decisao__passos{ font-size:.74rem; }
+  .cadeia-impacto__passo{ padding-left:1.4rem; }
+  .cadeia-impacto__passo--horas .cadeia-impacto__valor{ font-size:clamp(1.55rem, .55rem + 6vw, 2rem); }
+}
+/* Tela baixa (320x568, 375x667): depois do Enter, o título, o selo e a
+   frase-síntese cabem entre as etapas presas e a navegação. O preço já está
+   no campo e no título, então a linha dele sai da cadeia. */
+@media (max-height: 700px) and (max-width: 480px){
+  .cadeia-impacto__passo--preco,
+  .cadeia-impacto__passo--dias,
+  .revelacao .resposta-reality__item{ display:none; }
+  .revelacao{ position:relative; grid-template-areas:"cadeia cadeia"; gap:.1rem .6rem; }
+  .revelacao__marca{ position:absolute; grid-area:auto; top:0; right:0; }
+  .marca3d-cena--resultado{ --marca-d:40px; }
+  .cadeia-impacto__explica{ display:none; }
+  .cadeia-impacto__passo{ padding-block:.16rem; }
+  .cadeia-impacto__passo--horas{ padding-block:.2rem .25rem; padding-right:2.8rem; }
+  .cadeia-impacto__passo--horas .cadeia-impacto__valor{ font-size:1.35rem; }
+  .revelacao__veredito{ margin-top:.2rem; padding-top:.45rem; gap:.25rem; }
+  .revelacao__veredito .resposta-reality__sintese{ font-size:.95rem; line-height:1.4; }
+}
+
+/* --- Quer olhar mais fundo? O contexto recolhido, um tema por linha -------- */
+.mais-fundo{ margin-top:1.4rem; display:grid; gap:.6rem; }
+.mais-fundo__titulo{ margin:0; font-family:var(--fonte-display); font-size:1.08rem; }
+.mais-fundo__intro{ margin:0 0 .2rem; }
+.mais-fundo__item{
+  border:1px solid var(--superficie-borda); border-radius:14px;
+  background:var(--superficie);
+}
+.mais-fundo__item > summary{
+  display:grid; gap:.15rem; padding:.75rem 2.4rem .75rem 1rem;
+  cursor:pointer; list-style:none; position:relative; min-height:44px;
+}
+.mais-fundo__item > summary::-webkit-details-marker{ display:none; }
+.mais-fundo__item > summary::after{
+  content:"+"; content:"+" / ""; position:absolute; right:1rem; top:.7rem;
+  font-family:var(--fonte-dados); font-size:1.1rem; color:var(--amarelo);
+}
+.mais-fundo__item[open] > summary::after{ content:"−"; content:"−" / ""; }
+.mais-fundo__item > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:14px; }
+.mais-fundo__nome{ display:inline-flex; align-items:center; gap:.45rem; font-weight:700; color:var(--texto); }
+.mais-fundo__resumo{ font-size:.86rem; line-height:1.45; color:var(--texto-fraco); }
+.mais-fundo__resumo:empty{ display:none; }
+.mais-fundo__corpo{ padding:0 1rem 1rem; }
+.mais-fundo__item .bloco-interno h5{ margin:0 0 .5rem; font-size:.98rem; }
+
+/* Números do orçamento: cada valor inteiro numa linha, sem separar o número
+   da unidade. */
+.sem-quebra{ white-space:nowrap; }
+@media (max-width: 400px){
+  .lista-resumo--glossario li{ flex-wrap:wrap; }
+  .lista-resumo--glossario li > strong{ flex-basis:100%; text-align:left; }
+}
+.resumo-decisoes__leitura{ margin:.4rem 0 0; line-height:1.5; color:var(--texto); }
+.resumo-decisoes__origem{ display:block; font-size:.74rem; font-weight:700; letter-spacing:.04em; color:var(--texto-fraco); }

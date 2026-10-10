@@ -119,13 +119,14 @@ window.FinckMetas = (() => {
     if (!meta?.deadline) {
       return null;
     }
+    // Meses de calendário até o prazo, a mesma conta do cartão em Metas.
     const prazo = new Date(`${String(meta.deadline).slice(0, 10)}T12:00:00`);
-    const meses = (prazo - hoje) / (30 * 864e5);
+    const meses = (prazo.getFullYear() - hoje.getFullYear()) * 12 + (prazo.getMonth() - hoje.getMonth());
     const falta = Math.max(0, num(meta.target_amount) - num(meta.current_amount));
     if (!(meses > 0) || falta <= 0) {
       return null;
     }
-    return falta / Math.max(meses, 1);
+    return falta / meses;
   }
   return {
     ritmoMensal: ritmoMensal,

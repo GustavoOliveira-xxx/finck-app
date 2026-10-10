@@ -1,0 +1,356 @@
+@charset "UTF-8";
+/* ==========================================================================
+   Análise FinCK: a leitura da compra dentro do resultado do Reality.
+   Mesmo vidro, mesma paleta e mesmas fontes do app. O "✦" aparece só onde
+   há interpretação (título, leitura, conversa e respostas da FINCK AI); a
+   conta em si fica com a cara de conta: números em JetBrains Mono.
+   ========================================================================== */
+
+.analise-finck{
+  position:relative; isolation:isolate;
+  display:grid; gap:1rem;
+  padding:clamp(1rem,.9rem + .8vw,1.5rem);
+  border-radius:var(--raio-xl);
+  border:1px solid rgba(180,92,240,.38);
+  background:
+    radial-gradient(420px 200px at 0% 0%, rgba(254,200,0,.08), transparent 65%),
+    radial-gradient(520px 260px at 100% 0%, rgba(147,51,196,.22), transparent 60%),
+    linear-gradient(165deg, rgba(255,255,255,.04), rgba(255,255,255,.008)),
+    var(--vidro-alto);
+  box-shadow:var(--sombra-card), 0 0 48px -30px var(--roxo-glow);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  min-width:0;
+  /* O scroll-padding do html já desconta o cabeçalho, as etapas presas e a
+     navegação de baixo; aqui fica só uma folga pequena. */
+  scroll-margin-block:.5rem;
+}
+.analise-finck::before{
+  content:""; position:absolute; z-index:-1;
+  top:0; left:1.4rem; right:1.4rem; height:1px;
+  background:var(--grad-linha); opacity:.75;
+}
+.analise-finck p{ margin:0; }
+
+/* --- Cabeçalho ----------------------------------------------------------- */
+.analise-finck__cabecalho{ display:grid; gap:.3rem; }
+.analise-finck__titulo{
+  display:flex; align-items:center; gap:.45rem; margin:0;
+  font-family:var(--fonte-display); font-size:clamp(1.08rem,1rem + .4vw,1.3rem);
+  color:var(--texto); letter-spacing:-.01em;
+}
+.analise-finck__marca{ color:var(--amarelo); text-shadow:0 0 14px var(--amarelo-glow); }
+.analise-finck__resumo{ font-weight:600; color:var(--texto); font-size:1rem; }
+.analise-finck__origem{ font-size:.82rem; line-height:1.45; color:var(--texto-fraco); max-width:68ch; }
+
+.analise-finck__subtitulo{
+  margin:0 0 .4rem; font-family:var(--fonte-display);
+  font-size:.98rem; color:var(--texto); letter-spacing:0;
+}
+.analise-finck__subtopo{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap; }
+.analise-finck__subtopo .analise-finck__subtitulo{ margin:0; }
+.analise-finck__intro{ font-size:.86rem; color:var(--texto-fraco); margin-top:.35rem !important; }
+
+/* --- Selos: dado confirmado, estimativa, simulação ----------------------- */
+/* Mesmo desenho dos selos da linha do tempo, para a página falar uma língua só. */
+.selo-certeza{
+  display:inline-flex; align-items:center;
+  padding:.12rem .5rem; border-radius:999px;
+  font-family:var(--fonte-corpo); font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  line-height:1.4; white-space:nowrap; vertical-align:middle;
+  border:1px solid var(--superficie-borda-forte);
+}
+.selo-certeza--confirmado{ color:var(--verde); background:var(--verde-fraco); border-color:rgba(31,209,143,.35); }
+.selo-certeza--estimativa{ color:var(--amarelo); background:var(--amarelo-fraco); border-color:rgba(254,200,0,.35); }
+.selo-certeza--simulacao{ color:#d9b3f7; background:var(--roxo-vidro); border-color:rgba(180,92,240,.5); }
+.analise-finck__legenda{ font-size:.8rem; line-height:1.9; color:var(--texto-fraco); }
+.analise-finck__legenda .selo-certeza{ margin-right:.15rem; }
+
+/* --- Pontos ---------------------------------------------------------------- */
+.analise-finck__pontos{ list-style:none; margin:0; padding:0; display:grid; gap:.7rem; }
+.ponto-finck{
+  display:grid; gap:.5rem; min-width:0;
+  padding:.9rem 1rem;
+  border-radius:var(--raio-lg);
+  background:rgba(0,0,0,.26);
+  border:1px solid var(--superficie-borda);
+  border-left:3px solid var(--roxo-neon);
+}
+.ponto-finck__topo{ display:flex; align-items:center; gap:.55rem .7rem; flex-wrap:wrap; }
+.ponto-finck__num{
+  font-family:var(--fonte-dados); font-weight:700; font-size:1.2rem; line-height:1;
+  background:var(--grad-mista); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.ponto-finck__titulo{ flex:1 1 auto; margin:0; font-family:var(--fonte-display); font-size:1rem; color:var(--texto); }
+.ponto-finck__texto{ font-size:.95rem; line-height:1.55; color:var(--texto); max-width:70ch; }
+
+.ponto-finck__explica{ display:flex; flex-wrap:wrap; gap:0 1.1rem; }
+.ponto-finck__detalhe{ min-width:0; }
+.ponto-finck__detalhe[open]{ flex:1 1 100%; }
+.ponto-finck__detalhe > summary{
+  display:inline-flex; align-items:center; gap:.4rem;
+  min-height:44px; cursor:pointer; list-style:none;
+  font-size:.85rem; font-weight:600; color:var(--roxo-neon);
+}
+.ponto-finck__detalhe > summary::-webkit-details-marker{ display:none; }
+.ponto-finck__detalhe > summary::before{
+  content:"›" / ""; display:inline-block; font-size:1.1rem; line-height:1;
+  transition:transform var(--dur-rapida) var(--ease-out);
+}
+.ponto-finck__detalhe[open] > summary::before{ transform:rotate(90deg); }
+.ponto-finck__detalhe > summary:hover{ color:var(--amarelo); }
+.ponto-finck__corpo{
+  display:grid; gap:.45rem;
+  padding:.7rem .85rem; margin-bottom:.3rem;
+  border-radius:var(--raio-md);
+  background:rgba(255,255,255,.03); border:1px solid var(--superficie-borda);
+  font-size:.86rem; line-height:1.5; color:var(--texto-fraco);
+}
+.ponto-finck__fatores{ margin:0; padding-left:1.1rem; display:grid; gap:.2rem; }
+.ponto-finck__fatores li::marker{ color:var(--roxo-neon); }
+.ponto-finck__fora{ font-style:italic; }
+
+/* Cadeia do cálculo: cada passo leva ao próximo. */
+.cadeia-finck{ list-style:none; margin:0; padding:0; display:grid; }
+.cadeia-finck li{
+  position:relative;
+  display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:.15rem .8rem;
+  padding:.35rem 0;
+}
+.cadeia-finck li + li{ margin-top:.9rem; }
+.cadeia-finck li + li::before{
+  content:"↓" / ""; position:absolute; top:-.95rem; left:.15rem;
+  font-size:.8rem; line-height:1; color:var(--roxo-neon);
+}
+.cadeia-finck span{ flex:1 1 9rem; color:var(--texto-fraco); }
+.cadeia-finck strong{
+  flex:0 1 auto; min-width:0; overflow-wrap:anywhere;
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:.82rem; font-weight:600;
+  color:var(--texto);
+}
+
+/* --- Nossa leitura ------------------------------------------------------- */
+.analise-finck__leitura{
+  padding:.9rem 1rem; border-radius:var(--raio-lg);
+  border:1px solid rgba(254,200,0,.36);
+  background:linear-gradient(150deg, rgba(254,200,0,.09), rgba(14,10,20,.55) 70%);
+}
+.analise-finck__leitura .analise-finck__subtitulo{ color:var(--amarelo); }
+.analise-finck__leitura p{ font-weight:600; line-height:1.55; color:var(--texto); max-width:70ch; }
+
+/* --- Perguntas de informação faltante ----------------------------------- */
+.analise-finck__perguntas{ display:grid; gap:.6rem; }
+.analise-finck__perguntas .analise-finck__subtitulo{ margin:0; }
+.pergunta-finck{
+  display:grid; gap:.25rem;
+  padding:.8rem .95rem; border-radius:var(--raio-md);
+  border:1px dashed var(--superficie-borda-forte); background:rgba(255,255,255,.02);
+}
+.pergunta-finck__texto{ font-weight:600; color:var(--texto); }
+.pergunta-finck__ajuda{ font-size:.84rem; color:var(--texto-fraco); }
+
+.chips-finck{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.35rem; }
+.chip-finck{
+  display:inline-flex; align-items:center; justify-content:flex-start;
+  min-height:44px; max-width:100%;
+  padding:.45rem 1rem;
+  font-family:var(--fonte-corpo); font-size:.88rem; font-weight:600; line-height:1.3;
+  text-align:left; white-space:normal;
+  color:var(--texto);
+  border-color:rgba(180,92,240,.45);
+  background:rgba(147,51,196,.08);
+}
+.chip-finck[aria-pressed="true"]{ color:#fff; background:var(--grad-marca); border-color:transparent; }
+.chip-finck:disabled{ cursor:default; transform:none; }
+.chip-finck:disabled:not([aria-pressed="true"]){ opacity:.55; }
+
+.analise-finck__status{ font-size:.86rem; font-weight:600; color:var(--amarelo); }
+.analise-finck__status:empty{ display:none; }
+.analise-finck__status:focus{ outline:none; }
+.analise-finck__status:focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; border-radius:var(--raio-sm); }
+
+/* --- E se...? ------------------------------------------------------------- */
+/* Recolhido com uma linha de resumo; os três cartões abrem por baixo. */
+.analise-finck__cenarios > summary{
+  position:relative; display:grid; gap:.3rem;
+  min-height:44px; padding:.8rem 2.6rem .8rem 1rem;
+  cursor:pointer; list-style:none;
+  border-radius:var(--raio-lg);
+  border:1px solid var(--superficie-borda-forte);
+  background:rgba(0,0,0,.22);
+}
+.analise-finck__cenarios > summary::-webkit-details-marker{ display:none; }
+.analise-finck__cenarios > summary::after{
+  content:"+"; content:"+" / ""; position:absolute; right:1rem; top:.85rem;
+  font-family:var(--fonte-dados); font-size:1.2rem; color:var(--amarelo);
+}
+.analise-finck__cenarios[open] > summary::after{ content:"−"; content:"−" / ""; }
+.analise-finck__cenarios > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; }
+.analise-finck__cenarios-resumo{ font-size:.82rem; line-height:1.45; color:var(--texto-fraco); }
+.analise-finck__cenarios > [data-af="cenarios"]{ display:grid; gap:.6rem; padding-top:.7rem; }
+.cenarios-finck{ list-style:none; margin:0; padding:0; display:grid; gap:.6rem; grid-template-columns:minmax(0,1fr); }
+.cenario-finck{
+  display:grid; gap:.2rem; align-content:start; min-width:0;
+  padding:.85rem .95rem;
+  border-radius:var(--raio-lg);
+  background:rgba(0,0,0,.28);
+  border:1px solid var(--superficie-borda);
+  border-top:3px solid var(--roxo-neon);
+}
+.cenario-finck--esperar{ border-top-color:var(--amarelo); }
+.cenario-finck--parcelado{ border-top-color:var(--roxo-claro); }
+.cenario-finck__titulo{
+  margin:0; font-family:var(--fonte-corpo);
+  font-size:.76rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--roxo-neon);
+}
+.cenario-finck__valor{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:1.2rem; font-weight:700; color:var(--texto); overflow-wrap:anywhere; }
+.cenario-finck__sub{ font-size:.8rem; color:var(--texto-fraco); }
+.cenario-finck__efeitos{ margin:.45rem 0 0; display:grid; gap:.4rem; }
+.cenario-finck__efeitos div{ display:grid; gap:.05rem; align-content:start; min-width:0; }
+.cenario-finck__efeitos dt{ font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--texto-fraco); }
+.cenario-finck__efeitos dd{ margin:0; font-size:.9rem; font-variant-numeric:tabular-nums; color:var(--texto); overflow-wrap:anywhere; }
+.cenario-finck__nota{
+  margin-top:.35rem !important; padding-top:.4rem;
+  border-top:1px dashed var(--superficie-borda-forte);
+  font-size:.78rem; line-height:1.45; color:var(--texto-fraco);
+}
+@media (min-width: 720px){
+  .cenarios-finck{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 719px){
+  .cenario-finck__efeitos{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.4rem .8rem; }
+}
+
+/* --- Conversa ------------------------------------------------------------- */
+.analise-finck__conversa > summary{
+  position:relative;
+  display:grid; gap:.15rem;
+  min-height:44px; padding:.85rem 2.6rem .85rem 1rem;
+  cursor:pointer; list-style:none;
+  border-radius:var(--raio-lg);
+  border:1px solid rgba(180,92,240,.42);
+  background:linear-gradient(140deg, rgba(147,51,196,.18), rgba(18,14,24,.6) 70%);
+}
+.analise-finck__conversa > summary::-webkit-details-marker{ display:none; }
+.analise-finck__conversa > summary::after{
+  content:"+" / ""; position:absolute; right:1rem; top:50%; transform:translateY(-50%);
+  font-family:var(--fonte-dados); font-size:1.2rem; color:var(--amarelo);
+}
+.analise-finck__conversa[open] > summary::after{ content:"−" / ""; }
+.analise-finck__conversa[open] > summary{ border-radius:var(--raio-lg) var(--raio-lg) 0 0; }
+.analise-finck__conversa > summary:hover{ border-color:rgba(254,200,0,.45); }
+.analise-finck__conversa-titulo{ display:inline; margin:0; font-family:var(--fonte-display); font-size:1rem; color:var(--texto); }
+.analise-finck__conversa-titulo span{ color:var(--amarelo); }
+.analise-finck__conversa > summary small{ font-size:.8rem; color:var(--texto-fraco); }
+
+.conversa-finck{
+  display:grid; gap:.85rem;
+  padding:1rem;
+  border:1px solid rgba(180,92,240,.42); border-top:0;
+  border-radius:0 0 var(--raio-lg) var(--raio-lg);
+  background:rgba(0,0,0,.22);
+}
+.conversa-finck__intro{ font-size:.86rem; color:var(--texto-fraco); }
+.conversa-finck__historico{ display:grid; gap:.6rem; }
+.conversa-finck__historico:empty{ display:none; }
+
+.troca-finck{
+  display:grid; gap:.5rem; min-width:0;
+  padding:.8rem .9rem; border-radius:var(--raio-md);
+  background:rgba(255,255,255,.03); border:1px solid var(--superficie-borda);
+  scroll-margin-block:.5rem;
+}
+.troca-finck__pergunta{
+  justify-self:end; max-width:min(90%, 34rem);
+  padding:.45rem .75rem; border-radius:14px 14px 4px 14px;
+  background:rgba(147,51,196,.2); border:1px solid rgba(180,92,240,.38);
+  font-size:.88rem; color:var(--texto); overflow-wrap:anywhere;
+}
+.troca-finck__resposta{ display:grid; gap:.4rem; min-width:0; }
+.troca-finck__origem{ font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amarelo); }
+.troca-finck--ia .troca-finck__origem{ color:var(--roxo-neon); }
+.troca-finck--erro .troca-finck__origem{ color:#ffd2d7; }
+.troca-finck__titulo{ font-weight:700; color:var(--texto); }
+.troca-finck__texto{ font-size:.92rem; line-height:1.6; color:var(--texto); white-space:pre-line; overflow-wrap:anywhere; }
+.troca-finck__rodape{ font-size:.8rem; line-height:1.45; color:var(--texto-fraco); }
+.troca-finck__tecnico{ font-size:.74rem; color:var(--texto-fraquissimo); overflow-wrap:anywhere; }
+.troca-finck__antiga{ font-size:.76rem; color:var(--texto-fraquissimo); font-style:italic; }
+.troca-finck--ia{ border-left:3px solid var(--roxo-neon); background:var(--roxo-vidro); }
+.troca-finck--erro{ border-left:3px solid var(--amarelo); background:var(--amarelo-fraco); }
+.troca-finck--desatualizada{ opacity:.78; }
+.troca-finck .cadeia-finck{
+  padding:.55rem .75rem; border-radius:var(--raio-sm);
+  background:rgba(0,0,0,.25); font-size:.84rem;
+}
+.troca-finck .selo-certeza{ justify-self:start; }
+
+.conversa-finck__form{ display:grid; gap:.55rem; }
+.conversa-finck__rotulo{ display:block; font-size:.88rem; font-weight:600; color:var(--texto); letter-spacing:0; }
+.conversa-finck__form textarea{ min-height:5.5rem; resize:vertical; line-height:1.5; }
+.conversa-finck__conta{ margin-top:-.25rem !important; font-size:.76rem; color:var(--texto-fraquissimo); text-align:right; }
+.aviso-envio-finck{
+  display:grid; gap:.35rem;
+  padding:.75rem .9rem; border-radius:var(--raio-md);
+  border:1px solid rgba(31,209,143,.28); background:rgba(31,209,143,.06);
+  font-size:.82rem; line-height:1.5; color:var(--texto-fraco);
+}
+.aviso-envio-finck strong{ color:var(--texto); }
+.aviso-envio-finck__ver > summary{
+  display:inline-flex; align-items:center; min-height:44px;
+  cursor:pointer; font-weight:600; color:var(--roxo-neon);
+}
+.aviso-envio-finck__ver pre{
+  margin:.2rem 0 .3rem; padding:.6rem .7rem; max-height:15rem; overflow:auto;
+  border-radius:var(--raio-sm); background:rgba(0,0,0,.38);
+  font-family:var(--fonte-dados); font-size:.74rem; line-height:1.5; color:var(--texto-fraco);
+  white-space:pre-wrap; overflow-wrap:anywhere;
+}
+.conversa-finck__indisponivel{
+  padding:.6rem .8rem; border-radius:0 var(--raio-sm) var(--raio-sm) 0;
+  border-left:3px solid var(--amarelo); background:var(--amarelo-fraco);
+  font-size:.85rem; line-height:1.45; color:#ffe9a3;
+}
+.conversa-finck__enviar{ justify-self:start; min-height:44px; }
+.conversa-finck__enviar[aria-disabled="true"]{ opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
+.conversa-finck__form textarea:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* Etapas reais do envio: só o que de fato está acontecendo. */
+.etapas-finck{ list-style:none; margin:0; padding:0; display:grid; gap:.3rem; font-size:.85rem; color:var(--texto-fraco); }
+.etapas-finck li{ display:flex; align-items:center; gap:.5rem; }
+.etapas-finck li::before{ content:"○" / ""; width:1rem; text-align:center; color:var(--texto-fraquissimo); }
+.etapas-finck li[data-estado="feita"]::before{ content:"✓" / ""; color:var(--verde); }
+.etapas-finck li[data-estado="atual"]{ color:var(--texto); font-weight:600; }
+.etapas-finck li[data-estado="atual"]::before{ content:"◉" / ""; color:var(--amarelo); animation:respira-finck 1.6s var(--ease-suave) infinite; }
+
+@media (max-width: 600px){
+  .analise-finck{ padding:.95rem .85rem; gap:.85rem; }
+  .ponto-finck{ padding:.8rem .8rem; }
+  .conversa-finck{ padding:.85rem .75rem; }
+  .conversa-finck__enviar{ justify-self:stretch; }
+}
+
+/* --- Movimento: entrada discreta, só com animação completa --------------- */
+@keyframes surge-finck{
+  from{ opacity:0; transform:translateY(8px); }
+  to{   opacity:1; transform:none; }
+}
+@keyframes respira-finck{
+  0%,100%{ opacity:1; }
+  50%{     opacity:.45; }
+}
+.analise-finck--entrando .ponto-finck,
+.analise-finck--entrando .analise-finck__leitura{ animation:surge-finck .45s var(--ease-out) both; }
+.analise-finck--entrando .ponto-finck:nth-child(2){ animation-delay:70ms; }
+.analise-finck--entrando .ponto-finck:nth-child(3){ animation-delay:140ms; }
+.analise-finck--entrando .ponto-finck:nth-child(4){ animation-delay:210ms; }
+.analise-finck--entrando .analise-finck__leitura{ animation-delay:260ms; }
+
+html[data-animacoes="reduzida"] .analise-finck--entrando .ponto-finck,
+html[data-animacoes="reduzida"] .analise-finck--entrando .analise-finck__leitura,
+html[data-animacoes="reduzida"] .etapas-finck li[data-estado="atual"]::before,
+html[data-animacoes="desligada"] .analise-finck *,
+html[data-animacoes="desligada"] .analise-finck *::before{ animation:none !important; }
+@media (prefers-reduced-motion: reduce){
+  .analise-finck *,
+  .analise-finck *::before,
+  .analise-finck *::after{ animation:none !important; transition:none !important; }
+}
