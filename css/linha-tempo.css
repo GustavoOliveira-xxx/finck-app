@@ -15,7 +15,7 @@
 
 .linha-tempo__opcoes{ display:flex; flex-wrap:wrap; gap:.5rem; }
 .linha-tempo__opcao{
-  position:relative; display:inline-flex; align-items:center;
+  position:relative; display:inline-flex; flex-direction:row; align-items:center; justify-content:center;
   min-height:44px; padding:0 1.1rem; border-radius:999px; cursor:pointer;
   border:1px solid var(--superficie-borda-forte); background:var(--superficie-alta);
   font-weight:600; color:var(--texto-fraco);
@@ -25,7 +25,65 @@
 .linha-tempo__opcao:has(input:checked){ border-color:var(--amarelo); background:var(--amarelo-fraco); color:var(--texto); }
 .linha-tempo__opcao:has(input:focus-visible){ outline:2px solid var(--amarelo); outline-offset:3px; }
 
+/* Resumo antes dos controles: a conclusão em uma frase, o aviso de que é
+   simulação e os quatro cartões. A cor da borda acompanha o cenário, como
+   o semáforo do Reality, sem virar julgamento. */
+.linha-tempo__resumo{ display:grid; gap:.6rem; margin-top:.4rem; }
+.linha-tempo__conclusao{
+  margin:0; padding:.85rem 1rem;
+  border-radius:var(--raio-md);
+  border-left:3px solid var(--roxo-neon);
+  background:var(--roxo-vidro);
+  font-family:var(--fonte-display); font-size:1.02rem; font-weight:600; line-height:1.45;
+  color:var(--texto);
+}
+.linha-tempo__conclusao[data-situacao="cabe"],
+.linha-tempo__conclusao[data-situacao="cabe-com-imprevisto"]{ border-left-color:var(--verde); background:var(--verde-fraco); }
+.linha-tempo__conclusao[data-situacao="imprevisto-no-cartao"]{ border-left-color:var(--amarelo); background:var(--amarelo-fraco); }
+.linha-tempo__conclusao[data-situacao="nao-fecha"],
+.linha-tempo__conclusao[data-situacao="sem-saldo"]{ border-left-color:var(--vermelho); background:var(--vermelho-fraco); }
+.linha-tempo__simulacao,.linha-tempo__dica-controles{ margin:0; font-size:.8rem; line-height:1.45; }
+/* Falta um dado: a simulação pergunta em vez de supor. */
+.linha-tempo__falta{
+  display:grid; gap:.55rem; justify-items:start;
+  padding:.75rem .9rem; border-radius:var(--raio-md);
+  border-left:3px solid var(--amarelo); background:var(--amarelo-fraco);
+}
+.linha-tempo__falta[hidden]{ display:none; }
+.linha-tempo__falta p{ margin:0; font-size:.88rem; line-height:1.5; color:var(--texto); }
+.linha-tempo__falta .btn-mini{ min-height:44px; }
+.linha-tempo__resumo .linha-tempo__cartoes{ margin-top:.2rem; }
+
 .linha-tempo__cartoes > div small{ font-size:.74rem; line-height:1.35; color:var(--texto-fraco); }
+
+/* Dado confirmado x estimativa: o mesmo selo nos campos e na lista. */
+.linha-tempo__tipo{
+  display:inline-flex; align-items:center;
+  padding:.12rem .5rem; border-radius:999px;
+  font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  white-space:nowrap; vertical-align:middle;
+}
+.linha-tempo__tipo--confirmado{ color:var(--verde); background:var(--verde-fraco); border:1px solid rgba(31,209,143,.35); }
+.linha-tempo__tipo--estimativa{ color:var(--amarelo); background:var(--amarelo-fraco); border:1px solid rgba(254,200,0,.35); }
+.linha-tempo__tipo--mini{ margin-left:.45rem; font-size:.6rem; padding:.06rem .42rem; }
+.linha-tempo__rotulo-campo{ display:flex; flex-wrap:wrap; align-items:center; gap:.2rem 0; }
+
+.linha-tempo__origem{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+.linha-tempo__origem-grupo{
+  display:grid; gap:.5rem; align-content:start;
+  padding:.75rem .85rem; border-radius:var(--raio-md);
+  background:rgba(0,0,0,.22); border:1px solid var(--superficie-borda);
+}
+.linha-tempo__origem-grupo--estimativa{ border-style:dashed; }
+.linha-tempo__origem-titulo{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.8rem; color:var(--texto-fraco); }
+.linha-tempo__origem dl{ margin:0; display:grid; gap:.45rem; }
+.linha-tempo__origem dl > div{ display:flex; justify-content:space-between; align-items:baseline; gap:.75rem; }
+.linha-tempo__origem dt{ font-size:.86rem; color:var(--texto); min-width:0; }
+.linha-tempo__origem dd{
+  margin:0; display:grid; justify-items:end; text-align:right;
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:.9rem; color:var(--texto);
+}
+.linha-tempo__origem dd small{ font-family:var(--fonte-corpo); font-size:.72rem; line-height:1.35; color:var(--texto-fraco); max-width:16rem; }
 .linha-tempo__frase{ line-height:1.55; font-weight:500; color:var(--texto); }
 .linha-tempo__frase strong{ color:var(--amarelo); font-family:var(--fonte-dados); }
 
@@ -50,16 +108,24 @@
 .linha-tempo__formulas ol{ display:grid; gap:.55rem; margin:.8rem 0; padding-left:1.2rem; color:var(--texto-fraco); line-height:1.55; }
 .linha-tempo__formulas strong{ color:var(--texto); }
 
-.linha-tempo__ia{ display:grid; gap:.7rem; margin-top:1.2rem; justify-items:start; }
-.linha-tempo__ia-resposta{
-  display:grid; gap:.6rem; width:100%;
-  padding:.9rem 1rem; border-radius:var(--raio-md);
-  background:var(--roxo-vidro); border-left:3px solid var(--roxo-neon);
-  color:var(--texto); line-height:1.6; white-space:pre-line;
+/* Antes de a pessoa escolher a forma, a simulação é um exemplo e diz isso. */
+.linha-tempo__exemplo{
+  margin:0 0 .5rem; padding:.55rem .8rem; border-radius:var(--raio-md);
+  border:1px dashed rgba(254,200,0,.45); background:var(--amarelo-fraco);
+  font-size:.88rem; line-height:1.45; color:var(--texto);
 }
-.linha-tempo__ia-resposta--erro{ background:var(--amarelo-fraco); border-left-color:var(--amarelo); }
+.linha-tempo__selo{ margin:.4rem 0 0; }
+.linha-tempo__perguntar{ display:inline; min-height:auto; padding:0; color:var(--amarelo); text-decoration:underline; }
+.linha-tempo__completa{ margin-top:1rem; }
 
 @media (max-width:560px){
   .linha-tempo__controles{ padding:.85rem; }
-  .linha-tempo__cartoes{ grid-template-columns:1fr 1fr; }
+  .linha-tempo__cartoes{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .linha-tempo__conclusao{ font-size:.96rem; padding:.75rem .85rem; }
+}
+/* Em 320px, dois cartões lado a lado espremem os valores: um por linha. */
+@media (max-width:359px){
+  .linha-tempo__cartoes{ grid-template-columns:1fr; }
+  .linha-tempo__origem dl > div{ flex-direction:column; gap:.1rem; }
+  .linha-tempo__origem dd{ justify-items:start; text-align:left; }
 }

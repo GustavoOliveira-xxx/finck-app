@@ -23,28 +23,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderResumo();
     renderLista();
   }
-  // O histórico vira retorno sobre o próprio comportamento:
-  // quantas compras passaram pela análise, quanto tempo de trabalho elas
-  // representam e em quantas a decisão foi não comprar na hora.
+  // "Seu histórico" (FinckAbasReality.historicoHTML) conta o que passou
+  // pela análise e o que foi decidido; os cartões trazem só o que ele não
+  // mostra. O primeiro cartão leva o total em data-contador, que o CSS usa
+  // para o estado sem análises.
   function renderResumo() {
     const r = R.resumoHistorico(calculos);
     const horas = calculos.reduce((s, a) => s + Number(a.work_hours || 0), 0);
-    const dias = calculos.reduce((s, a) => s + Number(a.work_days || 0), 0);
-    const total = calculos.reduce((s, a) => s + Number(a.price || 0), 0);
     const host = document.getElementById("resumoDecisoes");
     if (host) {
-      host.innerHTML = calculos.length ? `
-        <h3>Suas decisões</h3>
-        <ul class="resumo-decisoes__numeros">
-          <li><strong>${calculos.length}</strong> ${calculos.length === 1 ? "análise" : "análises"}</li>
-          <li><strong>${U.moeda(total)}</strong> em compras analisadas</li>
-          <li><strong>${U.numero(dias, dias < 10 ? 1 : 0)}</strong> dias de trabalho representados</li>
-          <li><strong>${r.evitadas}</strong> ${r.evitadas === 1 ? "compra não feita na hora" : "compras não feitas na hora"}</li>
-        </ul>
-        <p class="resumo-decisoes__frase">${r.decididas ? `Em <strong>${r.evitadas} de ${r.decididas}</strong> decisões registradas você escolheu esperar, buscar alternativa ou não comprar depois de analisar.${r.a_acompanhar ? ` ${r.a_acompanhar} ${r.a_acompanhar === 1 ? "ainda espera" : "ainda esperam"} o acompanhamento de 30 dias.` : ""}` : "Nenhuma análise tem decisão registrada ainda. A decisão fica no fim de cada análise."}</p>
-        <p class="nota">É o que você decidiu no momento, não a prova de que a compra não aconteceu depois. O acompanhamento em <a href="decisoes.html">Decisões</a> registra o que aconteceu.</p>` : "";
+      host.innerHTML = window.FinckAbasReality?.historicoHTML(calculos) || "";
     }
-    document.getElementById("resumoCalculos").innerHTML = `\n      <article class="card-indicador"><span>Análises salvas</span><strong data-contador="${calculos.length}">${calculos.length}</strong></article>\n      <article class="card-indicador"><span>Valor analisado</span><strong>${U.moeda(total)}</strong></article>\n      <article class="card-indicador"><span>Tempo de trabalho avaliado</span><strong>${U.numero(horas, 1)} h</strong></article>\n      <article class="card-indicador"><span>Decisões conscientes</span><strong class="cor-verde">${r.evitadas}</strong></article>\n      <article class="card-indicador"><span>Valor que você decidiu não gastar</span><strong class="cor-verde">${U.moeda(r.valor_potencial)}</strong></article>`;
+    document.getElementById("resumoCalculos").innerHTML = `
+      <article class="card-indicador" data-contador="${calculos.length}"><span>Tempo de trabalho avaliado</span><strong>${U.numero(horas, 1)} h</strong></article>
+      <article class="card-indicador"><span>Valor que você decidiu não gastar</span><strong class="cor-verde">${U.moeda(r.valor_potencial)}</strong></article>`;
   }
   function filtrar() {
     const busca = document.getElementById("buscaCalculo").value.trim().toLowerCase();
@@ -60,13 +52,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (ordem === "antigos") {
       itens = itens.sort((a, b) => data(a) - data(b));
     } else if (ordem === "caros") {
-      itens = itens.sort((a, b) => Number(b.price) - Number(a.price));
+      itens = itens.sort((a, b) => R.valorTotal(b) - R.valorTotal(a));
     } else if (ordem === "horas") {
       itens = itens.sort((a, b) => Number(b.work_hours || 0) - Number(a.work_hours || 0));
     } else {
       itens = itens.sort((a, b) => data(b) - data(a));
     }
     return itens;
+  }
+  // "Analisar de novo" preenche o formulário com item, preço e quantidade;
+  // a pessoa confere e pede a análise com os números de hoje.
+  function linkRepetir(a) {
+    const p = new URLSearchParams({
+      item: a.item_name || "",
+      preco: String(Number(a.price) || "")
+    });
+    if (Number(a.quantity) > 1) {
+      p.set("qtd", String(Math.floor(Number(a.quantity))));
+    }
+    return `reality.html?${p.toString()}`;
   }
   function rendaMudou(a) {
     const base = Number(a.income_base || 0);
@@ -77,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const itens = filtrar();
     const host = document.getElementById("listaCalculos");
     document.getElementById("vazioCalculos").hidden = itens.length > 0;
-    host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}${U.urlHttpSegura(a.item_link) ? ` <a class="link-item" href="${U.escapeHTML(U.urlHttpSegura(a.item_link))}" target="_blank" rel="noopener noreferrer" title="Abrir link do item">🔗</a>` : ""}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${a.decision ? U.escapeHTML(rotulo(a.decision)) : "Análise sem decisão"}</p>\n          <p class="tag-salario" title="Salário base usado nesta análise">\n            Salário base na época: <strong>${U.moeda(a.income_base)}</strong>\n            ${rendaMudou(a) ? `<span class="selo-mudou">renda mudou</span>` : ""}\n          </p>\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(a.price)}</strong>\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir análise">✕</button>\n        </div>\n      </article>`).join("");
+    host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}${U.urlHttpSegura(a.item_link) ? ` <a class="link-item" href="${U.escapeHTML(U.urlHttpSegura(a.item_link))}" target="_blank" rel="noopener noreferrer" title="Abrir link do item">🔗</a>` : ""}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${a.decision ? U.escapeHTML(rotulo(a.decision)) : "Análise sem decisão"}</p>\n          <p class="tag-salario" title="Salário base usado nesta análise">\n            Salário base na época: <strong>${U.moeda(a.income_base)}</strong>\n            ${rendaMudou(a) ? `<span class="selo-mudou">renda mudou</span>` : ""}\n          </p>\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(R.valorTotal(a))}</strong>${Number(a.quantity) > 1 ? `\n          <small>${a.quantity} × ${U.moeda(a.price)}</small>` : ""}\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <a class="btn-secundario btn-mini" href="${linkRepetir(a)}">Analisar de novo</a>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir análise">✕</button>\n        </div>\n      </article>`).join("");
     host.querySelectorAll("[data-detalhe]").forEach(b => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
       if (!await U.confirmar("Excluir esta análise?", "Ela sai do seu registro de análises. Nenhum lançamento financeiro é afetado.", {
@@ -96,12 +100,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const refl = a.reflections || {};
-    document.getElementById("conteudoCalculo").innerHTML = `\n      <h4>Dados da análise</h4>\n      <ul class="lista-resumo">\n        <li><span>Item</span><strong>${U.escapeHTML(a.item_name)}</strong></li>\n        <li><span>Preço</span><strong>${U.moeda(a.price)}</strong></li>\n        <li><span>Categoria</span><strong>${U.escapeHTML(a.category || "Outros")}</strong></li>\n        <li><span>Data da análise</span><strong>${U.dataBR(a.analyzed_at || a.created_at)}</strong></li>\n        <li><span>Decisão</span><strong>${a.decision ? U.escapeHTML(rotulo(a.decision)) : "—"}</strong></li>\n        <li><span>Impacto</span><strong>${U.escapeHTML(a.impact_level || "—")}</strong></li>\n        ${a.item_link ? `<li><span>Link do item</span><strong>${U.urlHttpSegura(a.item_link) ? `<a href="${U.escapeHTML(U.urlHttpSegura(a.item_link))}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : `<span title="Endereço fora de http/https — não é aberto como link.">${U.escapeHTML(a.item_link)}</span>`}</strong></li>` : ""}\n      </ul>\n\n      <h4>Realidade financeira usada</h4>\n      <ul class="lista-resumo lista-resumo--destaque">\n        <li><span>Salário base</span><strong>${U.moeda(a.income_base)}</strong></li>\n        <li><span>Tipo de renda</span><strong>${U.escapeHTML(a.income_type || "—")}</strong></li>\n        <li><span>Jornada</span><strong>${U.numero(a.work_days_month, 0)} dias · ${U.numero(a.work_hours_day, 1)} h/dia</strong></li>\n        <li><span>Valor da hora</span><strong>${U.moeda(a.hour_value)}</strong></li>\n        <li><span>Valor do dia</span><strong>${U.moeda(a.day_value)}</strong></li>\n        <li><span>Renda livre na época</span><strong>${U.moeda(a.free_income)}</strong></li>\n      </ul>\n      ${rendaMudou(a) ? `<p class="nota">Hoje seu salário base é ${U.moeda(perfilAtual?.income_monthly)}. Esta análise foi feita com ${U.moeda(a.income_base)}.</p>` : ""}\n\n      <h4>Resultado</h4>\n      <ul class="lista-resumo">\n        <li><span>% da renda</span><strong>${U.percentual(a.income_percent)}</strong></li>\n        <li><span>Dias de trabalho</span><strong>${U.numero(a.work_days)} dias</strong></li>\n        <li><span>Horas de trabalho</span><strong>${U.numero(a.work_hours)} horas</strong></li>\n        <li><span>Saldo antes</span><strong>${U.moeda(a.balance_before)}</strong></li>\n        <li><span>Saldo depois</span><strong>${U.moeda(a.balance_after)}</strong></li>\n      </ul>\n      ${a.note ? `<p class="nota">Observação: ${U.escapeHTML(a.note)}</p>` : ""}\n\n      <h4>Reflexões</h4>\n      <ul class="lista-resumo">\n        ${cfg.REFLEXOES.map(q => `\n          <li><span>${U.escapeHTML(q.dimensao)}</span><strong>${U.escapeHTML(refl[q.id] || "—")}</strong></li>`).join("")}\n      </ul>`;
+    document.getElementById("conteudoCalculo").innerHTML = `\n      <h4>Dados da análise</h4>\n      <ul class="lista-resumo">\n        <li><span>Item</span><strong>${U.escapeHTML(a.item_name)}</strong></li>\n        <li><span>Preço</span><strong>${Number(a.quantity) > 1 ? `${a.quantity} × ${U.moeda(a.price)} = ${U.moeda(R.valorTotal(a))}` : U.moeda(a.price)}</strong></li>\n        <li><span>Categoria</span><strong>${U.escapeHTML(a.category || "Outros")}</strong></li>\n        <li><span>Data da análise</span><strong>${U.dataBR(a.analyzed_at || a.created_at)}</strong></li>\n        <li><span>Decisão</span><strong>${a.decision ? U.escapeHTML(rotulo(a.decision)) : "Sem decisão"}</strong></li>\n        <li><span>Impacto</span><strong>${U.escapeHTML(a.impact_level || "Não informado")}</strong></li>\n        ${a.item_link ? `<li><span>Link do item</span><strong>${U.urlHttpSegura(a.item_link) ? `<a href="${U.escapeHTML(U.urlHttpSegura(a.item_link))}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : `<span title="Endereço fora de http/https: não é aberto como link.">${U.escapeHTML(a.item_link)}</span>`}</strong></li>` : ""}\n      </ul>\n\n      <h4>Realidade financeira usada</h4>\n      <ul class="lista-resumo lista-resumo--destaque">\n        <li><span>Salário base</span><strong>${U.moeda(a.income_base)}</strong></li>\n        <li><span>Tipo de renda</span><strong>${U.escapeHTML(a.income_type || "Não informado")}</strong></li>\n        <li><span>Jornada</span><strong>${U.numero(a.work_days_month, 0)} dias · ${U.numero(a.work_hours_day, 1)} h/dia</strong></li>\n        <li><span>Valor da hora</span><strong>${U.moeda(a.hour_value)}</strong></li>\n        <li><span>Valor do dia</span><strong>${U.moeda(a.day_value)}</strong></li>\n        <li><span>Renda livre na época</span><strong>${U.moeda(a.free_income)}</strong></li>\n      </ul>\n      ${rendaMudou(a) ? `<p class="nota">Hoje seu salário base é ${U.moeda(perfilAtual?.income_monthly)}. Esta análise foi feita com ${U.moeda(a.income_base)}.</p>` : ""}\n\n      <h4>Resultado</h4>\n      <ul class="lista-resumo">\n        <li><span>% da renda</span><strong>${U.percentual(a.income_percent)}</strong></li>\n        <li><span>Dias de trabalho</span><strong>${U.numero(a.work_days)} dias</strong></li>\n        <li><span>Horas de trabalho</span><strong>${U.numero(a.work_hours)} horas</strong></li>\n        <li><span>Saldo antes</span><strong>${U.moeda(a.balance_before)}</strong></li>\n        <li><span>Saldo depois</span><strong>${U.moeda(a.balance_after)}</strong></li>\n      </ul>\n      ${a.note ? `<p class="nota">Observação: ${U.escapeHTML(a.note)}</p>` : ""}\n\n      <h4>Reflexões</h4>\n      <ul class="lista-resumo">\n        ${cfg.REFLEXOES.map(q => `\n          <li><span>${U.escapeHTML(q.dimensao)}</span><strong>${U.escapeHTML(refl[q.id] || "Sem resposta")}</strong></li>`).join("")}\n      </ul>`;
     U.abrirModal("modalCalculo");
   }
   function exportarCSV() {
-    const linhas = [ [ "data", "item", "categoria", "preco", "salario_base", "tipo_renda", "dias_mes", "horas_dia", "valor_hora", "valor_dia", "percentual_renda", "dias_trabalho", "horas_trabalho", "impacto", "decisao", "observacao", "link" ] ];
-    filtrar().forEach(a => linhas.push([ (a.analyzed_at || a.created_at || "").slice(0, 10), a.item_name, a.category, a.price, a.income_base, a.income_type, a.work_days_month, a.work_hours_day, a.hour_value, a.day_value, a.income_percent, a.work_days, a.work_hours, a.impact_level, a.decision || "", (a.note || "").replace(/[\r\n;]+/g, " "), a.item_link || "" ]));
+    const linhas = [ [ "data", "item", "categoria", "preco", "quantidade", "salario_base", "tipo_renda", "dias_mes", "horas_dia", "valor_hora", "valor_dia", "percentual_renda", "dias_trabalho", "horas_trabalho", "impacto", "decisao", "observacao", "link" ] ];
+    filtrar().forEach(a => linhas.push([ (a.analyzed_at || a.created_at || "").slice(0, 10), a.item_name, a.category, a.price, a.quantity || 1, a.income_base, a.income_type, a.work_days_month, a.work_hours_day, a.hour_value, a.day_value, a.income_percent, a.work_days, a.work_hours, a.impact_level, a.decision || "", (a.note || "").replace(/[\r\n;]+/g, " "), a.item_link || "" ]));
     const csv = linhas.map(l => l.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
     const url = URL.createObjectURL(new Blob([ `\ufeff${csv}` ], {
       type: "text/csv;charset=utf-8"

@@ -24,12 +24,12 @@ document.addEventListener("DOMContentLoaded", () => {
     bloqueada: c => `<strong>${U.escapeHTML(c.loja)} dificulta a leitura de fora.</strong> ` + (printDisponivel ? `Pelo link, a busca costuma voltar sem preço aqui. ` + `Mande um print da tela do produto: a IA lê o preço direto da imagem.` : `A busca por IA vai tentar mesmo assim, mas aqui ela costuma voltar sem preço. ` + `Se voltar, digite o valor manualmente.`),
     instavel: c => `<strong>${U.escapeHTML(c.loja)}:</strong> a busca por IA lê a página, mas nesta loja ` + `pode voltar sem preço. ${U.escapeHTML(c.motivo)}` + (printDisponivel ? ` Se falhar, mande um print da tela.` : ""),
     provavel: () => `Busca por IA disponível para esta loja.`,
-    desconhecida: () => `Loja não catalogada. A busca por IA lê a página do produto — ` + `se não achar, é só digitar o valor.`
+    desconhecida: () => `Loja não catalogada. A busca por IA lê a página do produto; ` + `se não achar, é só digitar o valor.`
   } : {
     bloqueada: c => `<strong>${U.escapeHTML(c.loja)} não permite busca automática.</strong> ` + `${U.escapeHTML(c.motivo)} Digite o valor manualmente.`,
     instavel: c => `<strong>${U.escapeHTML(c.loja)}:</strong> a busca pode não encontrar o preço. ` + `${U.escapeHTML(c.motivo)}`,
     provavel: () => `Busca disponível para esta loja.`,
-    desconhecida: () => `Loja não catalogada. Vale tentar — se não achar, é só digitar o valor.`
+    desconhecida: () => `Loja não catalogada. Vale tentar: se não achar, é só digitar o valor.`
   };
   let classificacao = {
     status: "desconhecida"
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // decide (BUSCA_IA_DEMO), aplicando limite por IP e teto diário. A chave
   // nunca chega aqui no navegador.
   let OPCIONAL = !IA_ATIVA;
-  // Códigos em que o servidor diz "este recurso não existe aqui" — diferente de
+  // Códigos em que o servidor diz "este recurso não existe aqui", diferente de
   // "não achei o preço nesta página". Nesses casos não adianta o usuário tentar
   // de novo: o certo é dizer que a busca é opcional e liberar a digitação.
   const INDISPONIVEL = new Set([ "IA_INDISPONIVEL", "SEM_LOGIN", "ORIGEM_NAO_PERMITIDA" ]);
@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     botao.disabled = true;
     botao.classList.add("busca-preco__botao--bloqueado");
-    botao.title = "Recurso opcional indisponível aqui — digite o preço no campo acima.";
+    botao.title = "Recurso opcional indisponível aqui: digite o preço no campo acima.";
     aviso.hidden = false;
     aviso.className = "busca-preco__aviso busca-preco__aviso--opcional";
     aviso.innerHTML = `<strong>A busca pelo link não está disponível aqui.</strong> Ela é um atalho opcional: digite o preço no campo acima e siga com a análise normalmente.`;
@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (d.confianca === "media") {
         return "O print mostrava mais de um valor; a IA escolheu o do produto principal. Vale conferir.";
       }
-      return "Preço lido do print pela IA. Confira se bate com o que a loja mostra.";
+      return "Preço lido do print pela IA do Google. Confira se bate com o que a loja mostra antes de usar.";
     }
     if (d.fonte === "ia") {
       if (d.metodo === "ia-busca") {
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (d.confianca === "media") {
         return "A página mostrava mais de um valor; a IA escolheu o do produto principal. Vale conferir.";
       }
-      return "Preço lido da página pela IA. Confira se bate com o que a loja mostra.";
+      return "Preço lido da página pela IA do Google. Confira se bate com o que a loja mostra antes de usar.";
     }
     if (d.confianca === "baixa") {
       return "Li os valores do texto da página, então podem estar errados. Confira na loja antes de analisar.";
@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return porIA;
     }
     // A IA não trouxe preço. O leitor antigo lê o HTML direto e às vezes acha
-    // o que ela não achou — menos nas lojas que recusam acesso de servidor,
+    // o que ela não achou, menos nas lojas que recusam acesso de servidor,
     // onde ele já responderia recusando.
     if (classificacao.status === "bloqueada") {
       return porIA;
@@ -293,8 +293,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     U.escreverMoeda("itemPrice", preco);
     preenchidos.push("preço");
-    if (campoCategoria && dados.categoria && !campoCategoria.dataset.escolhida && Array.from(campoCategoria.options).some(o => o.value === dados.categoria)) {
+    if (campoCategoria && dados.categoria && !campoCategoria.dataset.escolhida && !campoCategoria.dataset.confirmada && Array.from(campoCategoria.options).some(o => o.value === dados.categoria)) {
       campoCategoria.value = dados.categoria;
+      // A pílula do Reality diz quem sugeriu: a IA (print ou link) ou o
+      // leitor antigo da página. Continua sugestão até a pessoa confirmar.
+      const pelaIA = dados.fonte === "ia" || /^ia-/.test(String(dados.metodo || ""));
+      campoCategoria.dataset.origem = dados.metodo === "ia-print" ? "ia-print" : pelaIA ? "ia-link" : "pagina";
       campoCategoria.dispatchEvent(new Event("finck:categoria"));
       preenchidos.push("categoria");
     }
@@ -593,7 +597,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // pertenciam ao item anterior.
   document.getElementById("formReality")?.addEventListener("reset", () => {
     if (campoCategoria) {
-      delete campoCategoria.dataset.escolhida;
+      [ "escolhida", "confirmada", "origem", "inferida" ].forEach(k => delete campoCategoria.dataset[k]);
     }
     setTimeout(() => {
       if (!lendoPrint) {
@@ -608,7 +612,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const item = (l, mostrarMotivo) => `\n      <li>\n        <strong>${U.escapeHTML(l.nome)}</strong>\n        ${mostrarMotivo && l.motivo ? `<p>${U.escapeHTML(l.motivo)}</p>` : ""}\n        ${l.detalhe ? `<p>${U.escapeHTML(l.detalhe)}</p>` : ""}\n      </li>`;
-    host.innerHTML = `\n      <p class="lojas-intro">\n        ${IA_ATIVA ? "A busca manda a IA abrir a página do produto e ler o preço.\n        Ela entende a página como um leitor humano, então funciona em muito\n        mais loja do que antes — mas ainda depende de a loja deixar a página\n        ser aberta de fora." : "A busca lê a página do produto e traz o preço. Isso depende de como cada\n        loja monta o site — por isso não funciona em todas."} Em qualquer caso,\n        você pode digitar o valor manualmente.\n      </p>\n${printDisponivel ? `\n      <p class="lojas-print">\n        <strong>O print resolve em qualquer loja.</strong> Inclusive nas que recusam o\n        link: use <em>Ler preço de um print</em> com a tela do produto aberta, e a IA lê\n        o preço direto da imagem.\n      </p>\n` : ""}\n      <section class="lojas-grupo lojas-grupo--bloqueada">\n        <h4>${IA_ATIVA ? "Raramente funciona" : "Não funciona"}</h4>\n        <p class="lojas-grupo__nota">${IA_ATIVA ? printDisponivel ? "Estas lojas recusam o acesso de fora, inclusive o da IA. Pelo link,\n          quase sempre volta sem preço: aqui, use o print da tela." : "Estas lojas recusam o acesso de fora, inclusive o da IA. O botão\n          continua liberado — se voltar sem preço, digite o valor." : "O botão fica desativado nestas lojas."}</p>\n        <ul class="lojas-lista">\n          ${L.BLOQUEADAS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--instavel">\n        <h4>Pode falhar</h4>\n        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>\n        <ul class="lojas-lista">\n          ${L.INSTAVEIS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--provavel">\n        <h4>Costuma funcionar</h4>\n        <ul class="lojas-lista">\n          ${L.PROVAVEIS.map(l => item(l, false)).join("")}\n        </ul>\n      </section>\n\n      <p class="lojas-rodape">\n        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem\n        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda\n        por CEP, o valor lido pode ser o do item base.\n      </p>`;
+    host.innerHTML = `\n      <p class="lojas-intro">\n        ${IA_ATIVA ? "A busca manda a IA abrir a página do produto e ler o preço.\n        Ela entende a página como um leitor humano, então funciona em muito\n        mais loja do que antes, mas ainda depende de a loja deixar a página\n        ser aberta de fora." : "A busca lê a página do produto e traz o preço. Isso depende de como cada\n        loja monta o site, por isso não funciona em todas."} Em qualquer caso,\n        você pode digitar o valor manualmente.\n      </p>\n${printDisponivel ? `\n      <p class="lojas-print">\n        <strong>O print resolve em qualquer loja.</strong> Inclusive nas que recusam o\n        link: use <em>Ler preço de um print</em> com a tela do produto aberta, e a IA lê\n        o preço direto da imagem.\n      </p>\n` : ""}\n      <section class="lojas-grupo lojas-grupo--bloqueada">\n        <h4>${IA_ATIVA ? "Raramente funciona" : "Não funciona"}</h4>\n        <p class="lojas-grupo__nota">${IA_ATIVA ? printDisponivel ? "Estas lojas recusam o acesso de fora, inclusive o da IA. Pelo link,\n          quase sempre volta sem preço: aqui, use o print da tela." : "Estas lojas recusam o acesso de fora, inclusive o da IA. O botão\n          continua liberado: se voltar sem preço, digite o valor." : "O botão fica desativado nestas lojas."}</p>\n        <ul class="lojas-lista">\n          ${L.BLOQUEADAS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--instavel">\n        <h4>Pode falhar</h4>\n        <p class="lojas-grupo__nota">A busca tenta, mas às vezes volta sem preço.</p>\n        <ul class="lojas-lista">\n          ${L.INSTAVEIS.map(l => item(l, true)).join("")}\n        </ul>\n      </section>\n\n      <section class="lojas-grupo lojas-grupo--provavel">\n        <h4>Costuma funcionar</h4>\n        <ul class="lojas-lista">\n          ${L.PROVAVEIS.map(l => item(l, false)).join("")}\n        </ul>\n      </section>\n\n      <p class="lojas-rodape">\n        O valor trazido é sempre uma sugestão: ele preenche o campo, mas quem\n        confirma é você. Em produto com variação (cor, tamanho) ou preço que muda\n        por CEP, o valor lido pode ser o do item base.\n      </p>`;
   }
   if (abrirLista) {
     abrirLista.addEventListener("click", () => {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>FinCK of Reality | Cálculo realista de compra</title>
+  <title>FinCK of Reality | Análise de compra antes de decidir</title>
   <meta name="description" content="Traduza o preço de uma compra em horas de trabalho, impacto no orçamento e efeito nas suas metas.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
   <meta name="theme-color" content="#07060a">
@@ -22,6 +22,8 @@
   <link rel="stylesheet" href="css/impacto-ambiental.css">
   <link rel="stylesheet" href="css/clareza.css">
   <link rel="stylesheet" href="css/linha-tempo.css">
+  <link rel="stylesheet" href="css/inteligencia.css">
+  <link rel="stylesheet" href="css/reality-fluxo.css">
 </head>
 <body data-page="reality">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -74,11 +76,13 @@
 
     <div id="painelCalculo" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculo">
 
-    <!-- Onde a pessoa está e quanto falta. -->
+    <!-- Onde a pessoa está e quanto falta. A narrativa da análise: a compra
+         que ela quer, o que o preço revela (com o contexto em "Quer olhar
+         mais fundo?"), a reflexão dela e a decisão. -->
     <nav class="etapas-reality" id="etapasReality" aria-label="Etapas da análise">
       <ol>
-        <li data-etapa-reality="passoDados"><a href="#passoDados"><span class="etapas-reality__num">1</span> Dados</a></li>
-        <li data-etapa-reality="passoResultado"><a href="#passoResultado" aria-disabled="true"><span class="etapas-reality__num">2</span> Impacto</a></li>
+        <li data-etapa-reality="passoDados"><a href="#passoDados"><span class="etapas-reality__num">1</span> Compra</a></li>
+        <li data-etapa-reality="passoResultado"><a href="#passoResultado" aria-disabled="true"><span class="etapas-reality__num">2</span> Revelação</a></li>
         <li data-etapa-reality="passoReflexao"><a href="#passoReflexao" aria-disabled="true"><span class="etapas-reality__num">3</span> Reflexão</a></li>
         <li data-etapa-reality="passoDecisao"><a href="#passoDecisao" aria-disabled="true"><span class="etapas-reality__num">4</span> Decisão</a></li>
       </ol>
@@ -139,7 +143,18 @@
 
         <div class="alerta-fluxo" id="alertaRenda" role="alert" hidden></div>
         <button type="submit" class="btn-primario btn-grande" id="btnVerImpacto">Ver o impacto da compra</button>
-        <p class="status-processo" id="statusProcesso" aria-live="polite"></p>
+        <!-- Cada linha corresponde a uma parte da conta que de fato roda;
+             nada aqui é espera de enfeite. -->
+        <div class="progresso-analise" id="progressoAnalise" hidden>
+          <p class="progresso-analise__marca"><span aria-hidden="true">✦</span> Análise FinCK</p>
+          <ol class="progresso-analise__etapas">
+            <li data-etapa-analise="dados"><span class="sr-only" data-estado-texto></span>Dados financeiros</li>
+            <li data-etapa-analise="orcamento"><span class="sr-only" data-estado-texto></span>Impacto no orçamento</li>
+            <li data-etapa-analise="metas"><span class="sr-only" data-estado-texto></span>Suas metas</li>
+            <li data-etapa-analise="cenarios"><span class="sr-only" data-estado-texto></span>Cenários</li>
+          </ol>
+        </div>
+        <p class="status-processo sr-only" id="statusProcesso" aria-live="polite"></p>
 
         <details class="detalhes-hipoteses detalhes-precisao" id="detalhesVidaUtil">
           <summary>
@@ -153,14 +168,19 @@
           <fieldset class="grupo-vida-util">
             <legend>Quer saber se o barato realmente compensa?</legend>
             <p class="descricao">Informe a vida útil do produto. Sem isso, o FinCK compara só preços. Com isso, mostra o custo por mês de uso, que é onde um item barato e descartável costuma perder para um caro e durável.</p>
-            <div class="linha-dupla">
-              <label>Uso esperado (meses)
-                <input type="number" id="itemMeses" min="1" max="600" step="1" placeholder="Ex.: 24">
-              </label>
-              <label>Quantidade
-                <input type="number" id="itemQuantidade" min="1" max="999" step="1" placeholder="1">
-              </label>
+            <div class="campo-meses">
+              <label for="itemMeses">Uso esperado (meses)</label>
+              <small class="ajuda-campo" id="ajudaMeses">Você pretende usar por quanto tempo? Isso ajuda o FinCK a comparar o preço com a durabilidade.</small>
+              <div class="chips-meses" role="group" aria-label="Atalhos de tempo de uso">
+                <button type="button" class="chip chip-meses" data-meses="12" aria-pressed="false">12 meses</button>
+                <button type="button" class="chip chip-meses" data-meses="24" aria-pressed="false">24 meses</button>
+                <button type="button" class="chip chip-meses" data-meses="36" aria-pressed="false">36 meses</button>
+              </div>
+              <input type="number" id="itemMeses" min="1" max="600" step="1" placeholder="Ou digite, ex.: 18" inputmode="numeric" aria-describedby="ajudaMeses">
             </div>
+            <label>Quantidade
+              <input type="number" id="itemQuantidade" min="1" max="999" step="1" placeholder="1" inputmode="numeric">
+            </label>
           </fieldset>
           <label>Quando não servir mais
             <select id="itemDestino"></select>
@@ -177,103 +197,134 @@
 
       <div id="comparacao"></div>
 
-      <!-- A resposta em três segundos: tempo de trabalho primeiro,
-           peso na renda depois, e uma frase que dá para dizer em voz alta. -->
-      <article class="resposta-reality" id="respostaReality" tabindex="-1"></article>
+      <!-- A revelação: o preço vira horas e dias do trabalho da pessoa, peso
+           no mês e atraso na meta, com o selo de impacto e uma frase que dá
+           para dizer em voz alta. O 3D do Reality ancora o resultado. -->
+      <article class="resposta-reality" id="respostaReality" tabindex="-1" aria-labelledby="tituloResultado"></article>
 
-      <div class="cards-indicadores" id="indicadores"></div>
+      <!-- Análise FinCK: só o que a revelação ainda não mostrou, a leitura,
+           os cenários recolhidos e a conversa sobre esta compra. Desenhada
+           por js/inteligencia.js. -->
+      <section class="analise-finck" id="analiseFinck" aria-labelledby="tituloAnaliseFinck" hidden></section>
 
-      <div class="bloco-interno" id="detalhesAnalise">
-        <h4>Impacto no orçamento</h4>
-        <div id="impactoOrcamento"></div>
-      </div>
+      <!-- O contexto da compra, um tema por vez e recolhido: cada linha diz o
+           essencial e abre o resto. -->
+      <section class="mais-fundo" id="maisFundo" aria-labelledby="tituloMaisFundo">
+        <h4 class="mais-fundo__titulo" id="tituloMaisFundo">Quer olhar mais fundo?</h4>
+        <p class="descricao mais-fundo__intro">Metas, orçamento, os próximos meses e a sustentabilidade. Toque em um tema para ver os detalhes.</p>
 
-      <div class="bloco-interno">
-        <h4>Efeito sobre suas metas</h4>
-        <div id="impactoMetas"></div>
-      </div>
+        <details class="mais-fundo__item" id="detalhesMetas">
+          <summary><span class="mais-fundo__nome">Efeito sobre suas metas</span> <span class="mais-fundo__resumo" data-resumo="metas"></span></summary>
+          <div class="mais-fundo__corpo" id="impactoMetas"></div>
+        </details>
 
-      <!-- Linha do tempo da compra: o que a compra faz com os próximos meses,
-           com as parcelas que a pessoa já tem e um imprevisto de teste.
-           Contas em js/linha-tempo-engine.js; tela em js/linha-tempo.js. -->
-      <div class="bloco-interno linha-tempo" id="blocoLinhaTempo" hidden>
-        <h4>E nos próximos meses?</h4>
-        <p class="descricao">A compra não termina no dia em que você paga. Veja, mês a mês, como ela convive com a sua renda, as despesas fixas, os gastos do dia a dia e as parcelas que você já tem. E teste o que acontece se aparecer um imprevisto.</p>
-        <form id="formLinhaTempo" class="linha-tempo__controles" novalidate>
-          <fieldset class="linha-tempo__forma">
-            <legend>Como você pagaria?</legend>
-            <div class="linha-tempo__opcoes">
-              <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="parcelado" checked> <span>Parcelado</span></label>
-              <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="avista"> <span>À vista</span></label>
-            </div>
-          </fieldset>
-          <div class="linha-dupla" data-lt-parcelado>
-            <label>Parcelas
-              <input type="number" id="ltParcelas" min="1" max="24" step="1" value="10" inputmode="numeric">
-            </label>
-            <label>Juros do parcelamento (% ao mês)
-              <input type="number" id="ltJuros" min="0" max="20" step="0.01" value="0" inputmode="decimal" aria-describedby="ajudaLtJuros">
-              <small class="ajuda-campo" id="ajudaLtJuros">Deixe 0 se for "sem juros".</small>
-            </label>
+        <details class="mais-fundo__item" id="detalhesAnalise">
+          <summary><span class="mais-fundo__nome">Impacto no orçamento</span> <span class="mais-fundo__resumo" data-resumo="orcamento"></span></summary>
+          <div class="mais-fundo__corpo">
+            <div class="cards-indicadores" id="indicadores"></div>
+            <div id="impactoOrcamento"></div>
           </div>
-          <label data-lt-avista hidden>Desconto à vista (%)
-            <input type="number" id="ltDesconto" min="0" max="95" step="0.5" value="0" inputmode="decimal">
-          </label>
-          <label>Gastos do dia a dia por mês
-            <input type="text" inputmode="decimal" data-moeda id="ltDiaADia" aria-describedby="ajudaLtDiaADia">
-            <small class="ajuda-campo" id="ajudaLtDiaADia"></small>
-          </label>
-          <fieldset class="linha-tempo__imprevisto">
-            <legend>E se aparecer um imprevisto?</legend>
-            <div class="linha-dupla">
-              <label>Valor do imprevisto
-                <input type="text" inputmode="decimal" data-moeda id="ltImprevisto" aria-describedby="ajudaLtImprevisto">
+        </details>
+
+        <!-- Linha do tempo da compra: o que a compra faz com os próximos meses,
+             com as parcelas que a pessoa já tem e um imprevisto de teste.
+             Contas em js/linha-tempo-engine.js; tela em js/linha-tempo.js. -->
+        <details class="mais-fundo__item linha-tempo" id="blocoLinhaTempo" hidden>
+          <summary><span class="mais-fundo__nome">E nos próximos meses?</span> <span class="mais-fundo__resumo" data-resumo="linha"></span></summary>
+          <div class="mais-fundo__corpo">
+            <p class="descricao">Veja, mês a mês, como a compra convive com a sua renda, os fixos e as parcelas que você já tem, e teste um imprevisto.</p>
+            <form id="formLinhaTempo" class="linha-tempo__controles" novalidate>
+              <fieldset class="linha-tempo__forma">
+                <legend>Como você pagaria?</legend>
+                <div class="linha-tempo__opcoes">
+                  <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="parcelado" checked> <span>Parcelado</span></label>
+                  <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="avista"> <span>À vista</span></label>
+                </div>
+              </fieldset>
+              <div class="linha-dupla" data-lt-parcelado>
+                <label>Parcelas
+                  <input type="number" id="ltParcelas" min="1" max="24" step="1" value="10" inputmode="numeric">
+                </label>
+                <label>Juros do parcelamento (% ao mês)
+                  <input type="number" id="ltJuros" min="0" max="20" step="0.01" value="0" inputmode="decimal" aria-describedby="ajudaLtJuros">
+                  <small class="ajuda-campo" id="ajudaLtJuros">Deixe 0 se for "sem juros".</small>
+                </label>
+              </div>
+              <label data-lt-avista hidden>Desconto à vista (%)
+                <input type="number" id="ltDesconto" min="0" max="95" step="0.5" value="0" inputmode="decimal">
               </label>
-              <label>Em qual mês
-                <select id="ltMesImprevisto"></select>
+              <label>Gastos do dia a dia por mês
+                <input type="text" inputmode="decimal" data-moeda id="ltDiaADia" aria-describedby="ajudaLtDiaADia">
+                <small class="ajuda-campo" id="ajudaLtDiaADia"></small>
               </label>
+              <fieldset class="linha-tempo__imprevisto">
+                <legend>E se aparecer um imprevisto?</legend>
+                <div class="linha-dupla">
+                  <label>Valor do imprevisto
+                    <input type="text" inputmode="decimal" data-moeda id="ltImprevisto" aria-describedby="ajudaLtImprevisto">
+                  </label>
+                  <label>Em qual mês
+                    <select id="ltMesImprevisto"></select>
+                  </label>
+                </div>
+                <small class="ajuda-campo" id="ajudaLtImprevisto">Um conserto, um remédio, uma conta que veio maior. Deixe zero para ver só a compra.</small>
+              </fieldset>
+            </form>
+            <div id="linhaTempoResultado"></div>
+          </div>
+        </details>
+
+        <details class="mais-fundo__item" id="detalhesSustentabilidade">
+          <summary><span class="mais-fundo__nome">Sustentabilidade <span class="selo-ods12" title="Objetivo de Desenvolvimento Sustentável 12: consumo e produção responsáveis">ODS 12</span></span> <span class="mais-fundo__resumo">Impacto ambiental estimado, alternativas e o destino do item.</span></summary>
+          <div class="mais-fundo__corpo">
+            <p class="descricao descricao--ods">Para enriquecer a decisão, não para interrompê-la.</p>
+
+            <div class="bloco-interno bloco-impacto" id="blocoImpacto" hidden>
+              <h5>Impacto ambiental estimado</h5>
+              <div id="impactoAmbiental" aria-live="polite"></div>
             </div>
-            <small class="ajuda-campo" id="ajudaLtImprevisto">Um conserto, um remédio, uma conta que veio maior. Deixe zero para ver só a compra.</small>
-          </fieldset>
-        </form>
-        <div id="linhaTempoResultado" aria-live="polite"></div>
-      </div>
 
-      <h4 class="titulo-secao-ods">Sustentabilidade <span class="selo-ods12" title="Objetivo de Desenvolvimento Sustentável 12: consumo e produção responsáveis">ODS 12</span></h4>
-      <p class="descricao descricao--ods">Para enriquecer a decisão, não para interrompê-la.</p>
+            <div class="bloco-interno">
+              <h5>Alternativas mais sustentáveis</h5>
+              <ul class="lista-alternativas" id="alternativas"></ul>
+            </div>
 
-      <div class="bloco-interno bloco-impacto" id="blocoImpacto" hidden>
-        <h4>Impacto ambiental estimado</h4>
-        <div id="impactoAmbiental" aria-live="polite"></div>
-      </div>
-
-      <div class="bloco-interno">
-        <h4>Alternativas mais sustentáveis</h4>
-        <ul class="lista-alternativas" id="alternativas"></ul>
-      </div>
-
-      <div class="bloco-interno" id="blocoDestino" hidden>
-        <h4>Depois do uso: para onde este item vai</h4>
-        <div id="destinoItem"></div>
-      </div>
+            <div class="bloco-interno" id="blocoDestino" hidden>
+              <h5>Depois do uso: para onde este item vai</h5>
+              <div id="destinoItem"></div>
+            </div>
+          </div>
+        </details>
+      </section>
 
       <div class="acoes-etapa acoes-etapa--registro">
         <button type="button" class="btn-primario" id="btnRegistrarCalculo">Salvar esta análise</button>
         <button type="button" class="btn-secundario" id="btnComparar">Comparar com outra opção</button>
         <button type="button" class="btn-secundario" data-ir-aba="calculos">Minhas análises</button>
       </div>
-      <p class="nota" id="statusRegistro" aria-live="polite"></p>
+      <p class="nota status-registro" id="statusRegistro" aria-live="polite"></p>
     </section>
 
     <section class="bloco" id="passoReflexao" hidden aria-labelledby="tituloReflexao">
-      <h3 id="tituloReflexao">3. Quer ir além?</h3>
-      <p class="descricao">Três perguntas rápidas, menos de 30 segundos. Nenhuma resposta bloqueia a compra: elas só deixam a escolha mais clara.</p>
+      <h3 id="tituloReflexao">3. Pense na sua compra</h3>
+      <p class="descricao">Uma reflexão rápida sobre o que só você sabe: se precisa agora, quanto vai usar e quanto dura. Toque no que mais combina com você, sem resposta certa. Nenhuma resposta bloqueia a compra.</p>
       <form id="formReflexao" class="reflexoes"></form>
       <div id="sinteseReflexao" aria-live="polite"></div>
     </section>
 
     <section class="bloco" id="passoDecisao" hidden aria-labelledby="tituloDecisao">
-      <h3 id="tituloDecisao">4. Depois de ver tudo, o que você decidiu?</h3>
+      <h3 id="tituloDecisao">4. E agora, o que você decide?</h3>
+      <div class="ciclo-decisao">
+        <ol class="ciclo-decisao__passos" id="cicloDecisao" aria-label="Do impulso à decisão">
+          <li data-ciclo="quero">Quero comprar</li>
+          <li data-ciclo="analiso">Analiso</li>
+          <li data-ciclo="entendo">Entendo</li>
+          <li data-ciclo="reflito">Reflito</li>
+          <li data-ciclo="decido">Decido</li>
+          <li data-ciclo="registro">Registro</li>
+        </ol>
+        <p class="ciclo-decisao__frase">O FinCK não decide por você. Ele transforma uma compra por impulso em uma decisão consciente.</p>
+      </div>
       <div class="opcoes-decisao" id="opcoesDecisao" role="radiogroup" aria-labelledby="tituloDecisao"></div>
       <div class="confirmacao-decisao" id="confirmacaoDecisao" aria-live="polite" hidden></div>
 
@@ -290,7 +341,7 @@
     </div>
 
     <div id="painelCalculos" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculos" hidden>
-      <section class="resumo-decisoes" id="resumoDecisoes" aria-live="polite"></section>
+      <section class="resumo-decisoes" id="resumoDecisoes"></section>
       <section class="cards-indicadores" id="resumoCalculos"></section>
 
       <section class="bloco">
@@ -315,9 +366,15 @@
         </div>
 
         <div id="listaCalculos" class="itens-lista"></div>
+        <!-- Sem nenhuma análise, é o começo do histórico; com análises e um
+             filtro que não acha nada, só avisa do filtro. -->
         <div class="vazio vazio--guia" id="vazioCalculos" hidden>
-          <p><strong>Nenhuma análise salva ainda.</strong> Cada análise salva guarda o preço, as horas de trabalho e a sua decisão, para você ver depois o que realmente aconteceu.</p>
-          <a href="#" class="btn-secundario" data-ir-aba="calculo">Fazer a primeira análise</a>
+          <div class="vazio__sem-analises">
+            <p><strong>Você ainda não analisou nenhuma compra.</strong></p>
+            <p>Cada análise salva guarda o preço, as horas de trabalho e a sua decisão. Com o tempo, este histórico mostra como você decide.</p>
+            <a href="#calculo" class="btn-primario" data-ir-aba="calculo" data-focar="itemName">Fazer minha primeira análise</a>
+          </div>
+          <p class="vazio__sem-filtro">Nenhuma análise com essa busca ou esse filtro. Limpe a busca ou escolha "Todas" em Decisão.</p>
         </div>
 
         <div class="acoes-etapa">
@@ -336,7 +393,7 @@
   <div id="modalCalculo" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloCalculo">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalCalculo" aria-label="Fechar">✕</button>
-      <h3 id="tituloCalculo">Detalhe da análise</h3>
+      <h3 id="tituloCalculo">Detalhes da análise</h3>
       <div id="conteudoCalculo"></div>
     </div>
   </div>
@@ -360,6 +417,8 @@
   <script src="js/metas-engine.js"></script>
   <script src="js/planejamento-engine.js"></script>
   <script src="js/finance.js"></script>
+  <script src="js/ocorrencias.js"></script>
+  <script src="js/programacao.js"></script>
   <script src="js/tempo.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
@@ -367,6 +426,8 @@
   <script src="js/impacto-ambiental.js"></script>
   <script src="js/linha-tempo-engine.js"></script>
   <script src="js/linha-tempo.js"></script>
+  <script src="js/inteligencia-engine.js"></script>
+  <script src="js/inteligencia.js"></script>
   <script src="js/reality-page.js"></script>
   <script src="js/imagem-print.js"></script>
   <script src="js/buscar-preco.js"></script>

@@ -501,7 +501,15 @@
   }
   window.FinckFX = {
     ligarMedalha: medalha,
-    mirarAlvo: mirarAlvo
+    mirarAlvo: mirarAlvo,
+    // Monta o logo 3D em uma cena criada depois do carregamento, como a
+    // âncora do resultado do Reality. Parado ou não, quem decide é o CSS
+    // (prefers-reduced-motion e a preferência de animação do Perfil).
+    montarMarca: cena => {
+      if (cena) {
+        montarMarca(cena);
+      }
+    }
   };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", iniciar, {

@@ -54,6 +54,9 @@
     let semPonteiro = preferencia === "reduzida";
     // 0 = neutro, 1 = positivo; transita devagar para não piscar.
     let verde = 0, verdeAlvo = 0;
+    // Enquanto o Reality analisa uma compra, as órbitas andam um pouco mais
+    // rápido e acendem de leve; ao terminar, voltam ao ritmo normal.
+    let ritmo = 1, ritmoAlvo = 1;
     const ROXO = [ 180, 92, 240 ], ROXO_FUNDO = [ 147, 51, 196 ], AMARELO = [ 254, 200, 0 ], VERDE = [ 31, 209, 143 ];
     // Uma órbita para cada ideia: dinheiro (roxo), tempo de trabalho (amarelo)
     // e metas (roxo profundo). Raio relativo, achatamento e inclinação.
@@ -134,6 +137,8 @@
     const misturar = (a, b, k) => [ 0, 1, 2 ].map(i => Math.round(a[i] + (b[i] - a[i]) * k));
     function quadro(dt) {
       verde += (verdeAlvo - verde) * Math.min(1, dt * 1.2 + (parado ? 1 : 0));
+      ritmo += (ritmoAlvo - ritmo) * Math.min(1, dt * 1.6);
+      const aceso = Math.max(0, Math.min(1, (ritmo - 1) / 2));
       const alvoX = mira.ativa ? mira.x : .5;
       const alvoY = mira.ativa ? mira.y : .45;
       mira.atualX += (alvoX - mira.atualX) * Math.min(1, dt * 2.5 + .02);
@@ -164,7 +169,7 @@
         ctx.beginPath();
         ctx.ellipse(0, 0, raioBase * o.raio * 1.45, raioBase * o.raio * o.achatado * 1.45, 0, 0, TAU);
         ctx.lineWidth = .8;
-        ctx.strokeStyle = `rgba(${o.cor[0]},${o.cor[1]},${o.cor[2]},${(.06 + pulso * .08).toFixed(3)})`;
+        ctx.strokeStyle = `rgba(${o.cor[0]},${o.cor[1]},${o.cor[2]},${(.06 + pulso * .08 + aceso * .1).toFixed(3)})`;
         ctx.stroke();
         ctx.restore();
       });
@@ -175,7 +180,7 @@
       for (let n = 0; n < quantos; n++) {
         const p = pontos[n];
         const o = ORBITAS[p.orbita];
-        p.angulo += p.velocidade * dt;
+        p.angulo += p.velocidade * dt * ritmo;
         const rx = raioBase * o.raio * 1.45 * p.profundidade;
         const ry = raioBase * o.raio * o.achatado * 1.45 * p.profundidade;
         const posicao = ang => {
@@ -308,6 +313,14 @@
           quadro(0);
         } else {
           tocar();
+        }
+      },
+      // Só com animação completa: na reduzida e na desligada o fundo não
+      // muda de ritmo.
+      analisando(ativo) {
+        ritmoAlvo = ativo && !parado && preferencia === "completa" ? 3 : 1;
+        if (parado) {
+          ritmo = 1;
         }
       },
       // "positivo" acende o verde de equilíbrio; qualquer outro valor apaga.

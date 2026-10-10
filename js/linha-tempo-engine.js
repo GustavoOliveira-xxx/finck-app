@@ -98,6 +98,9 @@ window.FinckLinhaTempo = (() => {
       renda: num(ctx.perfil?.income_monthly ?? ctx.renda),
       fixos: num(ctx.despesasFixas),
       dia_a_dia: diaADia.valor,
+      // Guardado à parte: a tela troca dia_a_dia pelo valor do campo, e
+      // assim dá para saber se o número veio do histórico ou da pessoa.
+      dia_a_dia_historico: diaADia.valor,
       dia_a_dia_meses: diaADia.meses,
       dia_a_dia_estimado: diaADia.estimado,
       dia_a_dia_parcial: Boolean(diaADia.parcial),
@@ -293,14 +296,16 @@ window.FinckLinhaTempo = (() => {
       peso_parcelas_pct: pesoParcelas(c)
     });
 
+    // Alertas descrevem o cenário simulado, sem reprimenda: o que acontece
+    // com estes números, para a pessoa pesar na decisão dela.
     const sobraLivre = b.renda - b.fixos - b.dia_a_dia;
     const alertas = [];
     if (sobraLivre <= 0) {
-      alertas.push("Mesmo sem esta compra, renda menos despesas fixas e gastos do dia a dia já não fecha. Qualquer compra sai da reserva ou vira dívida.");
+      alertas.push("Neste cenário, mesmo sem esta compra, a renda não cobre as despesas fixas e os gastos do dia a dia informados. Qualquer compra sairia do saldo guardado ou poderia virar dívida no cartão.");
     }
     const r = resumoDe(escolhido);
     if (r.peso_parcelas_pct > limiteParcelas) {
-      alertas.push(`No mês mais carregado, as parcelas somadas chegam a ${Math.round(r.peso_parcelas_pct)}% da renda, acima da referência de ${limiteParcelas}%.`);
+      alertas.push(`No mês mais carregado, as parcelas somadas chegam a ${Math.round(r.peso_parcelas_pct)}% da renda, acima da referência de ${limiteParcelas}% usada pelo FinCK.`);
     }
 
     return {
@@ -316,24 +321,152 @@ window.FinckLinhaTempo = (() => {
     };
   }
 
+  const moedaSimples = v => `R$ ${num(v).toFixed(2)}`;
+  const meses = n => `${n} ${n === 1 ? "mês" : "meses"}`;
+  const rotuloDoMes = (a, i) => a.base.meses[i]?.rotulo || `mês ${i}`;
+  const usaCartao = a => a.escolhido.normal.resumo.entra_no_cartao || Boolean(a.escolhido.imprevisto?.resumo.entra_no_cartao);
+
+  // A simulação em palavras: uma conclusão curta, que a tela mostra primeiro,
+  // e a explicação logo depois. É a consequência do cenário simulado, nunca
+  // conselho ou reprimenda: o FinCK mostra o que acontece com estes números e
+  // a decisão continua sendo da pessoa.
+  function leitura(a, { moeda = moedaSimples } = {}) {
+    const e = a.escolhido.resumo;
+    const imp = a.entrada.imprevisto;
+    const ci = e.com_imprevisto;
+    const ap = e.mes_mais_apertado;
+    const comoFica = ap ? (ap.sobra < 0 ? `faltam ${moeda(-ap.sobra)}` : `sobram ${moeda(ap.sobra)}`) : "";
+    const forma = e.forma === "avista" ? `pagando à vista ${moeda(e.total)}` : `parcelando em ${e.parcelas}x de ${moeda(e.parcela)}`;
+    const semSaldo = e.forma === "avista" && !e.cabe_hoje;
+
+    let situacao;
+    let conclusao;
+    if (semSaldo) {
+      situacao = "sem-saldo";
+      conclusao = `Neste cenário, o saldo de hoje não cobre a compra à vista de ${moeda(e.total)}.`;
+    } else if (!e.cabe_sem_imprevisto) {
+      situacao = "nao-fecha";
+      conclusao = `Neste cenário, ${forma}, faltaria dinheiro nos próximos meses mesmo sem imprevisto.`;
+    } else if (imp && ci && ci.entra_no_cartao) {
+      situacao = "imprevisto-no-cartao";
+      conclusao = `Neste cenário, ${forma}, a compra cabe nos próximos meses, mas o imprevisto testado levaria parte da conta para o cartão.`;
+    } else if (imp && ci) {
+      situacao = "cabe-com-imprevisto";
+      conclusao = `Neste cenário, ${forma}, a compra cabe nos próximos meses, mesmo com o imprevisto testado.`;
+    } else {
+      situacao = "cabe";
+      conclusao = `Neste cenário, ${forma}, a compra cabe nos próximos meses sem usar o cartão.`;
+    }
+
+    const explicacao = [];
+    if (semSaldo) {
+      explicacao.push(`O saldo de hoje (${moeda(a.base.saldo)}) não cobre a compra à vista de ${moeda(e.total)}. Se a fatura não for paga integralmente, o valor pode entrar no crédito rotativo, que costuma ter juros muito altos.`);
+    } else if (e.forma === "avista") {
+      explicacao.push(`Pagando à vista ${moeda(e.total)}, o dinheiro sai hoje e os próximos meses ficam livres desta compra. O mês mais apertado é ${ap.rotulo}, quando ${comoFica}.`);
+    } else {
+      explicacao.push(`Parcelando em ${e.parcelas}x de ${moeda(e.parcela)}${e.juros_parcelamento > 0 ? ` (total de ${moeda(e.total)}, com ${moeda(e.juros_parcelamento)} de juros do parcelamento)` : ""}, o mês mais apertado é ${ap.rotulo}, quando ${comoFica}.`);
+    }
+
+    if (!e.cabe_sem_imprevisto) {
+      const normal = a.escolhido.normal.resumo;
+      const p = normal.primeiro_mes_divida;
+      if (!semSaldo) {
+        explicacao.push(`Mesmo sem imprevisto, faltaria dinheiro a partir de ${p && !p.hoje ? p.rotulo : "agora"}. Se a diferença ficar na fatura do cartão sem ser paga integralmente, os juros somariam cerca de ${moeda(e.juros_da_compra_normal)}.`);
+      } else if (e.juros_da_compra_normal > 0) {
+        explicacao.push(`Nesse caso, mesmo sem imprevisto, a simulação soma cerca de ${moeda(e.juros_da_compra_normal)} de juros do cartão.`);
+      }
+      if (normal.divida_final > 0) {
+        explicacao.push(`No fim da linha do tempo, ainda restariam ${moeda(normal.divida_final)} de dívida.`);
+      }
+    } else if (imp && ci) {
+      if (ci.entra_no_cartao) {
+        const soDaCompra = e.juros_da_compra < ci.juros_cartao - .01 ? ` (${moeda(e.juros_da_compra)} deles só existem por causa desta compra)` : "";
+        explicacao.push(`Um imprevisto de ${moeda(imp.valor)} em ${rotuloDoMes(a, imp.mes)} não caberia: até ${moeda(ci.maior_divida)} ficariam na fatura do cartão. Se ela não for paga integralmente, os juros do rotativo e do parcelamento da fatura somariam ${moeda(ci.juros_cartao)}${soDaCompra}, com ${meses(ci.meses_com_divida)} pagando a dívida.`);
+        if (e.juros_da_compra > 0) {
+          explicacao.push(`Nesse cenário, esta compra de ${moeda(e.total)} passaria a custar ${moeda(e.custo_real)}.`);
+        }
+        if (ci.divida_final > 0) {
+          explicacao.push(`No fim da linha do tempo, ainda restariam ${moeda(ci.divida_final)} de dívida.`);
+        }
+      } else {
+        explicacao.push(`Um imprevisto de ${moeda(imp.valor)} em ${rotuloDoMes(a, imp.mes)} ainda caberia sem usar o cartão.`);
+      }
+    }
+
+    // Sem histórico de gastos e sem valor informado, a conta usaria zero no
+    // dia a dia e a folga sairia inflada. Em vez de supor, pergunta.
+    const perguntas = [];
+    if (!a.base.dia_a_dia_estimado && num(a.base.dia_a_dia) <= 0) {
+      perguntas.push({
+        chave: "dia_a_dia",
+        texto: `Quanto você gasta por mês no dia a dia (mercado, transporte, lazer)? O FinCK ainda não tem esse histórico, e sem ele a simulação considera ${moeda(0)}.`
+      });
+    }
+    return { situacao, conclusao, explicacao, perguntas };
+  }
+
+  // De onde vem cada número: o que está registrado no FinCK (dado
+  // confirmado) e o que é estimativa ou hipótese de teste. A tela mostra os
+  // dois grupos separados, e a FINCK AI recebe a mesma separação.
+  function numerosUsados(a) {
+    const b = a.base;
+    const parcelas = (b.parcelas_existentes || []).slice(1, b.horizonte + 1);
+    const maiorParcela = centavos(Math.max(0, ...parcelas));
+    const mesesComParcela = parcelas.filter(v => v > 0).length;
+    const historico = b.dia_a_dia_historico;
+    const informado = historico !== undefined && Math.abs(num(b.dia_a_dia) - num(historico)) > .005;
+    const confirmados = [
+      { chave: "renda", rotulo: "Renda por mês", valor: centavos(b.renda), detalhe: "informada no seu perfil" },
+      { chave: "fixos", rotulo: "Despesas fixas por mês", valor: centavos(b.fixos), detalhe: "contas recorrentes registradas no FinCK" },
+      { chave: "parcelas", rotulo: "Parcelas que você já tem", valor: maiorParcela,
+        detalhe: mesesComParcela ? `até este valor por mês, em ${mesesComParcela} dos próximos ${meses(b.horizonte)}` : "nenhuma registrada para os próximos meses" },
+      { chave: "saldo", rotulo: "Saldo hoje", valor: centavos(b.saldo), detalhe: "registrado no FinCK" },
+      { chave: "preco", rotulo: "Preço da compra", valor: centavos(a.entrada.preco), detalhe: "o que você informou nesta análise" }
+    ];
+    const estimativas = [ {
+      chave: "dia_a_dia", rotulo: "Gastos do dia a dia por mês", valor: centavos(b.dia_a_dia),
+      detalhe: informado ? "valor que você informou"
+        : b.dia_a_dia_parcial ? "só o que saiu neste mês até agora"
+          : b.dia_a_dia_estimado ? `média dos últimos ${meses(b.dia_a_dia_meses)} do seu histórico`
+            : "ainda sem histórico de gastos"
+    } ];
+    if (a.entrada.imprevisto) {
+      estimativas.push({ chave: "imprevisto", rotulo: "Imprevisto", valor: centavos(a.entrada.imprevisto.valor),
+        detalhe: `hipotético, em ${rotuloDoMes(a, a.entrada.imprevisto.mes)}, só para testar a folga` });
+    }
+    if (usaCartao(a)) {
+      estimativas.push({ chave: "juros_cartao", rotulo: "Juros do cartão", valor: null, taxa_am: a.taxas.rotativo_am,
+        detalhe: "no rotativo, pela taxa média do Banco Central; a do seu cartão pode ser outra" });
+    }
+    return { confirmados, estimativas };
+  }
+
   // Resumo em texto para a FINCK AI explicar. Só números já calculados:
-  // a IA não refaz conta nenhuma.
-  function paraIA(a, { item = "o item", moeda = v => `R$ ${num(v).toFixed(2)}` } = {}) {
+  // a IA não refaz conta nenhuma, e cada número vai marcado como dado
+  // confirmado ou estimativa. O nome do item só entra se quem chama passar;
+  // a tela do Reality não passa, para ir só número para fora.
+  function paraIA(a, { item = "", moeda = moedaSimples } = {}) {
     const e = a.escolhido.resumo;
     const o = a.outro.resumo;
+    const u = numerosUsados(a);
+    const valorDe = i => (i.valor !== null ? ` ${moeda(i.valor)}`
+      : i.taxa_am ? ` de cerca de ${(i.taxa_am * 100).toFixed(1).replace(".", ",")}% ao mês` : "");
+    const grupo = itens => itens.map(i => `${i.rotulo.toLowerCase()}${valorDe(i)} (${i.detalhe})`).join("; ");
     const forma = r => (r.forma === "avista" ? `à vista por ${moeda(r.total)}${r.cabe_hoje ? "" : " (o saldo de hoje não cobre)"}` : `em ${r.parcelas}x de ${moeda(r.parcela)} (total ${moeda(r.total)})`);
     const linhas = [
-      `Compra: ${item}, preço ${moeda(a.entrada.preco)}. Forma escolhida: ${forma(e)}. Alternativa: ${forma(o)}.`,
-      `Mês típico da pessoa: renda ${moeda(a.base.renda)}, despesas fixas ${moeda(a.base.fixos)}, gastos do dia a dia ${moeda(a.base.dia_a_dia)}, sobra livre ${moeda(a.sobra_livre)}. Saldo hoje ${moeda(a.base.saldo)}.`,
+      `${item ? `Compra: ${item}, preço` : "Compra de"} ${moeda(a.entrada.preco)}. Forma escolhida: ${forma(e)}. Alternativa: ${forma(o)}.`,
+      `Conclusão calculada pelo FinCK: ${leitura(a, { moeda }).conclusao}`,
+      `Dados confirmados: ${grupo(u.confirmados.filter(i => i.chave !== "preco"))}.`,
+      `Estimativas: ${grupo(u.estimativas)}. Sobra livre por mês: ${moeda(a.sobra_livre)}.`,
       `Mês mais apertado com a compra: ${e.mes_mais_apertado?.rotulo}, sobra de ${moeda(e.mes_mais_apertado?.sobra)}.`,
       e.cabe_sem_imprevisto
         ? `Sem imprevisto, a compra cabe sem dívida. Maior imprevisto que aguenta sem entrar no cartão: ${moeda(e.margem_geral.valor)} (pior mês: ${e.margem_geral.mes?.rotulo || "-"}).`
-        : `Mesmo sem imprevisto, a compra leva a dívida no cartão: juros de ${moeda(a.escolhido.normal.resumo.juros_cartao)}.`
+        : `Mesmo sem imprevisto, neste cenário falta dinheiro e a diferença ficaria na fatura do cartão: juros de ${moeda(a.escolhido.normal.resumo.juros_cartao)} se ela não for paga integralmente.`
     ];
     if (a.entrada.imprevisto && e.com_imprevisto) {
       const ci = e.com_imprevisto;
       linhas.push(ci.entra_no_cartao
-        ? `Com um imprevisto de ${moeda(a.entrada.imprevisto.valor)} no mês ${a.entrada.imprevisto.mes}: entra no cartão, dívida máxima ${moeda(ci.maior_divida)}, ${ci.meses_com_divida} meses com dívida, juros de ${moeda(ci.juros_cartao)}. Juros que existem por causa da compra: ${moeda(e.juros_da_compra)}. Custo real da compra nesse cenário: ${moeda(e.custo_real)}.`
+        ? `Com um imprevisto de ${moeda(a.entrada.imprevisto.valor)} no mês ${a.entrada.imprevisto.mes}: entra no cartão, dívida máxima ${moeda(ci.maior_divida)}, ${meses(ci.meses_com_divida)} com dívida, juros de ${moeda(ci.juros_cartao)}. Juros que existem por causa da compra: ${moeda(e.juros_da_compra)}. Custo real da compra nesse cenário: ${moeda(e.custo_real)}.`
         : `Com um imprevisto de ${moeda(a.entrada.imprevisto.valor)} no mês ${a.entrada.imprevisto.mes}: ainda cabe sem dívida.`);
       if (o.com_imprevisto) {
         linhas.push(`Na alternativa (${o.forma === "avista" ? "à vista" : "parcelado"}), com o mesmo imprevisto: ${o.com_imprevisto.entra_no_cartao ? `juros de ${moeda(o.com_imprevisto.juros_cartao)}, custo real ${moeda(o.custo_real)}` : "cabe sem dívida"}.`);
@@ -356,6 +489,8 @@ window.FinckLinhaTempo = (() => {
     margemDeSeguranca,
     juntarAntes,
     analisar,
+    leitura,
+    numerosUsados,
     paraIA
   };
 })();
