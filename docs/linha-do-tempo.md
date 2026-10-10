@@ -15,22 +15,83 @@ acontecer nos meses seguintes.
 
 ## 2. O que a pessoa vê
 
-No resultado do Reality, a seção **"E nos próximos meses?"**:
+No resultado do Reality, dentro de "Quer olhar mais fundo?", o tema
+recolhido **"E nos próximos meses?"**. Fechado, ele já mostra numa linha a
+conclusão da simulação. Aberto, a leitura segue a ordem em que a pessoa
+precisa da informação (segunda rodada de UX, outubro de 2026):
 
-1. **Como você pagaria?** Parcelado (número de parcelas e juros do
-   parcelamento, se houver) ou à vista (com desconto, se houver).
-2. **Gastos do dia a dia**: já vem preenchido com a média dos últimos meses
-   fora das despesas fixas e das parcelas, e pode ser ajustado.
-3. **E se aparecer um imprevisto?** Valor e mês. A sugestão inicial é 15%
-   da renda no 3º mês.
-4. **Quatro números**: mês mais apertado, folga para imprevistos, o que o
-   imprevisto faz e o custo real da compra.
-5. **Uma frase** que diz em voz alta o que os números significam.
-6. **Três caminhos para a mesma compra**: parcelado, à vista e juntar antes.
-7. **Gráfico** do dinheiro guardado (roxo) e da dívida no cartão (vermelho).
-8. **A conta mês a mês** e **Como calculamos**, com as fórmulas.
-9. **Explicar com a FINCK AI**: a IA lê os números prontos e explica em
-   linguagem simples. Só é chamada quando a pessoa pede.
+1. **Conclusão primeiro.** Uma frase curta, com a borda colorida pela
+   situação: "Neste cenário, parcelando em 10x de R$ 300,00, a compra cabe
+   nos próximos meses sem usar o cartão.", ou que o imprevisto testado levaria
+   parte da conta para o cartão, ou que faltaria dinheiro mesmo sem
+   imprevisto, ou que o saldo de hoje não cobre a compra à vista. Só essa
+   frase é anunciada ao leitor de tela, e só quando muda.
+2. **Exemplo até a pessoa escolher.** Enquanto ela não mexe em "Como você
+   pagaria?", uma linha logo acima da conclusão avisa que a forma é um
+   exemplo ("Exemplo: 10x sem juros. Escolha em “Como você pagaria?”, logo
+   abaixo, a forma que você usaria."), e a linha do tema fechado começa
+   com "Exemplo.". Na comparação, o caminho simulado leva o rótulo
+   "exemplo"; só depois da escolha ele vira "sua escolha".
+3. **Selo e simulação lado a lado.** Quando o selo de impacto do Reality e
+   a simulação parecem dizer coisas opostas, uma frase explica que o selo
+   mede o peso no dinheiro de agora e a simulação mede o fôlego dos
+   próximos meses (parcelada, uma compra pode pesar muito hoje e ainda
+   caber mês a mês).
+4. **Pergunta quando falta.** Sem histórico de gastos e sem valor
+   informado, a simulação usaria R$ 0,00 para o dia a dia e a folga sairia
+   inflada. Em vez de calcular em silêncio, a tela pergunta "Quanto você
+   gasta por mês no dia a dia (mercado, transporte, lazer)?", diz que, sem
+   esse dado, a conta considera R$ 0,00, e oferece o botão "Informar os
+   gastos do dia a dia", que leva ao campo.
+5. **Aviso de simulação**: "Cálculo do FinCK, sem IA. É uma simulação com
+   os números desta tela, não previsão garantida: se a renda ou os gastos
+   mudarem, o resultado muda."
+6. **Quatro cartões**: mês mais apertado, folga para imprevistos, o que o
+   imprevisto faz e o custo real da compra. Onde há juros do cartão, o
+   próprio cartão explica: "Juros do cartão: cobrados quando a fatura não é
+   paga inteira."
+7. **Os controles**, para testar outros cenários:
+   - **Como você pagaria?** Parcelado (número de parcelas e juros do
+     parcelamento, se houver) ou à vista (com desconto, se houver).
+   - **Gastos do dia a dia**: já vem com a média dos últimos meses fora das
+     despesas fixas e das parcelas, com o selo Estimativa, e pode ser
+     ajustado.
+   - **E se aparecer um imprevisto?** Valor e mês, também com o selo
+     Estimativa. A sugestão inicial é 15% da renda no 3º mês.
+8. **Uma frase** que diz em voz alta o que os números significam e, quando
+   for o caso, os alertas do cenário. O crédito rotativo aparece como
+   consequência, sem reprimenda: "Se a fatura não for paga integralmente, o
+   valor pode entrar no crédito rotativo, que costuma ter juros muito
+   altos."
+9. **"Ver a simulação completa"**, recolhida: os números desta simulação,
+   separados em **Dado confirmado** (renda, despesas fixas, parcelas
+   registradas, saldo e preço) e **Estimativa** (dia a dia, imprevisto e
+   taxa do cartão); os **três caminhos para a mesma compra** (parcelado, à
+   vista e juntar antes); o **gráfico** do dinheiro guardado (roxo) e da
+   dívida no cartão (vermelho); **a conta mês a mês**, recolhida; e **Como
+   calculamos**, com as fórmulas. O que a pessoa abriu continua aberto
+   enquanto ela digita.
+
+Ao refazer a análise do mesmo item (por exemplo, mudando a quantidade ou a
+vida útil), a forma de pagamento e os campos que a pessoa mexeu continuam
+como estavam. Outro item volta tudo ao padrão.
+
+### 2.1 A FINCK AI na linha do tempo
+
+A linha do tempo não tem mais um botão de IA próprio. "Perguntar à FINCK AI
+sobre esta simulação" abre a conversa da Análise FinCK, no mesmo
+resultado, com uma pergunta já escrita e **sem enviar**: a pessoa lê antes
+o aviso do que vai junto e decide. Se enviar, vão só números: a forma
+simulada (e se ela foi confirmada pela pessoa ou ainda é exemplo), o mês
+mais apertado, a folga ou os juros do cartão, o peso das parcelas e o custo
+real, junto com os demais números da análise. O nome do item, de metas,
+de contas e de lançamentos não é enviado. O contrato com a rota está em
+`docs/analise-finck.md`.
+
+O link para o Assistente ("Ver como esta compra cabe no seu planejamento")
+leva uma pergunta neutra, só com valores, que inclui a forma de pagamento
+depois que a pessoa a escolhe: "Como uma compra de R$ 3.000,00 em 10x de
+R$ 300,00 mexe no meu planejamento?"
 
 ## 3. As contas
 
@@ -93,7 +154,7 @@ Um imprevisto de R$ 400 no primeiro mês deixa R$ 300 sem cobertura:
 
 | Mês | Sobra | Juros | Pago da dívida | Dívida |
 |---|---|---|---|---|
-| nov | −300 | — | — | 300,00 |
+| nov | −300 | 0 | 0 | 300,00 |
 | dez | 100 | 45,06 (rotativo) | 100 | 245,06 |
 | jan | 100 | 22,84 | 100 | 167,91 |
 | fev | 100 | 15,65 | 100 | 83,56 |
@@ -105,7 +166,10 @@ caberia na sobra de R$ 400, sem juros. Juntando os R$ 400 por mês, daria
 para comprar à vista no 8º mês.
 
 Este exemplo é um teste automático em `js/testes.js` ("Linha do tempo da
-compra").
+compra"). A leitura em palavras (conclusão por cenário, pergunta do dia a
+dia, nenhum texto que julgue a compra), a separação entre dado confirmado
+e estimativa e o que vai para a FINCK AI sem o nome do item são testados
+em `js/testes-linha-tempo.js`.
 
 ## 5. Simplificações
 
