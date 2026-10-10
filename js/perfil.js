@@ -37,9 +37,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       manual: "Configuração Manual",
       demo: "Modo Demonstrativo"
     }[p.setup_mode] || "—";
-    $("resumoPerfil").innerHTML = `\n      <article class="card-indicador" title="${U.escapeHTML(R.GLOSSARIO.saldo_atual.definicao)}">\n        <span>Saldo atual <small class="indicador-quando">até hoje</small></span>\n        <strong>${U.moeda(ctx.saldo)}</strong></article>\n      <article class="card-indicador" title="${U.escapeHTML(R.GLOSSARIO.nao_alocado.definicao)}">\n        <span>Fora das contas <small class="indicador-quando">não alocado</small></span>\n        <strong>${U.moeda(ctx.naoAlocado)}</strong></article>\n      <article class="card-indicador"><span>Movimentações</span><strong>${ctx.transacoes.length}</strong></article>\n      <article class="card-indicador"><span>Nível</span><strong>${nivel.level} · ${game.xp} XP</strong></article>`;
+    $("resumoPerfil").innerHTML = `\n      <article class="card-indicador" title="${U.escapeHTML(R.GLOSSARIO.saldo_atual.definicao)}">\n        <span>Saldo atual <small class="indicador-quando">até hoje</small></span>\n        <strong>${U.moeda(ctx.saldo)}</strong></article>\n      <article class="card-indicador" title="${U.escapeHTML(R.GLOSSARIO.nao_alocado.definicao)}">\n        <span>Fora das contas <small class="indicador-quando">não alocado</small></span>\n        <strong>${U.moeda(ctx.naoAlocado)}</strong></article>\n      <article class="card-indicador"><span>Movimentações <small class="indicador-quando">desde o início</small></span><strong>${ctx.transacoes.length}</strong></article>\n      <article class="card-indicador"><span>Nível</span><strong>${nivel.level} · ${game.xp} XP</strong></article>`;
     const origem = ctx.origemSaldo;
-    $("perfilOrigemSaldo").innerHTML = `\n      <strong>De onde vem o seu saldo inicial:</strong> ${U.escapeHTML(origem.nota)}\n      ${p.initial_balance_migrated_at ? `<br><small>Migrado para uma conta em ${U.dataBR(p.initial_balance_migrated_at)} — o valor do perfil é histórico.</small>` : ""}`;
+    $("perfilOrigemSaldo").innerHTML = `\n      <strong>De onde vem o seu saldo inicial:</strong> ${U.escapeHTML(origem.nota)}\n      ${p.initial_balance_migrated_at ? `<br><small>Migrado para uma conta em ${U.dataBR(p.initial_balance_migrated_at)}: o valor do perfil é histórico.</small>` : ""}`;
     atualizarDica();
   }
   function atualizarDica() {
@@ -195,7 +195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const ativas = r.checagens && perfilContas ? perfilContas.filter(c => c.active !== false) : [];
-    $("textoSaldoInicial").innerHTML = `Seu perfil guarda ${U.escapeHTML(pendente.detalhe)} de saldo inicial e você já tem contas cadastradas.\n       O FinCK parou de somar esse valor para não contar o mesmo dinheiro duas vezes — mas ele continua\n       registrado no perfil. Leve-o para uma conta e a composição do saldo passa a ser explícita.`;
+    $("textoSaldoInicial").innerHTML = `Seu perfil guarda ${U.escapeHTML(pendente.detalhe)} de saldo inicial e você já tem contas cadastradas.\n       O FinCK parou de somar esse valor para não contar o mesmo dinheiro duas vezes, mas ele continua\n       registrado no perfil. Leve-o para uma conta e a composição do saldo passa a ser explícita.`;
     $("contaSaldoInicial").innerHTML = ativas.map(c => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
   }
   let perfilContas = [];
@@ -300,7 +300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     transactions: "movimentações",
     goals: "metas",
     recurring_transactions: "recorrentes",
-    purchase_analyses: "cálculos"
+    purchase_analyses: "análises de compra"
   };
   $("inputImportar").addEventListener("change", async e => {
     const arquivo = e.target.files?.[0];
@@ -360,12 +360,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const r = await F.carregarDemo();
+    // Na demonstração, os exemplos voltam com as duas contas fictícias.
+    S.prepararContasDemo({
+      forcar: true
+    });
     await G.sincronizarConquistas();
     U.toast(r.inseridos ? `Dados de exemplo carregados: ${r.inseridos} registro(s) novo(s).` : "Os dados de exemplo já estavam carregados.", r.inseridos ? "sucesso" : "info");
     carregar();
   });
   $("btnLimpar").addEventListener("click", async () => {
-    if (!await U.confirmar("Apagar tudo?", "Movimentações, metas, recorrentes e análises. Esta ação não pode ser desfeita — considere exportar um backup antes.", {
+    if (!await U.confirmar("Apagar tudo?", "Movimentações, metas, recorrentes e análises. Esta ação não pode ser desfeita: considere exportar um backup antes.", {
       confirmar: "Apagar tudo"
     })) {
       return;

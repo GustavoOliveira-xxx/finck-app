@@ -205,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form.hidden = true;
     const aviso = document.createElement("div");
     aviso.className = "aviso-confirmacao";
-    aviso.innerHTML = `\n      <h3>Falta confirmar seu e-mail</h3>\n      <p>Enviamos um link para <strong>${U.escapeHTML(email)}</strong>.\n         Abra o link e depois entre normalmente.</p>\n      <p class="auth-sub">Não chegou? Confira o spam — ou peça outro.</p>\n      <div class="acoes-confirmacao">\n        <button type="button" class="btn-secundario" id="btnReenviar">Reenviar e-mail</button>\n        <a class="btn-primario" href="index.html">Ir para o login</a>\n      </div>\n      <p class="mensagem" id="msgReenvio" role="status"></p>`;
+    aviso.innerHTML = `\n      <h3>Falta confirmar seu e-mail</h3>\n      <p>Enviamos um link para <strong>${U.escapeHTML(email)}</strong>.\n         Abra o link e depois entre normalmente.</p>\n      <p class="auth-sub">Não chegou? Confira o spam ou peça outro.</p>\n      <div class="acoes-confirmacao">\n        <button type="button" class="btn-secundario" id="btnReenviar">Reenviar e-mail</button>\n        <a class="btn-primario" href="index.html">Ir para o login</a>\n      </div>\n      <p class="mensagem" id="msgReenvio" role="status"></p>`;
     card.appendChild(aviso);
     const btnReenviar = document.getElementById("btnReenviar");
     const msgReenvio = document.getElementById("msgReenvio");

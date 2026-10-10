@@ -26,7 +26,8 @@ window.FinckStore = (() => {
     integrity_events: "finck.eventos",
     operation_keys: "finck.chaves",
     local_actions: "finck.locais",
-    demo: "finck.demo"
+    demo: "finck.demo",
+    demo_contas: "finck.demo.contas"
   };
   const ler = (k, fb) => {
     try {
@@ -41,7 +42,14 @@ window.FinckStore = (() => {
     email: "visitante@finck.local",
     nome: "Visitante"
   });
-  const emDemo = () => localStorage.getItem(KEYS.demo) === "1";
+  // Sem acesso ao armazenamento (navegação privada, site bloqueado), não é demonstração.
+  const emDemo = () => {
+    try {
+      return localStorage.getItem(KEYS.demo) === "1";
+    } catch {
+      return false;
+    }
+  };
   const bd = () => emDemo() ? null : sb;
   const modo = () => emDemo() ? "demo" : sb ? "online" : "local";
   (function removerCredenciaisAntigas() {
@@ -182,6 +190,11 @@ window.FinckStore = (() => {
       } catch {}
     }
     localStorage.setItem(KEYS.demo, "1");
+    // Entrar de novo confere outra vez as contas de exemplo: se os dados
+    // foram apagados, a próxima semente volta a ganhar as duas contas.
+    try {
+      localStorage.removeItem(KEYS.demo_contas);
+    } catch {}
     gravar(KEYS.session, {
       ...USUARIO_DEMO
     });
@@ -189,6 +202,196 @@ window.FinckStore = (() => {
       ...USUARIO_DEMO
     };
   }
+  // Contas fictícias da demonstração. Sem elas, "Minhas contas" dizia que não
+  // havia conta nenhuma e todo lançamento de exemplo aparecia "sem conta": a
+  // demonstração parecia configurada pela metade.
+  //
+  // Os lançamentos, metas e a análise de exemplo continuam em js/finance.js
+  // (FIXTURE_DEMO). Aqui o saldo inicial do perfil é dividido entre as duas
+  // contas e o que ficou sem conta vai para a conta corrente; por isso o saldo
+  // geral e a soma das contas fecham no centavo. Roda uma vez por versão: quem
+  // já tinha a demonstração antiga ganha as contas na próxima tela, sem perder
+  // nenhum registro. Sem mudar nenhum valor, liga também o salário e o aluguel
+  // de exemplo às recorrências deste mês, que já aconteceram.
+  const VERSAO_CONTAS_DEMO = "1";
+  const CONTAS_DEMO = Object.freeze([ {
+    name: "Conta corrente",
+    institution_name: "exemplo",
+    account_type: "corrente",
+    is_default: true,
+    notes: "Conta fictícia da demonstração."
+  }, {
+    name: "Carteira",
+    institution_name: "carteira",
+    account_type: "carteira",
+    is_default: false,
+    notes: "Dinheiro em espécie da demonstração."
+  } ]);
+  const DINHEIRO_NA_CARTEIRA_DEMO = 100;
+  const SAQUE_DEMO = 200;
+  function prepararContasDemo({forcar: forcar = false} = {}) {
+    const nada = {
+      criadas: 0,
+      vinculadas: 0,
+      confirmadas: 0
+    };
+    try {
+      if (!emDemo() || !forcar && localStorage.getItem(KEYS.demo_contas) === VERSAO_CONTAS_DEMO) {
+        return nada;
+      }
+      const user = ler(KEYS.session, null) || USUARIO_DEMO;
+      const doUsuario = r => r && r.user_id === user.id;
+      const perfis = ler(KEYS.profiles, []);
+      const iPerfil = perfis.findIndex(p => p.id === user.id);
+      // Sem o perfil de exemplo a semente ainda não foi gravada (a tela de
+      // entrada carrega o store antes do clique): tenta de novo na próxima.
+      if (iPerfil < 0 || perfis[iPerfil].setup_mode !== "demo") {
+        return nada;
+      }
+      const U = window.FinckUtils;
+      const agora = new Date;
+      const hoje = U.dataISO(agora);
+      let transacoes = ler(KEYS.transactions, []);
+      let recorrentes = ler(KEYS.recurring_transactions, []);
+      const resultado = {
+        criadas: 0,
+        vinculadas: 0,
+        confirmadas: 0
+      };
+      const todasContas = ler(KEYS.accounts, []);
+      // Quem já cadastrou contas na demonstração montou o próprio exemplo:
+      // nenhuma conta fictícia é criada por cima.
+      if (!todasContas.some(doUsuario)) {
+        const inicioDoMes = U.dataISO(new Date(agora.getFullYear(), agora.getMonth(), 1));
+        // Mesmo cuidado de datasDaDemo: o recuo não atravessa para o mês anterior.
+        const ontem = U.dataISO(new Date(agora.getFullYear(), agora.getMonth(), Math.max(1, agora.getDate() - 1)));
+        const saldoPerfil = Number(perfis[iPerfil].initial_balance) || 0;
+        const naCarteira = Math.min(DINHEIRO_NA_CARTEIRA_DEMO, Math.max(0, saldoPerfil));
+        const cor = id => (cfg.INSTITUICOES || []).find(i => i.id === id)?.cor || null;
+        const [corrente, carteira] = CONTAS_DEMO.map((base, i) => ({
+          id: U.uid(),
+          // A corrente nasce um instante antes para aparecer primeiro na lista.
+          created_at: new Date(agora.getTime() - (CONTAS_DEMO.length - i) * 1e3).toISOString(),
+          ...base,
+          initial_balance: i === 0 ? saldoPerfil - naCarteira : naCarteira,
+          initial_balance_date: inicioDoMes,
+          last_four_digits: null,
+          color: cor(base.institution_name),
+          active: true,
+          user_id: user.id
+        }));
+        let saldoCorrente = corrente.initial_balance;
+        transacoes = transacoes.map(t => {
+          if (!doUsuario(t) || t.account_id || t.unallocated) {
+            return t;
+          }
+          resultado.vinculadas++;
+          if (!t.reversed_at && String(t.date || "") <= hoje) {
+            saldoCorrente += t.type === "entrada" ? Number(t.amount || 0) : -Number(t.amount || 0);
+          }
+          return {
+            ...t,
+            account_id: corrente.id
+          };
+        });
+        // Recorrentes também, para os próximos meses já nascerem na conta.
+        recorrentes = recorrentes.map(r => doUsuario(r) && !r.account_id ? {
+          ...r,
+          account_id: corrente.id
+        } : r);
+        gravar(KEYS.accounts, [ corrente, carteira, ...todasContas ]);
+        // Um saque da corrente para a carteira mostra a transferência entre
+        // contas, que muda onde o dinheiro está sem mudar o total.
+        if (saldoCorrente >= SAQUE_DEMO) {
+          gravar(KEYS.transfers, [ {
+            id: U.uid(),
+            created_at: agora.toISOString(),
+            from_account_id: corrente.id,
+            to_account_id: carteira.id,
+            amount: SAQUE_DEMO,
+            date: ontem,
+            description: "Saque para a carteira",
+            user_id: user.id
+          }, ...ler(KEYS.transfers, []) ]);
+        }
+        // O saldo inicial passou do perfil para as contas, como na migração da
+        // tela de perfil; sem a marca, o diagnóstico acusaria saldo duplicado.
+        perfis[iPerfil] = {
+          ...perfis[iPerfil],
+          initial_balance_source: "contas",
+          initial_balance_migrated_at: agora.toISOString(),
+          initial_balance_account_id: corrente.id
+        };
+        gravar(KEYS.profiles, perfis);
+        resultado.criadas = CONTAS_DEMO.length;
+      }
+      // Salário e aluguel de exemplo já aconteceram neste mês. Sem a ocorrência
+      // confirmada, a recorrência pedia confirmação outra vez, e confirmar
+      // gravaria o mesmo salário de novo. Só liga quando a movimentação é a do
+      // ciclo: mesma descrição, tipo, valor e data.
+      const ciclo = hoje.slice(0, 7);
+      const diasNoMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+      const ocorrencias = ler(KEYS.recurring_occurrences, []);
+      recorrentes.filter(r => doUsuario(r) && r.active !== false).forEach(r => {
+        const vencimento = `${ciclo}-${String(Math.min(Number(r.day_of_month) || 1, diasNoMes)).padStart(2, "0")}`;
+        if (vencimento > hoje) {
+          return;
+        }
+        const iT = transacoes.findIndex(t => doUsuario(t) && !t.reversed_at && !t.source_occurrence_id && t.type === r.type && t.description === r.description && Number(t.amount) === Number(r.amount) && String(t.date || "").slice(0, 10) === vencimento);
+        const iO = ocorrencias.findIndex(o => doUsuario(o) && String(o.recurring_id) === String(r.id) && o.cycle === ciclo);
+        // Ocorrência já decidida pela pessoa fica como está.
+        if (iT < 0 || iO >= 0 && (ocorrencias[iO].transaction_id || ![ "previsto", "pendente" ].includes(ocorrencias[iO].status))) {
+          return;
+        }
+        const t = transacoes[iT];
+        const decisao = {
+          status: "confirmado",
+          actual_amount: Number(r.amount) || 0,
+          account_id: t.account_id || null,
+          transaction_id: t.id,
+          decided_at: agora.toISOString()
+        };
+        const oc = iO >= 0 ? {
+          ...ocorrencias[iO],
+          ...decisao
+        } : {
+          id: U.uid(),
+          created_at: agora.toISOString(),
+          recurring_id: r.id,
+          cycle: ciclo,
+          due_date: vencimento,
+          description: r.description,
+          type: r.type,
+          category: r.type === "saida" ? r.category || t.category || "Outros" : null,
+          planned_amount: Number(r.amount) || 0,
+          ...decisao,
+          user_id: user.id
+        };
+        if (iO >= 0) {
+          ocorrencias[iO] = oc;
+        } else {
+          ocorrencias.unshift(oc);
+        }
+        transacoes[iT] = {
+          ...t,
+          source: "recorrente",
+          source_occurrence_id: oc.id
+        };
+        resultado.confirmadas++;
+      });
+      if (resultado.confirmadas) {
+        gravar(KEYS.recurring_occurrences, ocorrencias);
+      }
+      gravar(KEYS.transactions, transacoes);
+      gravar(KEYS.recurring_transactions, recorrentes);
+      localStorage.setItem(KEYS.demo_contas, VERSAO_CONTAS_DEMO);
+      return resultado;
+    } catch {
+      return nada;
+    }
+  }
+  // Síncrona e logo no carregamento: roda antes de qualquer tela ler os dados.
+  prepararContasDemo();
   function encerrarDemo() {
     Object.values(KEYS).forEach(k => localStorage.removeItem(k));
   }
@@ -913,7 +1116,18 @@ window.FinckStore = (() => {
     }
     return r.name || r.description || "registro";
   };
+  // Geradas a partir das tabelas acima: não vão para o arquivo exportado, mas
+  // "Apagar tudo" também as leva, senão sobram previsões de recorrentes que
+  // não existem mais.
+  const DERIVADAS = [ "reconciliation_queue", "monthly_closings", "recurring_occurrences" ];
   async function limparDados() {
+    for (const t of DERIVADAS) {
+      // Banco sem a migração dessas tabelas: não há o que apagar nelas.
+      const linhas = await listar(t).catch(() => []);
+      for (const l of linhas) {
+        await remover(t, l.id);
+      }
+    }
     for (const t of TABELAS) {
       const linhas = await listar(t);
       for (const l of linhas) {
@@ -935,6 +1149,8 @@ window.FinckStore = (() => {
     emDemo: emDemo,
     entrarDemo: entrarDemo,
     encerrarDemo: encerrarDemo,
+    prepararContasDemo: prepararContasDemo,
+    CONTAS_DEMO: CONTAS_DEMO,
     urlLocal: urlLocal,
     usuarioAtual: usuarioAtual,
     tokenAcesso: tokenAcesso,

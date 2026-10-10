@@ -10,10 +10,12 @@ window.FinckRevisao = (() => {
     if (linhas.length) {
       await S.upsert(TABELA, linhas, [ "recurring_id", "cycle" ]);
     }
-    const todas = await S.listar(TABELA, {
+    const lidas = await S.listar(TABELA, {
       ordem: "due_date",
       asc: true
     });
+    // Previsão em aberto de recorrente apagado não pede confirmação.
+    const todas = window.FinckProgramacao ? window.FinckProgramacao.ocorrenciasVigentes(lidas, recorrentes || []) : lidas;
     await reconciliar(todas);
     const virar = O.paraPendente(todas);
     for (const oc of virar) {

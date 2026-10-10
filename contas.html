@@ -74,7 +74,7 @@
       <p class="nota nota--conciliacao" id="avisoReconciliacao" hidden></p>
     </section>
 
-    <div class="acoes-etapa acoes-contas">
+    <div class="acoes-etapa acoes-contas" id="acoesContas">
       <button type="button" class="btn-primario" id="btnNovaConta">Adicionar conta</button>
       <button type="button" class="btn-secundario" id="btnTransferir">Nova transferência</button>
       <button type="button" class="btn-secundario" id="btnAjustar">Ajustar saldo</button>
@@ -93,9 +93,12 @@
         </label>
       </div>
       <div class="grade-contas" id="listaContas"></div>
-      <p class="vazio" id="vazioContas" hidden>
-        Nenhuma conta cadastrada. Comece pela conta onde você recebe seu dinheiro.
-      </p>
+      <div class="vazio vazio--guia" id="vazioContas" hidden>
+        <p><strong>Você ainda não cadastrou nenhuma conta.</strong> Tudo funciona sem elas: o saldo vem do seu perfil.</p>
+        <p>Cadastre a conta onde você recebe o seu dinheiro para conferir o saldo com o extrato do banco.</p>
+        <button type="button" class="btn-primario" id="btnPrimeiraConta">Adicionar minha primeira conta</button>
+      </div>
+      <p class="vazio" id="vazioFiltroContas" hidden></p>
     </section>
 
     <section class="bloco" id="blocoInstituicoes" hidden>
@@ -171,7 +174,7 @@
           <span>Usar como conta padrão em novos lançamentos</span>
         </label>
 
-        <p class="nota">Não pedimos agência, número completo, senha nem token — nada disso é necessário aqui.</p>
+        <p class="nota">Não pedimos agência, número completo, senha nem token: nada disso é necessário aqui.</p>
 
         <button type="submit" class="btn-salvar">Salvar conta</button>
       </form>

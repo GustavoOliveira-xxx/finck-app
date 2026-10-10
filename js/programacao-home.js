@@ -12,6 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const MARGEM = .05;
   const PAUSA_FOCO = 3e3;
   let cicloFoco = 0;
+  // Mesma regra de FinckPainel.faltaDeVerdade, sobre o panorama.
+  const faltaDeVerdade = pan => {
+    const menor = pan.menorCaixaComEntradas;
+    return (menor === null || menor === undefined ? pan.naoComprometido : menor) < 0;
+  };
   function agrupar(compromissos) {
     const mapa = new Map;
     for (const c of compromissos) {
@@ -52,27 +57,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const posicao = dias => MARGEM + (1 - MARGEM * 2) * Math.max(0, Math.min(1, (dias - menor) / alcance));
     const maior = Math.max(...grupos.map(g => g.valor));
     const altura = v => ALTURA_MIN + (maior > 0 ? v / maior : 0) * (ALTURA_MAX - ALTURA_MIN);
-    const rompe = grupos.find(g => g.acumulado > pan.saldo);
+    // "Descoberto" é o dia em que o caixa corrido (com as entradas previstas)
+    // fica negativo, a mesma regra dos avisos da home.
+    const soSaidas = grupos.find(g => g.acumulado > pan.saldo);
+    const isoFalta = faltaDeVerdade(pan) ? pan.descobertoComEntradasEm ? U.dataISO(pan.descobertoComEntradasEm) : soSaidas?.iso || null : null;
+    const rompe = isoFalta ? grupos.find(g => g.iso >= isoFalta) || null : null;
     const cobertura = pan.saldo <= 0 ? 0 : rompe ? posicao(rompe.emDias) : 1;
-    const torres = grupos.map((g, i) => torreHTML(posicao(g.emDias), altura(g.valor), i, g.vencido ? "pf3d__torre--vencida" : g.acumulado > pan.saldo ? "pf3d__torre--fora" : "")).join("");
-    const selo = pan.saldo <= 0 ? [ "pf3d__selo--risco", "sem saldo hoje" ] : rompe ? [ "pf3d__selo--risco", `descoberto em ${P.rotuloData(rompe.data)}` ] : [ "", `saldo cobre os ${JANELA} dias` ];
+    const torres = grupos.map((g, i) => torreHTML(posicao(g.emDias), altura(g.valor), i, g.vencido ? "pf3d__torre--vencida" : isoFalta && g.iso >= isoFalta ? "pf3d__torre--fora" : "")).join("");
+    const selo = pan.saldo <= 0 ? [ "pf3d__selo--risco", "sem saldo hoje" ] : isoFalta ? [ "pf3d__selo--risco", `descoberto em ${P.rotuloData(rompe ? rompe.data : pan.descobertoComEntradasEm)}` ] : soSaidas ? [ "", `entradas cobrem os ${JANELA} dias` ] : [ "", `saldo cobre os ${JANELA} dias` ];
     return {
       grupos: grupos,
       html: `\n        <div class="pf3d" data-pf3d\n             style="--cobertura:${cobertura.toFixed(4)};--t0:${posicao(0).toFixed(4)}">\n          <div class="pf3d__janela">\n            <div class="pf3d__camera">\n              <div class="pf3d__pista">\n                ${chaoHTML()}\n                ${cobertura < 1 ? '<span class="pf3d__ruptura"></span>' : ""}\n                ${marcoHTML()}\n                ${torres}\n              </div>\n            </div>\n            <span class="pf3d__selo ${selo[0]}">${selo[1]}</span>\n            <p class="pf3d__foco" data-pf3d-foco></p>\n          </div>\n        </div>`
     };
   }
-  function render(pan) {
+  // Os nomes daqui são os mesmos dos cards de "Sua situação hoje": saldo
+  // registrado, saídas previstas e caixa depois delas, todos da mesma conta
+  // (ctx.programacao, montada em finance.js). Assim nenhum número da home
+  // contradiz outro.
+  function render(pan, {usuarioId: usuarioId = null} = {}) {
     clearInterval(cicloFoco);
     const cena = montarCena(pan);
+    const ate = pan.limite ? P.rotuloData(pan.limite) : null;
+    const janela = `próximos ${JANELA} dias${ate ? `, até ${ate}` : ""}`;
     if (!pan.compromissos.length) {
-      host.innerHTML = `\n        <div class="prog-cabecalho">\n          <h3>Programação financeira</h3>\n        </div>\n        ${cena.html}\n        <p class="vazio">\n          Você ainda não tem saídas recorrentes cadastradas.\n          <a href="recorrentes.html">Cadastrar a primeira</a> para ver quanto do seu\n          saldo já está comprometido e até quando.\n        </p>`;
+      host.innerHTML = `\n        <div class="prog-cabecalho">\n          <h3>Programação financeira</h3>\n          <span class="prog-janela">${janela}</span>\n        </div>\n        ${cena.html}\n        <p class="vazio">\n          Nenhuma saída prevista ${ate ? `até ${ate}` : "nos próximos dias"}.\n          <a href="recorrentes.html">Cadastre suas contas de todo mês</a> para ver quanto do seu\n          saldo já tem destino e até quando.\n        </p>`;
       ligarCena(cena.grupos, pan.saldo);
       return;
     }
     const p = pan.proximo;
     const proximos = pan.compromissos.slice(0, 4);
     const restantes = pan.compromissos.length - proximos.length;
-    host.innerHTML = `\n      <div class="prog-cabecalho">\n        <h3>Programação financeira</h3>\n        <span class="prog-janela">próximos ${JANELA} dias</span>\n      </div>\n\n      ${cena.html}\n\n      <p class="prog-chamada">\n        ${p ? `Até <strong>${P.rotuloLongo(p.data)}</strong> você tem\n             <strong class="prog-chamada__valor">${U.moeda(pan.comprometidoAteProximo)}</strong>\n             em saídas previstas.` : `Você tem\n             <strong class="prog-chamada__valor">${U.moeda(pan.totalVencido)}</strong>\n             em saídas vencidas aguardando decisão.`}\n      </p>\n\n      ${pan.vencidos.length ? `\n        <p class="prog-vencidos">\n          ${pan.vencidos.length === 1 ? "1 saída venceu e ainda não foi decidida. Continua contando até você decidir." : `${pan.vencidos.length} saídas venceram e ainda não foram decididas. Continuam contando até você decidir.`}\n        </p>` : ""}\n\n      <ul class="prog-lista">\n        ${proximos.map(c => `\n          <li${c.vencido ? ' class="prog-lista--vencido"' : ""}>\n            <span class="prog-lista__data">${P.rotuloData(c.data)}</span>\n            <span class="prog-lista__nome">${U.escapeHTML(c.descricao)}</span>\n            <span class="prog-lista__quando">${P.quandoTexto(c.emDias)}</span>\n            <strong class="prog-lista__valor">${U.moeda(c.valor)}</strong>\n          </li>`).join("")}\n      </ul>\n      ${restantes > 0 ? `<p class="prog-mais">e mais ${restantes} até ${P.rotuloData(pan.compromissos[pan.compromissos.length - 1].data)}</p>` : ""}\n\n      <dl class="prog-contas">\n        <div><dt>Saldo atual</dt><dd>${U.moeda(pan.saldo)}</dd></div>\n        <div><dt>Comprometido em ${JANELA} dias</dt><dd class="prog-contas__preso">${U.moeda(pan.comprometidoTotal)}</dd></div>\n        <div class="prog-contas__sobra">\n          <dt>Não comprometido</dt>\n          <dd class="${pan.naoComprometido < 0 ? "cor-vermelha" : ""}">${U.moeda(pan.naoComprometido)}</dd>\n        </div>\n      </dl>\n\n      <p class="prog-nota">\n        ${pan.naoComprometido < 0 ? `Estas saídas somam mais que o seu saldo de hoje. Abra a programação completa para ver a partir de quando falta dinheiro e o que dá para adiar; a decisão continua sua.` : `${U.moeda(pan.naoComprometido)} não estão comprometidos por essas saídas programadas.`}\n      </p>\n\n      <button type="button" class="btn-secundario" id="btnVerProgramacao">Ver programação completa</button>`;
+    const caixa = pan.naoComprometido;
+    const entradas = Number(pan.entradasPrevistas) || 0;
+    const semEntradas = entradas > 0 ? `Entradas futuras (${U.moeda(entradas)} previstas no período) não entram nesta conta.` : "Entradas futuras não entram nesta conta.";
+    const origem = c => c.origem === "agendada" ? " · agendada" : "";
+    const falta = faltaDeVerdade(pan);
+    host.innerHTML = `\n      <div class="prog-cabecalho">\n        <h3>Programação financeira</h3>\n        <span class="prog-janela">${janela}</span>\n      </div>\n\n      ${cena.html}\n\n      <p class="prog-chamada">\n        ${p ? `Até <strong>${P.rotuloLongo(p.data)}</strong> você tem\n             <strong class="prog-chamada__valor">${U.moeda(pan.comprometidoAteProximo)}</strong>\n             em saídas previstas.` : `Você tem\n             <strong class="prog-chamada__valor">${U.moeda(pan.totalVencido)}</strong>\n             em saídas vencidas aguardando decisão.`}\n      </p>\n\n      ${pan.vencidos.length ? `\n        <p class="prog-vencidos">\n          ${pan.vencidos.length === 1 ? "1 saída venceu e ainda não foi decidida. Continua contando até você decidir." : `${pan.vencidos.length} saídas venceram e ainda não foram decididas. Continuam contando até você decidir.`}\n        </p>` : ""}\n\n      <dl class="prog-contas">\n        <div><dt>Saldo atual <small>registrado hoje</small></dt><dd>${U.moeda(pan.saldo)}</dd></div>\n        <div><dt>Saídas previstas <small>${ate ? `até ${ate}` : `${JANELA} dias`}</small></dt><dd class="prog-contas__preso">${U.moeda(pan.comprometidoTotal)}</dd></div>\n        <div class="prog-contas__sobra">\n          <dt>Caixa depois das saídas previstas <small>se nada mudar</small></dt>\n          <dd class="${falta ? "cor-vermelha" : caixa < 0 ? "prog-contas__neutro" : ""}">${U.moeda(caixa)}</dd>\n        </div>\n      </dl>\n\n      <p class="prog-nota">\n        ${falta && entradas > 0 && pan.descobertoComEntradasEm ? `Se nada mudar, mesmo contando as entradas previstas (${U.moeda(entradas)}), o saldo fica negativo a partir de ${P.rotuloData(pan.descobertoComEntradasEm)}. Na programação completa dá para ver o que pode ser adiado; a decisão continua sua.` : falta ? `Se nada mudar, essas saídas passam o saldo de hoje em ${U.moeda(-caixa)}${pan.descobertoEm ? ` a partir de ${P.rotuloData(pan.descobertoEm)}` : ""}. ${semEntradas} Na programação completa dá para ver o que pode ser adiado; a decisão continua sua.` : caixa < 0 ? `Só com as saídas, o saldo de hoje ficaria em <span class="valor-junto">${U.moeda(caixa)}</span>${ate ? ` até ${ate}` : ""}. Contando as entradas previstas (${U.moeda(entradas)}) na ordem das datas, ele não fica negativo nesse período.` : `Depois das saídas previstas ${ate ? `até ${ate}` : ""}, ficam ${U.moeda(caixa)} do saldo de hoje. ${semEntradas}`}\n      </p>\n\n      <details class="prog-detalhes" data-recolhivel="programacao">\n        <summary>Ver as próximas saídas (${pan.compromissos.length})</summary>\n        <ul class="prog-lista">\n          ${proximos.map(c => `\n            <li${c.vencido ? ' class="prog-lista--vencido"' : ""}>\n              <span class="prog-lista__data">${P.rotuloData(c.data)}</span>\n              <span class="prog-lista__nome">${U.escapeHTML(c.descricao)}</span>\n              <span class="prog-lista__quando">${P.quandoTexto(c.emDias)}${origem(c)}</span>\n              <strong class="prog-lista__valor">${U.moeda(c.valor)}</strong>\n            </li>`).join("")}\n        </ul>\n        ${restantes > 0 ? `<p class="prog-mais">e mais ${restantes} até ${P.rotuloData(pan.compromissos[pan.compromissos.length - 1].data)}</p>` : ""}\n      </details>\n\n      <button type="button" class="btn-secundario" id="btnVerProgramacao">Ver programação completa</button>`;
+    window.FinckPainel?.ligarRecolhiveis(host, usuarioId);
     ligarCena(cena.grupos, pan.saldo);
     const botao = document.getElementById("btnVerProgramacao");
     if (botao) {
@@ -84,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!alvo) {
       return;
     }
-    alvo.innerHTML = `\n      <p class="prog-modal__intro">\n        Cada marco mostra quanto precisa permanecer disponível até aquela data,\n        somando tudo que vem antes.\n      </p>\n      <ol class="prog-linha">\n        <li class="prog-linha__hoje"><span class="prog-linha__ponto"></span><div><strong>Hoje</strong>\n          <span>${U.moeda(pan.saldo)} em conta</span></div></li>\n        ${pan.compromissos.map(c => `\n          <li${c.vencido ? ' class="prog-linha--vencido"' : ""}>\n            <span class="prog-linha__ponto"></span>\n            <div>\n              <strong>${P.rotuloData(c.data)} · ${U.escapeHTML(c.descricao)}</strong>\n              <span>${U.moeda(c.valor)} · acumulado ${U.moeda(c.acumulado)}${c.vencido ? " · vencido, aguardando decisão" : ""}</span>\n            </div>\n            <em class="${pan.saldo - c.acumulado < 0 ? "cor-vermelha" : ""}">\n              sobra ${U.moeda(pan.saldo - c.acumulado)}\n            </em>\n          </li>`).join("")}\n      </ol>`;
+    alvo.innerHTML = `\n      <p class="prog-modal__intro">\n        Cada marco soma tudo o que sai até aquela data e mostra quanto do saldo\n        de hoje fica depois. Entradas futuras não entram nesta conta.\n      </p>\n      <ol class="prog-linha">\n        <li class="prog-linha__hoje"><span class="prog-linha__ponto"></span><div><strong>Hoje</strong>\n          <span>${U.moeda(pan.saldo)} registrados</span></div></li>\n        ${pan.compromissos.map(c => `\n          <li${c.vencido ? ' class="prog-linha--vencido"' : ""}>\n            <span class="prog-linha__ponto"></span>\n            <div>\n              <strong>${P.rotuloData(c.data)} · ${U.escapeHTML(c.descricao)}</strong>\n              <span>${U.moeda(c.valor)} · acumulado ${U.moeda(c.acumulado)}${c.vencido ? " · vencido, aguardando decisão" : ""}${c.origem === "agendada" ? " · agendado" : ""}</span>\n            </div>\n            <em class="${pan.saldo - c.acumulado < 0 ? "cor-vermelha" : ""}">\n              fica ${U.moeda(pan.saldo - c.acumulado)}\n            </em>\n          </li>`).join("")}\n      </ol>`;
     U.abrirModal("modalProgramacao");
   }
   function ligarParallax(cena) {
@@ -148,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
       atual = i;
       torres.forEach((t, n) => t.classList.toggle("pf3d__torre--foco", n === i));
       const g = grupos[i];
-      const fora = !g.vencido && g.acumulado > saldo;
+      const fora = !g.vencido && torres[i].classList.contains("pf3d__torre--fora");
       const quando = P.quandoTexto(g.emDias);
       foco.className = "pf3d__foco" + (g.vencido ? " pf3d__foco--vencida" : fora ? " pf3d__foco--fora" : "");
       foco.innerHTML = `\n        <span class="pf3d__foco-data">${P.rotuloData(g.data)}</span>\n        <span class="pf3d__foco-nome">${g.itens > 1 ? `${g.itens} saídas · ${quando}` : `${U.escapeHTML(g.descricao)} · ${quando}`}</span>\n        <strong class="pf3d__foco-valor">${U.moeda(g.valor)}</strong>`;
@@ -181,69 +202,127 @@ document.addEventListener("DOMContentLoaded", () => {
       mostrar((atual + 1) % torres.length);
     }, PAUSA_FOCO);
   }
+  // A home (js/home.js) desenha a programação junto com o resto, a partir do
+  // mesmo contexto. Sem a home pronta, a programação se vira sozinha.
   async function carregar() {
-    const ctx = await window.FinckFinance.carregarContexto();
-    let ocorrencias = [];
-    try {
-      ocorrencias = await window.FinckStore.listar("recurring_occurrences", {
-        ordem: "due_date",
-        asc: true
-      });
-    } catch (e) {
-      ocorrencias = [];
+    if (window.FinckHome && window.FinckHome.recarregar) {
+      return window.FinckHome.recarregar();
     }
-    render(P.panorama({
-      ocorrencias: ocorrencias,
-      recorrentes: ctx.recorrentes
+    const ctx = await window.FinckFinance.carregarContexto();
+    render(ctx.programacao || P.panorama({
+      recorrentes: ctx.recorrentes,
+      parcelamentos: ctx.parcelamentos,
+      pagamentos: ctx.pagamentos,
+      agendadas: ctx.transacoesFuturas
     }, ctx.saldo, {
       dias: JANELA
     }));
   }
-  carregar();
+  host.innerHTML = `<p class="nota" role="status">Lendo suas saídas previstas…</p>`;
   window.FinckProgramacaoHome = {
-    recarregar: carregar
+    recarregar: carregar,
+    desenhar: (pan, opcoes) => pan && render(pan, opcoes)
   };
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const jaInstalado = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-  if (jaInstalado || sessionStorage.getItem("finck.instalar.oculto")) {
-    return;
-  }
-  const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  let evento = null;
-  const montar = (texto, aoTocar) => {
-    if (document.querySelector(".finck-instalar")) {
-      return;
+// Convite para adicionar o FinCK à tela inicial. Não aparece na primeira
+// visita: só depois de uma ação de valor (a primeira análise salva no Reality).
+// Fica no fluxo da página, nunca por cima de botão, campo, aviso ou navegação,
+// e, dispensado, espera 30 dias para voltar.
+(() => {
+  const CHAVE = "finck.painel.instalar-dispensado-em";
+  const ler = () => {
+    try {
+      return localStorage.getItem(CHAVE);
+    } catch {
+      return null;
     }
-    const faixa = document.createElement("div");
-    faixa.className = "finck-instalar";
-    faixa.innerHTML = `\n      <span class="finck-instalar__texto">${texto}</span>\n      <button type="button" class="finck-instalar__acao">${aoTocar ? "Instalar" : "Entendi"}</button>\n      <button type="button" class="finck-instalar__fechar" aria-label="Dispensar">✕</button>`;
-    document.body.appendChild(faixa);
-    requestAnimationFrame(() => faixa.classList.add("finck-instalar--visivel"));
-    const sumir = () => {
-      faixa.classList.remove("finck-instalar--visivel");
-      sessionStorage.setItem("finck.instalar.oculto", "1");
-      setTimeout(() => faixa.remove(), 400);
-    };
-    faixa.querySelector(".finck-instalar__fechar").addEventListener("click", sumir);
-    faixa.querySelector(".finck-instalar__acao").addEventListener("click", async () => {
-      if (aoTocar) {
-        await aoTocar();
-      }
-      sumir();
-    });
   };
+  const gravar = v => {
+    try {
+      localStorage.setItem(CHAVE, String(v));
+    } catch {}
+  };
+  const instalado = () => {
+    try {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    } catch {
+      return false;
+    }
+  };
+  const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+  let evento = null;
+  let proprias = 0;
+  // O navegador avisa cedo, antes de a home terminar de carregar: guarda o
+  // aviso e decide depois.
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
     evento = e;
-    setTimeout(() => montar("Instale o FinCK na sua tela inicial. Ele abre em tela cheia, mas ainda precisa de internet.", async () => {
-      evento.prompt();
-      await evento.userChoice;
-      evento = null;
-    }), 2600);
+    avaliar({
+      proprias: proprias
+    });
   });
-  if (iOS) {
-    setTimeout(() => montar("Para instalar: toque em Compartilhar e escolha “Adicionar à Tela de Início”. O app abre em tela cheia, mas ainda precisa de internet.", null), 2600);
+  window.addEventListener("appinstalled", () => {
+    evento = null;
+    esconder();
+  });
+  function esconder() {
+    const host = document.getElementById("conviteInstalar");
+    if (host) {
+      host.hidden = true;
+      host.innerHTML = "";
+    }
   }
-});
+  function dispensar() {
+    gravar(Date.now());
+    const host = document.getElementById("conviteInstalar");
+    const voltar = host && host.contains(document.activeElement);
+    esconder();
+    // O foco volta para a ação principal, não some com o convite.
+    if (voltar) {
+      document.querySelector(".reality-cta__acoes .btn-primario")?.focus();
+    }
+  }
+  function avaliar({proprias: n = 0} = {}) {
+    proprias = Number(n) || 0;
+    const host = document.getElementById("conviteInstalar");
+    const PN = window.FinckPainel;
+    if (!host || !PN) {
+      return;
+    }
+    const mostrar = PN.deveConvidarInstalacao({
+      instalado: instalado(),
+      podeConvidar: Boolean(evento) || iOS,
+      proprias: proprias,
+      dispensadoEm: ler()
+    });
+    if (!mostrar) {
+      esconder();
+      return;
+    }
+    if (!host.hidden && host.innerHTML) {
+      return;
+    }
+    host.innerHTML = `\n      <div class="convite-instalar__texto">\n        <strong>Adicionar o FinCK à tela inicial</strong>\n        <p>${evento ? "Ele abre em tela cheia, como um aplicativo, e continua precisando de internet." : "No iPhone: toque em Compartilhar e escolha “Adicionar à Tela de Início”. Ele abre em tela cheia e continua precisando de internet."}</p>\n      </div>\n      <div class="convite-instalar__acoes">\n        ${evento ? `<button type="button" class="btn-secundario btn-mini" data-instalar>Adicionar à tela inicial</button>` : ""}\n        <button type="button" class="btn-texto" data-dispensar>${evento ? "Agora não" : "Entendi"}</button>\n      </div>`;
+    host.hidden = false;
+    host.querySelector("[data-dispensar]").addEventListener("click", dispensar);
+    host.querySelector("[data-instalar]")?.addEventListener("click", async () => {
+      const pedido = evento;
+      if (!pedido) {
+        return esconder();
+      }
+      evento = null;
+      try {
+        pedido.prompt();
+        const escolha = await pedido.userChoice;
+        if (escolha && escolha.outcome !== "accepted") {
+          gravar(Date.now());
+        }
+      } catch {}
+      esconder();
+    });
+  }
+  window.FinckInstalarHome = {
+    avaliar: avaliar
+  };
+})();

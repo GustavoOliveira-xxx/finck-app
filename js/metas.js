@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const alvo = F.soma(metas, "target_amount");
     const atual = F.soma(metas, "current_amount");
     const concluidas = metas.filter(m => Number(m.current_amount) >= Number(m.target_amount) && Number(m.target_amount) > 0).length;
-    document.getElementById("resumoMetas").innerHTML = `\n      <article class="card-indicador"><span>Metas ativas</span><strong>${metas.length - concluidas}</strong></article>\n      <article class="card-indicador"><span>Concluídas</span><strong>${concluidas}</strong></article>\n      <article class="card-indicador"><span>Total guardado</span><strong class="cor-verde">${U.moeda(atual)}</strong></article>\n      <article class="card-indicador"><span>Objetivo total</span><strong>${U.moeda(alvo)}</strong></article>`;
+    document.getElementById("resumoMetas").innerHTML = `\n      <article class="card-indicador"><span>Metas ativas</span><strong>${metas.length - concluidas}</strong></article>\n      <article class="card-indicador"><span>Concluídas</span><strong>${concluidas}</strong></article>\n      <article class="card-indicador"><span>Total guardado</span><strong class="cor-verde">${U.moeda(atual)}</strong>\n        <small class="explica-numero">Soma do que está guardado em todas as metas, até hoje.</small></article>\n      <article class="card-indicador"><span>Objetivo total</span><strong>${U.moeda(alvo)}</strong>\n        <small class="explica-numero">Soma dos valores que as metas querem alcançar.</small></article>`;
   }
   function ritmoDaMeta(m, falta) {
     if (!m.deadline || falta <= 0) {
@@ -76,24 +76,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const meses = (prazo.getFullYear() - hoje.getFullYear()) * 12 + (prazo.getMonth() - hoje.getMonth());
     if (meses <= 0) {
-      return `<p class="ritmo-meta ritmo-meta--vencida">\n                O prazo já passou. Faltam ${U.moeda(falta)} — vale remarcar a data.\n              </p>`;
+      return `<p class="ritmo-meta ritmo-meta--vencida">\n                O prazo já passou. Faltam ${U.moeda(falta)}: vale remarcar a data.\n              </p>`;
     }
     const porMes = falta / meses;
     const livre = rendaLivre();
     const cabe = livre <= 0 ? null : porMes <= livre;
     const fatia = livre > 0 ? porMes / livre * 100 : 0;
-    const veredito = cabe === null ? "Preencha sua renda no perfil para saber se esse ritmo cabe." : cabe ? `Cabe na sua renda livre — ${U.percentual(fatia, 0)} dela.` : `Acima da sua renda livre de ${U.moeda(livre)}. Vale esticar o prazo ou reduzir o alvo.`;
+    const veredito = cabe === null ? "Preencha sua renda no perfil para saber se esse ritmo cabe." : cabe ? `Cabe na sua renda livre: ${U.percentual(fatia, 0)} dela.` : `Acima da sua renda livre de ${U.moeda(livre)}. Vale esticar o prazo ou reduzir o alvo.`;
     return `<p class="ritmo-meta${cabe === false ? " ritmo-meta--apertada" : ""}">\n              <strong>${U.moeda(porMes)}/mês</strong> por ${meses} ${meses === 1 ? "mês" : "meses"}. ${veredito}\n            </p>`;
   }
   function renderLista() {
     const host = document.getElementById("listaMetas");
     document.getElementById("vazioMetas").hidden = metas.length > 0;
+    // Sem metas, quatro zeros não dizem nada: fica só o convite para começar,
+    // com um botão só (o do cabeçalho repetiria a mesma ação).
+    document.getElementById("resumoMetas").hidden = metas.length === 0;
+    document.getElementById("btnNovaMeta").hidden = metas.length === 0;
     host.innerHTML = metas.map(m => {
       const p = U.progresso(m.current_amount, m.target_amount);
       const falta = Math.max(0, Number(m.target_amount) - Number(m.current_amount));
       const dias = valorDia() > 0 ? falta / valorDia() : 0;
       const concluida = p >= 100;
-      return `\n        <article class="card-meta${concluida ? " card-meta--concluida" : ""}">\n          <header>\n            <h4>${U.escapeHTML(m.name)}</h4>\n            ${concluida ? `<span class="selo">Concluída</span>` : ""}\n          </header>\n          <div class="barra"><div class="barra-preenchida" style="width:${p}%"></div></div>\n          <p>${U.moeda(m.current_amount)} de ${U.moeda(m.target_amount)} · ${U.percentual(p, 0)}</p>\n          <p class="nota">Faltam ${U.moeda(falta)} — cerca de ${U.numero(dias, 1)} dias de trabalho.</p>\n          ${concluida ? "" : ritmoDaMeta(m, falta)}\n          ${m.deadline ? `<small>Prazo: ${U.dataBR(m.deadline)}</small>` : ""}\n          <div class="acoes-card">\n            <button type="button" class="btn-secundario btn-mini" data-aporte="${m.id}">Aportar</button>\n            <button type="button" class="btn-secundario btn-mini" data-retirar="${m.id}">Retirar</button>\n            <button type="button" class="btn-secundario btn-mini" data-detalhe="${m.id}">Detalhes</button>\n            <button type="button" class="btn-secundario btn-mini" data-editar="${m.id}">Editar</button>\n            <button type="button" class="btn-excluir-item" data-excluir="${m.id}" aria-label="Excluir meta">✕</button>\n          </div>\n        </article>`;
+      return `\n        <article class="card-meta${concluida ? " card-meta--concluida" : ""}">\n          <header>\n            <h4>${U.escapeHTML(m.name)}</h4>\n            ${concluida ? `<span class="selo">Concluída</span>` : ""}\n          </header>\n          <div class="barra"><div class="barra-preenchida" style="width:${p}%"></div></div>\n          <p>${U.moeda(m.current_amount)} de ${U.moeda(m.target_amount)} · ${U.percentual(p, 0)}</p>\n          <p class="nota">Faltam ${U.moeda(falta)}, cerca de ${U.numero(dias, 1)} dias de trabalho.</p>\n          ${concluida ? "" : ritmoDaMeta(m, falta)}\n          ${m.deadline ? `<small>Prazo: ${U.dataBR(m.deadline)}</small>` : ""}\n          <div class="acoes-card">\n            <button type="button" class="btn-secundario btn-mini" data-aporte="${m.id}">Aportar</button>\n            <button type="button" class="btn-secundario btn-mini" data-retirar="${m.id}">Retirar</button>\n            <button type="button" class="btn-secundario btn-mini" data-detalhe="${m.id}">Detalhes</button>\n            <button type="button" class="btn-secundario btn-mini" data-editar="${m.id}">Editar</button>\n            <button type="button" class="btn-excluir-item" data-excluir="${m.id}" aria-label="Excluir meta">✕</button>\n          </div>\n        </article>`;
     }).join("");
     host.querySelectorAll("[data-aporte]").forEach(b => b.addEventListener("click", () => abrirAporte(b.dataset.aporte, "aporte")));
     host.querySelectorAll("[data-retirar]").forEach(b => b.addEventListener("click", () => abrirAporte(b.dataset.retirar, "retirada")));
@@ -122,6 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalMeta");
   }
   document.getElementById("btnNovaMeta").addEventListener("click", () => abrirMeta(null));
+  document.getElementById("btnPrimeiraMeta").addEventListener("click", () => abrirMeta(null));
   // Atalho dos estados vazios ("Criar minha primeira meta"): metas.html#nova
   // já abre o formulário, sem a pessoa procurar o botão.
   if (location.hash === "#nova") {
@@ -179,7 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const guardado = Number(m.current_amount || 0);
     document.getElementById("aporteMetaId").value = m.id;
     document.getElementById("tituloAporte").textContent = modo === "retirada" ? "Retirar da meta" : "Aportar na meta";
-    document.getElementById("aporteInfo").textContent = modo === "retirada" ? `${m.name} — você tem ${U.moeda(guardado)} guardados. A retirada volta para o caixa.` : `${m.name} — faltam ${U.moeda(Math.max(0, Number(m.target_amount) - guardado))}.`;
+    document.getElementById("aporteInfo").textContent = modo === "retirada" ? `${m.name}: você tem ${U.moeda(guardado)} guardados. A retirada volta para o caixa.` : `${m.name}: faltam ${U.moeda(Math.max(0, Number(m.target_amount) - guardado))}.`;
     document.getElementById("btnConfirmarAporte").textContent = modo === "retirada" ? "Registrar retirada" : "Registrar aporte";
     U.limparMoeda("aporteValor");
     U.abrirModal("modalAporte");
@@ -201,12 +206,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     botao.disabled = true;
     try {
       if (modoAporte === "retirada") {
-        await F.retirarMeta(id, valor, `Retirada — ${meta?.name || "meta"}`, {
+        await F.retirarMeta(id, valor, `Retirada: ${meta?.name || "meta"}`, {
           chave: chave
         });
         U.toast("Retirada registrada.", "sucesso");
       } else {
-        await F.aportarMeta(id, valor, `Aporte — ${meta?.name || "meta"}`, {
+        await F.aportarMeta(id, valor, `Aporte: ${meta?.name || "meta"}`, {
           chave: chave
         });
         await G.premiar("meta_aporte", {

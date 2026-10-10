@@ -23,8 +23,38 @@ window.FinckFinance = (() => {
     }
     return vigentesAteHoje(transacoes, hoje).filter(t => !t.account_id && !t.unallocated);
   }
+  // Projeções com nome explícito: cada uma responde a uma pergunta só e leva a
+  // base de cálculo no nome. Um campo genérico de "disponível" fazia a home
+  // mostrar dois números que pareciam responder à mesma pergunta com valores
+  // opostos. A janela de previsão é fixa em 60 dias, a mesma da programação.
+  const JANELA_PREVISOES = 60;
+  function projecoesDe({saldo: saldo = 0, renda: renda = 0, despesasFixas: despesasFixas = 0, parcelasAPagar: parcelasAPagar = 0, saidasPrevistas: saidasPrevistas = null, entradasPrevistas: entradasPrevistas = null, menorCaixaComEntradas: menorCaixaComEntradas = null, descobertoEm: descobertoEm = null} = {}) {
+    const s = Number(saldo) || 0;
+    const parcelas = Number(parcelasAPagar) || 0;
+    const saidas = saidasPrevistas === null || saidasPrevistas === undefined ? null : Number(saidasPrevistas) || 0;
+    const menor = Number(menorCaixaComEntradas);
+    return {
+      // Menor saldo do período contando entradas e saídas na ordem das datas.
+      // Sem a programação dia a dia, fica a conta sem entradas, que é a mais
+      // cautelosa. É ele que decide se a home avisa que vai faltar dinheiro.
+      menorCaixaComEntradas60Dias: saidas === null ? null : menorCaixaComEntradas !== null && Number.isFinite(menor) ? menor : s - saidas,
+      descobertoEm60Dias: saidas === null ? null : descobertoEm || null,
+      janelaDias: JANELA_PREVISOES,
+      saldoAtual: s,
+      parcelasAPagar: parcelas,
+      saldoAposParcelas: s - parcelas,
+      sobraRendaAposFixos: (Number(renda) || 0) - (Number(despesasFixas) || 0),
+      saidasPrevistas60Dias: saidas,
+      entradasPrevistas60Dias: saidas === null ? null : Number(entradasPrevistas) || 0,
+      // null quando a tela não carregou a programação (js/programacao.js).
+      caixaAposPrevisoes60Dias: saidas === null ? null : s - saidas
+    };
+  }
   async function carregarContexto() {
-    const [perfil, todasTransacoes, metas, recorrentes, analises, contas, parcelamentos, pagamentos, transferencias, ajustes, movimentosMeta] = await Promise.all([ S.obterPerfil(), S.listar("transactions", {
+    // A programação de 60 dias só é montada nas telas que carregam
+    // js/programacao.js; as outras não pagam a leitura das ocorrências.
+    const Prog = window.FinckProgramacao;
+    const [perfil, todasTransacoes, metas, recorrentes, analises, contas, parcelamentos, pagamentos, transferencias, ajustes, movimentosMeta, ocorrencias] = await Promise.all([ S.obterPerfil(), S.listar("transactions", {
       ordem: "date",
       asc: false
     }), S.listar("goals", {
@@ -39,7 +69,10 @@ window.FinckFinance = (() => {
     }), S.listar("accounts"), S.listar("installment_purchases"), S.listar("installment_payments"), S.listar("transfers"), S.listar("balance_adjustments"), S.listar("goal_movements", {
       ordem: "date",
       asc: false
-    }) ]);
+    }), Prog ? S.listar("recurring_occurrences", {
+      ordem: "due_date",
+      asc: true
+    }).catch(() => []) : Promise.resolve([]) ]);
     const transacoes = vigentes(todasTransacoes);
     const hoje = U.hojeISO();
     const realizadas = vigentesAteHoje(todasTransacoes, hoje);
@@ -62,6 +95,26 @@ window.FinckFinance = (() => {
     const semConta = realizadas.filter(t => !t.account_id);
     const naoAlocado = naoAlocadoDe(todasTransacoes, origem, hoje);
     const ambiguas = alocacaoAmbigua(todasTransacoes, contas, hoje);
+    const ocorrenciasVigentes = Prog ? Prog.ocorrenciasVigentes(ocorrencias, recorrentes) : ocorrencias;
+    const programacao = Prog ? Prog.panorama({
+      ocorrencias: ocorrenciasVigentes,
+      recorrentes: recorrentes,
+      parcelamentos: parcelamentos,
+      pagamentos: pagamentos,
+      agendadas: futuras
+    }, saldo, {
+      dias: JANELA_PREVISOES
+    }) : null;
+    const projecoes = projecoesDe({
+      saldo: saldo,
+      renda: orcamento.renda,
+      despesasFixas: despesasFixas,
+      parcelasAPagar: compromissos,
+      saidasPrevistas: programacao ? programacao.comprometidoTotal : null,
+      entradasPrevistas: programacao ? programacao.entradasPrevistas : null,
+      menorCaixaComEntradas: programacao ? programacao.menorCaixaComEntradas : null,
+      descobertoEm: programacao ? programacao.descobertoComEntradasEm : null
+    });
     return {
       perfil: perfil,
       transacoes: transacoes,
@@ -96,7 +149,13 @@ window.FinckFinance = (() => {
       despesasFixas: despesasFixas,
       ...orcamento,
       compromissosAbertos: compromissos,
+      // Mantido para o Reality e o diagnóstico: é o mesmo que
+      // projecoes.saldoAposParcelas (saldo menos parcelas ainda a pagar).
       disponivelProjetado: saldo - compromissos,
+      projecoes: projecoes,
+      programacao: programacao,
+      // Só vem preenchido nas telas que carregam a programação.
+      ocorrencias: ocorrenciasVigentes,
       totalGuardado: soma(metas, "current_amount")
     };
   }
@@ -117,6 +176,9 @@ window.FinckFinance = (() => {
         nota: "O saldo inicial veio do seu perfil. Ao cadastrar contas, ele passa a vir delas."
       };
     }
+    // A semente da demonstração divide o saldo do perfil entre as duas contas
+    // de exemplo; ali a nota técnica de migração não diz nada a quem visita.
+    const demoDividida = perfil?.setup_mode === "demo" && Boolean(S.emDemo?.()) && ativas.length === 2 && Math.abs(saldoContas - saldoPerfil) < .005;
     return {
       fonte: "contas",
       saldoInicial: saldoContas,
@@ -124,7 +186,7 @@ window.FinckFinance = (() => {
       saldoContas: saldoContas,
       naoAlocado: 0,
       duplicaria: saldoPerfil,
-      nota: saldoPerfil > 0 ? `O saldo inicial agora vem das suas contas (${U.moeda(saldoContas)}). Os ${U.moeda(saldoPerfil)} informados no perfil não são somados de novo.` : todas.length ? "O saldo inicial vem das contas ativas. Contas arquivadas permanecem no histórico, mas não voltam a ativar o saldo antigo do perfil." : "O saldo inicial já foi migrado para contas. O valor guardado no perfil é apenas histórico."
+      nota: demoDividida ? "Na demonstração, o saldo inicial de exemplo está dividido entre as duas contas." : saldoPerfil > 0 ? `O saldo inicial agora vem das suas contas (${U.moeda(saldoContas)}). Os ${U.moeda(saldoPerfil)} informados no perfil não são somados de novo.` : todas.length ? "O saldo inicial vem das contas ativas. Contas arquivadas permanecem no histórico, mas não voltam a ativar o saldo antigo do perfil." : "O saldo inicial já foi migrado para contas. O valor guardado no perfil é apenas histórico."
     };
   }
   function orcamentoMensal(perfil, despesasFixas) {
@@ -623,12 +685,16 @@ window.FinckFinance = (() => {
   //
   // As datas são deslocamentos em dias a partir de hoje, não dias fixos do mês:
   // assim o conjunto continua coerente em qualquer data do sistema, com sempre
-  // três lançamentos já realizados e três ainda previstos. Antes, os dias fixos
+  // três lançamentos já realizados e dois ainda previstos. Antes, os dias fixos
   // 9, 10 e 12 apareciam como realizados ou futuros dependendo do dia em que a
-  // demo fosse aberta.
+  // demo fosse aberta. O streaming é só recorrência: como lançamento previsto
+  // também, confirmar a recorrência criava um segundo e a programação somava
+  // os dois.
   //
   // Invariante da demonstração: saldo atual = 1200 + 3500 − 1200 − 620 = 2880,
-  // e o previsto (−675) nunca entra nesse número.
+  // dividido entre Conta corrente 2580 e Carteira 300 (100 de saldo inicial
+  // mais o saque de 200; js/store.js prepararContasDemo). O previsto (−620)
+  // nunca entra nesse número.
   const FIXTURE_DEMO = {
     perfil: {
       name: "Usuário Demonstração",
@@ -668,13 +734,6 @@ window.FinckFinance = (() => {
       description: "Transporte",
       amount: 240,
       category: "Transporte"
-    }, {
-      dias: 2,
-      regime: "previsto",
-      type: "saida",
-      description: "Streaming",
-      amount: 55,
-      category: "Lazer"
     }, {
       dias: 4,
       regime: "previsto",
@@ -723,6 +782,18 @@ window.FinckFinance = (() => {
       work_days: 5.03,
       work_hours: 40.22,
       income_percent: 22.86,
+      // A base da época, como o Reality grava: sem ela, o histórico mostrava
+      // salário R$ 0,00 ao lado de 40 h de trabalho. O saldo é o de quatro
+      // dias atrás, antes do salário de exemplo.
+      income_base: 3500,
+      income_type: "fixa",
+      work_days_month: 22,
+      work_hours_day: 8,
+      hour_value: 19.89,
+      day_value: 159.09,
+      free_income: 2146,
+      balance_before: 1200,
+      balance_after: 400,
       impact_level: "atencao",
       decision: "adiar",
       reflections: {
@@ -812,6 +883,12 @@ window.FinckFinance = (() => {
       responsibility_label: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).nivel : null,
       analyzed_at: `${iso(-diasAtras)}T12:00:00.000Z`
     });
+    // Contas de exemplo, saque para a carteira e salário e aluguel já
+    // confirmados (js/store.js) entram na mesma operação, sem esperar a
+    // próxima tela. Fora da demonstração, não faz nada.
+    resumo.contas = S.prepararContasDemo ? S.prepararContasDemo({
+      forcar: true
+    }) : null;
     return resumo;
   }
   // Recarregar a demo por cima dela mesma não pode duplicar nada: inserirSeNovo
@@ -834,6 +911,8 @@ window.FinckFinance = (() => {
     naoAlocadoDe: naoAlocadoDe,
     alocacaoAmbigua: alocacaoAmbigua,
     carregarContexto: carregarContexto,
+    projecoesDe: projecoesDe,
+    JANELA_PREVISOES: JANELA_PREVISOES,
     origemDoSaldo: origemDoSaldo,
     orcamentoMensal: orcamentoMensal,
     compromissosEmAberto: compromissosEmAberto,

@@ -7,31 +7,49 @@ window.FinckNav = (() => {
     gamificacao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5.5"/><path d="M9 13.5 7 21l5-2.5L17 21l-2-7.5"/></svg>',
     perfil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6"/></svg>'
   };
+  // As duas partes do app: o controle do dia a dia e a ferramenta de decisão.
+  // A navegação já separa o Reality pelo destaque central; a família fica
+  // registrada aqui para qualquer menu que agrupe as telas usar o mesmo nome.
+  const FAMILIAS = {
+    financas: {
+      rotulo: "Minha vida financeira",
+      descricao: "Organizar e acompanhar"
+    },
+    reality: {
+      rotulo: "FinCK of Reality",
+      descricao: "Antes de comprar, descubra o impacto"
+    }
+  };
   const ITENS = [ {
     id: "home",
     href: "home.html",
     rotulo: "Início",
+    familia: "financas",
     icone: ICONES.home
   }, {
     id: "reality",
     href: "reality.html",
     rotulo: "Reality",
+    familia: "reality",
     icone: '<img src="assets/logo-reality-transparente.png" alt="">',
     destaque: true
   }, {
     id: "metas",
     href: "metas.html",
     rotulo: "Metas",
+    familia: "financas",
     icone: ICONES.metas
   }, {
     id: "gamificacao",
     href: "gamificacao.html",
     rotulo: "Jornada",
+    familia: "financas",
     icone: ICONES.gamificacao
   }, {
     id: "perfil",
     href: "perfil.html",
     rotulo: "Perfil",
+    familia: "financas",
     icone: ICONES.perfil
   } ];
   const MODOS = {
@@ -72,6 +90,7 @@ window.FinckNav = (() => {
         location.href = "index.html";
       });
     }
+    observarBarras();
   }
   function montarNav() {
     const host = document.querySelector("[data-finck-nav]");
@@ -79,7 +98,35 @@ window.FinckNav = (() => {
       return;
     }
     const atual = document.body.dataset.page;
-    host.innerHTML = ITENS.map(i => `\n      <a class="nav-item${i.id === atual ? " ativo" : ""}${i.destaque ? " nav-item--destaque" : ""}"\n         href="${i.href}" ${i.id === atual ? 'aria-current="page"' : ""}>\n        <span class="nav-icone" aria-hidden="true">${i.icone}</span>\n        <span class="nav-rotulo">${i.rotulo}</span>\n      </a>`).join("");
+    // No leitor de tela, o Reality se apresenta como a ferramenta de decisão
+    // (o nome visível continua no começo do nome acessível).
+    host.innerHTML = ITENS.map(i => `\n      <a class="nav-item${i.id === atual ? " ativo" : ""}${i.destaque ? " nav-item--destaque" : ""}"\n         href="${i.href}" data-familia="${i.familia}" ${i.id === atual ? 'aria-current="page"' : ""}>\n        <span class="nav-icone" aria-hidden="true">${i.icone}</span>\n        <span class="nav-rotulo">${i.rotulo}</span>${i.familia === "reality" ? `<span class="sr-only">: ${U.escapeHTML(FAMILIAS.reality.descricao.toLowerCase())}</span>` : ""}\n      </a>`).join("");
+    observarBarras();
+  }
+  // Mede o header e a navegação inferior de verdade e publica as alturas em
+  // --altura-header e --altura-nav-inferior. O CSS usa esses valores para
+  // reservar o fim da página e para o foco não parar atrás das barras.
+  let observador = null;
+  function observarBarras() {
+    const raiz = document.documentElement;
+    const nav = document.querySelector("[data-finck-nav]");
+    const header = document.querySelector("[data-finck-header]");
+    const medir = () => {
+      if (nav && nav.offsetHeight) {
+        raiz.style.setProperty("--altura-nav-inferior", `${Math.ceil(nav.offsetHeight)}px`);
+      }
+      // Rolando, o header encolhe por um instante; vale a altura cheia, que
+      // é o caso de quem chega ao topo da página.
+      if (header && header.offsetHeight && !document.body.classList.contains("rolando")) {
+        raiz.style.setProperty("--altura-header", `${Math.ceil(header.offsetHeight)}px`);
+      }
+    };
+    medir();
+    if (observador || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    observador = new ResizeObserver(medir);
+    [ nav, header ].forEach(el => el && observador.observe(el));
   }
   async function iniciarPagina({titulo: titulo, subtitulo: subtitulo, exigirPerfil: exigirPerfil = true} = {}) {
     const user = await S.exigirLogin();
@@ -118,6 +165,7 @@ window.FinckNav = (() => {
   }
   return {
     ITENS: ITENS,
+    FAMILIAS: FAMILIAS,
     montarHeader: montarHeader,
     montarNav: montarNav,
     iniciarPagina: iniciarPagina

@@ -58,19 +58,25 @@
       <p>Tudo o que você analisou antes de comprar, e o que decidiu em cada caso.</p>
     </section>
 
-    <section class="cards-indicadores" id="resumoDecisoes"></section>
-    <p class="nota" id="notaDecisoes"></p>
+    <div class="vazio vazio--guia" id="vazioDecisoes" hidden>
+      <p><strong>Você ainda não analisou nenhuma compra.</strong> Quando analisar, a sua decisão aparece aqui para você acompanhar depois.</p>
+      <p>No FinCK of Reality você vê quanto uma compra custa em horas de trabalho e o impacto dela no seu mês. A decisão continua sendo sua.</p>
+      <a class="btn-primario" href="reality.html">Fazer minha primeira análise</a>
+    </div>
+
+    <section class="cards-indicadores" id="resumoDecisoes" data-com-analises></section>
+    <p class="nota" id="notaDecisoes" data-com-analises></p>
 
     <section class="bloco" id="blocoAcompanhar" hidden>
       <div class="bloco-cabecalho">
         <h3>O que aconteceu depois?</h3>
         <span class="chip" id="chipAcompanhar"></span>
       </div>
-      <p class="descricao">Estas decisões conscientes já têm mais de 30 dias e ainda não foram acompanhadas. Dizer o que aconteceu é o que separa uma intenção registrada de uma economia confirmada — e é opcional.</p>
+      <p class="descricao">Estas decisões conscientes já têm mais de 30 dias e ainda não foram acompanhadas. Dizer o que aconteceu é o que separa uma intenção registrada de uma economia confirmada, e é opcional.</p>
       <div id="listaAcompanhar" class="itens-lista"></div>
     </section>
 
-    <section class="bloco">
+    <section class="bloco" data-com-analises>
       <div class="bloco-cabecalho">
         <h3>Histórico</h3>
         <label class="filtro">Filtrar
@@ -80,7 +86,7 @@
         </label>
       </div>
       <div id="listaDecisoes" class="itens-lista"></div>
-      <p class="vazio" id="vazioDecisoes" hidden>Nenhuma análise registrada ainda. <a href="reality.html">Analisar uma compra</a>.</p>
+      <p class="vazio" id="vazioFiltroDecisoes" hidden>Nenhuma análise com essa decisão. Escolha outra no filtro acima.</p>
     </section>
 
     <p class="link-rodape"><a href="reality.html">← Voltar ao FinCK of Reality</a></p>

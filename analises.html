@@ -58,7 +58,13 @@
       <p>Para onde o seu dinheiro está indo, por categoria e mês a mês, e quanto do seu tempo de trabalho isso representa. É a tela para entender os gastos; para fechar o mês e exportar, use <a href="relatorios.html">Relatórios</a>.</p>
     </section>
 
-    <section class="filtros">
+    <div class="vazio vazio--guia" id="vazioAnalises" hidden>
+      <p><strong>Seu extrato está limpo.</strong> Ainda não há lançamentos para analisar.</p>
+      <p>Registre a primeira entrada ou saída e esta tela passa a mostrar para onde o dinheiro vai, por categoria e mês a mês.</p>
+      <a class="btn-secundario" href="home.html#novo-lancamento">Adicionar lançamento</a>
+    </div>
+
+    <section class="filtros" data-com-lancamentos>
       <label>Período
         <select id="filtroPeriodo">
           <option value="mes">Mês atual</option>
@@ -75,17 +81,17 @@
       </label>
     </section>
 
-    <p class="nota" id="notaRegime"></p>
+    <p class="nota" id="notaRegime" data-com-lancamentos></p>
 
-    <section class="cards-indicadores" id="resumoAnalises"></section>
+    <section class="cards-indicadores" id="resumoAnalises" data-com-lancamentos></section>
 
-    <section class="bloco">
+    <section class="bloco" data-com-lancamentos>
       <h3>Gastos por categoria</h3>
       <canvas id="graficoCategorias" width="600" height="320" role="img" aria-label="Gráfico de gastos por categoria"></canvas>
       <ul class="lista-categorias" id="listaCategorias"></ul>
     </section>
 
-    <section class="bloco">
+    <section class="bloco" data-com-lancamentos>
       <h3>Evolução mensal</h3>
       <canvas id="graficoMensal" width="600" height="320" role="img" aria-label="Gráfico de entradas e saídas por mês"></canvas>
     </section>

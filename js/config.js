@@ -90,6 +90,15 @@ window.FINCK_CONFIG = {
     curto: "Outro",
     cor: "#9333c4",
     logo: null
+  }, {
+    // Só a conta corrente fictícia da demonstração usa; a tela de contas não
+    // oferece esta opção a quem cadastra uma conta de verdade.
+    id: "exemplo",
+    nome: "Banco exemplo",
+    curto: "Banco exemplo",
+    cor: "#9333c4",
+    logo: null,
+    demonstracao: true
   } ],
   TIPOS_CONTA: [ {
     id: "corrente",
@@ -203,7 +212,7 @@ window.FINCK_CONFIG = {
       referencia: .4,
       min: .3,
       max: .5,
-      texto: "Hipótese de design do projeto: itens de segunda mão costumam custar entre 30% e 50% menos. Não é dado científico — varia por produto, estado e região. Confirme com o preço real."
+      texto: "Hipótese de design do projeto: itens de segunda mão costumam custar entre 30% e 50% menos. Não é dado científico: varia por produto, estado e região. Confirme com o preço real."
     },
     reparar: {
       rotulo: "Reparar ou reaproveitar o que você já tem",
@@ -354,7 +363,7 @@ window.FINCK_CONFIG = {
     titulo: "Conscious Planner",
     xp: 100,
     icone: "📝",
-    lema: "Já não gasta no escuro — agora existe um plano."
+    lema: "Já não gasta no escuro: agora existe um plano."
   }, {
     level: 3,
     titulo: "Financial Thinker",
@@ -378,7 +387,7 @@ window.FINCK_CONFIG = {
     titulo: "Norman Osborn",
     xp: 1500,
     icone: "🕷️",
-    lema: "Conhece o próprio impulso — e sabe quando ele fala mais alto."
+    lema: "Conhece o próprio impulso e sabe quando ele fala mais alto."
   }, {
     level: 7,
     titulo: "Golden Seeker",
@@ -522,7 +531,7 @@ window.FINCK_CONFIG = {
       calculo: {
         categoria: "consumo",
         xp: 15,
-        rotulo: "Cadastrar um cálculo real",
+        rotulo: "Salvar uma análise de compra no Reality",
         limiteDia: 3
       },
       decisao: {

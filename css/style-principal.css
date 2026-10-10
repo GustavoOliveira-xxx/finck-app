@@ -60,6 +60,17 @@
 
   --largura: 1180px;
 
+  /* Barras fixas. js/nav.js mede a navegação inferior e o header de verdade
+     (mudam com a fonte, o zoom e os alvos de toque) e reescreve as alturas;
+     os valores daqui valem só até a medição. Qualquer tela que precise
+     reservar a área coberta pela navegação usa --espaco-nav-inferior, que já
+     soma o recuo da borda, a área segura do celular e uma folga. */
+  --altura-nav-inferior: 70px;
+  --recuo-nav-inferior: max(.85rem, env(safe-area-inset-bottom));
+  --area-nav-inferior: calc(var(--altura-nav-inferior) + var(--recuo-nav-inferior));
+  --espaco-nav-inferior: calc(var(--area-nav-inferior) + 1.5rem);
+  --altura-header: 4rem;
+
   --sombra-baixa:  0 1px 2px rgba(0,0,0,.45);
   --sombra-card:   0 18px 44px -26px rgba(0,0,0,.95), 0 2px 0 rgba(255,255,255,.03) inset;
   --sombra-alta:   0 34px 70px -34px rgba(0,0,0,1);
@@ -93,8 +104,13 @@ html{
   scrollbar-color: var(--roxo-claro) transparent;
 
   -webkit-tap-highlight-color: transparent;
+  /* Foco pelo Tab, links de âncora e scrollIntoView param entre o header e
+     a navegação inferior, nunca atrás delas. Página com outra barra presa
+     logo abaixo do header (as etapas do Reality) informa a altura dela em
+     --altura-barra-presa. */
+  scroll-padding-top:calc(var(--altura-header) + var(--altura-barra-presa, 0px) + .75rem);
+  scroll-padding-bottom:var(--espaco-nav-inferior);
 }
-
 button,a,input,select,.nav-item,.card-opcao,.aba,.chip,.botao-decisao,
 .item-transacao,.item-decisao,.item-lista,.conquista{
   -webkit-tap-highlight-color: transparent;
@@ -109,7 +125,9 @@ body{
   color:var(--texto);
   background:var(--preto-fundo);
   overflow-x:hidden;
-  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  /* O último botão de qualquer tela precisa conseguir subir inteiro acima
+     da navegação fixa. */
+  padding-bottom:var(--espaco-nav-inferior);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
@@ -246,6 +264,9 @@ small{ font-size:.78rem; }
   background:rgba(255,255,255,.012);
 }
 .vazio a{ color:var(--amarelo); border-bottom:1px solid currentColor; }
+/* Botões em forma de link dentro do estado vazio mantêm a cara de botão. */
+.vazio a.btn-primario{ color:#fff; border-bottom:0; }
+.vazio a.btn-secundario{ color:var(--texto); border-bottom-color:var(--superficie-borda-forte); }
 
 .cor-verde{ color:var(--verde) !important; }
 .cor-vermelha{ color:var(--vermelho) !important; }
@@ -378,7 +399,7 @@ body.rolando header[data-finck-header]::after{ opacity:1; }
 
 .nav-inferior{
   position:fixed; z-index:60;
-  left:50%; bottom:max(.85rem, env(safe-area-inset-bottom));
+  left:50%; bottom:var(--recuo-nav-inferior);
   transform:translateX(-50%);
   width:min(100% - 1.5rem, 540px);
   display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
@@ -742,7 +763,7 @@ input[type="number"],input[type="date"],input[type="month"]{
   font-family:var(--fonte-dados);
   font-variant-numeric:tabular-nums;
 }
-input::placeholder{ color:var(--texto-fraquissimo); font-weight:400; }
+input::placeholder,textarea::placeholder{ color:var(--texto-fraquissimo); font-weight:400; }
 
 input:hover,select:hover{ border-color:rgba(255,255,255,.24); }
 input:focus,select:focus,textarea:focus{
@@ -931,6 +952,12 @@ input[type="month"]::-webkit-calendar-picker-indicator{
   color:#fff;
   transform:translateY(-2px);
   box-shadow:0 16px 34px -24px var(--roxo-glow);
+}
+/* Desabilitado precisa parecer desabilitado, mas o texto continua legível. */
+.btn-secundario[disabled]{ opacity:.62; cursor:not-allowed; }
+.btn-secundario[disabled]:hover{
+  background:rgba(255,255,255,.045); border-color:var(--superficie-borda-forte);
+  color:var(--texto); transform:none; box-shadow:none;
 }
 
 .btn-perigo{
@@ -1327,6 +1354,8 @@ canvas{
   transition:all var(--dur-rapida) var(--ease-out);
 }
 .chip input{ position:absolute; opacity:0; pointer-events:none; }
+/* O input fica invisível: o anel de foco do teclado vai para o chip. */
+.chip:has(input:focus-visible){ outline:2px solid var(--amarelo); outline-offset:2px; }
 .chip:hover{ color:var(--texto); border-color:rgba(147,51,196,.5); transform:translateY(-1px); }
 .chip:has(input:checked){
   color:#fff;
@@ -1667,7 +1696,7 @@ canvas{
 
 .finck-toast-host{
   position:fixed; z-index:400;
-  right:1rem; bottom:calc(96px + env(safe-area-inset-bottom));
+  right:1rem; bottom:calc(var(--espaco-nav-inferior) - .5rem);
   display:flex; flex-direction:column; gap:.5rem;
   width:min(100% - 2rem, 340px);
   pointer-events:none;
@@ -1704,6 +1733,8 @@ canvas{
 .finck-toast--erro{ color:#ffd2d7; }
 .finck-toast--erro::before{ background:var(--vermelho); box-shadow:0 0 14px var(--vermelho); }
 .finck-toast--info::before{ background:var(--amarelo); box-shadow:0 0 14px var(--amarelo); }
+.finck-toast--com-link{ pointer-events:auto; }
+.finck-toast__link{ color:var(--amarelo); font-weight:600; text-underline-offset:2px; white-space:nowrap; }
 
 @keyframes header-desce{
   from{ opacity:0; transform:translateY(-14px); }
@@ -2128,6 +2159,7 @@ body.rolando header[data-finck-header]{
     display:inline-flex; align-items:center; justify-content:center;
   }
   .aba{ min-height:44px; }
+  details > summary{ min-height:44px; padding-block:.55rem; box-sizing:border-box; }
 }
 
 .ods-card{
@@ -2430,7 +2462,8 @@ body.rolando header[data-finck-header]{
 .acoes-contas{ display:flex; flex-wrap:wrap; gap:.6rem; margin-block:var(--gap-md, 1rem); }
 .acoes-contas .btn-primario,.acoes-contas .btn-secundario{ flex:1 1 180px; text-align:center; }
 
-.lista-consolidado li strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; }
+/* O sinal de menos não pode ficar numa linha e o valor na outra. */
+.lista-consolidado li strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
 
 .grade-contas{ display:grid; gap:.7rem; }
 @media (min-width: 720px){
@@ -2465,7 +2498,7 @@ body.rolando header[data-finck-header]{
   width:100%; height:100%;
   border-radius:9px;
   font-size:.9rem; font-weight:700; letter-spacing:-.02em;
-  color:#fff; background:var(--cor, var(--roxo-claro));
+  color:var(--cor-texto, #fff); background:var(--cor, var(--roxo-claro));
 }
 
 .cartao-conta__info{ min-width:0; }
@@ -2477,6 +2510,17 @@ body.rolando header[data-finck-header]{
 .cartao-conta__extra{ opacity:.75; }
 .cartao-conta__lado{ display:flex; flex-direction:column; align-items:flex-end; gap:.3rem; }
 .cartao-conta__lado strong{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:1.05rem; }
+.cartao-conta > .acoes-card{ grid-column:1 / -1; justify-content:flex-end; margin-top:0; }
+/* Em telas de 320px, o saldo desce para baixo do nome: ao lado, a coluna do
+   texto ficava com uma palavra por linha. */
+@media (max-width: 359px){
+  .cartao-conta{ grid-template-columns:auto minmax(0,1fr); }
+  .cartao-conta__lado{ grid-column:2; align-items:flex-start; }
+  .item-transferencia{ flex-wrap:wrap; }
+  .item-transferencia .item-info{ flex:1 1 100%; }
+  .item-transferencia .item-lado{ flex:1 1 100%; flex-direction:row; flex-wrap:wrap; align-items:center; }
+  .item-transferencia .item-lado .btn-excluir-item{ margin-left:auto; }
+}
 
 .selo--mini{
   padding:.05rem .45rem; font-size:.62rem; letter-spacing:.06em;
@@ -3167,8 +3211,9 @@ table th{
 }
 .pf3d__torre--fantasma .pf3d__brasa{ animation:none; opacity:.5; }
 
+/* Acima das torres: em telas estreitas, as mais altas passavam na frente. */
 .pf3d__selo{
-  position:absolute; right:.5rem; top:.5rem;
+  position:absolute; right:.5rem; top:.5rem; z-index:2;
   padding:.22rem .55rem;
   border-radius:99px;
   font-family:var(--fonte-dados);
@@ -3178,6 +3223,12 @@ table th{
   color:var(--verde);
   max-width:calc(100% - 1rem);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  isolation:isolate;
+}
+/* Fundo escuro sob a cor do selo: a torre que passa atrás não atrapalha a leitura. */
+.pf3d__selo::before{
+  content:""; position:absolute; inset:0; z-index:-1;
+  border-radius:inherit; background:rgba(12,9,18,.84);
 }
 .pf3d__selo--risco{
   border-color:rgba(255,77,94,.45);
@@ -3324,36 +3375,6 @@ table th{
 @media (max-width: 560px){
   .prog-linha li{ flex-direction:column; gap:.15rem; }
   .prog-contas > div{ gap:.5rem; }
-}
-
-.finck-instalar{
-  position:fixed; z-index:70;
-  left:50%; bottom:calc(env(safe-area-inset-bottom) + 5.2rem);
-  transform:translate(-50%, 1.2rem);
-  width:min(100% - 1.6rem, 460px);
-  display:flex; align-items:center; gap:.6rem;
-  padding:.6rem .7rem .6rem .95rem;
-  border-radius:14px;
-  background:var(--vidro-alto);
-  backdrop-filter:blur(16px) saturate(140%);
-  -webkit-backdrop-filter:blur(16px) saturate(140%);
-  border:1px solid rgba(147,51,196,.4);
-  box-shadow:var(--sombra-alta);
-  opacity:0;
-  transition:opacity .35s ease, transform .35s cubic-bezier(.22,.61,.36,1);
-}
-.finck-instalar--visivel{ opacity:1; transform:translate(-50%, 0); }
-.finck-instalar__texto{ flex:1 1 auto; font-size:.82rem; line-height:1.4; color:var(--texto-fraco); }
-.finck-instalar__acao{
-  flex:none; padding:.42rem .85rem; border-radius:99px;
-  border:1px solid rgba(147,51,196,.5); background:var(--roxo-vidro);
-  color:var(--texto); font-family:var(--fonte-corpo); font-size:.8rem; font-weight:600; cursor:pointer;
-}
-.finck-instalar__acao:hover{ border-color:var(--roxo-neon); }
-.finck-instalar__fechar{
-  flex:none; width:1.8rem; height:1.8rem; border-radius:50%;
-  border:1px solid var(--superficie-borda); background:none;
-  color:var(--texto-fraquissimo); font-size:.72rem; cursor:pointer;
 }
 
 .reality-cta--destaque{
@@ -3551,7 +3572,7 @@ table th{
   margin:.35rem 0 0;
   font-size:.78rem;
   line-height:1.45;
-  color:var(--texto-fraquissimo);
+  color:var(--texto-fraco);
 }
 .nota-saldo--alerta{ color:var(--amarelo); }
 

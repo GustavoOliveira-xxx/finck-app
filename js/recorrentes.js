@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ordem: "day_of_month",
       asc: true
     }), S.listar("accounts") ]);
-    $("recConta").innerHTML = `<option value="">Sem conta — só no saldo geral</option>` + contas.filter(c => c.active !== false).map(c => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
+    $("recConta").innerHTML = `<option value="">Sem conta (só no saldo geral)</option>` + contas.filter(c => c.active !== false).map(c => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
     render();
   }
   const nomeConta = id => contas.find(c => String(c.id) === String(id))?.name || null;
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     host.querySelectorAll("[data-editar]").forEach(b => b.addEventListener("click", () => abrirEdicao(b.dataset.editar)));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
-      if (!await U.confirmar("Excluir este recorrente?", "Os meses já confirmados continuam no histórico — só param de ser gerados daqui para frente.", {
+      if (!await U.confirmar("Excluir este recorrente?", "Os meses já confirmados continuam no histórico. Só param de ser gerados daqui para frente.", {
         confirmar: "Excluir"
       })) {
         return;
