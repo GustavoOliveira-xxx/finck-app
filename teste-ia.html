@@ -12,16 +12,21 @@
     button:disabled { opacity: 0.5; cursor: wait; }
     #saida { margin-top: 20px; padding: 14px; border-radius: 8px; background: #1a1d23; white-space: pre-wrap; min-height: 40px; }
     #modelo { margin-top: 8px; font-size: 12px; color: #888; }
+    label { display: block; margin-top: 14px; font-size: 14px; color: #bbb; }
+    #contexto { height: 80px; font-family: monospace; font-size: 13px; }
   </style>
 </head>
 <body>
   <h1>Teste da FINCK AI</h1>
-  <p>Página só para confirmar a conexão FINCK → Vercel → OpenRouter.</p>
+  <p>Página de desenvolvimento, só para confirmar a conexão FinCK, Vercel e OpenRouter.</p>
 
+  <label for="pergunta">Pergunta</label>
   <textarea id="pergunta">Me dê 3 dicas curtas para economizar dinheiro no mês.</textarea>
+  <label for="contexto">Contexto (opcional): números de uma análise, um por linha</label>
+  <textarea id="contexto" placeholder="Compra: R$ 800,00 à vista&#10;Renda considerada: R$ 3.500,00 por mês"></textarea>
   <button id="enviar">Perguntar</button>
 
-  <div id="saida">A resposta vai aparecer aqui.</div>
+  <div id="saida" aria-live="polite">A resposta vai aparecer aqui.</div>
   <div id="modelo"></div>
 
   <script>
@@ -31,15 +36,17 @@
 
     botao.addEventListener('click', async () => {
       const pergunta = document.getElementById('pergunta').value;
+      const contexto = document.getElementById('contexto').value.trim();
       botao.disabled = true;
-      saida.textContent = 'Pensando...';
+      // Só a etapa que de fato acontece: o pedido saiu e a resposta não voltou.
+      saida.textContent = 'Enviando a pergunta…';
       modelo.textContent = '';
 
       try {
         const r = await fetch('/api/ia', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pergunta })
+          body: JSON.stringify(contexto ? { pergunta, contexto } : { pergunta })
         });
         const dados = await r.json();
 

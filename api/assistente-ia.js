@@ -115,6 +115,8 @@ function limparRetrato(r) {
   return {
     referencia: data(r.referencia, /^\d{4}-\d{2}$/),
     meses_considerados: inteiro(r.meses_considerados),
+    // Mês em andamento: o prompt trata as médias como estimativa.
+    mes_parcial: r.mes_parcial === true,
     renda_mensal: numero(r.renda_mensal),
     tipo_renda: TIPOS_RENDA.includes(r.tipo_renda) ? r.tipo_renda : null,
     despesas_fixas: numero(r.despesas_fixas),
@@ -184,7 +186,7 @@ function lerPedido(bruto) {
 // Estável de propósito: é o prefixo marcado para cache. Nada aqui muda de
 // pedido para pedido (data, usuário e números vão na mensagem).
 const SISTEMA = [
-  "Você é o assistente de planejamento pessoal do FinCK, um aplicativo brasileiro de educação financeira e consumo consciente usado principalmente por estudantes e jovens adultos.",
+  "Você é a FINCK AI, a parte do FinCK que escreve o plano de ação e responde perguntas sobre o raio-X financeiro da pessoa. O FinCK é um aplicativo brasileiro de educação financeira e consumo consciente usado principalmente por estudantes e jovens adultos.",
   "",
   "O aplicativo já calculou um retrato da vida financeira da pessoa, com seis dimensões:",
   "- fluxo: quanto da renda as despesas fixas consomem (referência: até 50%, regra 50/30/20).",
@@ -195,11 +197,13 @@ const SISTEMA = [
   "- consumo: se a pessoa analisa compras antes de decidir e quantas decisões foram conscientes.",
   "",
   "Regras:",
-  "- Use só os números do retrato. Não invente valores, médias, rendimentos ou datas. Quando citar dinheiro, use o formato brasileiro (R$ 1.234,56).",
+  "- Use só os números do retrato. Não invente valores, médias, rendimentos, preços ou datas, e não refaça as contas que o FinCK já fez. O único valor novo permitido é o mensal de uma meta sugerida, dentro do que sobra no mês. Quando citar dinheiro, use o formato brasileiro (R$ 1.234,56).",
+  "- Médias com \"meses_considerados\" abaixo de 3, ou com \"mes_parcial\" verdadeiro, são estimativas: quando usar uma delas, diga que é estimativa e que muda conforme a pessoa registra mais meses.",
   "- Toda prioridade e toda resposta indicam em \"baseado_em\" a dimensão de onde vêm.",
-  "- Quando faltarem dados para uma conclusão, diga isso em vez de supor.",
-  "- Escreva em português do Brasil, falando com a pessoa por \"você\", de forma direta, respeitosa e sem julgamento moral sobre gastos. A decisão é sempre dela.",
-  "- Passos concretos e pequenos, que caibam na rotina de quem está começando: algo que dá para fazer nesta semana vale mais que um conselho geral.",
+  "- Quando faltar um dado para responder, diga qual é e pergunte à pessoa (ou registre em \"faltam_dados\"), em vez de supor.",
+  "- Você é consultora, não juíza nem vendedora: não dê ordens de compra (\"compre\", \"não compre\"), não chame uma compra ou um gasto de bom, ótimo, ruim ou errado e não elogie produto, loja ou marca. Mostre o que pesa e o que muda entre os caminhos possíveis.",
+  "- Escreva em português do Brasil, falando com a pessoa por \"você\", de forma direta, respeitosa e sem julgamento moral sobre gastos. A decisão é sempre dela, e o texto deixa isso claro.",
+  "- Passos concretos e pequenos, que caibam na rotina de quem está começando: algo que dá para fazer nesta semana vale mais que um conselho geral. Escreva cada passo como sugestão que a pessoa pode escolher, no infinitivo (\"Separar R$ 200 no dia do pagamento\"), não como ordem.",
   "- Não recomende produto financeiro, investimento específico, banco, corretora, empréstimo, cartão ou marca. Pode falar de hábitos (guardar no dia do pagamento, revisar assinaturas, esperar antes de comprar) e de categorias de gasto.",
   "- Se os compromissos passam do saldo ou as parcelas pesam demais, sugira renegociar direto com o credor e, se precisar, procurar o Procon; nunca sugira um novo crédito para pagar dívida.",
   "- Metas sugeridas: valor mensal que caiba no que sobra por mês segundo o retrato.",
@@ -231,7 +235,7 @@ function conteudoDoPedido(pedido) {
     "",
     `${conversa}<pergunta_da_pessoa>\n${pedido.pergunta}\n</pergunta_da_pessoa>`,
     "",
-    "Responda à pergunta com base no retrato, em até 6 frases. \"proximo_passo\" é uma ação concreta, ou texto vazio se não couber. \"fora_do_escopo\" é true quando a pergunta não for sobre finanças pessoais.",
+    "Responda à pergunta com base no retrato, em até 6 frases. Se ela pedir um veredito (\"posso comprar?\", \"devo comprar?\"), não responda sim ou não: mostre o que muda no mês, na reserva e nas metas com os números do retrato e lembre que a decisão é da pessoa. Se faltar um dado (o preço, a forma de pagamento), pergunte. \"proximo_passo\" é uma sugestão concreta, no infinitivo, ou texto vazio se não couber. \"fora_do_escopo\" é true quando a pergunta não for sobre finanças pessoais.",
   ].join("\n");
 }
 
@@ -334,7 +338,7 @@ function montarPlano(bruto, retrato) {
     habito_da_semana: frase(bruto.habito_da_semana, 240),
     alerta: frase(bruto.alerta, 320),
     faltam_dados: frases(bruto.faltam_dados, 3, 220),
-    limites: "Plano gerado por IA a partir dos seus números. É educativo: não é recomendação de investimento nem consultoria financeira.",
+    limites: "Plano escrito pela FINCK AI a partir do retrato agregado; as contas são do FinCK. É educativo: não é recomendação de investimento nem consultoria financeira. A decisão continua sendo sua.",
   };
 }
 
@@ -384,23 +388,23 @@ async function chamarClaude({ cliente, modelo, conteudo, esquema, effort }) {
     });
   } catch (e) {
     if (e instanceof SDK.RateLimitError) {
-      return { erro: falha(429, "OCUPADA", "O assistente está com muitos pedidos agora. Tente de novo em um minuto.") };
+      return { erro: falha(429, "OCUPADA", "A FINCK AI está com muitos pedidos agora. Tente de novo em um minuto. Enquanto isso, o plano pelas regras do FinCK continua disponível.") };
     }
     if (e instanceof SDK.AuthenticationError || e instanceof SDK.PermissionDeniedError) {
       console.error("assistente-ia: chave recusada", e.status);
-      return { erro: falha(503, "IA_INDISPONIVEL", "O assistente com IA não está disponível neste servidor agora.") };
+      return { erro: falha(503, "IA_INDISPONIVEL", "A FINCK AI não está disponível neste servidor agora. O plano pelas regras do FinCK continua disponível.") };
     }
     if (e instanceof SDK.APIConnectionError) {
-      return { erro: falha(503, "REDE", "A IA demorou demais para responder. Tente de novo em instantes.") };
+      return { erro: falha(503, "REDE", "A FINCK AI demorou demais para responder. Tente de novo em instantes.") };
     }
     if (e instanceof SDK.APIError) {
       console.error("assistente-ia: erro da API", e.status, e.message);
-      return { erro: falha(502, "FALHOU", "A IA não conseguiu responder agora. Tente de novo em instantes.") };
+      return { erro: falha(502, "FALHOU", "A FINCK AI não conseguiu responder agora. Tente de novo em instantes.") };
     }
     throw e;
   }
   if (resposta.stop_reason === "refusal") {
-    return { erro: falha(200, "RECUSA", "A IA não respondeu a este pedido. Tente reformular a pergunta, ou use o plano montado pelas regras do FinCK.") };
+    return { erro: falha(200, "RECUSA", "A FINCK AI não respondeu a este pedido. Tente reformular a pergunta, ou use o plano montado pelas regras do FinCK.") };
   }
   if (resposta.stop_reason === "max_tokens") {
     return { erro: falha(200, "CORTADA", "A resposta ficou longa demais e foi cortada. Tente de novo.") };
@@ -409,7 +413,7 @@ async function chamarClaude({ cliente, modelo, conteudo, esquema, effort }) {
   try {
     return { json: JSON.parse(texto), modelo: resposta.model, uso: resposta.usage };
   } catch {
-    return { erro: falha(502, "FORMATO", "A IA respondeu fora do formato esperado. Tente de novo.") };
+    return { erro: falha(502, "FORMATO", "A FINCK AI respondeu fora do formato esperado. Tente de novo.") };
   }
 }
 
@@ -445,6 +449,16 @@ function instrucaoJson(plano) {
   ].join("\n");
 }
 
+// Todo o texto que a pessoa vai ler, numa string só, para a conferência de tom.
+function textoCorrido(m) {
+  return [
+    m.diagnostico, m.resposta, m.proximo_passo, m.habito_da_semana, m.alerta,
+    ...(m.pontos_fortes || []),
+    ...(m.prioridades || []).flatMap((p) => [p.titulo, p.porque, ...(p.passos || [])]),
+    ...(m.metas_sugeridas || []).map((x) => x.motivo),
+  ].filter(Boolean).join("\n");
+}
+
 async function chamarOpenRouter({ pedido, buscar = fetch }) {
   const plano = pedido.modo === "plano";
   const r = await OR.conversar({
@@ -456,17 +470,19 @@ async function chamarOpenRouter({ pedido, buscar = fetch }) {
     aceitar: (texto) => {
       const json = OR.extrairJson(texto);
       if (!json) return null;
-      return plano ? montarPlano(json, pedido.retrato) : montarResposta(json);
+      const montado = plano ? montarPlano(json, pedido.retrato) : montarResposta(json);
+      // Ordem de compra ou veredito pede outra resposta, como JSON quebrado.
+      return montado && !OR.soaComoJuiz(textoCorrido(montado)) ? montado : null;
     },
   });
   if (r.status === 200) return { montado: r.valor, modelo: r.modelo };
-  if (r.status === 429) return { erro: falha(429, "OCUPADA", "O assistente está com muitos pedidos agora. Tente de novo em um minuto.") };
+  if (r.status === 429) return { erro: falha(429, "OCUPADA", "A FINCK AI está com muitos pedidos agora. Tente de novo em um minuto. Enquanto isso, o plano pelas regras do FinCK continua disponível.") };
   if (r.status === 401 || r.status === 403) {
     console.error("assistente-ia: chave do OpenRouter recusada", r.status);
-    return { erro: falha(503, "IA_INDISPONIVEL", "O assistente com IA não está disponível neste servidor agora.") };
+    return { erro: falha(503, "IA_INDISPONIVEL", "A FINCK AI não está disponível neste servidor agora. O plano pelas regras do FinCK continua disponível.") };
   }
-  if (r.status === 504) return { erro: falha(503, "REDE", "A IA demorou demais para responder. Tente de novo em instantes.") };
-  return { erro: falha(502, "FALHOU", "A IA não conseguiu responder agora. Tente de novo em instantes.") };
+  if (r.status === 504) return { erro: falha(503, "REDE", "A FINCK AI demorou demais para responder. Tente de novo em instantes.") };
+  return { erro: falha(502, "FALHOU", "A FINCK AI não conseguiu responder agora. Tente de novo em instantes.") };
 }
 
 const cache = new Map();
@@ -496,7 +512,7 @@ async function planejar({ cliente, pedido, modelo = modeloAtual(), chaveCache = 
   });
   if (lido.erro) return lido.erro;
   const montado = plano ? montarPlano(lido.json, pedido.retrato) : montarResposta(lido.json);
-  if (!montado) return falha(502, "FORMATO", "A IA respondeu sem o conteúdo esperado. Tente de novo.");
+  if (!montado) return falha(502, "FORMATO", "A FINCK AI respondeu sem o conteúdo esperado. Tente de novo.");
   const corpo = { ok: true, modo: pedido.modo, ...montado, modelo: lido.modelo };
   if (plano && chaveCache) {
     cache.set(chaveCache, { em: Date.now(), corpo });
@@ -519,7 +535,7 @@ module.exports = async function handler(req, res) {
   }
   if (req.method !== "POST") return A.responder(res, { ok: false, motivo: "Método não suportado." }, 405);
   if (!provedor()) {
-    return A.responder(res, { ok: false, codigo: "IA_INDISPONIVEL", motivo: "O assistente com IA não está configurado neste servidor." }, 503);
+    return A.responder(res, { ok: false, codigo: "IA_INDISPONIVEL", motivo: "A FINCK AI não está configurada neste servidor. O plano pelas regras do FinCK continua disponível." }, 503);
   }
   const token = A.tokenDoPedido(req);
   const userId = await A.usuarioDoToken(token);
@@ -527,11 +543,11 @@ module.exports = async function handler(req, res) {
     return A.responder(res, {
       ok: false,
       codigo: "SEM_LOGIN",
-      motivo: token ? "Sua sessão expirou. Entre novamente para usar o assistente." : "Entre na sua conta para usar o assistente com IA.",
+      motivo: token ? "Sua sessão expirou. Entre novamente para usar a FINCK AI." : "Entre na sua conta para usar a FINCK AI.",
     }, 401);
   }
   if (limites.passouDoDia()) {
-    return A.responder(res, { ok: false, codigo: "LIMITE", motivo: "O assistente atingiu o limite de uso de hoje. O plano pelas regras do FinCK continua disponível." }, 429);
+    return A.responder(res, { ok: false, codigo: "LIMITE", motivo: "A FINCK AI atingiu o limite de uso de hoje. O plano pelas regras do FinCK continua disponível." }, 429);
   }
   if (limites.passouDoUsuario(userId)) {
     return A.responder(res, { ok: false, codigo: "LIMITE", motivo: "Muitos pedidos seguidos. Espere alguns minutos e tente de novo." }, 429);
@@ -547,7 +563,7 @@ module.exports = async function handler(req, res) {
     return A.responder(res, resultado.corpo, resultado.status);
   } catch (e) {
     console.error("assistente-ia: falha inesperada", e?.message);
-    return A.responder(res, { ok: false, codigo: "FALHOU", motivo: "Algo deu errado no assistente. Tente de novo em instantes." }, 500);
+    return A.responder(res, { ok: false, codigo: "FALHOU", motivo: "Algo deu errado na FINCK AI. Tente de novo em instantes." }, 500);
   }
 };
 

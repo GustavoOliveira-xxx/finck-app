@@ -132,8 +132,11 @@ Decisões de cálculo:
   ou "Montado pelas regras do FinCK".
 - Cada prioridade e cada resposta mostram "Baseado em: <dimensão>".
 - **Degradação graciosa**: na demonstração, sem chave no servidor ou com
-  falha da IA, o plano sai de `planoLocal()` no mesmo formato, e a conversa
-  explica por que está desligada.
+  falha da IA, o plano sai de `planoLocal()` no mesmo formato. A conversa
+  continua pela rota geral da FINCK AI (`api/ia.js`), com o retrato em texto
+  de `contextoDaConversa()`: só números, níveis e nomes de categoria, com as
+  metas numeradas e sem nome. Se nenhuma rota responder (404 ou `ia: false`),
+  a conversa diz por que está desligada, com a mesma frase do Reality.
 - O último plano da IA fica guardado só no aparelho; se os números mudaram
   desde então, a tela avisa.
 
@@ -201,7 +204,8 @@ desenhado a partir disso:
   cache de 10 minutos vive só na memória da instância. O último plano fica
   no próprio aparelho.
 - **Escolha**: a IA só é chamada quando a pessoa toca em "Gerar meu plano"
-  ou envia uma pergunta. Na demonstração, nada é enviado.
+  ou envia uma pergunta. Na demonstração, o plano não sai do aparelho; uma
+  pergunta na conversa vai com os números de exemplo, avisado antes do envio.
 - **Provedor externo**: o retrato é processado pela API da Anthropic ou,
   sem a chave dela, pelo OpenRouter e pelo provedor do modelo gratuito que
   responder. Modelos gratuitos podem ter política de retenção diferente; a
