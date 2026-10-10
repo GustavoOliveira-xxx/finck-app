@@ -37,7 +37,8 @@ window.FinckUtils = (() => {
     '"': "&quot;",
     "'": "&#39;"
   }[c]));
-  function toast(mensagem, tipo = "info", ms = 3200) {
+  // link opcional ({ href, texto }) no fim do aviso, que então aceita clique.
+  function toast(mensagem, tipo = "info", ms = 3200, {link: link = null} = {}) {
     let host = document.getElementById("finckToastHost");
     if (!host) {
       host = document.createElement("div");
@@ -49,6 +50,14 @@ window.FinckUtils = (() => {
     el.className = `finck-toast finck-toast--${tipo}`;
     el.setAttribute("role", "status");
     el.textContent = mensagem;
+    if (link && link.href) {
+      const a = document.createElement("a");
+      a.className = "finck-toast__link";
+      a.href = link.href;
+      a.textContent = link.texto || "Ver";
+      el.append(" ", a);
+      el.classList.add("finck-toast--com-link");
+    }
     host.appendChild(el);
     setTimeout(() => el.remove(), ms);
   }

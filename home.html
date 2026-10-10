@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
   <link rel="stylesheet" href="css/clareza.css">
+  <link rel="stylesheet" href="css/painel.css">
 </head>
 <body data-page="home">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -54,26 +55,53 @@
 
   <main class="conteudo" id="conteudo" tabindex="-1">
 
-    <section class="hero hero--curto">
+    <!-- O topo responde três perguntas antes de qualquer detalhe: como estou,
+         para onde o dinheiro está indo e o que fazer agora. Logo depois vem o
+         convite do Reality, que continua sendo a única ação principal. -->
+    <section class="hero hero--curto hero--painel" aria-labelledby="saudacao">
       <h2 id="saudacao">Olá!</h2>
-      <p id="fraseDia">Antes de comprar, veja quanto custa em tempo de trabalho.</p>
+      <p id="fraseDia">Seu resumo de hoje, em três perguntas.</p>
+      <ul class="painel-perguntas" id="painelPerguntas" aria-busy="true">
+        <li class="painel-pergunta">
+          <h3 class="painel-pergunta__titulo">Como estou?</h3>
+          <p class="painel-pergunta__valor" id="respostaComoEstou">Lendo seus dados…</p>
+          <p class="painel-pergunta__nota" id="notaComoEstou"></p>
+          <a class="link-mais painel-pergunta__acao" href="#situacao">Ver números</a>
+        </li>
+        <li class="painel-pergunta">
+          <h3 class="painel-pergunta__titulo">Para onde meu dinheiro está indo?</h3>
+          <p class="painel-pergunta__valor" id="respostaParaOnde">Lendo seus lançamentos…</p>
+          <p class="painel-pergunta__nota" id="notaParaOnde"></p>
+          <span id="acaoParaOnde"><a class="link-mais painel-pergunta__acao" href="analises.html">Ver gastos</a></span>
+        </li>
+        <li class="painel-pergunta">
+          <h3 class="painel-pergunta__titulo">O que fazer agora?</h3>
+          <p class="painel-pergunta__valor painel-pergunta__valor--texto" id="respostaAgora">Conferindo pendências…</p>
+          <p class="painel-pergunta__nota" id="notaAgora"></p>
+          <span id="acaoAgora"></span>
+        </li>
+      </ul>
     </section>
 
-    <!-- Uma ação principal por tela. Na home ela é o Reality; todo
-         o resto vem depois, agrupado pela pergunta que responde: quanto tenho
-         agora, o que precisa de atenção, o que vem por aí e o que aprendi. -->
     <section class="reality-cta reality-cta--destaque reality-cta--principal" aria-labelledby="tituloReality">
       <div class="reality-cta__marca">
         <div class="marca3d-cena" data-marca3d data-logo="assets/logo-reality-transparente.png" data-nome="FinCK of Reality"></div>
       </div>
       <div class="reality-cta__texto">
         <span class="reality-cta__selo">Decisão de compra · FinCK of Reality</span>
-        <h2 id="tituloReality">Pense antes de comprar</h2>
-        <p>Informe o item e o preço. O FinCK mostra quanto ele custa em horas de trabalho, no seu mês e nas suas metas, sem julgar a sua escolha.</p>
+        <h2 id="tituloReality"><span aria-hidden="true">⚡</span> Quer comprar alguma coisa?</h2>
+        <p>Veja o impacto antes de decidir.</p>
+        <p class="reality-cta__detalhe">O FinCK mostra quanto custa em horas de trabalho, no seu mês e nas suas metas, sem julgar a sua escolha.</p>
       </div>
       <div class="reality-cta__acoes">
         <a class="btn-primario btn-grande" href="reality.html">Analisar uma compra</a>
         <a class="link-mais" href="reality.html#calculos">Minhas análises</a>
+      </div>
+      <!-- Primeira visita: uma faixa discreta diz por onde começar. Some ao
+           ser dispensada ou sozinha, depois da primeira análise salva. -->
+      <div class="faixa-inicio" id="faixaInicio" hidden>
+        <p><strong>Comece pelo Reality.</strong> O restante do painel é atualizado a partir das suas decisões.</p>
+        <button type="button" class="faixa-inicio__fechar" id="btnDispensarInicio" aria-label="Dispensar a dica de por onde começar">✕</button>
       </div>
       <div class="reality-cta__rodape">
         <p class="reality-cta__hora">Sua hora vale <strong id="valorHora">R$ 0,00</strong> · seu dia vale <strong id="valorDia">R$ 0,00</strong></p>
@@ -81,40 +109,59 @@
       </div>
     </section>
 
-    <section class="grupo-home" aria-labelledby="tituloSituacao">
+    <!-- Convite para adicionar à tela inicial: no fluxo da página, nunca por
+         cima de botão, campo, aviso ou navegação. -->
+    <div id="conviteInstalar" class="convite-instalar" hidden></div>
+
+    <section class="grupo-home" id="situacao" aria-labelledby="tituloSituacao">
       <div class="grupo-home__cabecalho">
-        <span class="grupo-home__papel">Fotografia de hoje</span>
+        <span class="grupo-home__papel">Fotografia de hoje e previsão</span>
         <h2 id="tituloSituacao">Sua situação hoje</h2>
       </div>
 
       <section class="balance-card" aria-labelledby="rotuloSaldo">
         <small id="rotuloSaldo">Saldo atual</small>
         <p id="saldoAtual">R$ 0,00</p>
-        <p class="explica-numero explica-numero--cartao">O que você tem registrado agora: saldo inicial, mais o que entrou, menos o que saiu.</p>
+        <p class="explica-numero explica-numero--cartao">O que está registrado até hoje: saldo inicial, mais o que entrou, menos o que saiu. <span class="selo-natureza selo-natureza--registrado">Dinheiro registrado</span></p>
         <p class="nota-saldo" id="notaSaldo"></p>
+
+        <h3 class="painel-subtitulo">Registrado neste mês <span>de 1º até hoje</span></h3>
         <div class="balance-info">
           <div>
             <span>Entradas do mês</span>
             <strong class="cor-verde" id="entradasMes">R$ 0,00</strong>
-            <small class="explica-numero">Recebido de 1º até hoje</small>
+            <small class="explica-numero">O que entrou de 1º até hoje.</small>
           </div>
           <div>
             <span>Saídas do mês</span>
             <strong class="cor-vermelha" id="saidasMes">R$ 0,00</strong>
-            <small class="explica-numero">Gasto de 1º até hoje</small>
+            <small class="explica-numero">O que saiu de 1º até hoje.</small>
           </div>
-          <div>
-            <span>Sobra após fixos</span>
+        </div>
+
+        <h3 class="painel-subtitulo painel-subtitulo--previsao">Previsão <span>se nada mudar</span></h3>
+        <div class="balance-info balance-info--previsao">
+          <div class="projecao">
+            <span>Sobra da renda após fixos</span>
+            <em class="projecao__janela">por mês</em>
             <strong id="rendaLivre">R$ 0,00</strong>
-            <small class="explica-numero">O que sobra da renda depois das despesas recorrentes. É orçamento, não saldo.</small>
+            <small class="explica-numero" id="explicaSobra">Renda prevista do mês menos as despesas fixas. É orçamento, não saldo.</small>
           </div>
-          <div>
-            <span>Pode sobrar depois dos compromissos</span>
-            <strong id="disponivelProjetado">R$ 0,00</strong>
-            <small class="explica-numero" id="explicaProjetado">Saldo atual menos parcelas e previsões ainda em aberto.</small>
+          <div class="projecao" id="cardCaixa60">
+            <span>Caixa depois das saídas previstas</span>
+            <em class="projecao__janela" id="janelaCaixa60">próximos 60 dias</em>
+            <strong id="caixa60">R$ 0,00</strong>
+            <small class="explica-numero" id="explicaCaixa60">Saldo atual menos as contas fixas, parcelas e lançamentos agendados do período.</small>
+          </div>
+          <div class="projecao" id="cardParcelas" hidden>
+            <span>Parcelas ainda a pagar</span>
+            <em class="projecao__janela">todas as que faltam</em>
+            <strong id="parcelasAPagar">R$ 0,00</strong>
+            <small class="explica-numero">Somente compras parceladas registradas no Planejamento.</small>
           </div>
         </div>
         <p class="nota-saldo" id="notaFolga"></p>
+        <a class="link-mais balance-card__acao" href="#programacaoFinanceira">Ver as saídas previstas</a>
       </section>
 
       <section id="cardContas"></section>
@@ -132,7 +179,7 @@
 
     <section class="cartao-assistente" id="cartaoAssistente" aria-labelledby="tituloAssistente">
       <div class="cartao-assistente__texto">
-        <span class="grupo-home__papel">Planejamento pessoal · IA</span>
+        <span class="grupo-home__papel">Planejamento pessoal · raio-X do FinCK</span>
         <h2 id="tituloAssistente">Seu raio-X financeiro</h2>
         <p id="resumoAssistente">O FinCK olha renda, gastos, compromissos, reserva, metas e decisões juntos e mostra onde agir primeiro.</p>
         <ul class="cartao-assistente__sinais" id="sinaisAssistente"></ul>
@@ -157,20 +204,20 @@
       </section>
     </section>
 
-    <section class="bloco">
+    <section class="bloco" aria-labelledby="tituloMetas">
       <div class="bloco-cabecalho">
-        <h2>Suas metas</h2>
-        <a href="metas.html" class="link-mais">Ver todas as metas</a>
+        <h2 id="tituloMetas">Suas metas</h2>
+        <a href="metas.html" class="link-mais" id="linkMetas">Ver todas as metas</a>
       </div>
       <div id="metasResumo" class="metas-resumo"></div>
     </section>
 
-    <section class="bloco lista-transacoes">
+    <section class="bloco lista-transacoes" id="movimentacoes" aria-labelledby="tituloMovimentacoes">
       <div class="bloco-cabecalho">
-        <h2>Últimas movimentações</h2>
+        <h2 id="tituloMovimentacoes">Últimas movimentações</h2>
         <a href="analises.html" class="link-mais">Para onde vai seu dinheiro</a>
       </div>
-      <div class="acoes-rapidas">
+      <div class="acoes-rapidas" id="novo-lancamento">
         <button type="button" id="btnEntrada" class="btn-acao entrada">
           <strong>+ Entrada</strong>
           <span>Registrar valor recebido</span>
@@ -180,139 +227,168 @@
           <span>Registrar valor gasto</span>
         </button>
       </div>
+      <div class="registro-feito" id="registroFeito" role="status"></div>
       <div id="lista" class="itens-lista"></div>
-      <div id="vazio" class="vazio vazio--guia" hidden>
-        <p><strong>Nenhuma movimentação registrada ainda.</strong> É aqui que aparece o que entrou e saiu, cada valor também em horas de trabalho.</p>
-        <p>Comece pelo seu último recebimento ou por um gasto de hoje, nos botões acima.</p>
+      <div id="vazio" class="vazio vazio--guia vazio--inicio" hidden>
+        <p><strong>Sua conta está pronta.</strong> Você ainda não possui lançamentos.</p>
+        <p>Comece registrando sua primeira entrada ou saída. Cada valor também aparece em horas de trabalho.</p>
+        <button type="button" class="btn-secundario" id="btnPrimeiroLancamento">+ Novo lançamento</button>
       </div>
     </section>
 
-    <section class="grupo-home" aria-labelledby="tituloAprendizado">
-      <div class="grupo-home__cabecalho">
+    <!-- Seções longas ficam recolhidas, sem perder conteúdo: quem está
+         chegando vê primeiro o que decide, e quem abre uma delas encontra
+         ela aberta na próxima visita. -->
+    <details class="grupo-home grupo-recolhivel" id="numeros" data-recolhivel="numeros">
+      <summary class="grupo-recolhivel__resumo">
         <span class="grupo-home__papel">Interpretação</span>
         <h2 id="tituloAprendizado">O que seus números dizem</h2>
-      </div>
+        <small>As quatro faces da sua sobra e os indicadores da sua jornada.</small>
+      </summary>
 
-      <section class="bloco">
-        <div class="bloco-cabecalho">
-          <h3>As faces do seu dinheiro</h3>
-        </div>
-        <p class="descricao">A sua sobra do mês lida de quatro ângulos. É o mesmo valor; muda só a unidade em que ele é medido.</p>
-
-        <div class="prisma-cena" data-prisma role="group" aria-label="As quatro faces da sua sobra do mês. Use as setas para girar.">
-          <div class="prisma-orbita">
-            <div class="prisma">
-              <div class="prisma__face prisma__face--frente">
-                <span class="prisma__rotulo">Renda livre</span>
-                <strong class="prisma__valor" id="prismaReais">R$ 0,00</strong>
-                <span class="prisma__nota">sua renda do mês menos as despesas fixas</span>
-              </div>
-              <div class="prisma__face prisma__face--direita">
-                <span class="prisma__rotulo">Em trabalho</span>
-                <strong class="prisma__valor" id="prismaHoras">0 h</strong>
-                <span class="prisma__nota">horas de trabalho para ganhar esse valor</span>
-              </div>
-              <div class="prisma__face prisma__face--tras">
-                <span class="prisma__rotulo">Em dias</span>
-                <strong class="prisma__valor" id="prismaDias">0 dias</strong>
-                <span class="prisma__nota">dias de trabalho equivalentes</span>
-              </div>
-              <div class="prisma__face prisma__face--esquerda">
-                <span class="prisma__rotulo" id="prismaMetaRotulo">Na sua meta</span>
-                <strong class="prisma__valor" id="prismaMeta">—</strong>
-                <span class="prisma__nota" id="prismaMetaNota">crie uma meta para ver esta face</span>
-              </div>
-              <div class="prisma__face prisma__face--topo" aria-hidden="true"></div>
-              <div class="prisma__face prisma__face--base" aria-hidden="true"></div>
-            </div>
+      <div class="grupo-recolhivel__corpo">
+        <section class="bloco" aria-labelledby="tituloFaces">
+          <div class="bloco-cabecalho">
+            <h3 id="tituloFaces">As faces do seu dinheiro</h3>
           </div>
-          <div class="prisma__sombra" aria-hidden="true"></div>
-          <span class="prisma-dica"><span>Arraste ou use as setas para explorar as quatro faces</span></span>
-        </div>
-      </section>
+          <p class="descricao">A sua sobra do mês lida de quatro ângulos. É o mesmo valor; muda só a unidade em que ele é medido.</p>
 
-      <section class="cards-indicadores">
-        <article class="card-indicador">
-          <span>Decisões conscientes</span>
-          <strong id="indEvitadas">0</strong>
-          <small class="explica-numero">Análises em que você decidiu esperar, buscar alternativa ou não comprar.</small>
-        </article>
-        <article class="card-indicador">
-          <span>Valor que você decidiu não gastar</span>
-          <strong id="indEconomia" class="cor-verde">R$ 0,00</strong>
-          <small class="explica-numero">Preço dessas compras no dia da decisão. Não é economia comprovada.</small>
-        </article>
-        <article class="card-indicador">
-          <span>Horas de trabalho equivalentes</span>
-          <strong id="indHoras">0 h</strong>
-          <small class="explica-numero">O mesmo valor convertido pela sua renda e jornada.</small>
-        </article>
-        <article class="card-indicador">
-          <span>Nível na Jornada</span>
-          <strong id="indNivel">1</strong>
-          <small class="explica-numero"><a href="gamificacao.html">Ver próxima conquista</a></small>
-        </article>
-      </section>
-    </section>
+          <div class="prisma-cena" data-prisma role="group" aria-label="As quatro faces da sua sobra do mês. Use as setas para girar.">
+            <div class="prisma-orbita">
+              <div class="prisma">
+                <div class="prisma__face prisma__face--frente">
+                  <span class="prisma__rotulo">Renda livre</span>
+                  <strong class="prisma__valor" id="prismaReais">R$ 0,00</strong>
+                  <span class="prisma__nota">sua renda do mês menos as despesas fixas</span>
+                </div>
+                <div class="prisma__face prisma__face--direita">
+                  <span class="prisma__rotulo">Em trabalho</span>
+                  <strong class="prisma__valor" id="prismaHoras">0 h</strong>
+                  <span class="prisma__nota">horas de trabalho para ganhar esse valor</span>
+                </div>
+                <div class="prisma__face prisma__face--tras">
+                  <span class="prisma__rotulo">Em dias</span>
+                  <strong class="prisma__valor" id="prismaDias">0 dias</strong>
+                  <span class="prisma__nota">dias de trabalho equivalentes</span>
+                </div>
+                <div class="prisma__face prisma__face--esquerda">
+                  <span class="prisma__rotulo" id="prismaMetaRotulo">Na sua meta</span>
+                  <strong class="prisma__valor" id="prismaMeta">sem meta</strong>
+                  <span class="prisma__nota" id="prismaMetaNota">crie uma meta para ver esta face</span>
+                </div>
+                <div class="prisma__face prisma__face--topo" aria-hidden="true"></div>
+                <div class="prisma__face prisma__face--base" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="prisma__sombra" aria-hidden="true"></div>
+            <span class="prisma-dica"><span>Arraste ou use as setas para explorar as quatro faces</span></span>
+          </div>
+        </section>
+
+        <section class="bloco-jornada" aria-labelledby="tituloJornada">
+          <div class="bloco-cabecalho">
+            <h3 id="tituloJornada">Indicadores da sua jornada</h3>
+            <a class="link-mais" href="gamificacao.html">Ver próxima conquista</a>
+          </div>
+          <div class="cards-indicadores">
+            <article class="card-indicador">
+              <span>Decisões conscientes</span>
+              <strong id="indEvitadas">0</strong>
+              <small class="explica-numero">Análises em que você decidiu esperar, buscar alternativa ou não comprar.</small>
+            </article>
+            <article class="card-indicador">
+              <span>Valor que você decidiu não gastar</span>
+              <strong id="indEconomia" class="cor-verde">R$ 0,00</strong>
+              <small class="explica-numero">Preço dessas compras no dia da decisão. Não é economia comprovada.</small>
+            </article>
+            <article class="card-indicador">
+              <span>Horas de trabalho equivalentes</span>
+              <strong id="indHoras">0 h</strong>
+              <small class="explica-numero">O mesmo valor convertido pela sua renda e jornada.</small>
+            </article>
+            <article class="card-indicador">
+              <span>Nível na Jornada</span>
+              <strong id="indNivel">1</strong>
+              <small class="explica-numero">Sobe com análises, decisões e registros em dia.</small>
+            </article>
+          </div>
+        </section>
+      </div>
+    </details>
 
     <nav class="mais-ferramentas" aria-labelledby="tituloFerramentas">
-      <h2 id="tituloFerramentas">Mais ferramentas</h2>
-      <ul class="mais-ferramentas__lista">
-        <li><a href="contas.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg></span><span><strong>Contas</strong><small>Onde seu dinheiro está</small></span></a></li>
-        <li><a href="planejamento.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15h2M14 15h2"/></svg></span><span><strong>Planejamento</strong><small>Parcelas e compromissos futuros</small></span></a></li>
-        <li><a href="assistente.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></span><span><strong>Assistente FinCK</strong><small>Raio-X e plano com IA</small></span></a></li>
-        <li><a href="analises.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/></svg></span><span><strong>Análises</strong><small>Para onde vai seu dinheiro</small></span></a></li>
-        <li><a href="relatorios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span><span><strong>Relatórios</strong><small>Fechamento do mês e exportação</small></span></a></li>
-        <li><a href="decisoes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><span><strong>Decisões</strong><small>O que você decidiu e o que aconteceu</small></span></a></li>
-        <li><a href="recorrentes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a3 3 0 0 1 3 3v1"/><path d="M15 4l3 3-3 3"/><path d="M20 17H9a3 3 0 0 1-3-3v-1"/><path d="M9 20l-3-3 3-3"/></svg></span><span><strong>Recorrentes</strong><small>Contas e recebimentos de todo mês</small></span></a></li>
-        <li><a href="cenarios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5"/><path d="M12 8 6 13v8"/><path d="M12 8l6 5v8"/><circle cx="12" cy="3" r="1.6"/><circle cx="6" cy="21" r="1.6"/><circle cx="18" cy="21" r="1.6"/></svg></span><span><strong>Cenários</strong><small>Comparar alternativas antes de decidir</small></span></a></li>
-        <li><a href="locais.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span><strong>Alternativas perto de você</strong><small>Conserto, usado, troca, doação e descarte</small></span></a></li>
-        <li><a href="gamificacao.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M12 13v3"/><path d="M8.5 20h7l-1-3.5h-5z"/></svg></span><span><strong>Jornada</strong><small>Conquistas e hábitos</small></span></a></li>
-      </ul>
+      <details class="grupo-recolhivel grupo-recolhivel--ferramentas" data-recolhivel="ferramentas">
+        <summary class="grupo-recolhivel__resumo">
+          <h2 id="tituloFerramentas">Mais ferramentas</h2>
+          <small>Contas, planejamento, relatórios, decisões e outras áreas do FinCK.</small>
+        </summary>
+        <!-- As duas famílias de FinckNav.FAMILIAS (js/nav.js). -->
+        <div class="mais-ferramentas__familia" data-familia="financas">
+          <h3 class="mais-ferramentas__familia-titulo" id="familiaFinancas">Minha vida financeira <small>Organizar e acompanhar</small></h3>
+          <ul class="mais-ferramentas__lista" aria-labelledby="familiaFinancas">
+            <li><a href="contas.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19"/><path d="M6 14.5h4"/></svg></span><span><strong>Contas</strong><small>Onde seu dinheiro está</small></span></a></li>
+            <li><a href="planejamento.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15h2M14 15h2"/></svg></span><span><strong>Planejamento</strong><small>Parcelas e compromissos futuros</small></span></a></li>
+            <li><a href="assistente.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></span><span><strong>Assistente FinCK</strong><small>Raio-X do FinCK e plano de ação</small></span></a></li>
+            <li><a href="analises.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8l6 4"/></svg></span><span><strong>Análises</strong><small>Para onde vai seu dinheiro</small></span></a></li>
+            <li><a href="relatorios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span><span><strong>Relatórios</strong><small>Fechamento do mês e exportação</small></span></a></li>
+            <li><a href="recorrentes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a3 3 0 0 1 3 3v1"/><path d="M15 4l3 3-3 3"/><path d="M20 17H9a3 3 0 0 1-3-3v-1"/><path d="M9 20l-3-3 3-3"/></svg></span><span><strong>Recorrentes</strong><small>Contas e recebimentos de todo mês</small></span></a></li>
+            <li><a href="gamificacao.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M12 13v3"/><path d="M8.5 20h7l-1-3.5h-5z"/></svg></span><span><strong>Jornada</strong><small>Conquistas e hábitos</small></span></a></li>
+          </ul>
+        </div>
+        <div class="mais-ferramentas__familia" data-familia="reality">
+          <h3 class="mais-ferramentas__familia-titulo" id="familiaReality">FinCK of Reality <small>Antes de comprar, descubra o impacto</small></h3>
+          <ul class="mais-ferramentas__lista" aria-labelledby="familiaReality">
+            <li><a href="decisoes.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span><span><strong>Decisões</strong><small>O que você decidiu e o que aconteceu</small></span></a></li>
+            <li><a href="cenarios.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5"/><path d="M12 8 6 13v8"/><path d="M12 8l6 5v8"/><circle cx="12" cy="3" r="1.6"/><circle cx="6" cy="21" r="1.6"/><circle cx="18" cy="21" r="1.6"/></svg></span><span><strong>Cenários</strong><small>Comparar alternativas antes de decidir</small></span></a></li>
+            <li><a href="locais.html"><span class="atalho-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span><strong>Alternativas perto de você</strong><small>Conserto, usado, troca, doação e descarte</small></span></a></li>
+          </ul>
+        </div>
+      </details>
     </nav>
 
   </main>
 
   <nav class="nav-inferior" data-finck-nav aria-label="Navegação principal"></nav>
 
+  <!-- Registro rápido: valor e descrição bastam. O resto tem padrão (hoje,
+       categoria sugerida, última conta usada) e fica em "Mais detalhes". -->
   <div id="modalTransacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloModal">
-    <div class="modal">
+    <div class="modal modal--lancamento">
       <button type="button" class="fechar" data-fechar="modalTransacao" aria-label="Fechar">✕</button>
-      <h3 id="tituloModal">Nova movimentação</h3>
+      <h3 id="tituloModal">Novo lançamento</h3>
       <form id="formTransacao" novalidate>
-        <input type="hidden" id="tipoTransacao" value="">
+        <fieldset class="tipo-lancamento">
+          <legend class="sr-only">Tipo do lançamento</legend>
+          <label class="chip"><input type="radio" name="tipoLancamento" value="saida" checked><span>− Saída</span></label>
+          <label class="chip"><input type="radio" name="tipoLancamento" value="entrada"><span>+ Entrada</span></label>
+        </fieldset>
         <label>Valor (R$)
-          <input type="text" inputmode="decimal" data-moeda id="valor">
+          <input type="text" inputmode="decimal" data-moeda id="valor" autocomplete="off">
         </label>
         <label>Descrição
-          <input type="text" id="descricao" required placeholder="Ex.: Salário, conta de luz">
+          <input type="text" id="descricao" required placeholder="Ex.: Almoço" autocomplete="off" aria-describedby="sugestaoCategoria">
         </label>
-        <label>Categoria
-          <select id="categoria"></select>
-        </label>
-        <label>Data
-          <input type="date" id="data" required>
-        </label>
-        <label>Conta
-          <select id="contaSelecionada"><option value="">Conta não informada</option></select>
-        </label>
-        <label>Vincular a uma meta (opcional)
-          <select id="metaSelecionada"><option value="">Nenhuma meta</option></select>
-        </label>
-        <button type="submit" class="btn-salvar">Revisar e salvar</button>
+        <p class="sugestao-categoria" id="sugestaoCategoria" aria-live="polite"></p>
+        <details class="mais-detalhes" id="maisDetalhes">
+          <summary><span>Mais detalhes (opcional)</span> <small id="resumoDetalhes">Data: hoje</small></summary>
+          <div class="mais-detalhes__campos">
+            <label id="campoCategoria">Categoria
+              <select id="categoria"></select>
+            </label>
+            <label>Data
+              <input type="date" id="data" required>
+            </label>
+            <label id="campoConta">Conta
+              <select id="contaSelecionada"><option value="">Conta não informada</option></select>
+            </label>
+            <label>Vincular a uma meta (opcional)
+              <select id="metaSelecionada"><option value="">Nenhuma meta</option></select>
+            </label>
+            <p class="nota">É uma conta de todo mês? <a href="recorrentes.html">Cadastre como recorrente</a> e o FinCK prevê as próximas.</p>
+          </div>
+        </details>
+        <button type="submit" class="btn-salvar" id="btnRegistrar">Registrar saída</button>
       </form>
-    </div>
-  </div>
-
-  <div id="modalConfirmacao" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloConfirmacao">
-    <div class="modal">
-      <button type="button" class="fechar" data-fechar="modalConfirmacao" aria-label="Fechar">✕</button>
-      <h3 id="tituloConfirmacao">Confirmar lançamento</h3>
-      <div class="resumo-confirmacao" id="resumoConfirmacao"></div>
-      <div class="acoes-modal">
-        <button type="button" class="btn-secundario" data-fechar="modalConfirmacao">Cancelar</button>
-        <button type="button" class="btn-primario" id="btnConfirmarSalvar">Confirmar</button>
-      </div>
     </div>
   </div>
 
@@ -323,7 +399,7 @@
       <p class="descricao">
         Seus recorrentes já venceram, mas o FinCK não move dinheiro sozinho: uma previsão
         só vira saldo depois que você confirma que ela aconteceu. Pode responder agora ou
-        clicar em "Decidir depois" — nada é perdido.
+        tocar em "Decidir depois": nada é perdido.
       </p>
       <div id="conteudoRevisao"></div>
     </div>

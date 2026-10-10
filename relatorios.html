@@ -69,20 +69,26 @@
       </div>
     </section>
 
-    <p class="nota" id="notaRegimeMes"></p>
+    <div class="vazio vazio--guia" id="vazioRelatorioInicio" hidden>
+      <p><strong>Seu extrato está limpo.</strong> Ainda não há lançamentos para fechar o mês.</p>
+      <p>Registre a primeira entrada ou saída e o relatório passa a mostrar o que entrou, o que saiu e as decisões do mês.</p>
+      <a class="btn-secundario" href="home.html#novo-lancamento">Adicionar lançamento</a>
+    </div>
 
-    <section class="cards-indicadores" id="resumoMes"></section>
+    <p class="nota" id="notaRegimeMes" data-com-lancamentos></p>
+
+    <section class="cards-indicadores" id="resumoMes" data-com-lancamentos></section>
 
     <section class="bloco" id="blocoPrevistoMes" hidden>
       <div class="bloco-cabecalho">
         <h3>Ainda previsto neste mês</h3>
         <span class="chip" id="chipPrevisto"></span>
       </div>
-      <p class="descricao">Lançamentos com data futura. Eles não entram no resultado realizado acima — aparecem aqui para você ver o que ainda vem.</p>
+      <p class="descricao">Lançamentos com data futura. Eles não entram no resultado realizado acima: aparecem aqui para você ver o que ainda vem.</p>
       <div id="listaPrevistoMes" class="itens-lista"></div>
     </section>
 
-    <section class="bloco bloco--historico">
+    <section class="bloco bloco--historico" data-com-lancamentos>
       <div class="bloco-cabecalho">
         <h3>Comparado com o seu próprio histórico</h3>
         <span class="chip" id="chipHistorico"></span>
@@ -98,7 +104,7 @@
       <div id="decisoesMes"></div>
     </section>
 
-    <section class="bloco">
+    <section class="bloco" data-com-lancamentos>
       <h3>Movimentações do mês</h3>
       <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Movimentações do mês; deslize horizontalmente para ver todas as colunas">
         <table class="tabela" id="tabelaTransacoes">
@@ -108,7 +114,7 @@
           <tbody></tbody>
         </table>
       </div>
-      <p class="vazio" id="vazioRelatorio" hidden>Nenhuma movimentação neste mês.</p>
+      <p class="vazio" id="vazioRelatorio" hidden>Nenhuma movimentação neste mês. Escolha outro mês de referência acima.</p>
     </section>
 
     <section class="bloco">

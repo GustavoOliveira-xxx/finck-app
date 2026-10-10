@@ -51,13 +51,13 @@ window.FinckGame = (() => {
     id: "primeira_analise",
     icone: "🧮",
     titulo: "Pensou antes",
-    descricao: "Registrou o primeiro cálculo real.",
+    descricao: "Analisou a primeira compra no FinCK of Reality.",
     teste: c => c.analises >= 1
   }, {
     id: "calculista",
     icone: "📐",
-    titulo: "Calculista",
-    descricao: "Registrou 25 cálculos reais.",
+    titulo: "Analista de compras",
+    descricao: "Analisou 25 compras no FinCK of Reality.",
     teste: c => c.analises >= 25
   }, {
     id: "consumo_consciente",
@@ -81,7 +81,7 @@ window.FinckGame = (() => {
     id: "ano_de_vida",
     icone: "🕰️",
     titulo: "Um mês de vida",
-    descricao: "Preservou 176 horas — um mês inteiro de trabalho.",
+    descricao: "Preservou 176 horas: um mês inteiro de trabalho.",
     teste: c => c.horasPreservadas >= 176
   }, {
     id: "mil_reais",
@@ -228,9 +228,9 @@ window.FinckGame = (() => {
         last_active: hoje,
         ledger: ledger
       });
-      if (!opcoes.silencioso && veredito.motivo) {
-        U.toast(veredito.motivo, "info");
-      }
+      // A recusa (teto do dia, intervalo, ação repetida) não vira aviso: logo
+      // depois de uma ação, parecia que a própria ação tinha falhado. O motivo
+      // volta para quem chamou, e as regras ficam explicadas na Jornada.
       return {
         concedido: 0,
         motivo: veredito.motivo,
@@ -257,9 +257,9 @@ window.FinckGame = (() => {
     };
     await S.salvarGamificacao(novo);
     if (ganho > 0 && !opcoes.silencioso) {
-      U.toast(`+${ganho} XP — ${opcoes.motivo || veredito.regra.rotulo}`, "sucesso");
+      U.toast(`+${ganho} XP: ${opcoes.motivo || veredito.regra.rotulo}`, "sucesso");
     }
-    if (nivelDepois.level > nivelAntes.level) {
+    if (nivelDepois.level > nivelAntes.level && opcoes.avisoDeNivel !== false) {
       U.toast(`${nivelDepois.icone} Nível ${nivelDepois.level}: ${nivelDepois.titulo}!`, "sucesso", 5e3);
       document.dispatchEvent(new CustomEvent("finck:nivel", {
         detail: nivelDepois
@@ -277,7 +277,10 @@ window.FinckGame = (() => {
       motivo: motivo
     });
   }
-  async function sincronizarConquistas() {
+  // avisar: false devolve o texto do aviso (em "aviso") para a tela juntar
+  // com o próprio, em vez de empilhar mais um.
+  async function sincronizarConquistas({avisar: avisar = true} = {}) {
+    let aviso = "";
     const [estado, perfil, transacoes, metas, analises] = await Promise.all([ S.obterGamificacao(), S.obterPerfil(), S.listar("transactions").then(l => l.filter(t => !t.reversed_at)), S.listar("goals"), S.listar("purchase_analyses") ]);
     const resumo = window.FinckReality.resumoHistorico(analises);
     const ctx = {
@@ -302,20 +305,40 @@ window.FinckGame = (() => {
         ...estado,
         achievements: desbloqueadas
       });
+      let nivelNovo = null;
       for (const id of novas) {
         const c = CONQUISTAS.find(x => x.id === id);
-        await premiar("conquista", {
+        const r = await premiar("conquista", {
           chave: id,
           motivo: `Conquista: ${c.titulo}`,
           silencioso: true,
+          avisoDeNivel: false,
           ignorarIntervalo: true
         });
-        U.toast(`${c.icone} Conquista desbloqueada: ${c.titulo}`, "sucesso", 4500);
+        if (r.nivel && r.nivel.level > nivelDe(estado.xp).level) {
+          nivelNovo = r.nivel;
+        }
+      }
+      // Cada conquista fica registrada acima; o aviso é um só, com o nível
+      // novo junto, para não empilhar vários sobre o conteúdo. Na própria
+      // Jornada, o link para ela não leva a lugar nenhum.
+      const unica = novas.length === 1 ? CONQUISTAS.find(x => x.id === novas[0]) : null;
+      aviso = (unica ? `${unica.icone} Conquista desbloqueada: ${unica.titulo}.` : `${novas.length} conquistas desbloqueadas.`) + (nivelNovo ? ` Nível ${nivelNovo.level}: ${nivelNovo.titulo}.` : "");
+      if (avisar) {
+        const naJornada = document.body?.dataset.page === "gamificacao";
+        U.toast(aviso, "sucesso", 6e3, naJornada ? {} : {
+          link: {
+            href: "gamificacao.html",
+            texto: "Ver na Jornada"
+          }
+        });
       }
     }
     return {
       lista: CONQUISTAS,
       desbloqueadas: desbloqueadas,
+      novas: novas,
+      aviso: aviso,
       ctx: ctx
     };
   }

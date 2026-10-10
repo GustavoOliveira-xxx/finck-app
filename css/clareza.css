@@ -297,8 +297,29 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num{ background:var(--verde); color:#07120e; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num{ font-size:0; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num::after{ content:"✓"; font-size:.72rem; }
-.etapas-reality li[data-estado="bloqueada"] a{ opacity:.45; cursor:default; }
+/* Travada sem opacidade baixa (o texto continua legível): o número
+   tracejado e o aria-disabled dizem que ainda não dá para ir. */
+.etapas-reality li[data-estado="bloqueada"] a{ opacity:1; color:var(--texto-fraco); cursor:default; }
+.etapas-reality li[data-estado="bloqueada"] .etapas-reality__num{ background:none; outline:1px dashed rgba(255,255,255,.3); outline-offset:-1px; }
 @media (pointer: coarse){ .etapas-reality a{ min-height:44px; } }
+
+/* O indicador de etapas fica preso logo abaixo do header. Tudo que é levado
+   até a tela (scrollIntoView depois do resultado, link das etapas, foco pelo
+   Tab nos dois sentidos) para abaixo dele: a altura entra no scroll-padding
+   do html. As etapas ganham uma folga a mais para o título respirar. */
+:root{ --altura-etapas-reality: 3.15rem; }
+@media (pointer: coarse){ :root{ --altura-etapas-reality: 3.65rem; } }
+html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-reality) + .2rem); }
+#passoDados,#passoResultado,#passoReflexao,#passoDecisao,.resposta-reality{ scroll-margin-top:.5rem; }
+
+/* Tela baixa (celular deitado ou zoom de 200%): header e etapas presos
+   ocupariam metade da altura junto com a navegação. Eles voltam ao fluxo
+   da página e o conteúdo ganha a tela. */
+@media (max-height: 500px){
+  header[data-finck-header]{ position:relative; }
+  .etapas-reality{ position:static; }
+  html,html:has(.etapas-reality){ scroll-padding-top:.75rem; }
+}
 
 .categoria-inferida{
   display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
@@ -357,6 +378,8 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
     linear-gradient(150deg, rgba(104,12,144,.4), rgba(14,10,20,.94) 65%);
   outline:none;
 }
+/* Quem chegou pelo teclado (Enter no formulário) vê onde o foco parou. */
+.resposta-reality:focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; }
 .resposta-reality__item{ margin:0; font-size:.88rem; color:var(--texto-fraco); }
 .resposta-reality__rotulo{ margin:.3rem 0 0; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--roxo-neon); }
 .resposta-reality__tempo{ margin:0; font-family:var(--fonte-display); font-size:clamp(1.2rem,1rem + 1vw,1.6rem); color:var(--texto); }

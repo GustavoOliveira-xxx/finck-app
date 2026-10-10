@@ -74,11 +74,11 @@
         <label class="campo-parcelas">Se parcelasse, em quantas vezes?
           <input type="number" id="cenarioParcelas" min="2" max="48" step="1" value="12">
         </label>
-        <label>Preço real da alternativa <small>(usado, reparo ou aluguel — opcional)</small>
+        <label>Preço da alternativa que você encontrou <small>(usado, reparo ou aluguel, opcional)</small>
           <input type="text" inputmode="decimal" data-moeda id="cenarioPrecoAlternativo">
         </label>
       </div>
-      <p class="nota">Sem esse preço, o FinCK usa uma faixa de hipótese do próprio projeto — não um dado de pesquisa. Informar o preço real torna a comparação verdadeira.</p>
+      <p class="nota">Sem esse preço, o FinCK usa uma faixa de hipótese do próprio projeto, não um dado de pesquisa. Com o preço que você encontrou, a comparação fica mais fiel.</p>
 
       <fieldset class="campo-instituicoes">
         <legend>Cenários para comparar</legend>
@@ -87,7 +87,7 @@
 
       <div class="acoes-etapa">
         <button type="button" class="btn-secundario" id="btnLimparCenario">Limpar</button>
-        <button type="button" class="btn-primario" id="btnLevarReality">Registrar de verdade no Reality</button>
+        <button type="button" class="btn-primario" id="btnLevarReality">Analisar no FinCK of Reality</button>
       </div>
     </section>
 

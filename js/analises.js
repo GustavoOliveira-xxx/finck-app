@@ -45,7 +45,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const horas = Number(ctx.perfil?.work_hours_day || 8);
     const valorHora = Number(ctx.perfil?.income_monthly || 0) / dias / horas;
     const horasGastas = valorHora > 0 ? saidas / valorHora : 0;
-    document.getElementById("resumoAnalises").innerHTML = `\n      <article class="card-indicador"><span>Entradas</span><strong class="cor-verde">${U.moeda(entradas)}</strong></article>\n      <article class="card-indicador"><span>Saídas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong></article>\n      <article class="card-indicador"><span>Resultado</span><strong>${U.moeda(entradas - saidas)}</strong></article>\n      <article class="card-indicador"><span>Tempo gasto</span><strong>${U.numero(horasGastas, 1)} h de trabalho</strong></article>`;
+    // Cada número diz a janela de tempo e o que entra na conta.
+    const seletor = document.getElementById("filtroPeriodo");
+    const periodo = seletor.value === "tudo" ? "Todo o histórico" : seletor.selectedOptions[0]?.textContent || "";
+    const janela = U.escapeHTML(`${periodo}, ${regime() === "ambos" ? "realizado e previsto" : "só o realizado"}.`);
+    const explicaHoras = valorHora > 0 ? `Saídas do período divididas pelo valor da sua hora (${U.moeda(valorHora)}).` : "Preencha a renda no perfil para ver as saídas em horas de trabalho.";
+    document.getElementById("resumoAnalises").innerHTML = `\n      <article class="card-indicador"><span>Entradas</span><strong class="cor-verde">${U.moeda(entradas)}</strong>\n        <small class="explica-numero">${janela}</small></article>\n      <article class="card-indicador"><span>Saídas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong>\n        <small class="explica-numero">${janela}</small></article>\n      <article class="card-indicador"><span>Resultado</span><strong>${U.moeda(entradas - saidas)}</strong>\n        <small class="explica-numero">Entradas menos saídas no mesmo período.</small></article>\n      <article class="card-indicador"><span>Tempo gasto</span><strong>${U.numero(horasGastas, 1)} h de trabalho</strong>\n        <small class="explica-numero">${U.escapeHTML(explicaHoras)}</small></article>`;
     const categorias = F.porCategoria(transacoes);
     C.rosca(document.getElementById("graficoCategorias"), categorias);
     C.tabelaEquivalente(document.getElementById("graficoCategorias"), {
@@ -68,9 +73,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const resumo = R.resumoHistorico(ctx.analises);
     const G = R.GLOSSARIO;
     const linha = (chave, valor, classe = "") => `\n      <li title="${U.escapeHTML(G[chave].definicao)}">\n        <span>${U.escapeHTML(G[chave].rotulo)}\n          <small class="indicador-quando">${U.escapeHTML(G[chave].referencia)}</small>\n        </span>\n        <strong class="${classe}">${valor}</strong>\n      </li>`;
-    document.getElementById("blocoConsciente").innerHTML = `\n      <ul class="lista-resumo lista-resumo--glossario">\n        ${linha("analises_registradas", resumo.total)}\n        <li title="Análises em que a decisão foi comprar."><span>Compras concluídas</span><strong>${resumo.compras}</strong></li>\n        ${linha("decisoes_conscientes", resumo.evitadas, "cor-verde")}\n        ${linha("valor_potencial", U.moeda(resumo.valor_potencial), "cor-verde")}\n        ${linha("economia_confirmada", U.moeda(resumo.economia_confirmada), "cor-verde")}\n        ${linha("horas_equivalentes", `${U.numero(resumo.horas_preservadas, 1)} h`)}\n        ${resumo.indicador_medio !== null ? linha("indicador_responsavel", `${resumo.indicador_medio}/100`) : ""}\n        <li title="Fatia das análises decididas em que a escolha foi consciente."><span>Taxa de decisões conscientes</span><strong>${U.percentual(resumo.taxa_consciente, 0)}</strong></li>\n      </ul>\n      ${resumo.a_acompanhar ? `<p class="nota">${resumo.a_acompanhar} decisão(ões) consciente(s) ainda sem acompanhamento. <a href="decisoes.html">Dizer o que aconteceu depois</a> transforma valor potencial em economia confirmada.</p>` : ""}\n      <p class="nota">Uma compra adiada ou substituída <em>pode</em> reduzir a demanda por um item novo. O FinCK registra a decisão e a sua reflexão — ele não mede o impacto ambiental real e não prova que um produto deixou de ser fabricado, transportado ou descartado.</p>`;
+    document.getElementById("blocoConsciente").innerHTML = `\n      <ul class="lista-resumo lista-resumo--glossario">\n        ${linha("analises_registradas", resumo.total)}\n        <li title="Análises em que a decisão foi comprar."><span>Compras concluídas</span><strong>${resumo.compras}</strong></li>\n        ${linha("decisoes_conscientes", resumo.evitadas, "cor-verde")}\n        ${linha("valor_potencial", U.moeda(resumo.valor_potencial), "cor-verde")}\n        ${linha("economia_confirmada", U.moeda(resumo.economia_confirmada), "cor-verde")}\n        ${linha("horas_equivalentes", `${U.numero(resumo.horas_preservadas, 1)} h`)}\n        ${resumo.indicador_medio !== null ? linha("indicador_responsavel", `${resumo.indicador_medio}/100`) : ""}\n        <li title="Fatia das análises decididas em que a escolha foi consciente."><span>Taxa de decisões conscientes</span><strong>${U.percentual(resumo.taxa_consciente, 0)}</strong></li>\n      </ul>\n      ${resumo.a_acompanhar ? `<p class="nota">${resumo.a_acompanhar} decisão(ões) consciente(s) ainda sem acompanhamento. <a href="decisoes.html">Dizer o que aconteceu depois</a> transforma valor potencial em economia confirmada.</p>` : ""}\n      <p class="nota">Uma compra adiada ou substituída <em>pode</em> reduzir a demanda por um item novo. O FinCK registra a decisão e a sua reflexão; ele não mede o impacto ambiental real e não prova que um produto deixou de ser fabricado, transportado ou descartado.</p>`;
   }
+  // Sem nenhum lançamento, gráficos zerados pareceriam erro: o que aparece é
+  // o estado inicial, com o atalho para o primeiro registro.
+  const semLancamentos = (ctx.todasTransacoes || []).length === 0;
+  document.getElementById("vazioAnalises").hidden = !semLancamentos;
+  document.querySelectorAll("[data-com-lancamentos]").forEach(el => {
+    el.hidden = semLancamentos;
+  });
   document.getElementById("filtroPeriodo").addEventListener("change", render);
+  document.getElementById("filtroRegime").addEventListener("change", render);
   window.addEventListener("resize", () => render());
   render();
 });

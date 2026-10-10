@@ -53,8 +53,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const aVir = futuras();
     const previsto = F.saldoDeMovimentos(aVir);
     const ambiguas = F.alocacaoAmbigua(transacoes, contas, hoje()).length;
-    const linhaPrevisto = aVir.length ? `\n      <li class="linha-previsto"><span>Previsto (ainda não saiu do caixa)</span>\n          <strong class="${previsto < 0 ? "cor-vermelha" : ""}">${previsto > 0 ? "+" : ""}${U.moeda(previsto)}</strong></li>` : "";
-    $("consolidado").innerHTML = `\n      <li><span>Dinheiro em contas</span>\n          <strong class="${resumo.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(resumo.disponivel)}</strong></li>\n      <li><span>Fora das contas (não alocado)</span>\n          <strong class="${naoAlocado < 0 ? "cor-vermelha" : ""}">${U.moeda(naoAlocado)}</strong></li>\n      <li class="linha-identidade"><span>Saldo atual (realizado)</span>\n          <strong>${U.moeda(saldoAtual)}</strong></li>${linhaPrevisto}\n      <li><span>Transferências registradas</span>\n          <strong>${transferencias.length}</strong></li>`;
+    const linhaPrevisto = aVir.length ? `\n      <li class="linha-previsto"><span>Previsto\n            <small class="explica-numero">Lançamentos futuros: ainda não saíram do caixa nem entram no saldo atual.</small></span>\n          <strong class="${previsto < 0 ? "cor-vermelha" : ""}">${previsto > 0 ? "+" : ""}${U.moeda(previsto)}</strong></li>` : "";
+    $("consolidado").innerHTML = `\n      <li><span>Dinheiro em contas\n            <small class="explica-numero">Soma das contas ativas, até hoje.</small></span>\n          <strong class="${resumo.disponivel < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(resumo.disponivel)}</strong></li>\n      <li><span>Fora das contas (não alocado)\n            <small class="explica-numero">Está no saldo geral, mas em conta nenhuma.</small></span>\n          <strong class="${naoAlocado < 0 ? "cor-vermelha" : ""}">${U.moeda(naoAlocado)}</strong></li>\n      <li class="linha-identidade"><span>Saldo atual (realizado)\n            <small class="explica-numero">O que já aconteceu até hoje: contas mais o que está fora delas.</small></span>\n          <strong>${U.moeda(saldoAtual)}</strong></li>${linhaPrevisto}\n      <li><span>Transferências registradas\n            <small class="explica-numero">Todas, desde o início. Não mudam o total.</small></span>\n          <strong>${transferencias.length}</strong></li>`;
     const notaOrigem = $("notaOrigemSaldo");
     if (notaOrigem) {
       notaOrigem.textContent = `${origem.nota} O saldo atual conta apenas o que já aconteceu até hoje; o previsto aparece em linha separada.`;
@@ -62,23 +62,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     const aviso = $("avisoReconciliacao");
     if (aviso) {
       aviso.hidden = ambiguas === 0;
-      aviso.innerHTML = ambiguas ? `<strong>${ambiguas} lançamento(s) sem conta definida.</strong>\n           Eles entram no saldo atual, mas não aparecem em nenhuma conta — e você\n           ainda não disse que devem ficar de fora. Enquanto isso, os dois números\n           acima contam histórias diferentes.\n           <a href="perfil.html#diagnostico">Resolver no diagnóstico</a>` : "";
+      aviso.innerHTML = ambiguas ? `<strong>${ambiguas} lançamento(s) sem conta definida.</strong>\n           Eles entram no saldo atual, mas não aparecem em nenhuma conta, e você\n           ainda não disse que devem ficar de fora. Enquanto isso, os dois números\n           acima contam histórias diferentes.\n           <a href="perfil.html#diagnostico">Resolver no diagnóstico</a>` : "";
     }
     renderContas();
     renderInstituicoes(resumo.contas);
     renderSemConta();
     renderTransferencias();
   }
+  // As ações ocupam uma linha inteira embaixo: ao lado do saldo, em 375px,
+  // espremiam o nome da instituição até ele passar por baixo dos botões.
+  // A sigla fica escura sobre cor clara (a Carteira é verde-claro) e branca
+  // sobre cor escura: vale a que tiver mais contraste com o fundo.
+  function corDoTextoSobre(cor) {
+    const m = /^#([\da-f]{6})$/i.exec(String(cor || "").trim());
+    if (!m) {
+      return "#fff";
+    }
+    const canal = i => {
+      const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+      return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+    };
+    const luz = .2126 * canal(0) + .7152 * canal(2) + .0722 * canal(4);
+    return 1.05 / (luz + .05) >= (luz + .05) / .052 ? "#fff" : "#07060a";
+  }
   function cartaoConta(c) {
     const inst = c.instituicao;
-    const marca = inst.logo ? `<img src="${inst.logo}" alt="${U.escapeHTML(inst.nome)}" class="conta-logo" loading="lazy">` : `<span class="conta-sigla" style="--cor:${inst.cor}">${U.escapeHTML(inst.curto.slice(0, 2))}</span>`;
+    const marca = inst.logo ? `<img src="${inst.logo}" alt="${U.escapeHTML(inst.nome)}" class="conta-logo" loading="lazy">` : `<span class="conta-sigla" style="--cor:${inst.cor};--cor-texto:${corDoTextoSobre(inst.cor)}">${U.escapeHTML(inst.curto.slice(0, 2))}</span>`;
     const lancamentos = transacoes.filter(t => String(t.account_id) === String(c.id)).length;
-    return `\n      <article class="cartao-conta${c.active === false ? " cartao-conta--arquivada" : ""}"\n               style="--cor-banco:${inst.cor}">\n        <div class="cartao-conta__marca">${marca}</div>\n        <div class="cartao-conta__info">\n          <h4>${U.escapeHTML(c.name)}\n            ${c.is_default ? '<span class="selo selo--mini">padrão</span>' : ""}\n            ${c.active === false ? '<span class="selo selo--mini selo--apagado">arquivada</span>' : ""}\n          </h4>\n          <small>${U.escapeHTML(inst.curto)} · ${U.escapeHTML(c.tipoRotulo)}${c.last_four_digits ? ` · ····${U.escapeHTML(c.last_four_digits)}` : ""}</small>\n          <small class="cartao-conta__extra">${lancamentos} lançamento(s)</small>\n        </div>\n        <div class="cartao-conta__lado">\n          <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>\n          ${c.saldo < 0 ? '<small class="cor-vermelha">saldo devedor</small>' : ""}\n          <div class="acoes-card">\n            <button type="button" class="btn-secundario btn-mini" data-editar="${c.id}">Editar</button>\n            <button type="button" class="btn-secundario btn-mini" data-arquivar="${c.id}">${c.active === false ? "Reativar" : "Arquivar"}</button>\n            <button type="button" class="btn-excluir-item" data-excluir="${c.id}" aria-label="Excluir conta">✕</button>\n          </div>\n        </div>\n      </article>`;
+    return `\n      <article class="cartao-conta${c.active === false ? " cartao-conta--arquivada" : ""}"\n               style="--cor-banco:${inst.cor}">\n        <div class="cartao-conta__marca">${marca}</div>\n        <div class="cartao-conta__info">\n          <h4>${U.escapeHTML(c.name)}\n            ${c.is_default ? '<span class="selo selo--mini">padrão</span>' : ""}\n            ${c.active === false ? '<span class="selo selo--mini selo--apagado">arquivada</span>' : ""}\n          </h4>\n          <small>${U.escapeHTML(c.tipoRotulo.startsWith(inst.curto) ? c.tipoRotulo : `${inst.curto} · ${c.tipoRotulo}`)}${c.last_four_digits ? ` · ····${U.escapeHTML(c.last_four_digits)}` : ""}</small>\n          <small class="cartao-conta__extra">${lancamentos} lançamento(s)</small>\n        </div>\n        <div class="cartao-conta__lado">\n          <strong class="${c.saldo < 0 ? "cor-vermelha" : ""}">${U.moeda(c.saldo)}</strong>\n          ${c.saldo < 0 ? '<small class="cor-vermelha">saldo devedor</small>' : ""}\n        </div>\n        <div class="acoes-card">\n          <button type="button" class="btn-secundario btn-mini" data-editar="${c.id}">Editar</button>\n          <button type="button" class="btn-secundario btn-mini" data-arquivar="${c.id}">${c.active === false ? "Reativar" : "Arquivar"}</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${c.id}" aria-label="Excluir conta ${U.escapeHTML(c.name)}">✕</button>\n        </div>\n      </article>`;
   }
   function renderContas() {
     const filtro = $("filtroStatus").value;
     const lista = contasComSaldo().filter(c => filtro === "todas" ? true : filtro === "ativas" ? c.active !== false : c.active === false);
-    $("vazioContas").hidden = lista.length > 0;
+    // Sem nenhuma conta é estado inicial, com convite; com contas, a lista só
+    // ficou vazia por causa do filtro.
+    const semNenhuma = contas.length === 0;
+    $("vazioContas").hidden = lista.length > 0 || !semNenhuma;
+    $("vazioFiltroContas").hidden = lista.length > 0 || semNenhuma;
+    // Transferir e ajustar dependem de contas: sem nenhuma, a única ação é a
+    // do estado inicial.
+    $("acoesContas").hidden = semNenhuma;
+    $("vazioFiltroContas").textContent = filtro === "arquivadas" ? "Nenhuma conta arquivada. Ao arquivar uma conta, ela sai do saldo e o histórico dela continua aqui." : "Nenhuma conta ativa agora. As arquivadas aparecem no filtro Arquivadas.";
     $("listaContas").innerHTML = lista.map(cartaoConta).join("");
     $("listaContas").querySelectorAll("[data-editar]").forEach(b => b.addEventListener("click", () => abrirConta(b.dataset.editar)));
     $("listaContas").querySelectorAll("[data-arquivar]").forEach(b => b.addEventListener("click", () => alternarArquivo(b.dataset.arquivar)));
@@ -126,7 +150,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   $("filtroStatus").addEventListener("change", renderContas);
   function pintarInstituicoes() {
-    $("gradeInstituicoes").innerHTML = cfg.INSTITUICOES.map(i => `\n      <button type="button" class="opcao-banco${i.id === instituicaoEscolhida ? " opcao-banco--ativa" : ""}"\n              data-inst="${i.id}" style="--cor:${i.cor}"\n              aria-pressed="${i.id === instituicaoEscolhida}">\n        ${i.logo ? `<img src="${i.logo}" alt="" class="opcao-banco__logo" loading="lazy">` : `<span class="opcao-banco__sigla">${U.escapeHTML(i.curto)}</span>`}\n        <span class="opcao-banco__nome">${U.escapeHTML(i.curto)}</span>\n      </button>`).join("");
+    // A instituição da demonstração só aparece para quem edita aquela conta.
+    $("gradeInstituicoes").innerHTML = cfg.INSTITUICOES.filter(i => !i.demonstracao || i.id === instituicaoEscolhida).map(i => `\n      <button type="button" class="opcao-banco${i.id === instituicaoEscolhida ? " opcao-banco--ativa" : ""}"\n              data-inst="${i.id}" style="--cor:${i.cor}"\n              aria-pressed="${i.id === instituicaoEscolhida}">\n        ${i.logo ? `<img src="${i.logo}" alt="" class="opcao-banco__logo" loading="lazy">` : `<span class="opcao-banco__sigla">${U.escapeHTML(i.curto)}</span>`}\n        <span class="opcao-banco__nome">${U.escapeHTML(i.curto)}</span>\n      </button>`).join("");
     $("campoOutraInstituicao").hidden = instituicaoEscolhida !== "outro";
     $("gradeInstituicoes").querySelectorAll("[data-inst]").forEach(b => b.addEventListener("click", () => {
       instituicaoEscolhida = b.dataset.inst;
@@ -160,6 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.abrirModal("modalConta");
   }
   $("btnNovaConta").addEventListener("click", () => abrirConta(null));
+  $("btnPrimeiraConta").addEventListener("click", () => abrirConta(null));
   $("formConta").addEventListener("submit", async e => {
     e.preventDefault();
     const id = $("contaId").value;
@@ -377,7 +403,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const bruto = U.lerMoeda("ajusteSaldo");
     const real = $("ajusteNegativo").checked ? -bruto : bruto;
     const dif = C.diferencaDoAjuste(esperado, real);
-    $("diferencaAjuste").textContent = bruto === 0 ? "Informe o saldo que aparece no seu extrato." : dif === 0 ? "Os valores já batem — nenhum ajuste será criado." : `Vamos registrar um ajuste de ${dif > 0 ? "+" : "−"} ${U.moeda(Math.abs(dif))}. Ele não entra no relatório de gastos.`;
+    $("diferencaAjuste").textContent = bruto === 0 ? "Informe o saldo que aparece no seu extrato." : dif === 0 ? "Os valores já batem: nenhum ajuste será criado." : `Vamos registrar um ajuste de ${dif > 0 ? "+" : "−"} ${U.moeda(Math.abs(dif))}. Ele não entra no relatório de gastos.`;
   }
   [ "ajusteConta", "ajusteSaldo", "ajusteNegativo" ].forEach(id => {
     $(id).addEventListener("input", atualizarPreviaAjuste);

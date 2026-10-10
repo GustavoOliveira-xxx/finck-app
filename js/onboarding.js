@@ -58,6 +58,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         card.disabled = true;
         try {
           await F.carregarDemo();
+          // Na demonstração, os exemplos já nascem com as duas contas fictícias.
+          S.prepararContasDemo({
+            forcar: true
+          });
           await G.sincronizarConquistas();
           U.toast("Dados de demonstração carregados.", "sucesso");
           setTimeout(() => {

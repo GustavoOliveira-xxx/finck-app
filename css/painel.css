@@ -1,0 +1,293 @@
+@charset "UTF-8";
+/* ==========================================================================
+   Painel (home): três perguntas no topo, números com nome e janela,
+   registro rápido e seções recolhíveis.
+   Usa os tokens e componentes de style-principal.css e clareza.css; aqui só
+   entra o que é próprio da home.
+   ========================================================================== */
+
+/* --- Topo: três perguntas ------------------------------------------------ */
+.hero--painel{ display:grid; gap:.25rem; }
+.hero--painel > p{ margin-top:0; color:var(--texto-fraco); font-size:.9rem; }
+.painel-perguntas{
+  list-style:none; margin:.6rem 0 0; padding:0;
+  display:grid; gap:.55rem;
+  grid-template-columns:minmax(0,1fr);
+}
+/* Três colunas ou uma: em duas, a terceira pergunta ficava sozinha embaixo. */
+@media (min-width: 700px){
+  .painel-perguntas{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+}
+.painel-pergunta{
+  display:grid; gap:.15rem; align-content:start;
+  min-width:0;
+  padding:.7rem .85rem;
+  border-radius:var(--raio-md);
+  background:rgba(0,0,0,.28);
+  border:1px solid var(--superficie-borda);
+}
+.painel-pergunta__titulo{
+  font-family:var(--fonte-corpo);
+  font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--roxo-neon);
+}
+.painel-pergunta__valor{
+  margin:0;
+  font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
+  font-size:1.15rem; font-weight:700; letter-spacing:-.02em;
+  color:var(--texto);
+  overflow-wrap:anywhere;
+}
+.painel-pergunta__valor--texto{
+  font-family:var(--fonte-corpo); font-size:.95rem; letter-spacing:0; line-height:1.4;
+}
+.painel-pergunta__nota{ margin:0; font-size:.8rem; line-height:1.45; color:var(--texto-fraco); }
+.painel-pergunta__nota:empty{ display:none; }
+.painel-pergunta__nota[data-tom="alerta"]{ color:#ffb3bb; }
+.painel-pergunta__acao{ justify-self:start; margin-top:.2rem; text-align:left; }
+/* A ação de duas perguntas vem num invólucro preenchido pelo script. */
+.painel-pergunta > span{ display:contents; }
+button.link-mais{ padding:0; }
+.hero--painel .painel-perguntas[aria-busy="true"] .painel-pergunta__valor{ color:var(--texto-fraco); font-size:.9rem; }
+
+/* O ⚡ do convite do Reality acompanha o título sem pesar. */
+#tituloReality > span[aria-hidden]{ font-size:.9em; margin-right:.1em; }
+
+/* --- Faixa da primeira visita (dentro do cartão do Reality) --------------- */
+.faixa-inicio{
+  flex:1 1 100%;
+  display:flex; align-items:center; gap:.6rem;
+  padding:.55rem .55rem .55rem .85rem;
+  border-radius:var(--raio-md);
+  border-left:3px solid var(--amarelo);
+  background:var(--amarelo-fraco);
+  font-size:.86rem; line-height:1.45;
+}
+.faixa-inicio p{ margin:0; flex:1 1 auto; color:var(--texto); }
+.faixa-inicio strong{ color:var(--amarelo); }
+.faixa-inicio__fechar{
+  flex:none; display:grid; place-items:center;
+  width:44px; height:44px; border-radius:50%;
+  color:var(--texto-fraco); font-size:.8rem;
+}
+.faixa-inicio__fechar:hover{ color:var(--texto); background:rgba(255,255,255,.06); }
+
+/* --- Convite de instalação: no fluxo da página -------------------------- */
+.convite-instalar{
+  display:flex; align-items:center; justify-content:space-between; gap:.6rem 1rem; flex-wrap:wrap;
+  margin-block:-.4rem .4rem;
+  padding:.8rem 1rem;
+  border-radius:var(--raio-md);
+  border:1px solid rgba(147,51,196,.4);
+  background:var(--roxo-vidro);
+}
+.convite-instalar__texto{ flex:1 1 16rem; display:grid; gap:.15rem; }
+.convite-instalar__texto strong{ font-size:.95rem; }
+.convite-instalar__texto p{ margin:0; font-size:.82rem; line-height:1.45; color:var(--texto-fraco); }
+.convite-instalar__acoes{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+
+/* --- Sua situação hoje: registrado x previsão ---------------------------- */
+.selo-natureza{
+  display:inline-block; margin-left:.25rem; padding:.05rem .45rem;
+  border-radius:999px; vertical-align:.08em;
+  font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  white-space:nowrap;
+}
+.selo-natureza--registrado{ color:#b8f5dd; background:var(--verde-fraco); border:1px solid rgba(31,209,143,.3); }
+.painel-subtitulo{
+  display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap;
+  margin:1.1rem 0 0;
+  font-family:var(--fonte-corpo); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--texto);
+}
+.painel-subtitulo span{ font-weight:500; letter-spacing:.02em; text-transform:none; color:var(--texto-fraco); }
+.painel-subtitulo::before{
+  content:""; width:.5rem; height:.5rem; border-radius:50%;
+  background:var(--verde); align-self:center;
+}
+.painel-subtitulo--previsao::before{ background:transparent; border:1.5px dashed var(--amarelo); }
+.balance-card .painel-subtitulo + .balance-info{ margin-top:.55rem; }
+.balance-info--previsao > div{ border-style:dashed; border-color:rgba(254,200,0,.28); }
+.balance-info .projecao__janela{
+  display:block; margin-top:.15rem;
+  font-style:normal; font-size:.7rem; font-weight:600;
+  color:var(--amarelo);
+}
+.balance-info--previsao{ grid-template-columns:repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+/* Cada bloco informativo termina numa ação clara. */
+.balance-card__acao{ display:inline-flex; align-items:center; min-height:44px; margin-top:.4rem; }
+
+/* --- Contas: aviso único quando não há contas ---------------------------- */
+.nota--sem-contas{
+  border-left:2px solid var(--roxo-neon);
+  padding-left:.6rem;
+  color:var(--texto-fraco);
+}
+
+/* --- Programação: saídas recolhíveis e rótulos com janela ---------------- */
+.prog-contas dt small{
+  display:block; font-size:.7rem; font-weight:400; color:var(--texto-fraquissimo);
+}
+.prog-contas__sobra dd.cor-vermelha{ color:var(--vermelho) !important; }
+/* Negativo só sem as entradas, que chegam antes de faltar: nem verde nem alarme. */
+.prog-contas__sobra dd.prog-contas__neutro{ color:var(--texto); }
+/* O sinal de menos não pode ficar numa linha e o valor em outra. */
+.prog-contas dd{ white-space:nowrap; }
+.prog-detalhes{ margin-top:.7rem; }
+.prog-detalhes > summary{
+  display:flex; align-items:center; gap:.45rem; min-height:44px;
+  cursor:pointer; list-style:none;
+  font-size:.86rem; font-weight:600; color:var(--amarelo);
+}
+.prog-detalhes > summary::-webkit-details-marker{ display:none; }
+.prog-detalhes > summary::before{
+  content:"›"; display:inline-block; font-size:1.1rem; line-height:1;
+  transition:transform var(--dur-rapida) var(--ease-out);
+}
+.prog-detalhes[open] > summary::before{ transform:rotate(90deg); }
+.prog-detalhes .prog-lista{ margin-top:.2rem; }
+
+/* --- Movimentações: estado inicial e registro feito --------------------- */
+.vazio--inicio{
+  border-style:solid; border-color:rgba(147,51,196,.3);
+  background:linear-gradient(150deg, rgba(147,51,196,.1), rgba(255,255,255,.012));
+}
+.registro-feito:empty{ display:none; }
+.registro-feito{
+  display:flex; align-items:center; justify-content:space-between; gap:.4rem .8rem; flex-wrap:wrap;
+  margin-bottom:.7rem; padding:.6rem .6rem .6rem .9rem;
+  border-radius:var(--raio-md);
+  border:1px solid rgba(31,209,143,.35); background:var(--verde-fraco);
+}
+.registro-feito p{ margin:0; display:grid; gap:.1rem; }
+.registro-feito strong{ color:#b8f5dd; font-weight:600; }
+.registro-feito small{ font-size:.78rem; color:var(--texto-fraco); }
+.registro-feito__xp{ order:1; flex-basis:100%; font-size:.8rem; color:var(--amarelo); }
+.registro-feito .btn-texto{ min-height:44px; color:var(--texto); }
+
+/* --- Registro rápido (modal) -------------------------------------------- */
+.tipo-lancamento{
+  border:0; margin:0; padding:0;
+  display:flex; gap:.5rem; flex-wrap:wrap;
+}
+.tipo-lancamento .chip{ min-height:44px; font-size:.9rem; }
+.sugestao-categoria{
+  display:flex; align-items:center; gap:.2rem .5rem; flex-wrap:wrap;
+  margin:-.35rem 0 0; font-size:.85rem; color:var(--texto-fraco);
+}
+.sugestao-categoria strong{ color:var(--amarelo); }
+.sugestao-categoria .btn-texto{ color:var(--roxo-neon); min-height:44px; }
+.mais-detalhes{
+  border:1px solid var(--superficie-borda); border-radius:var(--raio-md);
+  background:rgba(255,255,255,.02);
+}
+.mais-detalhes > summary{
+  display:flex; align-items:center; gap:.2rem .6rem; flex-wrap:wrap;
+  min-height:44px; padding:.5rem .85rem;
+  cursor:pointer; list-style:none;
+  font-size:.86rem; font-weight:600; color:var(--texto);
+}
+.mais-detalhes > summary::-webkit-details-marker{ display:none; }
+.mais-detalhes > summary::before{
+  content:"›"; font-size:1.05rem; line-height:1; color:var(--roxo-neon);
+  transition:transform var(--dur-rapida) var(--ease-out);
+}
+.mais-detalhes[open] > summary::before{ transform:rotate(90deg); }
+.mais-detalhes > summary small{ font-weight:400; font-size:.78rem; color:var(--texto-fraco); }
+.mais-detalhes__campos{ display:grid; gap:var(--gap-sm); padding:.3rem .85rem .9rem; }
+.mais-detalhes__campos .nota{ margin:0; }
+.mais-detalhes__campos .nota a{ color:var(--amarelo); }
+
+/* --- Seções recolhíveis: o conteúdo continua lá, só começa fechado ------- */
+.grupo-recolhivel > summary{ list-style:none; cursor:pointer; }
+.grupo-recolhivel > summary::-webkit-details-marker{ display:none; }
+.grupo-recolhivel__resumo{
+  position:relative;
+  display:grid; gap:.15rem;
+  min-height:44px;
+  padding:.85rem 3rem .85rem 1rem;
+  border-radius:var(--raio-lg);
+  border:1px solid var(--superficie-borda);
+  background:linear-gradient(165deg, rgba(255,255,255,.035), rgba(255,255,255,.006)), var(--vidro);
+  transition:border-color var(--dur-media) var(--ease-out);
+}
+.grupo-recolhivel__resumo:hover{ border-color:var(--superficie-borda-forte); }
+.grupo-recolhivel__resumo h2{ font-size:clamp(1.05rem,1rem + .4vw,1.3rem); margin:0; }
+.grupo-recolhivel__resumo small{ font-size:.8rem; color:var(--texto-fraco); }
+.grupo-recolhivel__resumo::after{
+  content:"›";
+  position:absolute; right:1.1rem; top:50%;
+  font-size:1.4rem; line-height:1; color:var(--amarelo);
+  transform:translateY(-50%) rotate(90deg);
+  transition:transform var(--dur-rapida) var(--ease-out);
+}
+.grupo-recolhivel[open] > .grupo-recolhivel__resumo::after{ transform:translateY(-50%) rotate(-90deg); }
+.grupo-recolhivel__corpo{ display:grid; gap:.9rem; margin-top:.9rem; }
+.mais-ferramentas .grupo-recolhivel__resumo h2{ margin:0; font-size:1rem; color:var(--texto); }
+.grupo-recolhivel--ferramentas .mais-ferramentas__lista{ margin-top:.7rem; }
+/* As duas famílias do app; os cartões continuam os mesmos. */
+.mais-ferramentas__familia{ margin-top:1rem; }
+.mais-ferramentas__familia-titulo{ margin:0; font-size:.82rem; font-weight:600; color:var(--texto-fraco); }
+.mais-ferramentas__familia-titulo small{ display:block; margin-top:.1rem; font-size:.74rem; font-weight:400; color:var(--texto-fraquissimo); }
+.mais-ferramentas__familia .mais-ferramentas__lista{ margin-top:.5rem; }
+.bloco-jornada{ display:grid; gap:.7rem; }
+.bloco-jornada .bloco-cabecalho h3{ font-size:1.05rem; }
+
+/* --- Telas estreitas ---------------------------------------------------- */
+@media (max-width: 600px){
+  .hero--painel{ padding:.8rem .85rem; }
+  .hero--painel > p{ display:none; }
+  .painel-perguntas{ gap:.45rem; margin-top:.45rem; }
+  /* Pergunta e ação na mesma linha; resposta e nota com a largura toda. */
+  .painel-pergunta{
+    grid-template-columns:minmax(0,1fr) auto;
+    column-gap:.6rem; row-gap:.1rem;
+    padding:.5rem .7rem .55rem;
+  }
+  .painel-pergunta > *{ grid-column:1 / -1; }
+  .painel-pergunta__titulo{ grid-column:1; grid-row:1; align-self:center; font-size:.68rem; letter-spacing:.06em; }
+  .painel-pergunta__acao{ grid-column:2; grid-row:1; align-self:center; justify-self:end; margin:0; text-align:right; }
+  .painel-pergunta__valor{ font-size:1.02rem; }
+  .painel-pergunta__valor--texto{ font-size:.88rem; }
+  .painel-pergunta__nota{ font-size:.76rem; line-height:1.4; }
+  .painel-pergunta__titulo{ text-transform:none; letter-spacing:.01em; font-size:.8rem; }
+  /* O botão do Reality precisa caber na primeira tela junto com as três
+     respostas: o detalhe do convite desce para depois da ação. */
+  .reality-cta--principal{ margin-top:-.5rem; }
+  .hero--painel h2{ font-size:1.15rem; }
+  .reality-cta--principal .marca3d-cena{ --marca-d:68px; width:68px; }
+  .reality-cta--principal .faixa-inicio,
+  .reality-cta--principal .reality-cta__detalhe{ grid-column:1 / -1; order:1; }
+  .reality-cta--principal .reality-cta__rodape{ order:1; }
+  .reality-cta--principal .reality-cta__texto > p{ font-size:.9rem; }
+  .reality-cta--principal .reality-cta__texto > .reality-cta__detalhe{ font-size:.84rem; }
+}
+.reality-cta__detalhe{ color:var(--texto-fraco); }
+/* Celulares de até 860px de altura (375x812, 390x844): espaçamentos e logo
+   menores, sem tirar nenhum texto, para "Analisar uma compra" ficar acima
+   da navegação. */
+@media (max-width: 600px) and (max-height: 860px){
+  .painel-pergunta{ padding:.4rem .7rem .45rem; }
+  .painel-perguntas{ gap:.35rem; }
+  .hero--painel{ padding-block:.6rem; }
+  .hero--painel h2{ font-size:1.05rem; }
+  .reality-cta--principal{ padding-top:.75rem; }
+  .reality-cta--principal .marca3d-cena{ --marca-d:48px; width:48px; }
+}
+/* Telas baixas (360x740, 375x667): cada pergunta vira rótulo, resposta e
+   link, sem a frase explicativa (ela está no cartão do saldo e nas telas de
+   destino). Um alerta continua aparecendo. */
+@media (max-width: 600px) and (max-height: 760px){
+  .painel-pergunta__nota:not([data-tom="alerta"]){ display:none; }
+}
+@media (max-width: 340px){
+  .painel-pergunta{ grid-template-columns:minmax(0,1fr); }
+  .painel-pergunta__acao{ grid-column:1; grid-row:auto; justify-self:start; text-align:left; }
+}
+@media (pointer: coarse){
+  .painel-pergunta__acao,.grupo-recolhivel__resumo{ min-height:44px; }
+  .painel-pergunta__acao{ display:inline-flex; align-items:center; }
+}
+
+/* Sinal e valor sempre juntos na mesma linha. */
+.valor-junto{ white-space:nowrap; }

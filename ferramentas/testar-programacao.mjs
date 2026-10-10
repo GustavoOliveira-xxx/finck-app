@@ -181,15 +181,27 @@ const base = (status, extra = {}) => ({
   ...extra
 });
 
+// A regra continua cadastrada, mas pausada: a ocorrência vale e a regra não
+// projeta outros ciclos. Previsão em aberto de regra apagada não conta.
+const pausada = mensal.map((r) => ({ ...r, active: false }));
+
 const comOcs = (ocs, dias = 30) => P.panorama({
   ocorrencias: ocs,
-  recorrentes: []
+  recorrentes: pausada
 }, 1e3, {
   referencia: HOJE,
   dias: dias
 });
 
 conferir("pendente vencida continua comprometida", comOcs([ base("pendente") ]).comprometidoTotal, 99);
+
+conferir("previsão de regra apagada não conta", P.panorama({
+  ocorrencias: [ base("pendente") ],
+  recorrentes: []
+}, 1e3, {
+  referencia: HOJE,
+  dias: 30
+}).comprometidoTotal, 0);
 
 conferir("pendente vencida vem marcada", comOcs([ base("pendente") ]).compromissos.map(c => c.vencido), [ true ]);
 
@@ -270,7 +282,7 @@ const duasVencidas = P.panorama({
     due_date: "2026-08-20",
     planned_amount: 200
   } ],
-  recorrentes: []
+  recorrentes: pausada
 }, 1e3, {
   referencia: HOJE,
   dias: 30
@@ -294,7 +306,7 @@ const soVencidas = P.panorama({
     id: "v1",
     due_date: "2026-08-05"
   } ],
-  recorrentes: []
+  recorrentes: pausada
 }, 1e3, {
   referencia: HOJE,
   dias: 30
