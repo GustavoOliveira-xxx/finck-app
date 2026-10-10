@@ -288,6 +288,12 @@ button.link-mais{ padding:0; }
   .painel-pergunta__acao,.grupo-recolhivel__resumo{ min-height:44px; }
   .painel-pergunta__acao{ display:inline-flex; align-items:center; }
 }
+/* No celular, o link de cada pergunta mantém a área de toque de 44px, mas a
+   margem negativa devolve a altura extra ao cartão: sem isso, as três
+   perguntas crescem e empurram "Analisar uma compra" para baixo da nav. */
+@media (pointer: coarse) and (max-width: 600px){
+  .painel-pergunta__acao{ margin-block:-12px; }
+}
 
 /* Sinal e valor sempre juntos na mesma linha. */
 .valor-junto{ white-space:nowrap; }
