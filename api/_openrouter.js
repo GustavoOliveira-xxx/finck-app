@@ -141,6 +141,27 @@ async function conversar({
   return resultado;
 }
 
+// A FINCK AI é consultora, não juíza nem vendedora. O prompt já proíbe, mas
+// modelos gratuitos às vezes escapam: ordem de compra ("compre", "não
+// compre") ou veredito sobre a compra ("ótima compra", "a compra é ruim").
+// Quem chama usa isto para pedir outra resposta. Frases como "se você
+// comprar agora", "caso você compre" (subjuntivo, não é ordem) ou "esperar
+// antes de comprar" passam.
+const INICIO = "(?<!\\p{L})";
+const FIM = "(?!\\p{L})";
+const ORDEM_OU_VEREDITO = new RegExp([
+  `(?<!${INICIO}(?:que|caso|quando|talvez|se|você|voce|vc)\\s+(?:n[ãa]o\\s+)?)${INICIO}(n[ãa]o\\s+)?compre(m)?${FIM}`,
+  `${INICIO}(recomendo|sugiro|aconselho|melhor)\\s+(que\\s+)?(você\\s+|voce\\s+)?(n[ãa]o\\s+)?compr\\p{L}*`,
+  `${INICIO}(boa|ótim[ao]|excelente|péssim[ao]|ruim|má)\\s+compra${FIM}`,
+  `${INICIO}compra\\s+(é|seria|foi)\\s+(uma\\s+)?(boa|ótima|excelente|péssima|ruim)${FIM}`,
+  `${INICIO}pode\\s+comprar[,!]?\\s+(sem\\s+(problema|medo|culpa|preocupa)|tranquil|sim${FIM})`,
+  `${INICIO}sim,?\\s+(você\\s+|voce\\s+)?pode\\s+comprar${FIM}`,
+  `${INICIO}vale\\s+(muito\\s+)?a\\s+pena\\s+comprar`,
+  `${INICIO}vale\\s+muito\\s+a\\s+pena${FIM}`,
+].join("|"), "iu");
+
+const soaComoJuiz = (texto) => ORDEM_OU_VEREDITO.test(String(texto || ""));
+
 // Primeiro objeto JSON de um texto: tolera cercas de código e frases antes
 // ou depois, que modelos gratuitos às vezes acrescentam.
 function extrairJson(texto) {
@@ -162,6 +183,7 @@ module.exports = {
   configurado,
   preferidos,
   naoConversa,
+  soaComoJuiz,
   hoje,
   conversar,
   extrairJson,

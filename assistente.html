@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
+  <link rel="stylesheet" href="css/inteligencia.css">
   <link rel="stylesheet" href="css/assistente.css">
   <link rel="stylesheet" href="css/clareza.css">
 </head>
@@ -64,7 +65,8 @@
     <section class="raiox" aria-labelledby="tituloRaiox">
       <div class="raiox__indice" id="indiceFinck"></div>
       <h3 id="tituloRaiox">Raio-X em seis dimensões</h3>
-      <p class="descricao">Cada cartão mostra o seu número, a referência usada e de onde ele vem. Nada aqui depende de IA: são contas feitas no seu aparelho com os dados que você registrou.</p>
+      <p class="descricao">Cada cartão mostra o seu número, a referência usada e de onde ele vem. Nada aqui depende de IA: são contas do FinCK, feitas no seu aparelho com os dados que você registrou.</p>
+      <p class="raiox__legenda"><span class="selo-certeza selo-certeza--confirmado">Dado confirmado</span> vem do que você registrou. <span class="selo-certeza selo-certeza--estimativa">Estimativa</span> usa a média de poucos meses ou um mês ainda em andamento, e muda conforme você registra mais.</p>
       <div class="grade-dimensoes" id="dimensoes"></div>
       <details class="detalhes-hipoteses">
         <summary>Como o índice FinCK é calculado</summary>
@@ -77,34 +79,53 @@
       <ol class="lista-prioridades" id="prioridades"></ol>
     </section>
 
-    <section class="bloco bloco--plano" aria-labelledby="tituloPlano">
+    <!-- O modo (demonstração, local ou com IA) é descoberto ao abrir a página
+         e declarado aqui antes de qualquer clique: título, texto, ficha e
+         botão mudam juntos em js/assistente.js. -->
+    <section class="bloco bloco--plano" aria-labelledby="tituloPlano" data-modo="conferindo">
       <div class="bloco-cabecalho">
         <h3 id="tituloPlano">Seu plano de ação</h3>
-        <span class="selo-origem" id="origemPlano" hidden></span>
+        <span class="selo-origem" id="origemPlano">Conferindo…</span>
       </div>
-      <p class="descricao" id="descricaoPlano">A IA lê o seu raio-X e transforma os números em passos concretos para as próximas semanas.</p>
-      <button type="button" class="btn-primario btn-grande" id="btnGerarPlano">Gerar meu plano</button>
-      <p class="status-processo" id="statusPlano" aria-live="polite"></p>
-      <div id="plano" aria-live="polite"></div>
+      <p class="descricao" id="descricaoPlano">Conferindo se a FINCK AI está disponível nesta conta…</p>
+      <dl class="ficha-plano" id="fichaPlano" hidden></dl>
+      <button type="button" class="btn-primario btn-grande" id="btnGerarPlano" disabled>Gerar plano</button>
+      <ol class="etapas-finck etapas-plano" id="etapasPlano" hidden></ol>
+      <p class="status-processo" id="statusPlano" role="status" aria-live="polite"></p>
+      <div id="plano"></div>
       <details class="detalhes-hipoteses" id="detalhesEnvio">
-        <summary>O que é enviado para a IA</summary>
-        <p class="descricao">Só o retrato abaixo: números agregados e arredondados, nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. O FinCK não guarda a resposta no servidor; o último plano fica só neste aparelho.</p>
-        <pre class="json-enviado" id="jsonEnviado" tabindex="0"></pre>
+        <summary>O que é enviado para a FINCK AI (plano e conversa)</summary>
+        <div class="envio-finck">
+          <p class="descricao" id="explicaEnvio">Só o retrato agregado abaixo: números arredondados, nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu.</p>
+          <h4>Pedido do plano</h4>
+          <pre class="json-enviado json-enviado--curto" id="pedidoPlano" tabindex="0"></pre>
+          <h4>Pedido de uma pergunta na conversa</h4>
+          <pre class="json-enviado json-enviado--curto" id="pedidoConversa" tabindex="0"></pre>
+          <h4>O retrato agregado, igual nos dois pedidos</h4>
+          <pre class="json-enviado" id="jsonEnviado" tabindex="0"></pre>
+        </div>
       </details>
     </section>
 
     <section class="bloco" id="secaoConversa" aria-labelledby="tituloConversa">
-      <h3 id="tituloConversa">Pergunte ao FinCK</h3>
-      <p class="descricao">Perguntas sobre a sua vida financeira, respondidas com os seus números.</p>
-      <div class="sugestoes" id="sugestoes" role="group" aria-label="Perguntas sugeridas"></div>
+      <div class="bloco-cabecalho">
+        <h3 id="tituloConversa">Pergunte sobre o seu raio-X</h3>
+        <span class="selo-origem" id="origemConversa" hidden></span>
+      </div>
+      <p class="descricao">A FINCK AI responde a partir dos números deste raio-X: renda, gastos, reserva, parcelas, metas e decisões de consumo. Não é um chat sobre qualquer assunto.</p>
+      <p class="sugestoes__titulo" id="tituloSugestoes">Perguntas a partir das suas prioridades</p>
+      <div class="sugestoes" id="sugestoes" role="group" aria-labelledby="tituloSugestoes"></div>
       <div class="conversa" id="conversa" aria-live="polite"></div>
       <form id="formPergunta" class="form-pergunta" novalidate>
-        <label>Sua pergunta
-          <textarea id="pergunta" rows="2" maxlength="400" placeholder="Ex.: Quanto consigo guardar por mês?"></textarea>
-        </label>
-        <button type="submit" class="btn-secundario" id="btnPerguntar">Perguntar</button>
+        <label class="conversa-finck__rotulo" for="pergunta">Sua pergunta para a FINCK AI</label>
+        <textarea id="pergunta" rows="2" maxlength="400" placeholder="Ex.: Quanto consigo guardar por mês?" aria-describedby="avisoEnvioConversa avisoConversa"></textarea>
+        <div class="aviso-envio-finck" id="avisoEnvioConversa" hidden>
+          <p id="textoEnvioConversa">Sua pergunta será enviada à FINCK AI com o retrato financeiro agregado. Não envie senhas, dados bancários, documentos ou informações de outras pessoas.</p>
+          <p>A conversa não fica salva: ela some quando você sai desta página. <a href="#detalhesEnvio" data-abrir-envio>Ver o que é enviado</a></p>
+        </div>
+        <p class="conversa-finck__indisponivel" id="avisoConversa" hidden></p>
+        <button type="submit" class="btn-secundario" id="btnPerguntar" disabled>Perguntar à FINCK AI</button>
       </form>
-      <p class="nota" id="avisoConversa" hidden></p>
     </section>
 
     <section class="bloco" aria-labelledby="tituloNumeros">
@@ -112,7 +133,7 @@
       <div class="numeros-assistente" id="numeros"></div>
     </section>
 
-    <p class="aviso-educativo">O Assistente FinCK é uma ferramenta educativa. Ele não é consultoria financeira, não recomenda investimentos, bancos ou crédito, e a decisão é sempre sua.</p>
+    <p class="aviso-educativo">O Assistente FinCK é uma ferramenta educativa. O raio-X e o plano local são contas e regras do FinCK; os textos marcados como FINCK AI são escritos por IA a partir do retrato agregado. Nada aqui é consultoria financeira nem recomendação de investimento, banco ou crédito, e a decisão continua sendo sua.</p>
     <p class="link-rodape"><a href="home.html">← Voltar ao início</a></p>
 
   </main>

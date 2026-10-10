@@ -314,9 +314,14 @@ window.FinckDiagnostico = (() => {
       add("critico", "Fechar o mês sem gastar mais do que entra", d.poupanca.explicacao, "Ver para onde vai o dinheiro", "analises.html", "poupanca");
     }
     if (d.reserva.nivel === "critico" || d.reserva.nivel === "atencao") {
-      const alvo = r.custo_mensal * p.RESERVA_MINIMA_MESES;
+      const minimo = r.custo_mensal * p.RESERVA_MINIMA_MESES;
+      const ideal = r.custo_mensal * p.RESERVA_IDEAL_MESES;
       const temMetaReserva = r.metas.some(m => /reserva|emerg/i.test(m.nome || ""));
-      add(d.reserva.nivel, temMetaReserva ? "Reforçar a reserva de emergência" : "Começar uma reserva de emergência", `${d.reserva.explicacao} O primeiro degrau é ${moeda(alvo)} (${p.RESERVA_MINIMA_MESES} meses de custo fixo).`, temMetaReserva ? "Ver minhas metas" : "Criar a meta de reserva", temMetaReserva ? "metas.html" : "metas.html#nova", "reserva");
+      // Com o primeiro degrau alcançado, o texto aponta o próximo alvo.
+      const passouMinimo = r.reserva_meses >= p.RESERVA_MINIMA_MESES;
+      const degrau = passouMinimo ? `O primeiro degrau (${moeda(minimo)}, ${p.RESERVA_MINIMA_MESES} meses de custo fixo) já foi alcançado; o próximo alvo é ${moeda(ideal)} (${p.RESERVA_IDEAL_MESES} meses).` : `O primeiro degrau é ${moeda(minimo)} (${p.RESERVA_MINIMA_MESES} meses de custo fixo).`;
+      const titulo = temMetaReserva ? "Reforçar a reserva de emergência" : passouMinimo ? "Separar a reserva de emergência numa meta" : "Começar uma reserva de emergência";
+      add(d.reserva.nivel, titulo, `${d.reserva.explicacao} ${degrau}`, temMetaReserva ? "Ver minhas metas" : "Criar a meta de reserva", temMetaReserva ? "metas.html" : "metas.html#nova", "reserva");
     }
     const emAlta = r.categorias.find(c => c.tendencia_pct !== null && c.tendencia_pct >= p.TENDENCIA_ALTA_PCT && c.participacao >= 10);
     if (emAlta) {
@@ -462,6 +467,8 @@ window.FinckDiagnostico = (() => {
       versao: 1,
       referencia: r.referencia,
       meses_considerados: r.meses_considerados,
+      // Mês em andamento: as médias ainda são estimativa.
+      mes_parcial: r.mes_parcial === true,
       renda_mensal: arred(r.renda),
       tipo_renda: r.tipo_renda,
       despesas_fixas: arred(r.despesas_fixas),
@@ -511,6 +518,32 @@ window.FinckDiagnostico = (() => {
     };
   }
 
+  // O mesmo retrato em texto, para a conversa pela rota da FINCK AI
+  // (api/ia.js, campo "contexto"). Só números, níveis e nomes de categoria:
+  // metas entram numeradas, sem o nome, e nenhuma conta ou lançamento vai.
+  function contextoDaConversa(diag) {
+    const r = paraIA(diag);
+    const casa1 = v => num(v).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+    const linhas = [
+      "Retrato agregado da vida financeira, calculado pelo FinCK (valores em reais, arredondados). Nomes de metas, contas e lançamentos não são enviados.",
+      `Período: ${r.meses_considerados} ${r.meses_considerados === 1 ? "mês" : "meses"} até ${r.referencia || "hoje"}${r.mes_parcial ? "; mês em andamento, as médias são estimativa" : ""}.`,
+      `Renda mensal declarada ${moeda(r.renda_mensal)}${r.tipo_renda ? ` (renda ${r.tipo_renda})` : ""}; despesas fixas ${moeda(r.despesas_fixas)}; sobra da renda após os fixos ${moeda(r.sobra_mensal)} por mês.`,
+      `Saldo atual ${moeda(r.saldo)}; parcelas por mês ${moeda(r.parcelas_mensais)}; parcelas que faltam pagar ${moeda(r.compromissos_abertos)}; saldo depois das parcelas ${moeda(r.disponivel_projetado)}.`,
+      `Médias por mês: entradas ${moeda(r.media_entradas)}; gastos ${moeda(r.media_gastos)}; guardado em metas ${moeda(r.media_guardado_em_metas)}; taxa de poupança ${casa1(r.taxa_poupanca_pct)}%.`,
+      `Reserva (saldo mais metas de reserva) ${moeda(r.reserva)}, que cobre ${casa1(r.reserva_meses)} ${arred(r.reserva_meses, 1) === 1 ? "mês" : "meses"} de custo fixo.`
+    ];
+    if (r.categorias.length) {
+      linhas.push(`Gastos por categoria (média por mês): ${r.categorias.map(c => `${c.nome} ${moeda(c.media_mensal)} (${casa1(c.participacao_pct)}% dos gastos${c.tendencia_pct === null ? "" : `, ${c.tendencia_pct >= 0 ? "+" : ""}${pct(c.tendencia_pct)} no último mês`})`).join("; ")}.`);
+    }
+    linhas.push(r.metas.length ? `Metas, numeradas e sem nome: ${r.metas.map((m, i) => `meta ${i + 1}: alvo ${moeda(m.alvo)}, guardado ${moeda(m.atual)}${m.prazo ? `, prazo ${m.prazo}` : ""}, aporte recente ${moeda(m.aporte_mensal_recente)} por mês${m.aporte_mensal_necessario === null ? "" : `, necessário ${moeda(m.aporte_mensal_necessario)} por mês`}, ${m.concluida ? "concluída" : m.no_ritmo ? "no ritmo" : "fora do ritmo"}`).join("; ")}.` : "Metas: nenhuma cadastrada.");
+    linhas.push(`Decisões de compra: ${r.consumo.analises} análise(s), ${r.consumo.decididas} com decisão${r.consumo.decididas ? `, ${pct(r.consumo.taxa_consciente_pct)} conscientes` : ""}.`);
+    if (r.indice !== null && r.indice !== undefined) {
+      linhas.push(`Índice FinCK: ${r.indice} de 100.`);
+    }
+    linhas.push(`Dimensões pelas regras do FinCK: ${diag.dimensoes.map(d => `${d.nome}: ${NIVEIS[d.nivel] || d.nivel}, ${d.valor_texto}${d.referencia ? ` (referência ${d.referencia})` : ""}`).join("; ")}.`);
+    return linhas.join("\n");
+  }
+
   // ------------------------------------------------------------ plano local
 
   // Mesmo formato do plano da IA, montado só com as regras. É o que aparece
@@ -525,11 +558,14 @@ window.FinckDiagnostico = (() => {
     const p = P();
     const folga = Math.max(0, r.base_renda - r.media_gastos);
     const sugestoes = [];
-    if (diag.dimensoes.find(d => d.id === "reserva")?.nivel !== "saudavel" && r.custo_mensal > 0 && folga > 0) {
+    // Quem já tem uma meta de reserva não recebe a sugestão de criar outra.
+    const temMetaReserva = (r.metas || []).some(m => /reserva|emerg/i.test(m.nome || ""));
+    if (!temMetaReserva && diag.dimensoes.find(d => d.id === "reserva")?.nivel !== "saudavel" && r.custo_mensal > 0 && folga > 0) {
+      const alvo = r.custo_mensal * (r.reserva_meses >= p.RESERVA_MINIMA_MESES ? p.RESERVA_IDEAL_MESES : p.RESERVA_MINIMA_MESES);
       sugestoes.push({
         nome: "Reserva de emergência",
-        valor_mensal: arred(Math.min(folga * .5, r.custo_mensal * p.RESERVA_MINIMA_MESES / 6)),
-        motivo: `Metade da sobra média do mês, até chegar a ${moeda(r.custo_mensal * p.RESERVA_MINIMA_MESES)}.`
+        valor_mensal: arred(Math.min(folga * .5, alvo / 6)),
+        motivo: `Metade da sobra média do mês, até chegar a ${moeda(alvo)}.`
       });
     }
     return {
@@ -556,6 +592,7 @@ window.FinckDiagnostico = (() => {
     NIVEIS: NIVEIS,
     diagnosticar: diagnosticar,
     paraIA: paraIA,
+    contextoDaConversa: contextoDaConversa,
     planoLocal: planoLocal,
     janelaDeMeses: janelaDeMeses,
     categorias: categorias,

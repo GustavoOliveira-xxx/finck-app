@@ -3431,7 +3431,7 @@ window.FinckTestes = (() => {
         compromissosAbertos: 900
       });
       esperar(r.semaforo.motivo).aSer("sem_projetado");
-      esperar(r.semaforo.titulo).aConter("déficit projetado");
+      esperar(r.semaforo.titulo).aConter("saldo depois das parcelas");
       esperar(r.disponivel_projetado).aSer(100);
     });
     teste("comprometimento da renda livre vem antes do percentual da renda", () => {
@@ -4011,6 +4011,14 @@ window.FinckTestes = (() => {
       esperar(ia.includes("description")).aSerFalso();
       esperar(ia).aConter("\"renda_mensal\":4000");
     });
+    teste("o retrato para a IA diz se o mês ainda está em andamento", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      const ia = D.paraIA(d);
+      esperar(typeof ia.mes_parcial).aSer("boolean");
+      esperar(ia.mes_parcial).aSer(d.retrato.mes_parcial === true);
+    });
     teste("plano por regras: no máximo 4 passos e meta que cabe na sobra", () => {
       const d = D.diagnosticar(base({
         saldo: 1500
@@ -4022,6 +4030,33 @@ window.FinckTestes = (() => {
       esperar(p.prioridades.length <= 4).aSerVerdadeiro();
       const folga = d.retrato.base_renda - d.retrato.media_gastos;
       esperar(p.metas_sugeridas.every(m => m.valor_mensal <= folga)).aSerVerdadeiro();
+    });
+    teste("o retrato em texto da conversa leva só números, sem nomes de metas ou lançamentos", () => {
+      const meta = { id: "m1", name: "Viagem SECRETA", target_amount: 5e3, current_amount: 1e3, deadline: "2027-06-01" };
+      const d = D.diagnosticar(base({ metas: [ meta ] }), { hoje: hoje });
+      const texto = D.contextoDaConversa(d);
+      esperar(texto.includes("SECRETA")).aSerFalso();
+      esperar(texto.includes("XPTO-PRIVADO")).aSerFalso();
+      esperar(texto).aConter("meta 1: alvo " + window.FinckUtils.moeda(5e3));
+      esperar(texto).aConter("Renda mensal declarada " + window.FinckUtils.moeda(4e3));
+      // Cabe no limite do contexto da rota geral (4000 caracteres).
+      esperar(texto.length < 4e3).aSerVerdadeiro();
+      esperar(/\d,0%/.test(texto)).aSerFalso();
+    });
+    teste("reserva acima do primeiro degrau aponta o próximo alvo e não repete a meta", () => {
+      // Custo fixo de 1.500: degraus de 4.500 (3 meses) e 9.000 (6 meses).
+      const meta = { id: "r1", name: "Reserva de emergência", target_amount: 6e3, current_amount: 0 };
+      const d = D.diagnosticar(base({ saldo: 5e3, metas: [ meta ] }), { hoje: hoje });
+      esperar(dim(d, "reserva").nivel).aSer("atencao");
+      const rec = d.prioridades.find(x => x.dimensao === "reserva");
+      esperar(rec.porque).aConter("já foi alcançado");
+      esperar(rec.porque).aConter(window.FinckUtils.moeda(9e3));
+      esperar(rec.porque.includes(`O primeiro degrau é ${window.FinckUtils.moeda(4500)}`)).aSerFalso();
+      esperar(D.planoLocal(d).metas_sugeridas.some(m => /reserva/i.test(m.nome))).aSerFalso();
+      // Sem meta de reserva, a sugestão leva ao alvo de 6 meses.
+      const semMeta = D.planoLocal(D.diagnosticar(base({ saldo: 5e3 }), { hoje: hoje }));
+      const sugerida = semMeta.metas_sugeridas.find(m => /reserva/i.test(m.nome));
+      esperar(sugerida.motivo).aConter(window.FinckUtils.moeda(9e3));
     });
   });
   descrever("Linha do tempo da compra (FinckLinhaTempo)", () => {
@@ -4172,8 +4207,12 @@ window.FinckTestes = (() => {
     }
     return resultado;
   }
+  // Os outros arquivos de teste (js/testes-*.js) registram suítes por aqui.
   return {
     rodar: rodar,
-    suites: suites
+    suites: suites,
+    descrever: descrever,
+    teste: teste,
+    esperar: esperar
   };
 })();
