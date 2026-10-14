@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teste FINCK AI</title>
+  <!-- Página interna de desenvolvedor: fora dos buscadores e fora da navegação do app. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Página interna de teste | rota api/ia</title>
   <style>
     body { font-family: Arial, sans-serif; background: #0f1115; color: #e8e8e8; max-width: 640px; margin: 40px auto; padding: 0 16px; }
     h1 { font-size: 22px; }
@@ -14,11 +16,13 @@
     #modelo { margin-top: 8px; font-size: 12px; color: #888; }
     label { display: block; margin-top: 14px; font-size: 14px; color: #bbb; }
     #contexto { height: 80px; font-family: monospace; font-size: 13px; }
+    .interna { padding: 10px 14px; border-radius: 8px; border: 1px dashed #f5c400; color: #f5d76e; font-size: 14px; line-height: 1.5; }
+    a { color: #c99af5; }
   </style>
 </head>
 <body>
-  <h1>Teste da FINCK AI</h1>
-  <p>Página de desenvolvimento, só para confirmar a conexão FinCK, Vercel e OpenRouter.</p>
+  <p class="interna"><strong>Página interna de teste, para desenvolvedores.</strong> Não faz parte do FinCK: serve só para confirmar a conexão entre o site, a função api/ia.js na Vercel e o OpenRouter, e mostra o modelo e o tempo de cada resposta. No app, a ajuda opcional fica recolhida no Reality e na <a href="assistente.html">Revisão financeira</a>.</p>
+  <h1>Teste da rota api/ia (FINCK AI)</h1>
 
   <label for="pergunta">Pergunta</label>
   <textarea id="pergunta">Me dê 3 dicas curtas para economizar dinheiro no mês.</textarea>

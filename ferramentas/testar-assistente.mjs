@@ -1,4 +1,5 @@
-// Testa o Assistente FinCK (api/assistente-ia.js).
+// Testa a rota da Revisão financeira (api/assistente-ia.js), chamada só
+// quando a pessoa pede a explicação escrita ou faz uma pergunta livre.
 //
 //   node ferramentas/testar-assistente.mjs
 //     Sem rede e sem gastar cota: validação do pedido, prompt, esquemas,
@@ -7,7 +8,8 @@
 //     fetch é trocado só para api.anthropic.com e para o Supabase).
 //
 //     Também cobre o caminho sem chave da Anthropic, pelos modelos gratuitos
-//     do OpenRouter (fetch simulado para openrouter.ai).
+//     do OpenRouter (fetch simulado para openrouter.ai), e o motor da página
+//     (js/diagnostico-engine.js): próximas ações e perguntas prontas, sem IA.
 //
 //   ANTHROPIC_API_KEY=<chave> node ferramentas/testar-assistente.mjs --ao-vivo
 //     Gera um plano e responde uma pergunta de verdade, com um retrato de
@@ -183,7 +185,7 @@ conferir("meta acima da sobra do mês é descartada", plano.metas_sugeridas.map(
 conferir("o descarte fica registrado", plano.metas_descartadas, 1);
 conferir("alerta vazio vira null", plano.alerta, null);
 conferir("origem marcada como IA", plano.origem, "ia");
-conferir("o plano diz quem escreveu e devolve a decisão", [plano.limites.includes("FINCK AI"), plano.limites.includes("A decisão continua sendo sua.")], [true, true]);
+conferir("o plano diz que foi escrito por IA, sem repetir a frase da decisão", [plano.limites.startsWith("Explicação escrita por IA"), plano.limites.includes("A decisão continua sendo sua.")], [true, false]);
 conferir("sem diagnóstico não há plano", api.montarPlano({ ...brutoPlano, diagnostico: "" }, sujo), null);
 conferir("sem prioridade válida não há plano", api.montarPlano({ ...brutoPlano, prioridades: [brutoPlano.prioridades[1]] }, sujo), null);
 conferir("sem sobra no mês nenhuma meta passa", api.montarPlano(brutoPlano, { ...sujo, media_entradas: 1000, media_gastos: 2000, sobra_mensal: -500 }).metas_sugeridas, []);
@@ -358,6 +360,71 @@ conferir("ordem de compra pelo OpenRouter pede outra resposta", [r.statusCode, r
 delete process.env.OPENROUTER_API_KEY;
 
 globalThis.fetch = fetchOriginal;
+
+// ------------------------------------------------------------------ motor da página
+
+// A Revisão financeira abre com o que js/diagnostico-engine.js calcula no
+// navegador, sem IA: as próximas ações (com a conta e o "por que importa") e
+// as respostas das perguntas prontas. O motor roda aqui num contexto isolado,
+// só com js/config.js, como no navegador.
+{
+  const vm = require("node:vm");
+  const fs = require("node:fs");
+  const caminho = (f) => new URL(`../${f}`, import.meta.url);
+  const janela = {};
+  const contexto = vm.createContext({ window: janela, console, Intl, Date, Math, Number, String, Object, Array, JSON });
+  for (const f of ["js/config.js", "js/diagnostico-engine.js"]) {
+    vm.runInContext(fs.readFileSync(caminho(f), "utf8"), contexto, { filename: f });
+  }
+  const D = janela.FinckDiagnostico;
+  const t = (date, type, amount, extra = {}) => ({ date, type, amount, description: "Lançamento XPTO-PRIVADO", ...extra });
+  const base = (extra = {}) => ({
+    perfil: { income_monthly: 4000, savings_percent: 10 },
+    transacoesRealizadas: [
+      t("2026-09-05", "entrada", 4000), t("2026-09-10", "saida", 1500, { category: "Moradia" }), t("2026-09-20", "saida", 800, { category: "Alimentação" }),
+      t("2026-08-05", "entrada", 4000), t("2026-08-10", "saida", 1500, { category: "Moradia" }), t("2026-08-20", "saida", 500, { category: "Alimentação" }),
+    ],
+    despesasFixas: 1500, saldo: 1500, compromissosAbertos: 0, disponivelProjetado: 1500,
+    metas: [], movimentosMeta: [], parcelamentos: [], analises: [], ...extra,
+  });
+  const hoje = { hoje: new Date("2026-10-15T12:00:00") };
+  const diag = D.diagnosticar(base(), hoje);
+  const CARA_DE_IA = /\bIA\b|FINCK AI|\u2726|\u2014|Sua vida financeira está|raio-X/;
+
+  const plano = D.planoLocal(diag);
+  conferir("próximas ações: cada uma com a conta e o porquê", plano.prioridades.every((x) => x.calculo.length > 1 && x.importa.length > 20 && x.nivel), true);
+  conferir("próximas ações: a conta mostra a regra e a nota", plano.prioridades[0].calculo.some((l) => l.rotulo === "Nota"), true);
+  conferir("próximas ações e resumo sem cara de IA", CARA_DE_IA.test(JSON.stringify(plano)) || CARA_DE_IA.test(diag.resumo), false);
+  conferir("resumo é um fato com o índice", diag.resumo.startsWith(`Índice FinCK de ${diag.indice}/100`), true);
+  conferir("hábito sugerido sem ordem", /^Para compras acima de uma hora/.test(plano.habito_da_semana), true);
+
+  const prontas = D.perguntasProntas(diag);
+  conferir("perguntas prontas: no máximo 5, a primeira segue a primeira prioridade", [prontas.length <= 5, prontas[0].id], [true, "reserva"]);
+  conferir("perguntas prontas sem repetição", new Set(prontas.map((x) => x.id)).size, prontas.length);
+  const respostas = prontas.map((x) => D.responder(diag, x.id));
+  conferir("toda pergunta pronta tem resposta calculada", respostas.every((r) => r && r.texto && r.calculo.length && ["confirmado", "estimativa"].includes(r.certeza)), true);
+  conferir("respostas calculadas sem cara de IA e sem descrição de lançamento", respostas.some((r) => CARA_DE_IA.test(JSON.stringify(r)) || JSON.stringify(r).includes("XPTO")), false);
+  const reserva = D.responder(diag, "reserva");
+  conferir("reserva: falta para 3 e para 6 meses", [reserva.calculo.find((l) => l.rotulo === "Falta para 3 meses").valor.endsWith("3000.00"), reserva.calculo.find((l) => l.rotulo === "Falta para 6 meses").valor.endsWith("7500.00")], [true, true]);
+  conferir("reserva: hipótese da sobra inteira vira estimativa", reserva.certeza, "estimativa");
+  const categoria = D.responder(diag, "categoria");
+  conferir("categoria em alta: último mês contra a média anterior", categoria.calculo.find((l) => l.rotulo === "Diferença").valor, "R$ 800.00 − R$ 500.00 = R$ 300.00");
+  const guardar = D.responder(diag, "guardar");
+  conferir("quanto sobra: usa o plano declarado no Perfil", guardar.texto.includes("O plano declarado no Perfil é guardar R$ 400.00 por mês."), true);
+  conferir("quanto sobra: sem aporte, não fala em R$ 0 para metas", guardar.texto.includes("Nenhum valor foi para metas no período."), true);
+  const indice = D.responder(diag, "indice");
+  conferir("índice: cita só as dimensões fora do saudável e as que ficaram de fora", [/reserva de emergência \(nota \d+\)/.test(indice.texto), /fluxo do mês \(nota/.test(indice.texto), indice.texto.includes("metas")], [true, false, true]);
+  conferir("pergunta desconhecida não tem resposta", D.responder(diag, "lua"), null);
+
+  const meta = { id: "m1", name: "Viagem", target_amount: 3000, current_amount: 600, deadline: "2027-04-15" };
+  const comMeta = D.diagnosticar(base({ metas: [meta] }), hoje);
+  const ritmo = D.responder(comMeta, "meta");
+  conferir("meta fora do ritmo: a pergunta pronta aparece com o nome", D.perguntasProntas(comMeta, 9).some((x) => x.id === "meta" && x.rotulo.includes("\"Viagem\"")), true);
+  conferir("meta parada: diz que não dá para estimar", ritmo.texto.includes("não recebeu aportes nos últimos 3 meses"), true);
+  const semRenda = D.diagnosticar(base({ perfil: {} }), hoje);
+  conferir("sem renda: perguntas de renda somem e nada quebra", D.perguntasProntas(semRenda, 9).some((x) => x.id === "fixos" || x.id === "parcelas"), false);
+  conferir("sem renda: a primeira ação é informar a renda, com o porquê", [D.planoLocal(semRenda).prioridades[0].titulo, D.planoLocal(semRenda).prioridades[0].importa.length > 0], ["Informar a sua renda mensal", true]);
+}
 
 console.log(`\n${ok} passaram, ${falhou} falharam\n`);
 process.exit(falhou ? 1 : 0);

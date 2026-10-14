@@ -1,14 +1,15 @@
-// Assistente FinCK: tela do planejamento pessoal.
+// Revisão financeira: tela do planejamento pessoal (arquivo assistente.html,
+// mantido para os links antigos continuarem valendo).
 //
-// Três camadas, de baixo para cima:
-//   1. FinckDiagnostico (js/diagnostico-engine.js) calcula o raio-X aqui, no
-//      aparelho, com regras e parâmetros visíveis em FINCK_CONFIG.DIAGNOSTICO.
-//   2. A rota api/assistente-ia.js recebe só o retrato agregado (paraIA) e a
-//      FINCK AI devolve linguagem: o plano de ação e as respostas da conversa.
-//   3. Esta tela mostra os dois e diz sempre de onde veio cada coisa.
-// Sem IA (demonstração, servidor sem chave, falha de rede), o plano é montado
-// pelas regras do FinCK, no mesmo formato: o recurso diminui, não some. O
-// modo é descoberto ao abrir a tela e declarado antes de qualquer clique.
+// O FinCK calcula primeiro, a pessoa decide e a IA só entra se ela pedir:
+//   1. FinckDiagnostico (js/diagnostico-engine.js) calcula o índice, as seis
+//      dimensões, as próximas ações e as respostas das perguntas prontas, aqui
+//      no aparelho, com os parâmetros de FINCK_CONFIG.DIAGNOSTICO.
+//   2. A página abre direto com isso, sem botão e sem chamada de rede.
+//   3. A ajuda opcional fica recolhida no fim: a pergunta livre e a explicação
+//      escrita das ações chamam a IA só depois do clique, e a resposta sai
+//      rotulada como escrita por IA. Se ela falhar, nada some: as ações pelas
+//      regras continuam na tela.
 document.addEventListener("DOMContentLoaded", async () => {
   const cfg = window.FINCK_CONFIG;
   const S = window.FinckStore;
@@ -16,8 +17,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const F = window.FinckFinance;
   const D = window.FinckDiagnostico;
   const user = await window.FinckNav.iniciarPagina({
-    titulo: "Assistente FinCK",
-    subtitulo: "Seu planejamento pessoal"
+    titulo: "Revisão financeira",
+    subtitulo: "Planejamento pessoal"
   });
   if (!user) {
     return;
@@ -26,14 +27,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const esc = U.escapeHTML;
   const IA = cfg.ASSISTENTE_IA || {};
   const IA_ATIVA = IA.ATIVA === true && !!IA.ENDPOINT;
-  // A conversa responde em qualquer modo: com conta e a rota do assistente
-  // disponível, por ela; senão (demonstração, rota do assistente ausente),
-  // pela rota geral da FINCK AI (api/ia.js), com o retrato em texto, sem nomes.
+  // Pergunta livre sem a rota da revisão (demonstração, rota ausente): vai
+  // pela rota geral (api/ia.js), com o retrato em texto, sem nomes.
   const ENDPOINT_LIVRE = "/api/ia";
-  const MSG_IA = {
-    ausente: "A FINCK AI não está disponível neste endereço.",
-    desligada: "A FINCK AI está desligada neste servidor agora."
-  };
+  const MAX_PERGUNTA = 400;
   const P = cfg.DIAGNOSTICO || {};
   const JANELA = P.JANELA_MESES || 3;
   const ctx = await F.carregarContexto();
@@ -51,6 +48,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       return false;
     }
   })();
+  // A explicação escrita só existe com conta e com a rota configurada; na
+  // demonstração o trecho nem aparece (nada de recurso desabilitado).
+  const comExplicacao = !demo && IA_ATIVA;
+
+  // Mensagens da ajuda opcional, sem jargão nem nome de serviço: o que
+  // aconteceu e o que fazer. As mesmas palavras do Reality.
+  const MSG = {
+    indisponivel: "A ajuda opcional não está disponível agora.",
+    limite: "A ajuda opcional atingiu o limite por agora. Tente de novo mais tarde.",
+    demorou: "A ajuda opcional demorou demais para responder. Tente de novo em instantes.",
+    conexao: "Não foi possível falar com a ajuda opcional. Confira a sua conexão e tente de novo.",
+    falhou: "A ajuda opcional não conseguiu responder agora. Tente de novo em instantes.",
+    sessao: "Sua sessão expirou. Entre de novo na sua conta e tente outra vez.",
+    recusa: "A ajuda opcional não respondeu a este pedido. Tente escrever a pergunta de outro jeito."
+  };
+  const VALEM = "Os números e as próximas ações desta página continuam valendo.";
+  const ROTULO_IA = "Resposta escrita por IA a partir dos números desta revisão.";
+  const ROTULO_EXPLICACAO = "Explicação escrita por IA a partir dos números desta revisão.";
+  const PROVEDORES = {
+    anthropic: "o Claude, da Anthropic",
+    openrouter: "modelos gratuitos do OpenRouter"
+  };
 
   // Rolagem suave só com a animação completa e sem pedido do sistema.
   const movimentoLiberado = () => {
@@ -63,9 +82,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   const meses = n => `${n} ${n === 1 ? "mês" : "meses"}`;
-  // Mensagens do servidor já costumam dizer o que fazer; a tela não repete.
-  const jaDizOQueFazer = t => /tente de novo|entre novamente|volte amanhã|espere/i.test(String(t || ""));
+  const minuscula = t => `${t.charAt(0).toLowerCase()}${t.slice(1)}`;
   const selo = tipo => tipo === "estimativa" ? '<span class="selo-certeza selo-certeza--estimativa">Estimativa</span>' : '<span class="selo-certeza selo-certeza--confirmado">Dado confirmado</span>';
+  const htmlConta = linhas => linhas && linhas.length ? `<dl class="conta-revisao">${linhas.map(l => `<div><dt>${esc(l.rotulo)}</dt><dd>${esc(l.valor)}</dd></div>`).join("")}</dl>` : "";
 
   // ------------------------------------------------------------ certeza
 
@@ -103,7 +122,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   const gastosEstimados = diag.retrato.mes_parcial || diag.retrato.meses_considerados < JANELA;
 
-  // ------------------------------------------------------------ raio-X
+  // ------------------------------------------------------------ índice
 
   function renderIndice() {
     const host = $("indiceFinck");
@@ -113,16 +132,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const nivel = diag.indice >= 75 ? "saudavel" : diag.indice >= 50 ? "atencao" : "critico";
     const estimadas = diag.dimensoes.filter(d => certeza(d)?.tipo === "estimativa").map(d => d.nome.toLowerCase());
+    const primeira = diag.prioridades[0];
     host.innerHTML = `
       <div class="indice-finck indice-finck--${nivel}">
         <span class="indice-finck__rotulo">Índice FinCK</span>
         <strong class="indice-finck__valor">${diag.indice}<small>/100</small></strong>
         <span class="indice-finck__nivel">vida financeira ${esc(diag.rotulo)}</span>
       </div>
-      <p class="raiox__resumo">${esc(diag.resumo)}</p>
+      <p class="raiox__resumo">${primeira ? `Primeira das próximas ações: ${esc(minuscula(primeira.titulo))}.` : "Nenhuma ação pendente no momento."}</p>
       ${estimadas.length ? `<p class="nota">${selo("estimativa")} O índice inclui estimativa em ${esc(estimadas.join(" e "))}, então ele pode mudar conforme você registra mais meses.</p>` : ""}`;
     window.FinckFundo?.tom(nivel === "saudavel" ? "positivo" : "neutro");
   }
+
+  // ------------------------------------------------------------ próximas ações
+
+  // Cada ação diz o que fazer e por quê, com o número que a disparou. A conta
+  // e o motivo de ela importar ficam recolhidos, um toque abaixo.
+  function htmlAcao(x) {
+    const d = DIMS[x.baseado_em || x.dimensao];
+    const c = certeza(d);
+    return `
+      <li class="acao-revisao acao-revisao--${esc(x.nivel || "info")}">
+        <div class="acao-revisao__topo">
+          <h4 class="acao-revisao__titulo">${esc(x.titulo)}</h4>
+          ${x.prazo ? `<span class="chip-prazo">${esc(x.prazo)}</span>` : ""}
+        </div>
+        <p class="acao-revisao__porque">${esc(x.porque)}</p>
+        <div class="acao-revisao__detalhes">
+          ${x.calculo && x.calculo.length ? `
+          <details class="ponto-finck__detalhe">
+            <summary>Como foi calculado?</summary>
+            <div class="ponto-finck__corpo">
+              ${d ? `<p>Regra do FinCK na dimensão <strong>${esc(d.nome)}</strong>:</p>` : ""}
+              ${htmlConta(x.calculo)}
+              ${c ? `<p class="acao-revisao__certeza">${selo(c.tipo)}${c.motivo ? ` ${esc(c.motivo)}` : ""}</p>` : ""}
+            </div>
+          </details>` : ""}
+          ${x.importa ? `
+          <details class="ponto-finck__detalhe">
+            <summary>Por que isso importa?</summary>
+            <div class="ponto-finck__corpo"><p>${esc(x.importa)}</p></div>
+          </details>` : ""}
+        </div>
+        ${x.href ? `<a class="btn-secundario btn-mini acao-revisao__link" href="${esc(x.href)}">${esc(x.acao || "Ver no app")}</a>` : ""}
+      </li>`;
+  }
+
+  function renderAcoes() {
+    const p = D.planoLocal(diag);
+    const extras = diag.prioridades.slice(p.prioridades.length);
+    if (demo) {
+      $("origemAcoes").textContent = "Montadas pelas regras do FinCK com os dados de exemplo, da mais urgente para a menos urgente.";
+    }
+    $("plano").innerHTML = `
+      ${p.alerta ? `<p class="alerta">${esc(p.alerta)}</p>` : ""}
+      ${p.prioridades.length ? `<ol class="acoes-revisao">${p.prioridades.map(htmlAcao).join("")}</ol>` : `<p class="acoes-revisao__vazio"><strong>Nenhuma ação pendente.</strong> Com os números de hoje, nenhuma regra do FinCK apontou algo a fazer. O FinCK of Reality ajuda a pesar as próximas compras.</p>`}
+      ${extras.length ? `
+      <details class="secao-finck acoes-revisao__mais">
+        <summary>
+          <span class="secao-finck__nome">Outros pontos, com menos urgência (${extras.length})</span>
+        </summary>
+        <div class="secao-finck__corpo"><ol class="acoes-revisao acoes-revisao--extras">${extras.map(htmlAcao).join("")}</ol></div>
+      </details>` : ""}
+      ${p.pontos_fortes.length ? `<div class="plano__fortes"><h4>O que já vai bem</h4><ul>${p.pontos_fortes.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+      ${p.metas_sugeridas.length ? `<div class="plano__metas"><h4>Meta sugerida</h4>${p.metas_sugeridas.map(m => `
+        <div class="meta-sugerida">
+          <strong>${esc(m.nome)}</strong>
+          <span class="meta-sugerida__valor">${U.moeda(m.valor_mensal)}<small>/mês</small></span>
+          <p>${esc(m.motivo || "")}</p>
+          <a class="btn-secundario btn-mini" href="metas.html#nova">Criar esta meta</a>
+        </div>`).join("")}<p class="nota">Uma sugestão não vira meta sozinha: ela só existe se você criar.</p></div>` : ""}
+      ${p.habito_da_semana ? `<div class="plano__habito"><h4>Hábito sugerido</h4><p>${esc(p.habito_da_semana)}</p></div>` : ""}`;
+  }
+
+  // ------------------------------------------------------------ dimensões
 
   function renderDimensoes() {
     $("dimensoes").innerHTML = diag.dimensoes.map(d => {
@@ -146,23 +229,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ${diag.dimensoes.map(d => `<li>${esc(d.nome)}: peso ${Math.round((P.PESOS?.[d.id] || 0) * 100)}%${d.referencia ? `, referência ${esc(d.referencia)}` : ""}</li>`).join("")}
       </ul>
       <p class="nota">As referências são didáticas e ficam todas em um só lugar do código (FINCK_CONFIG.DIAGNOSTICO). A regra 50/30/20 vem de Warren e Tyagi (2005); a reserva de ${P.RESERVA_MINIMA_MESES} a ${P.RESERVA_IDEAL_MESES} meses e o teto de parcelas são parâmetros prudenciais adotados pelo projeto. O índice não é score de crédito.</p>`;
-  }
-
-  function renderPrioridades() {
-    const host = $("prioridades");
-    if (!diag.prioridades.length) {
-      host.innerHTML = `<li class="prioridade prioridade--saudavel"><p><strong>Nada urgente agora.</strong> Os hábitos atuais estão segurando o mês. O FinCK of Reality ajuda a pesar as próximas compras.</p></li>`;
-      return;
-    }
-    host.innerHTML = diag.prioridades.slice(0, 5).map(x => `
-      <li class="prioridade prioridade--${x.nivel}">
-        <div>
-          <h4>${esc(x.titulo)}</h4>
-          <p>${esc(x.porque)}</p>
-          <small class="prioridade__origem">Baseado em: ${esc(NOMES[x.dimensao] || x.dimensao)}</small>
-        </div>
-        <a class="btn-secundario btn-mini" href="${x.href}">${esc(x.acao)}</a>
-      </li>`).join("");
   }
 
   function renderNumeros() {
@@ -204,197 +270,195 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>`;
   }
 
-  // Formato dos dois pedidos, para a pessoa ver antes de enviar qualquer coisa.
-  $("jsonEnviado").textContent = JSON.stringify(retrato, null, 2);
-  $("pedidoPlano").textContent = JSON.stringify({
-    planejamento: {
-      modo: "plano",
-      retrato: "(o retrato agregado abaixo)"
+  // ------------------------------------------------------------ dados e privacidade
+
+  // Tudo sobre o que sai do aparelho num lugar só, recolhido no fim. O nome
+  // do serviço e do modelo só aparece aqui, e só depois de a pessoa abrir
+  // um trecho da ajuda (é quando a página pergunta ao servidor).
+  const infoIA = {
+    provedor: null,
+    modelo: null
+  };
+  function quemEscreve() {
+    if (infoIA.provedor && PROVEDORES[infoIA.provedor]) {
+      return `Neste servidor, ${PROVEDORES[infoIA.provedor]}${infoIA.modelo ? ` (modelo ${infoIA.modelo})` : ""}, chamado pela função do FinCK na Vercel. A chave fica no servidor, nunca na página.`;
     }
-  }, null, 2);
-  $("pedidoConversa").textContent = JSON.stringify({
-    planejamento: {
-      modo: "pergunta",
-      retrato: "(o retrato agregado abaixo)",
+    if (!comExplicacao) {
+      return `Modelos gratuitos do OpenRouter${infoIA.modelo ? ` (neste servidor, ${infoIA.modelo})` : ""}, chamados pela função do FinCK na Vercel. A chave fica no servidor, nunca na página.`;
+    }
+    return "Um serviço de IA chamado pela função do FinCK na Vercel: o Claude, da Anthropic, quando o servidor tem essa chave; senão, modelos gratuitos do OpenRouter. A chave fica no servidor, nunca na página.";
+  }
+  function renderPrivacidade() {
+    const linhas = comExplicacao ? [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", "Só quando você pede a explicação escrita ou envia uma pergunta livre: o retrato agregado mostrado abaixo, com números arredondados e nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. Os dois pedidos exigem a sua conta." ], [ "Quem escreve o texto", quemEscreve() ], [ "Se a rota da revisão não responder", "A pergunta livre vai pela rota geral do FinCK, com o retrato em texto mostrado abaixo, sem nomes de metas, contas ou lançamentos." ], [ "Onde fica salvo", "A última explicação escrita fica só neste aparelho, no navegador. O servidor não grava o pedido nem a resposta em banco ou log; a mesma explicação fica até 10 minutos na memória da função. A conversa some quando você sai da página." ] ] : [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", `Só quando você envia uma pergunta livre: a pergunta e o retrato em texto mostrado abaixo, ${demo ? "com os números de exemplo da demonstração" : "com os seus números agregados"}. Não vão nomes de metas, contas ou lançamentos.` ], [ "Quem escreve a resposta", quemEscreve() ], [ "Onde fica salvo", "Em nenhum lugar: a conversa some quando você sai da página. O registro do servidor guarda só o status, o modelo e o tempo da chamada, nunca o texto." ] ];
+    $("fichaPrivacidade").innerHTML = linhas.map(([ t, v ]) => `<div><dt>${esc(t)}</dt><dd>${esc(v)}</dd></div>`).join("");
+  }
+  function renderPedidos() {
+    const json = v => esc(JSON.stringify(v, null, 2));
+    const livre = `${JSON.stringify({
       pergunta: "(a sua pergunta, até 400 caracteres)",
-      historico: "(até 6 mensagens anteriores desta conversa)"
-    }
-  }, null, 2);
-  renderIndice();
-  renderDimensoes();
-  renderPrioridades();
-  renderNumeros();
-
-  // ------------------------------------------------------------ modo
-
-  // GET sem login e sem cota: diz se a rota existe e tem chave. Na
-  // demonstração não chama nada. Sem resposta (site estático, 404 local,
-  // rota fora do ar), o modo é o plano local.
-  let situacao = null;
-  function disponibilidade() {
-    if (situacao) {
-      return situacao;
-    }
-    situacao = (async () => {
-      if (demo) {
-        return {
-          tipo: "demo"
-        };
-      }
-      if (!IA_ATIVA) {
-        return {
-          tipo: "local",
-          motivo: "A FINCK AI não está ligada nesta versão do app."
-        };
-      }
-      const ctrl = new AbortController;
-      const alarme = setTimeout(() => ctrl.abort(), 6000);
-      try {
-        const r = await fetch(IA.ENDPOINT, {
-          method: "GET",
-          cache: "no-store",
-          signal: ctrl.signal
-        });
-        if (r.status === 404) {
-          return {
-            tipo: "local",
-            motivo: MSG_IA.ausente
-          };
+      contexto: "(o retrato em texto, logo abaixo)"
+    }, null, 2)}`;
+    $("pedidosEnviados").innerHTML = comExplicacao ? `
+      <h4>Pedido da explicação escrita</h4>
+      <pre class="json-enviado json-enviado--curto" tabindex="0">${json({
+        planejamento: {
+          modo: "plano",
+          retrato: "(o retrato agregado abaixo)"
         }
-        const s = r.ok ? await r.json().catch(() => null) : null;
-        if (!s || s.ok !== true) {
-          return {
-            tipo: "local",
-            motivo: "A FINCK AI não respondeu agora."
-          };
+      })}</pre>
+      <h4>Pedido de uma pergunta livre</h4>
+      <pre class="json-enviado json-enviado--curto" tabindex="0">${json({
+        planejamento: {
+          modo: "pergunta",
+          retrato: "(o retrato agregado abaixo)",
+          pergunta: "(a sua pergunta, até 400 caracteres)",
+          historico: "(até 6 mensagens anteriores desta conversa)"
         }
-        return s.ia ? {
-          tipo: "ia",
-          provedor: s.provedor || null
-        } : {
-          tipo: "local",
-          motivo: MSG_IA.desligada
-        };
-      } catch {
-        return {
-          tipo: "local",
-          motivo: "Sem conexão com a FINCK AI agora."
-        };
-      } finally {
-        clearTimeout(alarme);
-      }
-    })();
-    return situacao;
+      })}</pre>
+      <h4>O retrato agregado, igual nos dois pedidos</h4>
+      <pre class="json-enviado" id="jsonEnviado" tabindex="0">${json(retrato)}</pre>
+      <h4>O retrato em texto, se a pergunta for pela rota geral</h4>
+      <pre class="json-enviado" id="contextoEnviado" tabindex="0">${esc(contextoConversa)}</pre>` : `
+      <h4>Pedido de uma pergunta livre</h4>
+      <pre class="json-enviado json-enviado--curto" tabindex="0">${esc(livre)}</pre>
+      <h4>O retrato em texto que vai junto</h4>
+      <pre class="json-enviado" id="contextoEnviado" tabindex="0">${esc(contextoConversa)}</pre>`;
   }
 
-  // GET sem custo na rota geral: 404 ou ia:false avisam antes de a pessoa
-  // escrever. Sem resposta, fica em aberto e o próprio envio conta o motivo.
-  let situacaoLivre = null;
-  function iaLivre() {
-    if (!situacaoLivre) {
-      situacaoLivre = (async () => {
-        const ctrl = new AbortController;
-        const alarme = setTimeout(() => ctrl.abort(), 6000);
+  if (demo) {
+    $("avisoDemo").hidden = false;
+    $("avisoEnvioConversa").innerHTML = "<strong>O que é enviado:</strong> a sua pergunta e os números de exemplo desta revisão, em texto. Não vão nomes de metas, contas ou lançamentos.";
+  }
+  renderIndice();
+  renderAcoes();
+  renderDimensoes();
+  renderNumeros();
+  renderPrivacidade();
+  renderPedidos();
+
+  // ------------------------------------------------------------ rotas (sob pedido)
+
+  // GET sem login e sem cota, feito só quando a pessoa abre um trecho da
+  // ajuda opcional, nunca ao carregar a página. Diz se a rota existe e tem
+  // chave; sem resposta, o próprio envio conta o motivo.
+  const comPrazo = async (url, ms = 6000) => {
+    const ctrl = new AbortController;
+    const alarme = setTimeout(() => ctrl.abort(), ms);
+    try {
+      return await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+        signal: ctrl.signal
+      });
+    } finally {
+      clearTimeout(alarme);
+    }
+  };
+  let rotaMemo = null;
+  function rotaAssistente() {
+    if (!rotaMemo) {
+      rotaMemo = (async () => {
+        if (!comExplicacao) {
+          return {
+            tipo: "local",
+            codigo: "DESLIGADA"
+          };
+        }
         try {
-          const r = await fetch(ENDPOINT_LIVRE, {
-            method: "GET",
-            cache: "no-store",
-            signal: ctrl.signal
-          });
+          const r = await comPrazo(IA.ENDPOINT);
           if (r.status === 404) {
             return {
-              ok: false,
-              motivo: MSG_IA.ausente
+              tipo: "local",
+              codigo: "AUSENTE"
             };
           }
-          const j = await r.json().catch(() => null);
-          return j && j.ia === false ? {
-            ok: false,
-            motivo: MSG_IA.desligada
-          } : {
-            ok: true
+          const s = r.ok ? await r.json().catch(() => null) : null;
+          if (!s || s.ok !== true) {
+            return {
+              tipo: "local",
+              codigo: "FALHOU"
+            };
+          }
+          if (!s.ia) {
+            return {
+              tipo: "local",
+              codigo: "DESLIGADA"
+            };
+          }
+          infoIA.provedor = s.provedor || null;
+          infoIA.modelo = s.modelo || null;
+          renderPrivacidade();
+          return {
+            tipo: "ia"
           };
         } catch {
-          return null;
-        } finally {
-          clearTimeout(alarme);
+          // Sem conexão agora: a próxima tentativa pergunta de novo.
+          rotaMemo = null;
+          return {
+            tipo: "local",
+            codigo: "CONEXAO"
+          };
         }
       })();
     }
-    return situacaoLivre;
+    return rotaMemo;
   }
-  async function canalDaConversa(m) {
-    if (m.tipo === "ia") {
-      return {
-        canal: "assistente"
-      };
+  let livreMemo = null;
+  function iaLivre() {
+    if (!livreMemo) {
+      livreMemo = (async () => {
+        try {
+          const r = await comPrazo(ENDPOINT_LIVRE);
+          if (r.status === 404) {
+            return {
+              ok: false
+            };
+          }
+          const j = await r.json().catch(() => null);
+          if (j && j.ia === false) {
+            return {
+              ok: false
+            };
+          }
+          if (j && j.modelo && !infoIA.provedor) {
+            infoIA.modelo = String(j.modelo);
+            renderPrivacidade();
+          }
+          return {
+            ok: true
+          };
+        } catch {
+          livreMemo = null;
+          return null;
+        }
+      })();
     }
-    const livre = await iaLivre();
-    return livre && livre.ok === false ? {
-      canal: null,
-      motivo: livre.motivo
-    } : {
-      canal: "livre"
-    };
-  }
-
-  const PROVEDORES = {
-    anthropic: "o Claude, da Anthropic",
-    openrouter: "modelos gratuitos do OpenRouter"
-  };
-
-  // Tudo que muda com o modo, num lugar só: título, texto, selo, ficha,
-  // botão e a conversa.
-  const MODOS = {
-    demo: {
-      titulo: "Plano demonstrativo",
-      texto: "Este plano é montado pelas regras do FinCK usando dados de exemplo. Com uma conta, a FINCK AI pode escrever um plano a partir dos seus números agregados.",
-      botao: "Gerar plano demonstrativo",
-      selo: [ "regras", "Regras do FinCK" ],
-      ficha: () => [ [ "Quem escreve", "As regras do FinCK, no seu aparelho, sem IA." ], [ "O que é enviado", "Nada para montar o plano. Uma pergunta na conversa leva os números de exemplo, sem nomes." ], [ "Onde fica salvo", "Em nenhum lugar: o plano é refeito na hora a cada clique." ] ]
-    },
-    local: {
-      titulo: "Plano local",
-      texto: "A FINCK AI está indisponível agora. O FinCK ainda pode montar um plano pelas regras locais.",
-      botao: "Gerar plano local",
-      selo: [ "regras", "Regras do FinCK" ],
-      ficha: m => [ [ "Por que local", `${m.motivo || "A FINCK AI não respondeu."} As contas e as regras funcionam sem ela.` ], [ "O que é enviado", "Nada para montar o plano: as regras rodam neste aparelho." ], [ "Quando a FINCK AI voltar", "Recarregue a página mais tarde: o botão passa a ser Gerar meu plano." ], [ "Onde fica salvo", "Em nenhum lugar: o plano local é refeito na hora a cada clique." ] ]
-    },
-    ia: {
-      titulo: "Plano com IA",
-      texto: "A FINCK AI escreve a explicação usando o retrato agregado mostrado em O que é enviado.",
-      botao: "Gerar meu plano",
-      selo: [ "ia", "✦ FINCK AI" ],
-      ficha: m => [ [ "Quem escreve", `A FINCK AI${PROVEDORES[m.provedor] ? ` (${PROVEDORES[m.provedor]})` : ""} escreve o texto; os números e as notas são contas do FinCK.` ], [ "O que é enviado", "Só o retrato agregado, que você pode conferir abaixo antes de gerar." ], [ "Se a FINCK AI falhar", "O FinCK mostra na hora o plano pelas regras locais, e você pode tentar de novo em alguns minutos." ], [ "Onde fica salvo", "O último plano fica só neste aparelho, no navegador. O servidor não grava o pedido nem a resposta em banco ou log; o mesmo plano fica até 10 minutos na memória da função." ] ]
-    }
-  };
-
-  let modo = null;
-  let planoIaNaTela = false;
-  const botao = $("btnGerarPlano");
-
-  function rotuloBotao() {
-    if (!modo) {
-      return;
-    }
-    botao.textContent = modo.tipo === "ia" && planoIaNaTela ? "Gerar de novo" : MODOS[modo.tipo].botao;
+    return livreMemo;
   }
 
-  function aplicarModo(m) {
-    modo = m;
-    const d = MODOS[m.tipo];
-    document.querySelector(".bloco--plano").dataset.modo = m.tipo;
-    $("tituloPlano").textContent = d.titulo;
-    $("descricaoPlano").textContent = d.texto;
-    const origem = $("origemPlano");
-    origem.className = `selo-origem selo-origem--${d.selo[0]}`;
-    origem.textContent = d.selo[1];
-    const ficha = $("fichaPlano");
-    ficha.innerHTML = d.ficha(m).map(([ t, v ]) => `<div><dt>${esc(t)}</dt><dd>${esc(v)}</dd></div>`).join("");
-    ficha.hidden = false;
-    botao.disabled = false;
-    rotuloBotao();
-    $("explicaEnvio").textContent = m.tipo === "ia" ? `Só o retrato agregado abaixo: números arredondados, nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. Os pedidos vão para a rota do FinCK na Vercel, que exige a sua conta e repassa a ${PROVEDORES[m.provedor] || "um provedor de IA"}. O servidor não grava nada em banco nem em log; para não repetir a chamada, o mesmo plano fica até 10 minutos na memória da função. O último plano fica só neste aparelho, e a conversa some quando você sai da página.` : m.tipo === "demo" ? "Na demonstração, o plano é montado pelas regras do FinCK no seu aparelho e nada dele é enviado. Uma pergunta na conversa vai para a FINCK AI com o retrato em texto mostrado abaixo: números de exemplo, sem nomes de metas, contas ou lançamentos." : "Sem a rota do assistente, o plano é montado pelas regras do FinCK no seu aparelho e nada dele é enviado. Uma pergunta na conversa, se a FINCK AI responder, vai com o retrato em texto mostrado abaixo, sem nomes de metas, contas ou lançamentos.";
+  // Erro da IA vira uma frase da própria tela: sem nome de serviço, sem
+  // código e sem "servidor".
+  function mensagemDoErro(r) {
+    const c = r?.codigo;
+    if (c === "SEM_LOGIN") {
+      return MSG.sessao;
+    }
+    if (c === "LIMITE" || c === "OCUPADA") {
+      return MSG.limite;
+    }
+    if (c === "REDE" || c === "DEMOROU") {
+      return MSG.demorou;
+    }
+    if (c === "CONEXAO") {
+      return MSG.conexao;
+    }
+    if (c === "IA_INDISPONIVEL" || c === "AUSENTE") {
+      return MSG.indisponivel;
+    }
+    if (c === "RECUSA") {
+      return MSG.recusa;
+    }
+    return MSG.falhou;
   }
 
   async function pedir(corpo, aoEtapa = () => {}) {
@@ -403,8 +467,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!token) {
       return {
         ok: false,
-        codigo: "SEM_LOGIN",
-        motivo: "Sua sessão expirou. Entre novamente na sua conta para usar a FINCK AI."
+        codigo: "SEM_LOGIN"
       };
     }
     aoEtapa(1);
@@ -420,94 +483,298 @@ document.addEventListener("DOMContentLoaded", async () => {
         })
       });
       aoEtapa(2);
+      if (r.status === 404) {
+        return {
+          ok: false,
+          codigo: "AUSENTE"
+        };
+      }
       return await r.json().catch(() => null) || {
         ok: false,
-        motivo: "A FINCK AI respondeu fora do esperado."
+        codigo: "FALHOU"
       };
     } catch {
       return {
         ok: false,
-        codigo: "REDE",
-        motivo: "Não deu para falar com a FINCK AI. Confira a sua internet."
+        codigo: "CONEXAO"
       };
     }
   }
 
-  // ------------------------------------------------------------ plano
+  // Pela rota geral vão só a pergunta e o retrato em texto (sem nomes).
+  async function perguntarLivre(pergunta) {
+    try {
+      const r = await fetch(ENDPOINT_LIVRE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pergunta: pergunta,
+          contexto: contextoConversa
+        })
+      });
+      if (r.status === 404) {
+        return {
+          ok: false,
+          codigo: "AUSENTE"
+        };
+      }
+      const j = await r.json().catch(() => null);
+      if (r.ok && j && typeof j.resposta === "string" && j.resposta.trim()) {
+        return {
+          ok: true,
+          resposta: j.resposta.trim()
+        };
+      }
+      return {
+        ok: false,
+        codigo: r.status === 429 ? "LIMITE" : r.status === 504 ? "DEMOROU" : "FALHOU"
+      };
+    } catch {
+      return {
+        ok: false,
+        codigo: "CONEXAO"
+      };
+    }
+  }
 
+  // ------------------------------------------------------------ perguntas
+
+  const conversa = $("conversa");
+  const campo = $("pergunta");
+  const btnPerguntar = $("btnPerguntar");
+  const perguntaLivre = $("perguntaLivre");
+  const avisoConversa = $("avisoConversa");
+  const historico = [];
+  const prontas = D.perguntasProntas(diag);
+  const htmlSugestoes = () => prontas.map(s => `<button type="button" class="chip chip-finck" data-sugestao="${esc(s.id)}">${esc(s.rotulo)}</button>`).join("");
+  $("sugestoes").innerHTML = htmlSugestoes();
+  if (!prontas.length) {
+    $("rotuloSugestoes").hidden = true;
+  }
+
+  function novaTroca(pergunta) {
+    const art = document.createElement("article");
+    art.className = "troca-finck";
+    art.innerHTML = `<p class="troca-finck__pergunta"><span class="visualmente-oculto">Você perguntou: </span>${esc(pergunta)}</p><div class="troca-finck__resposta"></div>`;
+    conversa.appendChild(art);
+    return art;
+  }
+  function preencherTroca(art, tipo, html) {
+    art.className = `troca-finck troca-finck--${tipo}`;
+    art.querySelector(".troca-finck__resposta").innerHTML = html;
+  }
+  const htmlErro = (r, {comPerguntas: comPerguntas = true} = {}) => `
+    <p class="troca-finck__origem">Ajuda opcional</p>
+    <p class="troca-finck__texto">${esc(mensagemDoErro(r))}</p>
+    <p class="troca-finck__rodape">${esc(VALEM)}${comPerguntas && prontas.length ? " As perguntas acima têm resposta na hora, pelo cálculo do FinCK." : ""}</p>`;
+
+  // Pergunta pronta: resposta calculada no aparelho, sem rede.
+  $("conversa").parentElement.addEventListener("click", e => {
+    const b = e.target.closest("[data-sugestao]");
+    if (!b) {
+      return;
+    }
+    const id = b.dataset.sugestao;
+    const ja = conversa.querySelector(`[data-pronta="${CSS.escape(id)}"]`);
+    if (ja) {
+      rolarAte(ja);
+      return;
+    }
+    const resp = D.responder(diag, id);
+    if (!resp) {
+      return;
+    }
+    const art = novaTroca(resp.rotulo || b.textContent);
+    art.dataset.pronta = id;
+    preencherTroca(art, "calculo", `
+      <p class="troca-finck__origem">Cálculo do FinCK</p>
+      <p class="troca-finck__texto">${esc(resp.texto)}</p>
+      ${htmlConta(resp.calculo)}
+      ${selo(resp.certeza)}`);
+    rolarAte(art);
+  });
+
+  // Por onde a pergunta livre vai: com conta e a rota da revisão no ar, por
+  // ela; senão pela rota geral. Descoberto só quando a pessoa abre o trecho,
+  // foca o campo ou envia.
+  let foraDoAr = false;
+  async function canal() {
+    if (foraDoAr) {
+      return {
+        canal: null
+      };
+    }
+    if (comExplicacao) {
+      const m = await rotaAssistente();
+      if (m.tipo === "ia") {
+        return {
+          canal: "assistente"
+        };
+      }
+    }
+    const livre = await iaLivre();
+    return livre && livre.ok === false ? {
+      canal: null
+    } : {
+      canal: "livre"
+    };
+  }
+  function mostrarIndisponivel() {
+    foraDoAr = true;
+    avisoConversa.textContent = `${MSG.indisponivel} ${VALEM}${prontas.length ? " As perguntas acima têm resposta na hora, pelo cálculo do FinCK." : ""}`;
+    avisoConversa.hidden = false;
+    $("camposConversa").hidden = true;
+  }
+  async function conferirConversa() {
+    const c = await canal();
+    if (!c.canal) {
+      mostrarIndisponivel();
+    }
+    return c;
+  }
+  let abertaPeloCodigo = false;
+  perguntaLivre.addEventListener("toggle", () => {
+    if (perguntaLivre.open && !abertaPeloCodigo) {
+      conferirConversa();
+    }
+    abertaPeloCodigo = false;
+  });
+  campo.addEventListener("focus", () => {
+    conferirConversa();
+  }, {
+    once: true
+  });
+  const conta = $("perguntaConta");
+  const atualizarConta = () => {
+    conta.textContent = `${campo.value.length} de ${MAX_PERGUNTA} caracteres`;
+  };
+  campo.addEventListener("input", atualizarConta);
+
+  document.querySelector("[data-abrir-envio]")?.addEventListener("click", e => {
+    e.preventDefault();
+    const det = $("dadosPrivacidade");
+    det.open = true;
+    rolarAte(det, "start");
+    det.querySelector("summary").focus({
+      preventScroll: true
+    });
+  });
+
+  const ETAPAS_LIVRE = [ "Enviando a pergunta e os números desta revisão…" ];
+  const ETAPAS_CONTA = [ "Conferindo a sua sessão…", "Enviando a pergunta e o retrato agregado…", "Conferindo a resposta…" ];
+  let enviando = false;
+  $("formPergunta").addEventListener("submit", async e => {
+    e.preventDefault();
+    const texto = campo.value.trim();
+    if (texto.length < 3) {
+      return U.erroCampo("pergunta", "Escreva a sua pergunta.");
+    }
+    if (enviando) {
+      return;
+    }
+    enviando = true;
+    btnPerguntar.setAttribute("aria-busy", "true");
+    btnPerguntar.disabled = true;
+    try {
+      const c = await conferirConversa();
+      if (!c.canal) {
+        avisoConversa.focus();
+        return;
+      }
+      const livre = c.canal === "livre";
+      const ETAPAS = livre ? ETAPAS_LIVRE : ETAPAS_CONTA;
+      const art = novaTroca(texto);
+      preencherTroca(art, "espera", `<p class="troca-finck__origem">Ajuda opcional</p><p class="troca-finck__espera"><span class="ponto-espera" aria-hidden="true"></span> <span data-etapa>${esc(ETAPAS[0])}</span></p>`);
+      rolarAte(art);
+      campo.value = "";
+      atualizarConta();
+      const etapa = art.querySelector("[data-etapa]");
+      const r = livre ? await perguntarLivre(texto) : await pedir({
+        modo: "pergunta",
+        retrato: retrato,
+        pergunta: texto,
+        historico: historico.slice(-6)
+      }, i => {
+        etapa.textContent = ETAPAS[i];
+      });
+      if (!r || !r.ok) {
+        preencherTroca(art, "erro", htmlErro(r));
+        // A pergunta volta para o campo, para tentar de novo sem reescrever.
+        if (!campo.value) {
+          campo.value = texto;
+          atualizarConta();
+        }
+        if (r?.codigo === "AUSENTE") {
+          mostrarIndisponivel();
+        }
+        return;
+      }
+      if (livre) {
+        preencherTroca(art, "ia", `
+          <p class="troca-finck__origem">${esc(ROTULO_IA)}</p>
+          <p class="troca-finck__texto">${esc(r.resposta)}</p>
+          <p class="troca-finck__rodape">${demo ? "Com os números de exemplo da demonstração, sem" : "Sem"} nomes de metas, contas ou lançamentos.</p>`);
+        return;
+      }
+      const baseado = Array.isArray(r.baseado_em) ? r.baseado_em : [];
+      preencherTroca(art, "ia", `
+        <p class="troca-finck__origem">${esc(ROTULO_IA)}</p>
+        <p class="troca-finck__texto">${esc(r.resposta)}</p>
+        ${r.proximo_passo ? `<p class="troca-finck__rodape"><strong>Uma sugestão:</strong> ${esc(r.proximo_passo)}</p>` : ""}
+        ${baseado.length ? `<p class="troca-finck__rodape">Dimensões usadas: ${baseado.map(id => esc(NOMES[id] || id)).join(", ")}.</p>` : ""}
+        ${r.fora_do_escopo ? `<p class="troca-finck__rodape">Essa pergunta foge desta revisão; a ajuda responde melhor sobre renda, gastos, reserva, parcelas, metas e decisões de compra.</p>` : ""}`);
+      historico.push({
+        papel: "pessoa",
+        texto: texto
+      }, {
+        papel: "assistente",
+        texto: r.resposta
+      });
+    } finally {
+      enviando = false;
+      btnPerguntar.disabled = false;
+      btnPerguntar.removeAttribute("aria-busy");
+    }
+  });
+
+  // ------------------------------------------------------------ explicação escrita
+
+  const secaoExplicacao = $("secaoExplicacao");
+  const btnExplicacao = $("btnExplicacao");
+  const statusExplicacao = $("statusExplicacao");
+  const listaEtapas = $("etapasExplicacao");
   const PRAZO_ORDEM = [ "esta semana", "este mês", "nos próximos 3 meses" ];
 
-  // "Por que o FinCK diz isso?": os números da dimensão em que a prioridade
-  // se apoia, para a pessoa conferir a conclusão em vez de só acreditar nela.
-  function htmlPorque(x, origemIa) {
-    const d = DIMS[x.baseado_em];
-    if (!d) {
-      return "";
-    }
-    const c = certeza(d);
-    return `
-      <details class="porque-finck">
-        <summary>Por que o FinCK diz isso?</summary>
-        <div class="porque-finck__corpo">
-          <p>${origemIa ? "A FINCK AI escreveu esta prioridade a partir da dimensão" : "Esta prioridade sai da regra da dimensão"} <strong>${esc(d.nome)}</strong>. Os números são contas do FinCK:</p>
-          <dl class="porque-finck__numeros">
-            <div><dt>Situação</dt><dd>${esc(d.valor_texto)}</dd></div>
-            ${d.referencia ? `<div><dt>Referência</dt><dd>${esc(d.referencia)}</dd></div>` : ""}
-            ${d.nota !== null ? `<div><dt>Nota</dt><dd>${d.nota}/100, ${esc(D.NIVEIS[d.nivel].toLowerCase())}</dd></div>` : `<div><dt>Nota</dt><dd>${esc(D.NIVEIS[d.nivel])}</dd></div>`}
-          </dl>
-          <p>${esc(d.explicacao)}</p>
-          ${c ? `<p class="porque-finck__certeza">${selo(c.tipo)}${c.motivo ? ` ${esc(c.motivo)}` : ""}</p>` : ""}
-        </div>
-      </details>`;
-  }
-
-  // Depois do clique, o começo do plano entra na tela; se ele já está à
-  // vista, nada se mexe.
-  function mostrarPlano() {
-    const topo = $("plano").getBoundingClientRect().top;
-    if (topo > window.innerHeight * .6) {
-      rolarAte($("plano"), "start");
-    }
-  }
-
-  function renderPlano(p, {em: em = null, aviso: aviso = null} = {}) {
-    const ia = p.origem === "ia";
-    planoIaNaTela = ia;
+  function renderExplicacao(p, {em: em = null, aviso: aviso = null} = {}) {
     const prioridades = p.prioridades.slice().sort((a, b) => PRAZO_ORDEM.indexOf(a.prazo) - PRAZO_ORDEM.indexOf(b.prazo));
-    // Na demonstração as regras rodam sobre dados de exemplo, não "os seus".
-    const limites = !ia && demo ? "Plano montado pelas regras do FinCK com os dados de exemplo. É educativo: não é recomendação de investimento nem consultoria financeira." : p.limites || "";
-    $("plano").innerHTML = `
+    $("explicacao").innerHTML = `
       ${aviso ? `<p class="nota plano__aviso">${esc(aviso)}</p>` : ""}
-      <article class="plano plano--${ia ? "ia" : "regras"}" aria-label="${ia ? "Plano escrito pela FINCK AI" : "Plano montado pelas regras do FinCK"}">
-        <p class="plano__origem">${ia ? "✦ FINCK AI · escrito a partir do retrato agregado" : "Montado pelas regras do FinCK"}${em ? ` · ${esc(U.dataBR(em))}` : ""}</p>
-        <p class="plano__diagnostico">${esc(p.diagnostico)}</p>
-        ${p.pontos_fortes.length ? `<div class="plano__fortes"><h4>O que já vai bem</h4><ul>${p.pontos_fortes.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
-        <h4>Próximos passos</h4>
-        <ol class="plano__prioridades">${prioridades.map(x => `
+      <article class="troca-finck troca-finck--ia explicacao-escrita">
+        <p class="troca-finck__origem">${esc(ROTULO_EXPLICACAO)}${em ? ` (${esc(U.dataBR(em))})` : ""}</p>
+        <p class="troca-finck__texto">${esc(p.diagnostico)}</p>
+        ${p.pontos_fortes && p.pontos_fortes.length ? `<div class="plano__fortes"><h4>O que já vai bem</h4><ul>${p.pontos_fortes.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+        <h4>As próximas ações, explicadas</h4>
+        <ol class="explicacao-escrita__acoes">${prioridades.map(x => `
           <li>
-            <div class="plano__cabeca">
-              <strong>${esc(x.titulo)}</strong>
-              <span class="chip-prazo">${esc(x.prazo)}</span>
-            </div>
+            <div class="acao-revisao__topo"><strong>${esc(x.titulo)}</strong><span class="chip-prazo">${esc(x.prazo)}</span></div>
             <p>${esc(x.porque)}</p>
-            ${x.passos.length ? `<ul class="plano__passos">${x.passos.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
-            <small class="prioridade__origem">Baseado em: ${esc(NOMES[x.baseado_em] || x.baseado_em)}</small>
-            ${htmlPorque(x, ia)}
-            ${x.href ? `<a class="link-mais" href="${x.href}">${esc(x.acao || "Ver no app")}</a>` : ""}
+            ${x.passos && x.passos.length ? `<ul class="plano__passos">${x.passos.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+            <small class="prioridade__origem">Dimensão: ${esc(NOMES[x.baseado_em] || x.baseado_em)}</small>
           </li>`).join("")}</ol>
-        ${p.metas_sugeridas.length ? `<div class="plano__metas"><h4>Metas sugeridas</h4>${p.metas_sugeridas.map(m => `
+        ${p.metas_sugeridas && p.metas_sugeridas.length ? `<div class="plano__metas"><h4>Metas sugeridas</h4>${p.metas_sugeridas.map(m => `
           <div class="meta-sugerida">
             <strong>${esc(m.nome)}</strong>
             <span class="meta-sugerida__valor">${U.moeda(m.valor_mensal)}<small>/mês</small></span>
             <p>${esc(m.motivo || "")}</p>
-            <a class="btn-secundario btn-mini" href="metas.html#nova">Criar esta meta</a>
           </div>`).join("")}<p class="nota">Uma sugestão não vira meta sozinha: ela só existe se você criar.</p></div>` : ""}
-        ${p.habito_da_semana ? `<div class="plano__habito"><h4>Hábito da semana</h4><p>${esc(p.habito_da_semana)}</p></div>` : ""}
+        ${p.habito_da_semana ? `<div class="plano__habito"><h4>Hábito sugerido</h4><p>${esc(p.habito_da_semana)}</p></div>` : ""}
         ${p.alerta ? `<p class="alerta">${esc(p.alerta)}</p>` : ""}
-        ${p.faltam_dados && p.faltam_dados.length ? `<div class="plano__faltam"><h4>Para o retrato ficar mais preciso</h4><ul>${p.faltam_dados.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
-        <p class="nota">${esc(limites)}${ia ? "" : " A decisão continua sendo sua."}</p>
+        ${p.faltam_dados && p.faltam_dados.length ? `<div class="plano__faltam"><h4>Para a revisão ficar mais precisa</h4><ul>${p.faltam_dados.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+        <p class="troca-finck__rodape">As contas são do FinCK. É educativo: não é recomendação de investimento nem consultoria financeira.</p>
       </article>`;
-    rotuloBotao();
+    btnExplicacao.textContent = "Pedir uma nova explicação (usa IA)";
   }
 
   function guardar(p) {
@@ -529,22 +796,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Etapas reais do pedido: sessão, envio e espera, conferência da resposta.
   // Nada de progresso inventado; o aviso de demora só aparece se demorar.
-  const statusPlano = $("statusPlano");
-  const listaEtapas = $("etapasPlano");
-  const ETAPAS_PLANO = [ "Conferindo a sua sessão…", "Enviando o retrato agregado e esperando a FINCK AI…", "Conferindo a resposta antes de mostrar…" ];
+  const ETAPAS_PLANO = [ "Conferindo a sua sessão…", "Enviando o retrato agregado e esperando a resposta…", "Conferindo a resposta antes de mostrar…" ];
   let alarmeDemora = null;
   function mostrarEtapa(i) {
     listaEtapas.hidden = false;
     listaEtapas.innerHTML = ETAPAS_PLANO.map((t, k) => `<li data-estado="${k < i ? "feita" : k === i ? "atual" : "proxima"}">${k < i ? '<span class="visualmente-oculto">Feito: </span>' : ""}${esc(t)}</li>`).join("");
-    statusPlano.textContent = ETAPAS_PLANO[i];
-    if (i === 0) {
-      // O botão pode estar no pé da tela: as etapas não nascem atrás da navegação.
-      rolarAte(listaEtapas);
-    }
+    statusExplicacao.textContent = ETAPAS_PLANO[i];
     clearTimeout(alarmeDemora);
     if (i === 1) {
       alarmeDemora = setTimeout(() => {
-        statusPlano.textContent = "A FINCK AI está levando mais tempo que o normal. O limite é de cerca de um minuto; se passar disso, o FinCK mostra o plano pelas regras.";
+        statusExplicacao.textContent = "A resposta está levando mais tempo que o normal. O limite é de cerca de um minuto.";
       }, 2e4);
     }
   }
@@ -553,283 +814,101 @@ document.addEventListener("DOMContentLoaded", async () => {
     listaEtapas.hidden = true;
     listaEtapas.innerHTML = "";
   }
-
-  botao.addEventListener("click", async () => {
-    const m = await disponibilidade();
-    if (m.tipo !== "ia") {
-      renderPlano(D.planoLocal(diag));
-      statusPlano.textContent = m.tipo === "demo" ? "Plano demonstrativo pronto, logo abaixo." : "Plano local pronto, logo abaixo.";
-      mostrarPlano();
-      return;
+  function explicacaoIndisponivel() {
+    const aviso = $("explicacaoIndisponivel");
+    aviso.textContent = `A explicação escrita não está disponível agora. ${VALEM}`;
+    aviso.hidden = false;
+    btnExplicacao.hidden = true;
+    return aviso;
+  }
+  // Ao abrir o trecho, a página pergunta se a rota existe. Fora do ar, o
+  // botão some e fica a frase; sem conexão, o botão fica e o envio explica.
+  async function conferirExplicacao() {
+    const m = await rotaAssistente();
+    if (m.tipo !== "ia" && m.codigo !== "CONEXAO") {
+      explicacaoIndisponivel();
+      return false;
     }
-    botao.disabled = true;
-    botao.setAttribute("aria-busy", "true");
-    botao.textContent = "Gerando o plano…";
-    try {
-      const r = await pedir({
-        modo: "plano",
-        retrato: retrato
-      }, mostrarEtapa);
-      esconderEtapas();
-      if (!r || !r.ok) {
-        const oQueFazer = r?.codigo === "SEM_LOGIN" ? "Entre de novo na sua conta e tente outra vez." : jaDizOQueFazer(r?.motivo) ? "" : "Você pode tentar de novo em alguns minutos.";
-        renderPlano(D.planoLocal(diag), {
-          aviso: `${r?.motivo || "A FINCK AI não respondeu agora."} Enquanto isso, este é o plano montado pelas regras do FinCK. ${oQueFazer}`.trim()
-        });
-        statusPlano.textContent = "A FINCK AI não respondeu; o plano pelas regras está logo abaixo.";
-        mostrarPlano();
+    return true;
+  }
+
+  if (comExplicacao) {
+    secaoExplicacao.hidden = false;
+    secaoExplicacao.addEventListener("toggle", () => {
+      if (secaoExplicacao.open) {
+        conferirExplicacao();
+      }
+    });
+    // A última explicação volta ao abrir a tela, já dentro do trecho; se os
+    // números mudaram desde então, a tela avisa em vez de fingir que é de hoje.
+    const salvo = lembrado();
+    if (salvo?.plano?.origem === "ia" && Array.isArray(salvo.plano.prioridades)) {
+      renderExplicacao(salvo.plano, {
+        em: salvo.em,
+        aviso: salvo.assinatura !== assinatura ? "Os seus números mudaram desde esta explicação. Peça de novo para considerar a situação de hoje." : null
+      });
+      $("resumoExplicacao").textContent = `Há uma explicação salva neste aparelho${salvo.em ? `, de ${U.dataBR(salvo.em)}` : ""}.`;
+    }
+    btnExplicacao.addEventListener("click", async () => {
+      if (btnExplicacao.getAttribute("aria-busy") === "true") {
         return;
       }
-      guardar(r);
-      renderPlano(r, {
-        em: U.hojeISO()
-      });
-      statusPlano.textContent = "Plano da FINCK AI pronto, logo abaixo. Ele fica salvo só neste aparelho.";
-      mostrarPlano();
-    } finally {
-      esconderEtapas();
-      botao.disabled = false;
-      botao.removeAttribute("aria-busy");
-      rotuloBotao();
-    }
-  });
-
-  // O último plano da FINCK AI volta ao abrir a tela; se os números mudaram
-  // desde então, a tela avisa em vez de fingir que o plano é de hoje.
-  const salvo = demo ? null : lembrado();
-  if (salvo?.plano?.origem === "ia") {
-    renderPlano(salvo.plano, {
-      em: salvo.em,
-      aviso: salvo.assinatura !== assinatura ? "Este é o último plano da FINCK AI salvo neste aparelho, e os seus números mudaram desde então. Gere de novo para considerar a situação de hoje." : "Este é o último plano da FINCK AI, salvo só neste aparelho."
-    });
-  }
-
-  // ------------------------------------------------------------ conversa
-
-  // Sugestões ligadas às prioridades da própria pessoa: quem abre a conversa
-  // não precisa adivinhar o que perguntar, e a pergunta já nasce no contexto.
-  function sugestoesDoRaioX({semNomes: semNomes = false} = {}) {
-    const r = diag.retrato;
-    const lista = [];
-    const add = t => {
-      if (t && !lista.includes(t) && lista.length < 4) {
-        lista.push(t);
-      }
-    };
-    const curto = t => t.length > 28 ? `${t.slice(0, 27).trim()}…` : t;
-    const porDimensao = {
-      reserva: () => "O que falta para a minha reserva chegar à referência?",
-      poupanca: () => "Para onde está indo a sobra do meu mês?",
-      compromissos: () => "Quanto as parcelas pesam na minha renda?",
-      fluxo: () => "Quanto da minha renda já tem destino fixo?",
-      metas: () => {
-        const m = r.metas.find(x => !x.concluida && !x.no_ritmo);
-        return m ? semNomes ? "Como deixar no ritmo do prazo a meta que está atrasada?" : `Como deixar a meta "${curto(String(m.nome || "Meta"))}" no ritmo do prazo?` : "Qual meta pesa mais no meu mês?";
-      },
-      consumo: () => "Como pesar melhor a próxima compra?"
-    };
-    diag.prioridades.forEach(x => add(porDimensao[x.dimensao]?.()));
-    const subiu = r.categorias.find(c => c.tendencia_pct !== null && c.tendencia_pct >= 10);
-    if (subiu) {
-      add(`Por que ${curto(subiu.nome)} subiu no último mês?`);
-    }
-    if (diag.indice !== null) {
-      add(`Por que o meu Índice FinCK está em ${diag.indice}?`);
-    }
-    add("Quanto consigo guardar por mês?");
-    return lista;
-  }
-
-  const historico = [];
-  const conversa = $("conversa");
-  const campo = $("pergunta");
-  const btnPerguntar = $("btnPerguntar");
-  const desenharSugestoes = (opcoes = {}) => {
-    $("sugestoes").innerHTML = sugestoesDoRaioX(opcoes).map(t => `<button type="button" class="chip chip--sugestao" data-sugestao="${esc(t)}" disabled>${esc(t)}</button>`).join("");
-  };
-  desenharSugestoes();
-  $("sugestoes").addEventListener("click", e => {
-    const b = e.target.closest("[data-sugestao]");
-    if (!b || b.disabled) {
-      return;
-    }
-    campo.value = b.dataset.sugestao;
-    campo.focus();
-  });
-  document.querySelector("[data-abrir-envio]")?.addEventListener("click", e => {
-    e.preventDefault();
-    const det = $("detalhesEnvio");
-    det.open = true;
-    rolarAte(det, "start");
-    det.querySelector("summary").focus({
-      preventScroll: true
-    });
-  });
-
-  function bolha(papel, html) {
-    const el = document.createElement("div");
-    el.className = `bolha bolha--${papel}`;
-    el.innerHTML = html;
-    conversa.appendChild(el);
-    rolarAte(el);
-    return el;
-  }
-  const ORIGEM_IA = '<p class="bolha__origem">✦ FINCK AI</p>';
-
-  // Pela rota geral vão só a pergunta e o retrato em texto (sem nomes).
-  async function perguntarLivre(pergunta) {
-    try {
-      const r = await fetch(ENDPOINT_LIVRE, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          pergunta: pergunta,
-          contexto: contextoConversa
-        })
-      });
-      if (r.status === 404) {
-        return {
-          ok: false,
-          codigo: "AUSENTE",
-          motivo: MSG_IA.ausente
-        };
-      }
-      const j = await r.json().catch(() => null);
-      if (r.ok && j && typeof j.resposta === "string" && j.resposta.trim()) {
-        return {
-          ok: true,
-          resposta: j.resposta.trim()
-        };
-      }
-      return {
-        ok: false,
-        motivo: j && j.erro ? String(j.erro) : "A FINCK AI não respondeu agora. Tente de novo em instantes."
-      };
-    } catch {
-      return {
-        ok: false,
-        codigo: "REDE",
-        motivo: "Não consegui falar com a FINCK AI. Confira a sua conexão e tente de novo."
-      };
-    }
-  }
-
-  $("formPergunta").addEventListener("submit", async e => {
-    e.preventDefault();
-    const texto = campo.value.trim();
-    if (texto.length < 3) {
-      return U.erroCampo("pergunta", "Escreva a sua pergunta.");
-    }
-    if (!canalAtual || !canalAtual.canal) {
-      return;
-    }
-    const livre = canalAtual.canal === "livre";
-    btnPerguntar.disabled = true;
-    btnPerguntar.setAttribute("aria-busy", "true");
-    bolha("pessoa", `<p><span class="visualmente-oculto">Você perguntou: </span>${esc(texto)}</p>`);
-    campo.value = "";
-    const ETAPAS = livre ? [ "Enviando a pergunta e os números do raio-X…" ] : [ "Conferindo a sua sessão…", "Enviando a pergunta e o retrato agregado…", "Conferindo a resposta…" ];
-    const pendente = bolha("assistente", `${ORIGEM_IA}<p class="bolha__espera"><span class="bolha__ponto" aria-hidden="true"></span> <span data-etapa>${ETAPAS[0]}</span></p>`);
-    const etapa = pendente.querySelector("[data-etapa]");
-    try {
-      const r = livre ? await perguntarLivre(texto) : await pedir({
-        modo: "pergunta",
-        retrato: retrato,
-        pergunta: texto,
-        historico: historico.slice(-6)
-      }, i => {
-        etapa.textContent = ETAPAS[i];
-      });
-      if (!r || !r.ok) {
-        pendente.classList.add("bolha--erro");
-        pendente.innerHTML = `
-          <p class="bolha__origem">FINCK AI indisponível agora</p>
-          <p>${esc(r?.motivo || "A FINCK AI não respondeu agora.")}</p>
-          <p class="bolha__rodape">O raio-X e o plano pelas regras continuam valendo.${r?.codigo === "SEM_LOGIN" ? " Entre de novo na sua conta e pergunte outra vez." : jaDizOQueFazer(r?.motivo) || r?.codigo === "AUSENTE" ? "" : " Tente de novo em alguns minutos."}</p>`;
-        if (r?.codigo === "AUSENTE") {
-          aplicarModoConversa(modo, {
-            canal: null,
-            motivo: r.motivo
-          });
+      btnExplicacao.disabled = true;
+      btnExplicacao.setAttribute("aria-busy", "true");
+      const rotulo = btnExplicacao.textContent;
+      btnExplicacao.textContent = "Pedindo a explicação…";
+      try {
+        if (!await conferirExplicacao()) {
+          $("explicacaoIndisponivel").focus();
+          return;
         }
-        return;
+        rolarAte(listaEtapas);
+        const r = await pedir({
+          modo: "plano",
+          retrato: retrato
+        }, mostrarEtapa);
+        esconderEtapas();
+        if (!r || !r.ok || !Array.isArray(r.prioridades)) {
+          // O erro entra acima da última explicação salva, sem apagá-la.
+          const host = $("explicacao");
+          host.querySelector(":scope > .troca-finck--erro")?.remove();
+          host.insertAdjacentHTML("afterbegin", `<article class="troca-finck troca-finck--erro">${htmlErro(r, {
+            comPerguntas: false
+          })}</article>`);
+          statusExplicacao.textContent = "A explicação escrita não veio. As próximas ações desta página continuam valendo.";
+          if (r?.codigo === "AUSENTE" || r?.codigo === "IA_INDISPONIVEL") {
+            explicacaoIndisponivel();
+          }
+          return;
+        }
+        guardar(r);
+        renderExplicacao(r, {
+          em: U.hojeISO()
+        });
+        statusExplicacao.textContent = "Explicação escrita pronta, logo abaixo. Ela fica salva só neste aparelho.";
+      } finally {
+        esconderEtapas();
+        btnExplicacao.disabled = false;
+        btnExplicacao.removeAttribute("aria-busy");
+        if (btnExplicacao.textContent === "Pedindo a explicação…") {
+          btnExplicacao.textContent = $("explicacao").querySelector(".explicacao-escrita") ? "Pedir uma nova explicação (usa IA)" : rotulo;
+        }
       }
-      if (livre) {
-        // A frase de autonomia já vem no fim da resposta (api/ia.js).
-        pendente.innerHTML = `
-        ${ORIGEM_IA}
-        <p class="bolha__texto">${esc(r.resposta)}</p>
-        <p class="bolha__rodape">Resposta escrita pela FINCK AI a partir dos números ${demo ? "de exemplo da demonstração" : "deste raio-X"}, sem nomes de metas, contas ou lançamentos.</p>`;
-        return;
-      }
-      const baseado = Array.isArray(r.baseado_em) ? r.baseado_em : [];
-      pendente.innerHTML = `
-        ${ORIGEM_IA}
-        <p class="bolha__texto">${esc(r.resposta)}</p>
-        ${r.proximo_passo ? `<p class="bolha__passo"><strong>Uma sugestão:</strong> ${esc(r.proximo_passo)}</p>` : ""}
-        ${baseado.length ? `<small class="prioridade__origem">Baseado em: ${baseado.map(id => esc(NOMES[id] || id)).join(", ")}</small>` : ""}
-        ${r.fora_do_escopo ? `<small class="prioridade__origem">Essa pergunta foge do seu raio-X; a FINCK AI responde melhor sobre renda, gastos, reserva, parcelas, metas e decisões de compra.</small>` : ""}
-        <p class="bolha__rodape">Resposta escrita pela FINCK AI a partir do retrato agregado. A decisão continua sendo sua.</p>`;
-      historico.push({
-        papel: "pessoa",
-        texto: texto
-      }, {
-        papel: "assistente",
-        texto: r.resposta
-      });
-    } finally {
-      btnPerguntar.disabled = false;
-      btnPerguntar.removeAttribute("aria-busy");
-    }
-  });
-
-  // A conversa liga sempre que alguma rota da FINCK AI responde. Sem
-  // nenhuma, o motivo fica escrito perto do campo, em vez de deixar a pessoa
-  // escrever para nada.
-  let canalAtual = null;
-  function aplicarModoConversa(m, c) {
-    canalAtual = c || null;
-    const ligada = Boolean(c && c.canal);
-    const livre = ligada && c.canal === "livre";
-    const aviso = $("avisoConversa");
-    $("avisoEnvioConversa").hidden = !ligada;
-    aviso.hidden = ligada;
-    aviso.textContent = ligada ? "" : `${c?.motivo || m?.motivo || MSG_IA.ausente} A conversa volta quando ela estiver disponível; o raio-X e o plano pelas regras continuam valendo.`;
-    $("textoEnvioConversa").textContent = livre ? `${demo ? "Na demonstração, sua pergunta vai para a FINCK AI com os números de exemplo deste raio-X" : "Sua pergunta vai para a FINCK AI com os números agregados deste raio-X"}, em texto: não vão nomes de metas, contas nem lançamentos. Não envie senhas, dados bancários, documentos ou informações de outras pessoas.` : "Sua pergunta será enviada à FINCK AI com o retrato financeiro agregado. Não envie senhas, dados bancários, documentos ou informações de outras pessoas.";
-    if (livre) {
-      $("pedidoConversa").textContent = `${JSON.stringify({
-        pergunta: "(a sua pergunta, até 400 caracteres)",
-        contexto: "(o retrato em texto, logo abaixo)"
-      }, null, 2)}\n\n${contextoConversa}`;
-    }
-    const origem = $("origemConversa");
-    origem.hidden = false;
-    origem.className = `selo-origem selo-origem--${ligada ? "ia" : "regras"}`;
-    origem.textContent = ligada ? "✦ FINCK AI" : "Desligada agora";
-    // Só o aviso visível descreve o campo: o texto do envio não vale quando
-    // nada é enviado.
-    campo.setAttribute("aria-describedby", ligada ? "avisoEnvioConversa" : "avisoConversa");
-    campo.disabled = !ligada;
-    btnPerguntar.disabled = !ligada;
-    desenharSugestoes({
-      semNomes: !ligada || livre
-    });
-    $("sugestoes").querySelectorAll("button").forEach(b => {
-      b.disabled = !ligada;
     });
   }
 
-  disponibilidade().then(async m => {
-    aplicarModo(m);
-    aplicarModoConversa(m, await canalDaConversa(m));
-  });
+  // ------------------------------------------------------------ vinda do Reality
 
-  // Vindo do Reality, a pergunta neutra sobre a compra já chega escrita.
+  // "Ver esta compra na Revisão financeira": a pergunta neutra sobre a compra
+  // chega escrita no campo da pergunta livre, com o trecho aberto. Nada é
+  // enviado sem a pessoa pedir.
   const vinda = new URLSearchParams(location.search).get("pergunta");
   if (vinda) {
-    campo.value = vinda.slice(0, 400);
-    rolarAte($("secaoConversa"), "start");
+    campo.value = vinda.slice(0, MAX_PERGUNTA);
+    atualizarConta();
+    $("secaoConversa").open = true;
+    abertaPeloCodigo = true;
+    perguntaLivre.open = true;
+    rolarAte(perguntaLivre, "start");
   }
 });

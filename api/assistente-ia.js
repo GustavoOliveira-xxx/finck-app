@@ -1,4 +1,4 @@
-// Assistente FinCK: planejamento pessoal com IA.
+// Revisão financeira: explicação escrita e perguntas com IA, só sob pedido.
 //
 // Dois provedores, escolhidos pelas variáveis de ambiente: o Claude, da
 // Anthropic, quando há ANTHROPIC_API_KEY; senão, os modelos gratuitos do
@@ -9,10 +9,11 @@
 // FinckDiagnostico.paraIA() monta: números arredondados, nomes de categoria e
 // de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome da pessoa.
 //
-// Dois pedidos, os dois com conta (a demonstração usa o plano por regras, no
-// próprio navegador, sem passar por aqui):
+// A Revisão financeira (assistente.html) abre com as próximas ações montadas
+// pelas regras, no navegador, sem passar por aqui. Esta rota só é chamada
+// quando a pessoa pede, e sempre com conta:
 //
-//   { modo: "plano", retrato }                       plano de ação estruturado
+//   { modo: "plano", retrato }                       explicação escrita das ações
 //   { modo: "pergunta", retrato, pergunta, historico } resposta curta
 //
 // A IA interpreta números, não os calcula: a resposta sai num esquema JSON
@@ -186,7 +187,7 @@ function lerPedido(bruto) {
 // Estável de propósito: é o prefixo marcado para cache. Nada aqui muda de
 // pedido para pedido (data, usuário e números vão na mensagem).
 const SISTEMA = [
-  "Você é a FINCK AI, a parte do FinCK que escreve o plano de ação e responde perguntas sobre o raio-X financeiro da pessoa. O FinCK é um aplicativo brasileiro de educação financeira e consumo consciente usado principalmente por estudantes e jovens adultos.",
+  "Você é a FINCK AI, a parte do FinCK que, quando a pessoa pede, escreve a explicação das próximas ações e responde perguntas sobre a revisão financeira dela. O FinCK é um aplicativo brasileiro de educação financeira e consumo consciente usado principalmente por estudantes e jovens adultos.",
   "",
   "O aplicativo já calculou um retrato da vida financeira da pessoa, com seis dimensões:",
   "- fluxo: quanto da renda as despesas fixas consomem (referência: até 50%, regra 50/30/20).",
@@ -202,7 +203,7 @@ const SISTEMA = [
   "- Toda prioridade e toda resposta indicam em \"baseado_em\" a dimensão de onde vêm.",
   "- Quando faltar um dado para responder, diga qual é e pergunte à pessoa (ou registre em \"faltam_dados\"), em vez de supor.",
   "- Você é consultora, não juíza nem vendedora: não dê ordens de compra (\"compre\", \"não compre\"), não chame uma compra ou um gasto de bom, ótimo, ruim ou errado e não elogie produto, loja ou marca. Mostre o que pesa e o que muda entre os caminhos possíveis.",
-  "- Escreva em português do Brasil, falando com a pessoa por \"você\", de forma direta, respeitosa e sem julgamento moral sobre gastos. A decisão é sempre dela, e o texto deixa isso claro.",
+  "- Escreva em português do Brasil, falando com a pessoa por \"você\", de forma direta, respeitosa e sem julgamento moral sobre gastos. A decisão é sempre dela: não decida por ela nem dê ordens.",
   "- Passos concretos e pequenos, que caibam na rotina de quem está começando: algo que dá para fazer nesta semana vale mais que um conselho geral. Escreva cada passo como sugestão que a pessoa pode escolher, no infinitivo (\"Separar R$ 200 no dia do pagamento\"), não como ordem.",
   "- Não recomende produto financeiro, investimento específico, banco, corretora, empréstimo, cartão ou marca. Pode falar de hábitos (guardar no dia do pagamento, revisar assinaturas, esperar antes de comprar) e de categorias de gasto.",
   "- Se os compromissos passam do saldo ou as parcelas pesam demais, sugira renegociar direto com o credor e, se precisar, procurar o Procon; nunca sugira um novo crédito para pagar dívida.",
@@ -235,7 +236,7 @@ function conteudoDoPedido(pedido) {
     "",
     `${conversa}<pergunta_da_pessoa>\n${pedido.pergunta}\n</pergunta_da_pessoa>`,
     "",
-    "Responda à pergunta com base no retrato, em até 6 frases. Se ela pedir um veredito (\"posso comprar?\", \"devo comprar?\"), não responda sim ou não: mostre o que muda no mês, na reserva e nas metas com os números do retrato e lembre que a decisão é da pessoa. Se faltar um dado (o preço, a forma de pagamento), pergunte. \"proximo_passo\" é uma sugestão concreta, no infinitivo, ou texto vazio se não couber. \"fora_do_escopo\" é true quando a pergunta não for sobre finanças pessoais.",
+    "Responda à pergunta com base no retrato, em até 6 frases. Se ela pedir um veredito (\"posso comprar?\", \"devo comprar?\"), não responda sim ou não: mostre o que muda no mês, na reserva e nas metas com os números do retrato e deixe a escolha com a pessoa. Se faltar um dado (o preço, a forma de pagamento), pergunte. \"proximo_passo\" é uma sugestão concreta, no infinitivo, ou texto vazio se não couber. \"fora_do_escopo\" é true quando a pergunta não for sobre finanças pessoais.",
   ].join("\n");
 }
 
@@ -338,7 +339,7 @@ function montarPlano(bruto, retrato) {
     habito_da_semana: frase(bruto.habito_da_semana, 240),
     alerta: frase(bruto.alerta, 320),
     faltam_dados: frases(bruto.faltam_dados, 3, 220),
-    limites: "Plano escrito pela FINCK AI a partir do retrato agregado; as contas são do FinCK. É educativo: não é recomendação de investimento nem consultoria financeira. A decisão continua sendo sua.",
+    limites: "Explicação escrita por IA a partir do retrato agregado; as contas são do FinCK. É educativa: não é recomendação de investimento nem consultoria financeira.",
   };
 }
 
