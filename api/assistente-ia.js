@@ -1,8 +1,10 @@
 // Revisão financeira: explicação escrita e perguntas com IA, só sob pedido.
 //
-// Dois provedores, escolhidos pelas variáveis de ambiente: o Claude, da
-// Anthropic, quando há ANTHROPIC_API_KEY; senão, os modelos gratuitos do
-// OpenRouter (OPENROUTER_API_KEY), os mesmos da FINCK AI (api/_openrouter.js).
+// Três provedores, escolhidos pelas variáveis de ambiente, nesta ordem: o
+// Claude, da Anthropic, quando há ANTHROPIC_API_KEY; o Gemini, do Google,
+// quando há ASSISTENTE_GEMINI_API_KEY ou GEMINI_API_KEY (api/_gemini.js);
+// senão, os modelos gratuitos do OpenRouter (OPENROUTER_API_KEY), os mesmos
+// da FINCK AI (api/_openrouter.js). ASSISTENTE_PROVEDOR força um deles.
 //
 // O navegador calcula o diagnóstico da vida financeira inteira
 // (js/diagnostico-engine.js) e manda para cá só o retrato agregado que
@@ -27,10 +29,18 @@
 //
 //   ANTHROPIC_API_KEY     opcional. Chave do console da Anthropic. Com ela,
 //                         o assistente usa o Claude.
-//   OPENROUTER_API_KEY    opcional. Sem a chave da Anthropic, o assistente usa
-//                         os modelos gratuitos do OpenRouter. Uma das duas é
+//   ASSISTENTE_GEMINI_API_KEY
+//                         opcional. Chave do Google AI Studio só para a
+//                         revisão. Sem ela, vale a GEMINI_API_KEY da busca de
+//                         preço. Com uma das duas (e sem a da Anthropic), o
+//                         assistente usa o Gemini.
+//   OPENROUTER_API_KEY    opcional. Sem as chaves acima, o assistente usa os
+//                         modelos gratuitos do OpenRouter. Uma das chaves é
 //                         obrigatória; sem nenhuma, a tela usa o plano pelas
 //                         regras do FinCK.
+//   ASSISTENTE_PROVEDOR   opcional. "anthropic", "gemini" ou "openrouter"
+//                         para escolher um provedor que tenha chave, mesmo
+//                         com outro antes dele na ordem.
 //   ASSISTENTE_MODELO     opcional. "claude-opus-5-5" (padrão) ou
 //                         "claude-sonnet-5-5", mais barato.
 //   ASSISTENTE_TETO_DIA   opcional. Teto global de pedidos por dia. Padrão 100.
@@ -41,6 +51,7 @@ const { createHash } = require("node:crypto");
 const SDK = require("@anthropic-ai/sdk");
 const A = require("./_acesso.js");
 const OR = require("./_openrouter.js");
+const G = require("./_gemini.js");
 
 const Anthropic = SDK.default || SDK.Anthropic;
 
@@ -357,12 +368,25 @@ function montarResposta(bruto) {
 
 // ------------------------------------------------------------ Claude
 
-// Claude quando há chave da Anthropic; senão, o OpenRouter gratuito.
-const provedor = () => (process.env.ANTHROPIC_API_KEY ? "anthropic" : OR.configurado() ? "openrouter" : null);
+// Claude quando há chave da Anthropic; senão, o Gemini; senão, o OpenRouter
+// gratuito. ASSISTENTE_PROVEDOR escolhe outro, desde que ele tenha chave.
+const TEM_CHAVE = {
+  anthropic: () => Boolean(process.env.ANTHROPIC_API_KEY),
+  gemini: () => G.configurado(),
+  openrouter: () => OR.configurado(),
+};
+function provedor() {
+  const pedido = String(process.env.ASSISTENTE_PROVEDOR || "").trim().toLowerCase();
+  if (TEM_CHAVE[pedido] && TEM_CHAVE[pedido]()) return pedido;
+  return ["anthropic", "gemini", "openrouter"].find((p) => TEM_CHAVE[p]()) || null;
+}
 
-const modeloAtual = () => (provedor() === "openrouter"
-  ? OR.MODELO
-  : MODELOS_ACEITOS.has(process.env.ASSISTENTE_MODELO) ? process.env.ASSISTENTE_MODELO : MODELO_PADRAO);
+function modeloAtual() {
+  const via = provedor();
+  if (via === "openrouter") return OR.MODELO;
+  if (via === "gemini") return G.modelos()[0];
+  return MODELOS_ACEITOS.has(process.env.ASSISTENTE_MODELO) ? process.env.ASSISTENTE_MODELO : MODELO_PADRAO;
+}
 
 function criarCliente() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: PRAZO_MS, maxRetries: 1 });
@@ -486,6 +510,38 @@ async function chamarOpenRouter({ pedido, buscar = fetch }) {
   return { erro: falha(502, "FALHOU", "A FINCK AI não conseguiu responder agora. Tente de novo em instantes.") };
 }
 
+// ------------------------------------------------------------ Gemini
+
+// O Gemini tem saída em esquema (como o Claude), então o pedido vai sem o
+// molde de texto do OpenRouter. A resposta passa pelas mesmas conferências
+// e pela de tom; se não passar, vai o próximo modelo da lista.
+async function chamarGemini({ pedido, buscar = fetch }) {
+  const plano = pedido.modo === "plano";
+  const r = await G.gerarJson({
+    sistema: SISTEMA,
+    usuario: `${conteudoDoPedido(pedido)}\n\nHoje é ${OR.hoje()}. Textos em português do Brasil.`,
+    esquema: plano ? esquemaDoPlano() : esquemaDaResposta(),
+    maxTokens: plano ? 4000 : 1500,
+    prazoMs: PRAZO_MS,
+    buscar,
+    aceitar: (json) => {
+      const montado = plano ? montarPlano(json, pedido.retrato) : montarResposta(json);
+      return montado && !OR.soaComoJuiz(textoCorrido(montado)) ? montado : null;
+    },
+  });
+  if (r.status === 200) return { montado: r.valor, modelo: r.modelo };
+  if (r.status === 429) return { erro: falha(429, "OCUPADA", "A FINCK AI está com muitos pedidos agora. Tente de novo em um minuto. Enquanto isso, o plano pelas regras do FinCK continua disponível.") };
+  if (r.status === 401 || r.status === 403) {
+    console.error("assistente-ia: chave do Gemini recusada", r.status);
+    return { erro: falha(503, "IA_INDISPONIVEL", "A FINCK AI não está disponível neste servidor agora. O plano pelas regras do FinCK continua disponível.") };
+  }
+  if (r.status === 504) return { erro: falha(503, "REDE", "A FINCK AI demorou demais para responder. Tente de novo em instantes.") };
+  if (r.status === "recusa") return { erro: falha(200, "RECUSA", "A FINCK AI não respondeu a este pedido. Tente reformular a pergunta, ou use o plano montado pelas regras do FinCK.") };
+  if (r.status === "cortada") return { erro: falha(200, "CORTADA", "A resposta ficou longa demais e foi cortada. Tente de novo.") };
+  console.error("assistente-ia: Gemini sem resposta aproveitável", r.status, r.modelo || "");
+  return { erro: falha(502, "FALHOU", "A FINCK AI não conseguiu responder agora. Tente de novo em instantes.") };
+}
+
 const cache = new Map();
 
 async function planejar({ cliente, pedido, modelo = modeloAtual(), chaveCache = null, via = provedor(), buscar = fetch }) {
@@ -494,8 +550,8 @@ async function planejar({ cliente, pedido, modelo = modeloAtual(), chaveCache = 
     if (guardado && Date.now() - guardado.em < CACHE_PLANO_MS) return { status: 200, corpo: guardado.corpo };
   }
   const plano = pedido.modo === "plano";
-  if (via === "openrouter") {
-    const lido = await chamarOpenRouter({ pedido, buscar });
+  if (via === "openrouter" || via === "gemini") {
+    const lido = await (via === "gemini" ? chamarGemini : chamarOpenRouter)({ pedido, buscar });
     if (lido.erro) return lido.erro;
     const corpo = { ok: true, modo: pedido.modo, ...lido.montado, modelo: lido.modelo };
     if (plano && chaveCache) {
@@ -571,6 +627,7 @@ module.exports = async function handler(req, res) {
 module.exports.SISTEMA = SISTEMA;
 module.exports.provedor = provedor;
 module.exports.chamarOpenRouter = chamarOpenRouter;
+module.exports.chamarGemini = chamarGemini;
 module.exports.DIMENSOES = DIMENSOES;
 module.exports.limparRetrato = limparRetrato;
 module.exports.lerPedido = lerPedido;

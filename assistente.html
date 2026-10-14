@@ -57,7 +57,10 @@
   <main class="conteudo" id="conteudo" tabindex="-1">
 
     <section class="hero hero--revisao">
-      <span class="grupo-home__papel">Planejamento pessoal</span>
+      <div class="hero-revisao__selos">
+        <span class="grupo-home__papel">Planejamento pessoal</span>
+        <span class="selo-ia">FINCK AI</span>
+      </div>
       <h2>Seus números e as próximas ações</h2>
       <p>Renda, gastos, parcelas, reserva, metas e decisões de compra, calculados no seu aparelho com o que você registrou.<span id="avisoDemo" hidden> Na demonstração, os números são dados de exemplo.</span></p>
     </section>
@@ -73,6 +76,23 @@
       </div>
       <p class="descricao" id="origemAcoes">Montadas pelas regras do FinCK com os seus números, da mais urgente para a menos urgente.</p>
       <div id="plano"></div>
+    </section>
+
+    <!-- A FINCK AI em destaque, logo depois das ações: os botões só abrem os
+         trechos do fim da página. Nada é enviado sem o clique de lá, que já
+         diz o que vai e quem escreve (js/assistente.js). -->
+    <section class="painel-ia" id="painelIA" aria-labelledby="tituloPainelIA">
+      <div class="painel-ia__texto">
+        <span class="selo-ia">FINCK AI</span>
+        <h3 id="tituloPainelIA">Quer isso explicado com as suas palavras?</h3>
+        <p>A FINCK AI escreve a explicação das próximas ações e responde perguntas sobre estes números. As contas continuam sendo do FinCK, e só os números agregados saem do aparelho, quando você pedir.</p>
+        <p class="painel-ia__nota" id="notaPainelIA" hidden>Na demonstração, a explicação escrita fica desligada; a pergunta livre funciona com os números de exemplo.</p>
+      </div>
+      <div class="painel-ia__acoes">
+        <button type="button" class="btn-primario" data-ir-para="secaoExplicacao" id="atalhoExplicacao" hidden>Explicar as próximas ações</button>
+        <button type="button" class="btn-secundario" data-ir-para="perguntaLivre" id="atalhoPergunta">Fazer uma pergunta</button>
+        <button type="button" class="btn-texto" data-ir-para="dadosPrivacidade">O que é enviado</button>
+      </div>
     </section>
 
     <section class="raiox" aria-labelledby="tituloRaiox">
@@ -108,7 +128,7 @@
           <div class="conversa-finck__historico" id="conversa" aria-live="polite" aria-relevant="additions"></div>
           <details class="pergunta-livre-finck" id="perguntaLivre">
             <summary>
-              <span class="pergunta-livre-finck__nome">Pergunta livre <span class="pergunta-livre-finck__tipo">(Ajuda opcional)</span></span>
+              <span class="pergunta-livre-finck__nome">Pergunta livre <span class="selo-ia selo-ia--mini">IA</span></span>
               <small>Escreva com as suas palavras. Nada é enviado sem você pedir.</small>
             </summary>
             <form id="formPergunta" class="conversa-finck__form" novalidate>
@@ -132,7 +152,7 @@
       <!-- Só com conta e com a rota configurada; na demonstração, nem aparece. -->
       <details class="secao-finck" id="secaoExplicacao" hidden>
         <summary>
-          <span class="secao-finck__nome">Quer uma explicação escrita destas ações?</span>
+          <span class="secao-finck__nome">Quer uma explicação escrita destas ações? <span class="selo-ia selo-ia--mini">IA</span></span>
           <small class="secao-finck__resumo" id="resumoExplicacao">Um texto sobre as próximas ações, escrito só se você pedir.</small>
         </summary>
         <div class="secao-finck__corpo">

@@ -22,6 +22,7 @@ const require = createRequire(import.meta.url);
 const AO_VIVO = process.argv.includes("--ao-vivo");
 const SDK = require("@anthropic-ai/sdk");
 const api = require("../api/assistente-ia.js");
+const G = require("../api/_gemini.js");
 
 let ok = 0, falhou = 0;
 const conferir = (titulo, obtido, esperado) => {
@@ -70,20 +71,24 @@ const RETRATO = {
 // ------------------------------------------------------------------ ao vivo
 
 if (AO_VIVO) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Defina ANTHROPIC_API_KEY para o modo --ao-vivo.");
+  // Usa o provedor que as variáveis apontam, na mesma ordem da rota:
+  // ANTHROPIC_API_KEY, depois ASSISTENTE_GEMINI_API_KEY ou GEMINI_API_KEY,
+  // depois OPENROUTER_API_KEY.
+  const via = api.provedor();
+  if (!via) {
+    console.error("Defina ANTHROPIC_API_KEY, GEMINI_API_KEY ou OPENROUTER_API_KEY para o modo --ao-vivo.");
     process.exit(1);
   }
   const Anthropic = SDK.default || SDK.Anthropic;
-  const cliente = new Anthropic({ timeout: 50000, maxRetries: 1 });
+  const cliente = via === "anthropic" ? new Anthropic({ timeout: 50000, maxRetries: 1 }) : null;
   const modelo = api.modeloAtual();
   for (const pedido of [
     api.lerPedido({ modo: "plano", retrato: RETRATO }),
     api.lerPedido({ modo: "pergunta", retrato: RETRATO, pergunta: "Posso comprar um fone de R$ 800 este mês?" }),
   ]) {
     const inicio = Date.now();
-    const r = await api.planejar({ cliente, pedido, modelo });
-    console.log(`\n${pedido.modo} com ${modelo}: ${Date.now() - inicio} ms, status ${r.status}`);
+    const r = await api.planejar({ cliente, pedido, modelo, via });
+    console.log(`\n${pedido.modo} via ${via} (${r.corpo.modelo || modelo}): ${Date.now() - inicio} ms, status ${r.status}`);
     console.log(JSON.stringify(r.corpo, null, 2));
   }
   process.exit(0);
@@ -260,6 +265,9 @@ const fetchOriginal = globalThis.fetch;
 const chamadasAnthropic = [];
 const chamadasOpenRouter = [];
 let respostaOpenRouter = () => "";
+const chamadasGemini = [];
+// Recebe o número da chamada e o modelo; devolve [status, corpo].
+let respostaGemini = () => [200, {}];
 globalThis.fetch = async (entrada, init = {}) => {
   const url = String(entrada?.url ?? entrada);
   if (url.includes("/auth/v1/user")) {
@@ -273,6 +281,13 @@ globalThis.fetch = async (entrada, init = {}) => {
       model: "nvidia/nemotron-3-super-120b-a12b:free",
       choices: [{ message: { content: respostaOpenRouter(chamadasOpenRouter.length) } }],
     }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (url.includes("generativelanguage.googleapis.com")) {
+    const corpo = JSON.parse(init.body);
+    const modelo = decodeURIComponent(url.split("/models/")[1].split(":")[0]);
+    chamadasGemini.push({ url, modelo, corpo, headers: new Headers(init.headers) });
+    const [status, saida] = respostaGemini(chamadasGemini.length, modelo);
+    return new Response(JSON.stringify(saida), { status, headers: { "content-type": "application/json" } });
   }
   if (url.includes("api.anthropic.com")) {
     const corpo = JSON.parse(init.body);
@@ -299,6 +314,10 @@ const req = (method, body, token) => ({ method, body, headers: token ? { authori
 
 delete process.env.ANTHROPIC_API_KEY;
 delete process.env.OPENROUTER_API_KEY;
+delete process.env.GEMINI_API_KEY;
+delete process.env.ASSISTENTE_GEMINI_API_KEY;
+delete process.env.ASSISTENTE_GEMINI_MODELO;
+delete process.env.ASSISTENTE_PROVEDOR;
 let r = res();
 await api(req("GET"), r);
 conferir("GET sem chave diz que a IA está desligada", [r.statusCode, r.corpo.ia], [200, false]);
@@ -358,6 +377,76 @@ r = res();
 await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Posso comprar um fone de R$ 800?" } }, "valido"), r);
 conferir("ordem de compra pelo OpenRouter pede outra resposta", [r.statusCode, r.corpo.resposta, chamadasOpenRouter.length - antesDoJuiz], [200, consultora, 2]);
 delete process.env.OPENROUTER_API_KEY;
+
+// ------------------------------------------------------------------ Gemini (Google AI Studio)
+
+const textoGemini = (obj, finishReason = "STOP") => [200, { candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] }, finishReason }] }];
+const semCota = [429, { error: { code: 429, message: "You exceeded your current quota", status: "RESOURCE_EXHAUSTED" } }];
+
+process.env.GEMINI_API_KEY = "chave-do-preco";
+r = res();
+await api(req("GET"), r);
+conferir("GET só com a chave do preço usa o Gemini", [r.corpo.ia, r.corpo.provedor, r.corpo.modelo], [true, "gemini", "gemini-3.5-flash-lite"]);
+
+process.env.OPENROUTER_API_KEY = "chave-openrouter";
+conferir("com Gemini e OpenRouter, o Gemini vem antes", api.provedor(), "gemini");
+process.env.ASSISTENTE_PROVEDOR = "openrouter";
+conferir("ASSISTENTE_PROVEDOR escolhe o OpenRouter", api.provedor(), "openrouter");
+process.env.ASSISTENTE_PROVEDOR = "anthropic";
+conferir("ASSISTENTE_PROVEDOR sem chave daquele provedor é ignorado", api.provedor(), "gemini");
+delete process.env.ASSISTENTE_PROVEDOR;
+delete process.env.OPENROUTER_API_KEY;
+
+// Primeiro modelo sem cota, o segundo responde.
+process.env.ASSISTENTE_GEMINI_API_KEY = "chave-da-revisao";
+respostaGemini = (n) => (n === 1 ? semCota : textoGemini(brutoPlano));
+r = res();
+await api(req("POST", { planejamento: { modo: "plano", retrato: { ...RETRATO, saldo: 321 } } }, "valido"), r);
+conferir("plano pelo Gemini, passando ao próximo modelo quando falta cota", [r.statusCode, r.corpo.ok, r.corpo.origem, r.corpo.modelo, r.corpo.prioridades?.length], [200, true, "ia", "gemini-3.5-flash", 2]);
+const g = chamadasGemini[0];
+conferir("a chave só da revisão vale antes da do preço", g?.headers.get("x-goog-api-key"), "chave-da-revisao");
+conferir("começa pelo modelo lite", g?.modelo, "gemini-3.5-flash-lite");
+conferir("as regras vão como instrução de sistema", g?.corpo.systemInstruction?.parts?.[0]?.text, api.SISTEMA);
+conferir("pede JSON no esquema", [g?.corpo.generationConfig?.responseMimeType, g?.corpo.generationConfig?.responseSchema?.type], ["application/json", "OBJECT"]);
+const esquemaEnviado = JSON.stringify(g?.corpo.generationConfig?.responseSchema);
+conferir("esquema sem additionalProperties e com a ordem das chaves", [esquemaEnviado.includes("additionalProperties"), g?.corpo.generationConfig?.responseSchema?.propertyOrdering?.[0]], [false, "diagnostico"]);
+conferir("o enum das dimensões chega ao Gemini", g?.corpo.generationConfig?.responseSchema?.properties?.prioridades?.items?.properties?.baseado_em?.enum, api.DIMENSOES);
+conferir("o retrato e a data vão na mensagem", [g?.corpo.contents?.[0]?.parts?.[0]?.text.includes("<retrato_financeiro>"), /Hoje é \d/.test(g?.corpo.contents?.[0]?.parts?.[0]?.text)], [true, true]);
+
+// Veredito de compra: o modelo seguinte responde.
+chamadasGemini.length = 0;
+const consultoraGemini = "Comprar agora deixa a reserva em 2,9 meses de custo fixo.";
+respostaGemini = (n) => textoGemini({ resposta: n === 1 ? "Pode comprar, é uma ótima compra." : consultoraGemini, baseado_em: ["reserva"], proximo_passo: "", fora_do_escopo: false });
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Posso comprar um fone de R$ 800?" } }, "valido"), r);
+conferir("veredito pelo Gemini pede outra resposta", [r.statusCode, r.corpo.resposta, chamadasGemini.length], [200, consultoraGemini, 2]);
+
+respostaGemini = () => semCota;
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Quanto sobra por mês?" } }, "valido"), r);
+conferir("todos sem cota viram OCUPADA", [r.statusCode, r.corpo.codigo], [429, "OCUPADA"]);
+
+respostaGemini = () => [400, { error: { code: 400, message: "API key not valid. Please pass a valid API key.", status: "INVALID_ARGUMENT" } }];
+chamadasGemini.length = 0;
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Quanto sobra por mês?" } }, "valido"), r);
+conferir("chave inválida vira IA_INDISPONIVEL, sem tentar outros modelos", [r.statusCode, r.corpo.codigo, chamadasGemini.length], [503, "IA_INDISPONIVEL", 1]);
+
+respostaGemini = () => [200, { candidates: [{ finishReason: "SAFETY", content: { parts: [] } }] }];
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Quanto sobra por mês?" } }, "valido"), r);
+conferir("bloqueio de segurança vira RECUSA", [r.statusCode, r.corpo.codigo], [200, "RECUSA"]);
+
+respostaGemini = () => [200, { candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [{ text: "{\"resposta\": \"Comprar ag" }] } }] }];
+r = res();
+await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Quanto sobra por mês?" } }, "valido"), r);
+conferir("resposta cortada vira CORTADA", [r.statusCode, r.corpo.codigo], [200, "CORTADA"]);
+
+process.env.ASSISTENTE_GEMINI_MODELO = "gemini-teste";
+conferir("ASSISTENTE_GEMINI_MODELO vai na frente da lista", [api.modeloAtual(), G.modelos().length], ["gemini-teste", 4]);
+delete process.env.ASSISTENTE_GEMINI_MODELO;
+delete process.env.ASSISTENTE_GEMINI_API_KEY;
+delete process.env.GEMINI_API_KEY;
 
 globalThis.fetch = fetchOriginal;
 

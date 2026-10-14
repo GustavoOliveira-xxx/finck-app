@@ -121,6 +121,21 @@
       </div>
     </section>
 
+    <!-- Revisão financeira: as prioridades deste cartão são calculadas pelas
+         regras do FinCK (js/diagnostico-engine.js), sem IA. A FINCK AI fica na
+         página da revisão e só escreve quando a pessoa pede. Logo abaixo do
+         Reality por ser a segunda porta do app. -->
+    <section class="cartao-assistente cartao-assistente--ia acabamento-2" id="cartaoAssistente" aria-labelledby="tituloAssistente">
+      <div class="cartao-assistente__texto">
+        <span class="selo-ia">FINCK AI</span>
+        <h2 id="tituloAssistente">Revisão financeira</h2>
+        <p id="resumoAssistente">Renda, gastos, compromissos, reserva, metas e decisões lidos juntos, com as prioridades do seu planejamento.</p>
+        <ul class="cartao-assistente__sinais" id="sinaisAssistente"></ul>
+        <p class="cartao-assistente__ia">As contas são do FinCK. Se você pedir, a FINCK AI explica as próximas ações e responde perguntas sobre os seus números.</p>
+      </div>
+      <a class="btn-primario" href="assistente.html">Abrir revisão financeira</a>
+    </section>
+
     <!-- Convite para adicionar à tela inicial: no fluxo da página, nunca por
          cima de botão, campo, aviso ou navegação. -->
     <div id="conviteInstalar" class="convite-instalar" hidden></div>
@@ -187,17 +202,6 @@
       <div class="aviso-fechamento" id="avisoRevisao" hidden></div>
       <div class="aviso-fechamento" id="avisoFechamento" hidden></div>
       <ul class="lista-tarefas" id="tarefasHome" aria-live="polite"></ul>
-    </section>
-
-    <!-- Revisão financeira: prioridades calculadas pelas regras do FinCK
-         (js/diagnostico-engine.js), sem IA. -->
-    <section class="cartao-assistente acabamento-2" id="cartaoAssistente" aria-labelledby="tituloAssistente">
-      <div class="cartao-assistente__texto">
-        <h2 id="tituloAssistente">Revisão financeira</h2>
-        <p id="resumoAssistente">Renda, gastos, compromissos, reserva, metas e decisões lidos juntos, com as prioridades do seu planejamento.</p>
-        <ul class="cartao-assistente__sinais" id="sinaisAssistente"></ul>
-      </div>
-      <a class="btn-secundario" href="assistente.html">Ver revisão financeira</a>
     </section>
 
     <section class="grupo-home" id="previsao" aria-labelledby="tituloPrevisao">
