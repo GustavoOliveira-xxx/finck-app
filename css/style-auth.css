@@ -185,29 +185,22 @@ body.pagina-auth::before{
 .auth-card{
   position:relative;
   padding:clamp(1.6rem,1.3rem + 1.6vw,2.5rem);
-  border-radius:var(--raio-xl);
-  background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.008)), var(--vidro);
+  border-radius:var(--raio-lg);
+  background:rgba(17,14,24,.9);
   border:1px solid var(--superficie-borda);
-  box-shadow:var(--sombra-card);
-  backdrop-filter:blur(13px) saturate(138%);
-  -webkit-backdrop-filter:blur(13px) saturate(138%);
+  box-shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 26px -18px rgba(0,0,0,.9);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
   overflow:hidden;
   animation: card-entra .85s var(--ease-out) .12s both;
 }
+/* Painel sóbrio: filete sólido no topo, sem halo. */
 .auth-card::before{
   content:"";
-  position:absolute; top:0; left:0; right:0; height:2px;
-  background:var(--grad-linha);
+  position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--roxo-claro);
 }
-.auth-card::after{
-  content:"";
-  position:absolute; right:-80px; top:-80px;
-  width:240px; height:240px; border-radius:50%;
-  background:radial-gradient(circle, rgba(147,51,196,.26), transparent 68%);
-  filter:blur(14px);
-  animation: respira 2.2s var(--ease-suave) .35s 1 both;
-  pointer-events:none;
-}
+.auth-card::after{ content:none; }
 .auth-card h2{
   font-family:var(--fonte-display);
   font-size:clamp(1.5rem,1.3rem + .8vw,1.9rem);
@@ -684,12 +677,11 @@ input:-webkit-autofill{
 
 :root{
   --vidro: rgba(18,14,26,.5);
-  --raio-xl: 22px;
 }
 
 .auth-card{
-  backdrop-filter:blur(22px) saturate(130%);
-  -webkit-backdrop-filter:blur(22px) saturate(130%);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
 }
 
 @media (max-width: 780px){
