@@ -1,7 +1,12 @@
-// Tela da Análise FinCK, dentro do resultado do FinCK of Reality.
+// "O que merece atenção", "Comparar formas de decidir" e "Tirar uma dúvida
+// sobre o cálculo", dentro do resultado do FinCK of Reality.
 // Os números e os textos vêm do motor (js/inteligencia-engine.js); aqui se
-// desenha o bloco, se repassa ao Reality o que a pessoa respondeu e, só
-// quando ela escreve uma pergunta, se fala com a FINCK AI.
+// desenham os blocos, se repassa ao Reality o que a pessoa respondeu e, só
+// quando ela envia uma pergunta livre, se fala com a ajuda opcional (/api/ia).
+//
+// O bloco principal vai no host (section#analiseFinck). A comparação e a
+// dúvida vão em hosts.comparar e hosts.duvida quando o Reality os passa
+// (dentro de "Se quiser aprofundar"); sem eles, ficam no fim do host.
 window.FinckInteligenciaUI = (() => {
   const I = window.FinckInteligencia;
   const U = window.FinckUtils;
@@ -10,12 +15,22 @@ window.FinckInteligenciaUI = (() => {
   const MAX_PERGUNTA = 600;
   const MAX_TROCAS = 3;
   const SELO = {
-    confirmado: [ "confirmado", "Dado confirmado" ],
-    estimativa: [ "estimativa", "Estimativa" ]
+    confirmado: [ "confirmado", "Dado confirmado", "Dado confirmado: vem do que você registrou no FinCK." ],
+    estimativa: [ "estimativa", "Estimativa", "Estimativa: depende de uma suposição, como o ritmo de aportes, a vida útil ou meses iguais na simulação." ]
   };
+  // Mensagens da ajuda opcional, sem jargão: o que aconteceu e o que fazer.
+  const MSG = {
+    indisponivel: "A ajuda opcional não está disponível agora.",
+    limite: "A ajuda opcional atingiu o limite por agora. Tente de novo mais tarde.",
+    demorou: "A ajuda opcional demorou demais para responder. Tente de novo em instantes.",
+    conexao: "Não foi possível falar com a ajuda opcional. Confira a sua conexão e tente de novo.",
+    falhou: "A ajuda opcional não conseguiu responder agora. Tente de novo em instantes."
+  };
+  const VALEM = "Os números acima continuam valendo.";
+  const ROTULO_IA = "Resposta escrita por IA a partir dos números desta análise.";
 
   // estado: a análise que está na tela. memoria: o que a pessoa fez com ela
-  // (conversa, forma de pagamento escolhida), mantido enquanto o item for o
+  // (dúvidas, forma de pagamento escolhida), mantido enquanto o item for o
   // mesmo, inclusive quando o Reality refaz a conta por causa de uma resposta.
   let estado = null;
   let memoria = novaMemoria(null);
@@ -26,10 +41,10 @@ window.FinckInteligenciaUI = (() => {
   let verificando = false;
   let proximaTroca = 1;
   let ligadoNoDocumento = false;
-  const hostsLigados = new WeakSet();
+  const raizesLigadas = new WeakSet();
 
   function novaMemoria(chave) {
-    return { chave: chave, trocas: [], conversaAberta: false, forma: null, rascunho: "" };
+    return { chave: chave, trocas: [], duvidaAberta: false, livreAberta: false, forma: null, rascunho: "" };
   }
   const chaveDe = entrada => `${String(entrada.item_name || "").trim().toLowerCase()}|${Number(entrada.price) || 0}|${Number(entrada.quantity) || 1}`;
   const emDemo = () => {
@@ -44,7 +59,25 @@ window.FinckInteligenciaUI = (() => {
     const reduz = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     return !reduz && (document.documentElement.dataset.animacoes || "completa") === "completa";
   };
-  const el = (host, nome) => host.querySelector(`[data-af="${nome}"]`);
+  // Os três lugares onde a tela desenha, sem repetir quando são o mesmo.
+  const raizes = () => estado ? [ estado.host, estado.comparar, estado.duvida ].filter((r, i, lista) => r && lista.indexOf(r) === i) : [];
+  function no(nome) {
+    for (const raiz of raizes()) {
+      const achado = raiz.querySelector(`[data-af="${nome}"]`);
+      if (achado) {
+        return achado;
+      }
+    }
+    return null;
+  }
+  // Abre os details em volta (o "Se quiser aprofundar" do Reality, por exemplo).
+  function abrirEmVolta(elemento) {
+    let d = elemento && elemento.parentElement ? elemento.parentElement.closest("details") : null;
+    while (d) {
+      d.open = true;
+      d = d.parentElement ? d.parentElement.closest("details") : null;
+    }
+  }
 
   function analisarAgora() {
     return I.analisar({
@@ -58,56 +91,70 @@ window.FinckInteligenciaUI = (() => {
     });
   }
 
-  // --------------------------------------------------------------- esqueleto
+  // --------------------------------------------------------------- esqueletos
 
-  function esqueleto() {
+  function htmlPrincipal() {
     return `
       <div class="analise-finck__cabecalho">
-        <h4 id="tituloAnaliseFinck" class="analise-finck__titulo"><span class="analise-finck__marca" aria-hidden="true">✦</span> Análise FinCK</h4>
-        <p class="analise-finck__resumo" data-af="resumo"></p>
-        <p class="analise-finck__origem">Feita pelo FinCK com os seus dados e regras que você pode conferir, sem IA. A FINCK AI só entra se você escrever uma pergunta na conversa, no fim deste bloco.</p>
+        <h4 id="tituloAnaliseFinck" class="analise-finck__titulo">O que merece atenção</h4>
+        <p class="analise-finck__resumo" data-af="resumo" hidden></p>
       </div>
       <ol class="analise-finck__pontos" role="list" data-af="pontos"></ol>
-      <p class="analise-finck__legenda" data-af="legenda"><span class="selo-certeza selo-certeza--confirmado">Dado confirmado</span> vem do que você registrou no FinCK. <span class="selo-certeza selo-certeza--estimativa">Estimativa</span> depende de uma suposição, como o ritmo de aportes ou a vida útil.</p>
       <div class="analise-finck__leitura" data-af="leitura"></div>
       <div data-af="perguntas"></div>
-      <p class="analise-finck__status" data-af="status" role="status" aria-live="polite" tabindex="-1"></p>
-      <details class="analise-finck__cenarios" data-af="cenarios-caixa">
+      <p class="analise-finck__status" data-af="status" role="status" aria-live="polite" tabindex="-1"></p>`;
+  }
+
+  function htmlComparar() {
+    return `
+      <details class="secao-finck secao-finck--comparar" data-af="comparar-caixa">
         <summary>
-          <span class="analise-finck__subtopo">
-            <span class="analise-finck__subtitulo" id="tituloCenariosFinck">E se...?</span>
+          <span class="secao-finck__topo">
+            <span class="secao-finck__nome" id="tituloCompararFinck">Comparar formas de decidir</span>
             <span class="selo-certeza selo-certeza--simulacao">Simulação</span>
           </span>
-          <small class="analise-finck__cenarios-resumo" data-af="cenarios-resumo"></small>
+          <small class="secao-finck__resumo" data-af="cenarios-resumo"></small>
         </summary>
-        <div data-af="cenarios"></div>
-      </details>
-      <details class="analise-finck__conversa" data-af="conversa">
+        <div class="secao-finck__corpo" data-af="cenarios"></div>
+      </details>`;
+  }
+
+  function htmlDuvida() {
+    return `
+      <details class="secao-finck secao-finck--duvida" data-af="duvida-caixa">
         <summary>
-          <h5 class="analise-finck__conversa-titulo"><span aria-hidden="true">✦</span> Converse sobre esta compra</h5>
-          <small>Perguntas prontas com a conta na hora, ou uma pergunta sua para a FINCK AI.</small>
+          <span class="secao-finck__nome" id="tituloDuvidaFinck">Tirar uma dúvida sobre o cálculo</span>
+          <small class="secao-finck__resumo">Perguntas com resposta na hora, com a conta à vista.</small>
         </summary>
-        <div class="conversa-finck">
-          <p class="conversa-finck__intro">Pergunte sobre esta análise. As sugestões são respondidas na hora pelo cálculo do FinCK, sem IA.</p>
-          <div class="chips-finck" role="group" aria-label="Sugestões de pergunta" data-af="sugestoes"></div>
+        <div class="secao-finck__corpo conversa-finck">
+          <p class="conversa-finck__grupo" id="rotuloSugestoesFinck">Cálculo do FinCK</p>
+          <div class="chips-finck" role="group" aria-labelledby="rotuloSugestoesFinck" data-af="sugestoes"></div>
           <div class="conversa-finck__historico" data-af="historico" aria-live="polite" aria-relevant="additions"></div>
-          <form class="conversa-finck__form" data-af="form" novalidate>
-            <label class="conversa-finck__rotulo" for="perguntaFinck">Ou escreva a sua pergunta para a FINCK AI</label>
-            <textarea id="perguntaFinck" name="pergunta" rows="3" maxlength="${MAX_PERGUNTA}" aria-describedby="perguntaFinckConta avisoEnvioFinck"></textarea>
-            <p class="conversa-finck__conta" id="perguntaFinckConta" data-af="conta">0 de ${MAX_PERGUNTA} caracteres</p>
-            <div class="aviso-envio-finck" id="avisoEnvioFinck">
-              <p><strong>O que vai para a FINCK AI:</strong> a sua pergunta, a categoria da compra e os números desta análise (renda, despesas fixas, saldo, horas, percentuais, prazos estimados e a simulação dos próximos meses). Não vão o nome do item nem nomes de metas, contas ou lançamentos.<span data-af="demo" hidden> Na demonstração, esses números são dados de exemplo e a pergunta é enviada do mesmo jeito.</span></p>
-              <p><strong>Não envie senhas, dados bancários, documentos ou informações de outras pessoas.</strong></p>
-              <p>As respostas ficam só nesta tela (as ${MAX_TROCAS} últimas) e somem quando você começa outra análise.</p>
-              <details class="aviso-envio-finck__ver">
-                <summary>Ver os números que vão junto</summary>
-                <pre data-af="contexto"></pre>
-              </details>
-            </div>
-            <p class="conversa-finck__indisponivel" data-af="indisponivel" hidden></p>
-            <button type="submit" class="btn-secundario conversa-finck__enviar" data-af="enviar">Perguntar à FINCK AI</button>
-            <ol class="etapas-finck" data-af="etapas" hidden></ol>
-          </form>
+          <details class="pergunta-livre-finck" data-af="livre">
+            <summary>
+              <span class="pergunta-livre-finck__nome">Pergunta livre <span class="pergunta-livre-finck__tipo">(Ajuda opcional)</span></span>
+              <small>Escreva com as suas palavras. Nada é enviado sem você pedir.</small>
+            </summary>
+            <form class="conversa-finck__form" data-af="form" novalidate>
+              <p class="conversa-finck__indisponivel" data-af="indisponivel" tabindex="-1" hidden></p>
+              <div class="conversa-finck__campos" data-af="campos">
+                <p class="conversa-finck__como">Ao enviar, um serviço de IA escreve a resposta a partir dos números desta análise. Os cálculos continuam sendo do FinCK.</p>
+                <label class="conversa-finck__rotulo" for="perguntaFinck">Sua pergunta</label>
+                <textarea id="perguntaFinck" data-af="pergunta" name="pergunta" rows="3" maxlength="${MAX_PERGUNTA}" aria-describedby="perguntaFinckConta avisoEnvioFinck avisoPrivacidadeFinck"></textarea>
+                <p class="conversa-finck__conta" id="perguntaFinckConta" data-af="conta">0 de ${MAX_PERGUNTA} caracteres</p>
+                <div class="aviso-envio-finck">
+                  <p id="avisoEnvioFinck"><strong>O que é enviado:</strong> a sua pergunta, a categoria da compra e os números desta análise (renda, despesas fixas, saldo, horas, percentuais, prazos estimados e a simulação dos próximos meses). Não vão o nome do item nem nomes de metas, contas ou lançamentos.<span data-af="demo" hidden> Na demonstração, esses números são dados de exemplo.</span></p>
+                  <p id="avisoPrivacidadeFinck"><strong>Privacidade:</strong> não envie senhas, dados bancários, documentos ou informações de outras pessoas. As respostas ficam só nesta tela (as ${MAX_TROCAS} últimas) e somem quando você começa outra análise.</p>
+                  <details class="aviso-envio-finck__ver">
+                    <summary>Ver os números que vão junto</summary>
+                    <pre data-af="contexto"></pre>
+                  </details>
+                </div>
+                <button type="submit" class="btn-secundario conversa-finck__enviar" data-af="enviar">Enviar pergunta</button>
+                <ol class="etapas-finck" data-af="etapas" hidden></ol>
+              </div>
+            </form>
+          </details>
         </div>
       </details>`;
   }
@@ -122,30 +169,27 @@ window.FinckInteligenciaUI = (() => {
     return `<span class="selo-certeza selo-certeza--${classe}">${texto}</span>`;
   };
 
+  // Um fato, o selo e um só "Como foi calculado?" com o que entra na conta,
+  // a conta passo a passo e o que fica de fora.
   function htmlPonto(p) {
+    const selo = SELO[p.certeza] || SELO.estimativa;
     return `
       <li class="ponto-finck ponto-finck--${esc(p.id)}" data-ponto="${esc(p.id)}">
         <div class="ponto-finck__topo">
-          <span class="ponto-finck__num" aria-hidden="true">${esc(p.numero)}</span>
           <h5 class="ponto-finck__titulo">${esc(p.titulo)}</h5>
           ${htmlSelo(p.certeza)}
         </div>
         <p class="ponto-finck__texto">${esc(p.texto)}</p>
-        <div class="ponto-finck__explica">
-          <details class="ponto-finck__detalhe" data-detalhe="porque">
-            <summary>Por que o FinCK diz isso?</summary>
-            <div class="ponto-finck__corpo">
-              <p>Consideramos:</p>
-              <ul class="ponto-finck__fatores">${p.fatores.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
-              ${p.nao_considera ? `<p class="ponto-finck__fora">Fica de fora da conta: ${esc(p.nao_considera)}</p>` : ""}
-              <p>Por isso chegamos a essa conclusão.</p>
-            </div>
-          </details>
-          <details class="ponto-finck__detalhe" data-detalhe="como">
-            <summary>Como chegamos nisso?</summary>
-            <div class="ponto-finck__corpo">${htmlCalculo(p.calculo)}</div>
-          </details>
-        </div>
+        <details class="ponto-finck__detalhe" data-detalhe="calculo">
+          <summary>Como foi calculado?</summary>
+          <div class="ponto-finck__corpo">
+            <p class="ponto-finck__rotulo">Entra na conta:</p>
+            <ul class="ponto-finck__fatores">${p.fatores.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+            ${htmlCalculo(p.calculo)}
+            ${p.nao_considera ? `<p class="ponto-finck__fora">Fica de fora: ${esc(p.nao_considera)}</p>` : ""}
+            <p class="ponto-finck__selo">${esc(selo[2])}</p>
+          </div>
+        </details>
       </li>`;
   }
 
@@ -172,7 +216,7 @@ window.FinckInteligenciaUI = (() => {
     const n = a.numeros;
     const rotuloAportes = { ritmo: "de aportes reais nas metas (média dos últimos 90 dias)", prazo: "que os prazos das metas pedem", misto: "de aportes e prazos das metas" }[n.base_aportes] || "das metas";
     return `
-      <p class="analise-finck__intro">O mesmo preço em três momentos, com o efeito ${meta ? `na meta “${esc(meta.nome)}”` : "nas metas"}, no seu mês e no total pago.</p>
+      <p class="secao-finck__intro">O mesmo preço de três formas, com o efeito ${meta ? `na meta “${esc(meta.nome)}”` : "nas metas"}, no seu mês e no total pago.</p>
       <ul class="cenarios-finck" role="list">
         ${a.cenarios.map(c => `
           <li class="cenario-finck cenario-finck--${esc(c.id)}">
@@ -188,25 +232,29 @@ window.FinckInteligenciaUI = (() => {
           </li>`).join("")}
       </ul>
       <details class="ponto-finck__detalhe analise-finck__regra">
-        <summary>Como os cenários são calculados</summary>
+        <summary>Como foi calculado?</summary>
         <div class="ponto-finck__corpo">
-          <p>É a mesma conta da revelação lá em cima. Cada pagamento usa primeiro a folga fora das metas; só o que passa dela sai do que iria para a meta e vira atraso, pelo ritmo dela. Agora, conta só a folga de hoje. Esperando ${esc(I.PARAMETROS.MESES_ESPERA)} meses, entra a sobra desses meses. Parcelando, cada parcela, com os juros, usa a folga e a sobra dos meses até ela.</p>
+          <p>É a mesma conta do impacto lá em cima. Cada pagamento usa primeiro a folga fora das metas; só o que passa dela sai do que iria para a meta e vira atraso, pelo ritmo dela. Comprando agora, conta só a folga de hoje. Esperando ${esc(I.PARAMETROS.MESES_ESPERA)} meses, entra a sobra desses meses. Parcelando, cada parcela, com os juros, usa a folga e a sobra dos meses até ela.</p>
           <p>Folga fora das metas hoje: ${esc(U.moeda(n.folga_hoje))} (o saldo acima de um mês de despesas fixas, mais a sobra deste mês fora das metas, sem passar do saldo depois das parcelas).</p>
           <p>Sobra fora das metas: ${esc(U.moeda(n.sobra_livre))} ${n.sobra_livre_com_dia_a_dia ? "(renda menos despesas fixas menos gastos do dia a dia)" : "(renda menos despesas fixas; os gastos do dia a dia não entram)"} menos ${esc(U.moeda(n.aportes_metas))} por mês ${esc(rotuloAportes)} = ${esc(U.moeda(n.sobra_extra))} por mês.</p>
-          <p>"No mês" compara o que sai em cada mês (ou o que você separa, no cenário de esperar) com a sua sobra após os fixos. O preço é o mesmo nos três casos, e renda e despesas ficam iguais todo mês: é uma simulação, não uma previsão garantida.</p>
+          <p>"No mês" compara o que sai em cada mês (ou o que você separa, se esperar) com a sua sobra após os fixos. O preço é o mesmo nas três formas, e renda e despesas ficam iguais todo mês: é uma simulação, não uma previsão garantida.</p>
         </div>
       </details>`;
   }
 
-  // Redesenha tudo o que depende dos números, sem tocar na conversa. Os
-  // detalhes que a pessoa abriu continuam abertos.
+  // Redesenha tudo o que depende dos números, sem tocar nas dúvidas já
+  // respondidas. Os detalhes que a pessoa abriu continuam abertos.
   function desenharAnalise() {
     const host = estado.host;
     const a = estado.analise;
     const abertos = new Set([ ...host.querySelectorAll("[data-ponto] details[open]") ].map(d => `${d.closest("[data-ponto]").dataset.ponto}:${d.dataset.detalhe}`));
-    const regraAberta = Boolean(host.querySelector(".analise-finck__regra[open]"));
-    el(host, "resumo").textContent = a.cabecalho;
-    el(host, "pontos").innerHTML = a.pontos.map(htmlPonto).join("");
+    const caixaCenarios = no("cenarios");
+    const regraAberta = Boolean(caixaCenarios && caixaCenarios.querySelector(".analise-finck__regra[open]"));
+    const resumo = no("resumo");
+    resumo.textContent = a.cabecalho || "";
+    resumo.hidden = !a.cabecalho;
+    const pontos = no("pontos");
+    pontos.innerHTML = a.pontos.map(htmlPonto).join("");
     abertos.forEach(chave => {
       const [ponto, detalhe] = chave.split(":");
       const d = host.querySelector(`[data-ponto="${ponto}"] details[data-detalhe="${detalhe}"]`);
@@ -214,29 +262,28 @@ window.FinckInteligenciaUI = (() => {
         d.open = true;
       }
     });
-    el(host, "pontos").hidden = !a.pontos.length;
-    el(host, "legenda").hidden = !a.pontos.length;
-    el(host, "leitura").innerHTML = `
-      <h5 class="analise-finck__subtitulo"><span aria-hidden="true">✦</span> Nossa leitura</h5>
+    pontos.hidden = !a.pontos.length;
+    no("leitura").innerHTML = `
+      <h5 class="analise-finck__subtitulo">O que mais pesa neste cenário</h5>
       <p>${esc(a.leitura.texto)}</p>`;
-    el(host, "perguntas").innerHTML = htmlPerguntas(a.perguntas);
-    el(host, "cenarios").innerHTML = htmlCenarios(a);
-    const resumoCenarios = el(host, "cenarios-resumo");
+    no("perguntas").innerHTML = htmlPerguntas(a.perguntas);
+    caixaCenarios.innerHTML = htmlCenarios(a);
+    const resumoCenarios = no("cenarios-resumo");
     if (resumoCenarios.textContent !== a.resumo_cenarios) {
       resumoCenarios.textContent = a.resumo_cenarios;
     }
     if (regraAberta) {
-      host.querySelector(".analise-finck__regra").open = true;
+      caixaCenarios.querySelector(".analise-finck__regra").open = true;
     }
-    el(host, "sugestoes").innerHTML = htmlSugestoes(a.sugestoes);
-    el(host, "contexto").textContent = I.contexto(a);
-    el(host, "demo").hidden = !a.demo;
+    no("sugestoes").innerHTML = htmlSugestoes(a.sugestoes);
+    no("contexto").textContent = I.contexto(a);
+    no("demo").hidden = !a.demo;
     marcarTrocasAntigas();
   }
 
   const htmlSugestoes = lista => lista.map(s => `<button type="button" class="chip chip-finck" data-sugestao="${esc(s.id)}"${s.valor ? ` data-valor="${esc(s.valor)}"` : ""}>${esc(s.rotulo)}</button>`).join("");
 
-  // --------------------------------------------------------------- conversa
+  // ----------------------------------------------------------------- dúvidas
 
   function elementoTroca(t) {
     const art = document.createElement("article");
@@ -252,7 +299,8 @@ window.FinckInteligenciaUI = (() => {
     resposta.className = "troca-finck__resposta";
     const origem = document.createElement("p");
     origem.className = "troca-finck__origem";
-    origem.textContent = { calculo: "Cálculo do FinCK", ia: "✦ FINCK AI", erro: "FINCK AI indisponível agora" }[t.tipo];
+    // A resposta escrita por IA diz isso antes do texto, não no rodapé.
+    origem.textContent = { calculo: "Cálculo do FinCK", ia: ROTULO_IA, erro: "Ajuda opcional" }[t.tipo];
     resposta.append(origem);
     if (t.titulo) {
       const titulo = document.createElement("p");
@@ -271,23 +319,10 @@ window.FinckInteligenciaUI = (() => {
       selo.innerHTML = htmlSelo(t.certeza);
       resposta.append(conta.firstElementChild, selo.firstElementChild);
     }
-    if (t.tipo === "ia") {
-      const rodape = document.createElement("p");
-      rodape.className = "troca-finck__rodape";
-      // A frase de autonomia já vem no fim da resposta (api/ia.js).
-      rodape.textContent = "Resposta escrita pela FINCK AI a partir dos números desta análise.";
-      resposta.append(rodape);
-      if (t.modelo || t.tempo_ms) {
-        const tecnico = document.createElement("p");
-        tecnico.className = "troca-finck__tecnico";
-        tecnico.textContent = [ t.modelo ? `Modelo: ${t.modelo}` : "", t.tempo_ms ? `${U.numero(t.tempo_ms / 1000, 1)} s` : "" ].filter(Boolean).join(" · ");
-        resposta.append(tecnico);
-      }
-    }
     if (t.tipo === "erro") {
       const valem = document.createElement("p");
       valem.className = "troca-finck__rodape";
-      valem.textContent = "Os números acima continuam valendo. Estas perguntas têm resposta na hora, pelo cálculo do FinCK:";
+      valem.textContent = `${VALEM} Estas perguntas têm resposta na hora, pelo cálculo do FinCK:`;
       const chips = document.createElement("div");
       chips.className = "chips-finck";
       chips.innerHTML = estado ? htmlSugestoes(estado.analise.sugestoes) : "";
@@ -302,8 +337,7 @@ window.FinckInteligenciaUI = (() => {
   }
 
   function desenharHistorico() {
-    const historico = el(estado.host, "historico");
-    historico.replaceChildren(...memoria.trocas.map(elementoTroca));
+    no("historico").replaceChildren(...memoria.trocas.map(elementoTroca));
     marcarTrocasAntigas();
   }
 
@@ -312,12 +346,13 @@ window.FinckInteligenciaUI = (() => {
       return;
     }
     const atual = I.contexto(estado.analise);
+    const historico = no("historico");
     memoria.trocas.forEach(t => {
-      const no = estado.host.querySelector(`[data-troca="${t.id}"]`);
-      if (no) {
+      const elemento = historico && historico.querySelector(`[data-troca="${t.id}"]`);
+      if (elemento) {
         const antiga = t.base !== atual;
-        no.classList.toggle("troca-finck--desatualizada", antiga);
-        no.querySelector(".troca-finck__antiga").hidden = !antiga;
+        elemento.classList.toggle("troca-finck--desatualizada", antiga);
+        elemento.querySelector(".troca-finck__antiga").hidden = !antiga;
       }
     });
   }
@@ -326,11 +361,11 @@ window.FinckInteligenciaUI = (() => {
     const t = { id: proximaTroca++, base: I.contexto(estado.analise), ...dados };
     memoria.trocas.unshift(t);
     const sobra = memoria.trocas.splice(MAX_TROCAS);
-    const historico = el(estado.host, "historico");
+    const historico = no("historico");
     sobra.forEach(v => historico.querySelector(`[data-troca="${v.id}"]`)?.remove());
-    const no = elementoTroca(t);
-    historico.prepend(no);
-    no.scrollIntoView({ block: "nearest", behavior: movimentoLiberado() ? "smooth" : "auto" });
+    const elemento = elementoTroca(t);
+    historico.prepend(elemento);
+    elemento.scrollIntoView({ block: "nearest", behavior: movimentoLiberado() ? "smooth" : "auto" });
   }
 
   function sugerir(id, valor) {
@@ -346,8 +381,8 @@ window.FinckInteligenciaUI = (() => {
   }
 
   function mostrarEtapas(atual) {
-    const lista = el(estado.host, "etapas");
-    const etapas = [ "Enviando os números desta análise…", "Esperando a FINCK AI…" ];
+    const lista = no("etapas");
+    const etapas = [ "Enviando a pergunta e os números desta análise…", "Esperando a resposta…" ];
     if (atual === null) {
       lista.hidden = true;
       lista.innerHTML = "";
@@ -355,28 +390,30 @@ window.FinckInteligenciaUI = (() => {
     }
     lista.hidden = false;
     lista.innerHTML = etapas.map((t, i) => `<li data-estado="${i < atual ? "feita" : i === atual ? "atual" : "proxima"}">${i < atual ? '<span class="visualmente-oculto">Feito: </span>' : ""}${esc(t)}</li>`).join("");
-    el(estado.host, "status").textContent = etapas[atual];
+    no("status").textContent = etapas[atual];
   }
 
+  // Fora do ar, a pergunta livre some e fica só o aviso: nada de campo
+  // desabilitado. Se o foco estava no campo, ele passa para o aviso.
   function aplicarDisponibilidade() {
     if (!estado) {
       return;
     }
-    const host = estado.host;
-    const fora = iaDisponivel && iaDisponivel.ok === false;
-    const aviso = el(host, "indisponivel");
+    const fora = Boolean(iaDisponivel && iaDisponivel.ok === false);
+    const aviso = no("indisponivel");
+    const campos = no("campos");
+    const focoNosCampos = Boolean(campos && campos.contains(document.activeElement));
     aviso.hidden = !fora;
-    aviso.textContent = fora ? `${iaDisponivel.motivo} Os números acima continuam valendo, e as sugestões acima respondem na hora.` : "";
-    host.querySelector("#perguntaFinck").disabled = Boolean(fora);
-    el(host, "enviar").setAttribute("aria-disabled", String(Boolean(fora || pedido)));
+    aviso.textContent = fora ? `${MSG.indisponivel} ${VALEM}` : "";
+    campos.hidden = fora;
+    if (fora && focoNosCampos) {
+      aviso.focus({ preventScroll: true });
+    }
+    no("enviar").setAttribute("aria-disabled", String(Boolean(pedido)));
   }
 
-  // Pergunta sem custo (GET não gasta cota) para saber, antes de a pessoa
-  // escrever, se a FINCK AI existe neste endereço.
-  // As mesmas frases do Assistente quando a FINCK AI não responde neste
-  // endereço (rota ausente) ou está desligada no servidor.
-  const INDISPONIVEL = "A FINCK AI não está disponível neste endereço.";
-  const DESLIGADA = "A FINCK AI está desligada neste servidor agora.";
+  // Pergunta sem custo (GET não gasta cota), feita só quando a pessoa abre a
+  // pergunta livre, para saber se a ajuda opcional existe neste endereço.
   function verificarIA() {
     if (iaDisponivel !== null || verificando || !window.fetch) {
       return;
@@ -387,10 +424,10 @@ window.FinckInteligenciaUI = (() => {
     fetch(ENDPOINT_IA, { method: "GET", cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
       .then(async r => {
         if (r.status === 404) {
-          return { ok: false, motivo: INDISPONIVEL };
+          return { ok: false };
         }
         const j = await r.json().catch(() => null);
-        return j && j.ia === false ? { ok: false, motivo: DESLIGADA } : { ok: true };
+        return j && j.ia === false ? { ok: false } : { ok: true };
       })
       .catch(() => null)
       .then(v => {
@@ -412,13 +449,30 @@ window.FinckInteligenciaUI = (() => {
     }
   }
 
+  // A mensagem do servidor não vai para a tela: cada situação tem a sua
+  // frase, sem nome de serviço nem código.
+  function motivoDaFalha(status, dados) {
+    if (status === 400 && dados && typeof dados.erro === "string" && dados.erro.length < 160) {
+      return dados.erro;
+    }
+    if (status === 404 || status === 500 || status === 503) {
+      return MSG.indisponivel;
+    }
+    if (status === 429) {
+      return MSG.limite;
+    }
+    if (status === 504) {
+      return MSG.demorou;
+    }
+    return MSG.falhou;
+  }
+
   function enviarPergunta(e) {
     e.preventDefault();
     if (!estado || pedido) {
       return;
     }
-    const host = estado.host;
-    const campo = host.querySelector("#perguntaFinck");
+    const campo = no("pergunta");
     const pergunta = campo.value.trim().slice(0, MAX_PERGUNTA);
     if (iaDisponivel && iaDisponivel.ok === false) {
       return;
@@ -431,25 +485,25 @@ window.FinckInteligenciaUI = (() => {
     // mudar durante a espera, a resposta é marcada como feita com os antigos.
     const base = I.contexto(estado.analise);
     const corpo = JSON.stringify({ pergunta: pergunta, contexto: base });
-    el(host, "form").setAttribute("aria-busy", "true");
+    no("form").setAttribute("aria-busy", "true");
     // XMLHttpRequest e não fetch: o evento de envio concluído é o que marca,
     // de verdade, a passagem de "enviando" para "esperando".
     const xhr = new XMLHttpRequest();
     pedido = xhr;
     etapaDoPedido = 0;
     mostrarEtapas(0);
-    el(host, "enviar").setAttribute("aria-disabled", "true");
+    no("enviar").setAttribute("aria-disabled", "true");
     // O bloco pode ter sido redesenhado enquanto a resposta não chegava:
-    // tudo é procurado de novo no host atual.
+    // tudo é procurado de novo.
     const terminar = () => {
       if (pedido !== xhr || !estado) {
         return false;
       }
       pedido = null;
       etapaDoPedido = null;
-      el(estado.host, "form").removeAttribute("aria-busy");
+      no("form").removeAttribute("aria-busy");
       mostrarEtapas(null);
-      el(estado.host, "status").textContent = "";
+      no("status").textContent = "";
       aplicarDisponibilidade();
       return true;
     };
@@ -473,24 +527,22 @@ window.FinckInteligenciaUI = (() => {
       try {
         dados = JSON.parse(xhr.responseText);
       } catch {}
-      if (xhr.status === 404) {
-        iaDisponivel = { ok: false, motivo: INDISPONIVEL };
-        falhar(INDISPONIVEL);
-        return;
-      }
       if (xhr.status >= 200 && xhr.status < 300 && dados && typeof dados.resposta === "string" && dados.resposta.trim()) {
         if (!terminar()) {
           return;
         }
-        estado.host.querySelector("#perguntaFinck").value = "";
+        no("pergunta").value = "";
         atualizarConta();
-        adicionarTroca({ tipo: "ia", pergunta: pergunta, texto: dados.resposta.trim(), modelo: dados.modelo ? String(dados.modelo) : "", tempo_ms: Number(dados.tempo_ms) || 0, base: base });
+        adicionarTroca({ tipo: "ia", pergunta: pergunta, texto: dados.resposta.trim(), base: base });
         return;
       }
-      falhar(dados && dados.erro ? String(dados.erro) : "A FINCK AI não respondeu agora. Tente de novo em instantes.");
+      if (xhr.status === 404) {
+        iaDisponivel = { ok: false };
+      }
+      falhar(motivoDaFalha(xhr.status, dados));
     };
-    xhr.onerror = () => falhar("A FINCK AI não respondeu agora. Confira a sua conexão e tente de novo.");
-    xhr.ontimeout = () => falhar("A FINCK AI demorou demais para responder. Tente de novo em instantes.");
+    xhr.onerror = () => falhar(MSG.conexao);
+    xhr.ontimeout = () => falhar(MSG.demorou);
     xhr.send(corpo);
   }
 
@@ -498,8 +550,8 @@ window.FinckInteligenciaUI = (() => {
     if (!estado) {
       return;
     }
-    const campo = estado.host.querySelector("#perguntaFinck");
-    el(estado.host, "conta").textContent = `${campo.value.length} de ${MAX_PERGUNTA} caracteres`;
+    const campo = no("pergunta");
+    no("conta").textContent = `${campo.value.length} de ${MAX_PERGUNTA} caracteres`;
     memoria.rascunho = campo.value;
   }
 
@@ -507,11 +559,11 @@ window.FinckInteligenciaUI = (() => {
 
   function anunciar(texto) {
     if (estado) {
-      el(estado.host, "status").textContent = texto;
+      no("status").textContent = texto;
     }
   }
   function focarStatus() {
-    const status = estado && el(estado.host, "status");
+    const status = estado && no("status");
     if (status && status.textContent) {
       status.focus({ preventScroll: true });
       // Um ponto novo acima pode empurrar a mensagem para trás da navegação
@@ -575,33 +627,39 @@ window.FinckInteligenciaUI = (() => {
 
   // ----------------------------------------------------------------- eventos
 
-  function ligar(host) {
-    if (!hostsLigados.has(host)) {
-      hostsLigados.add(host);
-      host.addEventListener("click", e => {
+  function ligar(raiz) {
+    if (!raizesLigadas.has(raiz)) {
+      raizesLigadas.add(raiz);
+      raiz.addEventListener("click", e => {
         const escolha = e.target.closest("[data-campo]");
-        if (escolha && host.contains(escolha) && !escolha.disabled) {
+        if (escolha && raiz.contains(escolha) && !escolha.disabled) {
           escolher(escolha);
           return;
         }
         const sugestao = e.target.closest("[data-sugestao]");
-        if (sugestao && host.contains(sugestao)) {
+        if (sugestao && raiz.contains(sugestao)) {
           sugerir(sugestao.dataset.sugestao, sugestao.dataset.valor);
         }
       });
-      host.addEventListener("submit", e => {
+      raiz.addEventListener("submit", e => {
         if (e.target.matches('[data-af="form"]')) {
           enviarPergunta(e);
         }
       });
-      host.addEventListener("input", e => {
-        if (e.target.id === "perguntaFinck") {
+      raiz.addEventListener("input", e => {
+        if (e.target.matches('[data-af="pergunta"]')) {
           atualizarConta();
         }
       });
-      host.addEventListener("toggle", e => {
-        if (e.target.matches('[data-af="conversa"]')) {
-          memoria.conversaAberta = e.target.open;
+      raiz.addEventListener("toggle", e => {
+        if (!estado || !raizes().includes(raiz)) {
+          return;
+        }
+        if (e.target.matches('[data-af="duvida-caixa"]')) {
+          memoria.duvidaAberta = e.target.open;
+        }
+        if (e.target.matches('[data-af="livre"]')) {
+          memoria.livreAberta = e.target.open;
           if (e.target.open) {
             verificarIA();
           }
@@ -619,7 +677,7 @@ window.FinckInteligenciaUI = (() => {
         memoria.forma = t.value === "avista" ? "avista" : "parcelado";
         estado.formaConfirmada = true;
         estado.analise = analisarAgora();
-        el(estado.host, "perguntas").innerHTML = htmlPerguntas(estado.analise.perguntas);
+        no("perguntas").innerHTML = htmlPerguntas(estado.analise.perguntas);
       });
     }
   }
@@ -627,24 +685,28 @@ window.FinckInteligenciaUI = (() => {
   // ------------------------------------------------------------------ entrada
 
   // Chamado pelo Reality a cada análise.
-  function mostrar({ ctx = {}, entrada = {}, resultado = null, linhaTempo = null, host = null, aoEscolher = null } = {}) {
+  function mostrar({ ctx = {}, entrada = {}, resultado = null, linhaTempo = null, host = null, hosts = null, aoEscolher = null } = {}) {
     const alvo = host || document.getElementById("analiseFinck");
     if (!alvo || !I || !resultado) {
       return;
     }
+    const comparar = hosts && hosts.comparar && hosts.comparar !== alvo ? hosts.comparar : null;
+    const duvida = hosts && hosts.duvida && hosts.duvida !== alvo ? hosts.duvida : null;
     const chave = chaveDe(entrada || {});
     const mesmoItem = memoria.chave === chave;
     const pendente = estado && estado.pendente;
-    const focoDentro = alvo.contains(document.activeElement) || document.activeElement === document.body;
+    const focoDentro = [ alvo, comparar, duvida ].some(r => r && r.contains(document.activeElement)) || document.activeElement === document.body;
     if (!mesmoItem) {
       cancelarPedido();
       memoria = novaMemoria(chave);
-    } else if (estado && estado.host === alvo) {
-      const campo = alvo.querySelector("#perguntaFinck");
+    } else if (estado) {
+      const campo = no("pergunta");
       if (campo) {
         memoria.rascunho = campo.value;
       }
     }
+    // Um lugar que deixou de ser usado não fica com a tela antiga.
+    const antigos = raizes().filter(r => r !== alvo && r !== comparar && r !== duvida);
     const formaAtual = linhaTempo && linhaTempo.entrada ? linhaTempo.entrada.forma : null;
     estado = {
       ctx: ctx || {},
@@ -652,21 +714,38 @@ window.FinckInteligenciaUI = (() => {
       resultado: resultado,
       linhaTempo: linhaTempo,
       host: alvo,
+      comparar: comparar,
+      duvida: duvida,
       aoEscolher: typeof aoEscolher === "function" ? aoEscolher : null,
       formaConfirmada: Boolean(memoria.forma),
       pendente: null,
       analise: null
     };
+    antigos.forEach(r => {
+      r.innerHTML = "";
+    });
     estado.analise = analisarAgora();
-    // O mesmo item no mesmo bloco não refaz o esqueleto: a linha de estado,
-    // a conversa e o que a pessoa abriu continuam os mesmos nós, e a
+    // O mesmo item nos mesmos lugares não refaz os esqueletos: a linha de
+    // estado, as dúvidas e o que a pessoa abriu continuam os mesmos nós, e a
     // mensagem final cai numa região viva que já existia.
-    const reaproveita = mesmoItem && Boolean(el(alvo, "pontos"));
+    const temEsqueleto = (raiz, nome) => Boolean(raiz.querySelector(`[data-af="${nome}"]`));
+    const reaproveita = mesmoItem && temEsqueleto(alvo, "pontos") && temEsqueleto(comparar || alvo, "cenarios") && temEsqueleto(duvida || alvo, "historico");
     if (!reaproveita) {
-      alvo.innerHTML = esqueleto();
+      alvo.innerHTML = htmlPrincipal() + (comparar ? "" : htmlComparar()) + (duvida ? "" : htmlDuvida());
+      if (comparar) {
+        comparar.innerHTML = htmlComparar();
+      }
+      if (duvida) {
+        duvida.innerHTML = htmlDuvida();
+      }
     }
     alvo.hidden = false;
     alvo.classList.add("analise-finck");
+    [ comparar, duvida ].forEach(r => {
+      if (r) {
+        r.hidden = false;
+      }
+    });
     // A entrada em cascata só na primeira vez do item; ao refazer a conta, o
     // bloco não "pisca" de novo.
     if (!mesmoItem) {
@@ -674,19 +753,18 @@ window.FinckInteligenciaUI = (() => {
       clearTimeout(relogioEntrada);
       relogioEntrada = setTimeout(() => alvo.classList.remove("analise-finck--entrando"), 1200);
     }
-    ligar(alvo);
+    raizes().forEach(ligar);
     desenharAnalise();
     if (!reaproveita) {
       desenharHistorico();
-      const conversa = el(alvo, "conversa");
-      conversa.open = memoria.conversaAberta;
-      const campo = alvo.querySelector("#perguntaFinck");
-      campo.value = memoria.rascunho || "";
+      no("duvida-caixa").open = memoria.duvidaAberta;
+      no("livre").open = memoria.livreAberta;
+      no("pergunta").value = memoria.rascunho || "";
     }
     atualizarConta();
     aplicarDisponibilidade();
     if (pedido && etapaDoPedido !== null) {
-      el(alvo, "form").setAttribute("aria-busy", "true");
+      no("form").setAttribute("aria-busy", "true");
       mostrarEtapas(etapaDoPedido);
     }
     if (pendente && pendente.campo === "expected_months") {
@@ -725,33 +803,45 @@ window.FinckInteligenciaUI = (() => {
 
   function limpar() {
     cancelarPedido();
+    const lugares = estado ? raizes() : [ "analiseFinck", "compararFormas", "duvidaCalculo" ].map(id => document.getElementById(id)).filter(Boolean);
     const host = estado ? estado.host : document.getElementById("analiseFinck");
+    lugares.forEach(r => {
+      r.innerHTML = "";
+    });
     if (host) {
-      host.innerHTML = "";
       host.hidden = true;
     }
     estado = null;
     memoria = novaMemoria(null);
   }
 
-  // Abre a conversa com uma pergunta já escrita, sem enviar: a pessoa lê o
-  // aviso do que vai junto e decide.
+  // Abre "Tirar uma dúvida sobre o cálculo" e a pergunta livre, com a
+  // pergunta já escrita, sem enviar: a pessoa lê o que vai junto e decide.
+  // Também abre o que estiver em volta (o "Se quiser aprofundar").
   function perguntar(texto) {
     if (!estado || !estado.host || !estado.host.isConnected) {
-      return;
+      return false;
     }
-    const conversa = el(estado.host, "conversa");
-    const campo = estado.host.querySelector("#perguntaFinck");
-    if (!conversa || !campo) {
-      return;
+    const caixa = no("duvida-caixa");
+    const livre = no("livre");
+    const campo = no("pergunta");
+    if (!caixa || !livre || !campo) {
+      return false;
     }
-    conversa.open = true;
-    if (!campo.value.trim()) {
+    abrirEmVolta(caixa);
+    caixa.open = true;
+    livre.open = true;
+    memoria.duvidaAberta = true;
+    memoria.livreAberta = true;
+    const fora = Boolean(iaDisponivel && iaDisponivel.ok === false);
+    const alvo = fora ? no("indisponivel") : campo;
+    if (!fora && !campo.value.trim()) {
       campo.value = String(texto || "").slice(0, MAX_PERGUNTA);
       atualizarConta();
     }
-    campo.focus({ preventScroll: true });
-    campo.scrollIntoView({ block: "center", behavior: movimentoLiberado() ? "smooth" : "auto" });
+    alvo.focus({ preventScroll: true });
+    alvo.scrollIntoView({ block: "center", behavior: movimentoLiberado() ? "smooth" : "auto" });
+    return true;
   }
 
   return { mostrar: mostrar, atualizar: atualizar, limpar: limpar, perguntar: perguntar, analiseAtual: () => estado ? estado.analise : null };

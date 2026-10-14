@@ -66,7 +66,7 @@
         ${r.sem_decisao ? numero(r.sem_decisao, "sem decisão ainda") : ""}
       </ul>
       <p class="resumo-decisoes__frase">${U.escapeHTML(R.fraseHistorico(r))}</p>
-      ${leitura ? `<p class="resumo-decisoes__leitura"><span class="resumo-decisoes__origem">Leitura do FinCK, feita por regra, sem IA:</span> ${U.escapeHTML(leitura)}</p>` : ""}
+      ${leitura ? `<p class="resumo-decisoes__leitura"><span class="resumo-decisoes__origem">Regra do FinCK</span> ${U.escapeHTML(leitura)}</p>` : ""}
       <p class="nota">Conta as decisões salvas no momento da análise, não a prova do que aconteceu depois. O acompanhamento de 30 dias, em <a href="decisoes.html">Decisões</a>, registra o que veio depois.</p>`;
   }
   function renderHistorico(host, analises) {

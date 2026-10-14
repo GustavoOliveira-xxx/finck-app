@@ -1,5 +1,6 @@
-// Testes da Análise FinCK (js/inteligencia-engine.js) e da tela dela
-// (js/inteligencia.js, carregada aqui só para estes testes).
+// Testes de "O que merece atenção" (js/inteligencia-engine.js) e da tela
+// dele, com a comparação e a dúvida (js/inteligencia.js, carregada aqui só
+// para estes testes).
 (() => {
   const { descrever, teste, esperar } = window.FinckTestes;
   const E = window.FinckInteligencia;
@@ -7,7 +8,8 @@
   const L = window.FinckLinhaTempo;
   const HOJE = new Date(2026, 9, 8, 12);
   const PERFIL = { income_monthly: 3500, work_days_month: 22, work_hours_day: 8 };
-  // Nomes de propósito estranhos: nenhum deles pode chegar ao contexto da IA.
+  // Nomes de propósito estranhos: nenhum deles pode chegar ao contexto que a
+  // ajuda opcional recebe.
   const METAS = [
     { id: "m1", name: "Viagem secreta da Ana", target_amount: 6000, current_amount: 1500, deadline: "2027-06-08" },
     { id: "m2", name: "Notebook do Pedro", target_amount: 3200, current_amount: 400, deadline: "2028-04-08" }
@@ -16,6 +18,9 @@
   // Intl separa "R$" do número com espaço não separável; nos testes vale o comum.
   const t = s => String(s).replace(/[\u00a0\u202f]/g, " ");
   const PROIBIDO = /não compre|compre agora|ótima compra|boa compra|compra é ruim|você deve|não deveria|confiança:|de certeza/i;
+  // A palavra IA, o nome FINCK AI e o símbolo ✦ ficam fora de tudo o que o
+  // FinCK calcula sozinho.
+  const CARA_DE_IA = /\bIA\b|FINCK AI|\u2726|Encontramos|Nossa leitura/;
 
   function cenario({ preco = 800, meses = null, metas = METAS, saldo = 2880, fixos = 1354, compromissos = 0, categoria = "Eletrônicos", quantidade = null, linha = true, forma = "parcelado", parcelas = 10, juros = 0, diaADia = 900, formaConfirmada = false, demo = false, renda = 3500 } = {}) {
     const perfil = { ...PERFIL, income_monthly: renda };
@@ -49,11 +54,12 @@
     cenario({ preco: 400, quantidade: 2, compromissos: 2700 })
   ];
 
-  descrever("Análise FinCK: pontos e relevância", () => {
-    teste("no máximo 3 pontos, numerados, em ordem e sem repetir a revelação", () => {
+  descrever("O que merece atenção: pontos e relevância", () => {
+    teste("no máximo 2 pontos, em ordem, sem repetir a revelação e sem frase de \"encontramos\"", () => {
       VARIOS().forEach(({ analise }) => {
-        esperar(analise.pontos.length <= 3).aSerVerdadeiro();
+        esperar(analise.pontos.length <= E.PARAMETROS.MAX_PONTOS).aSerVerdadeiro();
         esperar(analise.pontos.some(p => p.id === "impacto")).aSerFalso();
+        esperar(E.PARAMETROS.MAX_PONTOS).aSer(2);
         analise.pontos.forEach((p, i) => {
           esperar(p.numero).aSer(String(i + 1).padStart(2, "0"));
           esperar(p.na_revelacao).aSerFalso();
@@ -63,14 +69,14 @@
         });
       });
       const pesado = cenario({ preco: 2900, meses: 12 }).analise;
-      esperar(pesado.pontos.length >= 2).aSerVerdadeiro();
-      esperar(pesado.cabecalho).aSer(`Além da revelação, ${pesado.pontos.length} pontos podem influenciar sua decisão.`);
+      esperar(pesado.pontos.length).aSer(2);
+      esperar(pesado.cabecalho).aSer("");
     });
 
     teste("compra pequena, sem metas e sem aperto: nada além da revelação", () => {
       const { analise } = cenario({ preco: 30, metas: [], categoria: "Alimentação" });
       esperar(analise.pontos.length).aSer(0);
-      esperar(analise.cabecalho).aSer("A revelação acima já mostra o que mais pesa nesta compra.");
+      esperar(analise.cabecalho).aSer("Além do impacto acima, nenhum outro ponto pesa nesta compra.");
       esperar(analise.leitura.texto).aConter("cabe com folga");
     });
 
@@ -150,7 +156,7 @@
     });
   });
 
-  descrever("Análise FinCK: confirmado, estimativa e explicação", () => {
+  descrever("O que merece atenção: confirmado, estimativa e explicação", () => {
     teste("selos: impacto, saldo e oportunidade confirmados; meta, durabilidade e parcelas estimados", () => {
       const esperado = { impacto: "confirmado", saldo: "confirmado", oportunidade: "confirmado", meta: "estimativa", durabilidade: "estimativa", parcelas: "estimativa" };
       VARIOS().forEach(({ analise }) => analise.pontos.forEach(p => esperar(p.certeza).aSer(esperado[p.id])));
@@ -170,8 +176,16 @@
       esperar(t(impacto.calculo.find(c => c.rotulo === "Valor da hora").valor)).aConter("R$ 19,89");
     });
 
-    teste("leitura de consultor termina sempre com a autonomia da pessoa", () => {
-      VARIOS().forEach(({ analise }) => esperar(analise.leitura.texto.endsWith("A decisão continua sendo sua.")).aSerVerdadeiro());
+    teste("o que mais pesa: uma frase de regra, sem repetir a frase da decisão", () => {
+      VARIOS().forEach(({ analise }) => {
+        esperar(analise.leitura.texto.length > 20).aSerVerdadeiro();
+        esperar(analise.leitura.texto.includes("A decisão continua sendo sua.")).aSerFalso();
+        esperar(analise.leitura.texto.includes("O maior ponto de atenção")).aSerFalso();
+      });
+    });
+
+    teste("nada do que o FinCK calcula fala em IA, usa ✦ ou diz \"encontramos\"", () => {
+      VARIOS().forEach(({ analise }) => esperar(CARA_DE_IA.test(textos(analise))).aSerFalso());
     });
 
     teste("nenhum texto manda, vende ou inventa confiança", () => {
@@ -186,7 +200,7 @@
     });
   });
 
-  descrever("Análise FinCK: perguntas de informação faltante", () => {
+  descrever("O que merece atenção: perguntas de informação faltante", () => {
     teste("sem vida útil, pergunta por quanto tempo, com 12, 24 e 36 meses", () => {
       const q = cenario().analise.perguntas.find(p => p.id === "vida_util");
       esperar(q.pergunta).aSer("Você pretende usar por quanto tempo?");
@@ -207,8 +221,8 @@
     });
   });
 
-  descrever("Análise FinCK: cenários E se...?", () => {
-    teste("agora, daqui a 2 meses e parcelado pela mesma regra da revelação", () => {
+  descrever("Comparar formas de decidir: cenários", () => {
+    teste("comprar agora, esperar 2 meses e parcelar pela mesma regra da revelação", () => {
       const { analise, resultado } = cenario({ preco: 3500, saldo: 1600, diaADia: 1100 });
       const [agora, esperarC, parc] = analise.cenarios;
       const aportes = resultado.impacto_metas.reduce((s, m) => s + m.aporte_mensal, 0);
@@ -218,9 +232,10 @@
       const atraso = parte => Math.min(Math.max(0, parte), meta.falta) / meta.aporte_mensal * 30;
       esperar(resultado.sobra_fora_metas).aSerPerto(extra, 6);
       esperar(resultado.folga_fora_metas).aSerPerto(folga, 6);
-      esperar(agora.titulo).aSer("Agora");
-      esperar(esperarC.titulo).aSer("Daqui a 2 meses");
-      esperar(parc.titulo).aSer("Parcelado");
+      esperar(agora.titulo).aSer("Comprar agora");
+      esperar(esperarC.titulo).aSer("Esperar 2 meses");
+      esperar(parc.titulo).aSer("Parcelar");
+      esperar(analise.resumo_cenarios).aConter("comprando agora");
       // Agora: um pagamento hoje, contra a folga de hoje.
       esperar(agora.atraso_dias).aSerPerto(atraso(3500 - folga), 2);
       esperar(agora.atraso_dias).aSerPerto(meta.atraso_dias, 6);
@@ -266,7 +281,7 @@
     });
   });
 
-  descrever("Análise FinCK: respostas das sugestões", () => {
+  descrever("Tirar uma dúvida: respostas calculadas", () => {
     teste("cada sugestão responde com números, conta e selo", () => {
       VARIOS().forEach(({ analise }) => analise.sugestoes.forEach(s => {
         const r = E.responder(analise, s.id, { valor: s.valor });
@@ -323,7 +338,7 @@
     });
   });
 
-  descrever("Análise FinCK: contexto enviado à FINCK AI", () => {
+  descrever("Tirar uma dúvida: contexto enviado à ajuda opcional", () => {
     teste("sem nomes de item, metas, contas ou lançamentos", () => {
       VARIOS().forEach(({ analise }) => {
         const c = E.contexto(analise);
@@ -337,7 +352,7 @@
       esperar(c).aConter("total R$ 800,00");
       esperar(c).aConter("Renda mensal declarada R$ 3.500,00");
       esperar(c).aConter("37% da sobra do mês");
-      esperar(c).aConter("A decisão continua sendo sua.");
+      esperar(c).aConter("O que mais pesa neste cenário, pela regra do FinCK:");
     });
 
     teste("na demonstração, o contexto avisa que são dados de exemplo", () => {
@@ -347,7 +362,9 @@
   });
 
   // A tela não está na lista de scripts de testes.html; ela é carregada aqui,
-  // montada num bloco escondido e removida no fim de cada teste.
+  // montada em blocos fora da tela e removida no fim de cada teste. Com
+  // separar = true, a comparação e a dúvida vão para lugares próprios, como
+  // o Reality faz em "Se quiser aprofundar".
   const carregarTela = () => window.FinckInteligenciaUI ? Promise.resolve() : new Promise((ok, falha) => {
     const s = document.createElement("script");
     s.src = "js/inteligencia.js";
@@ -355,18 +372,79 @@
     s.onerror = () => falha(new Error("não carregou js/inteligencia.js"));
     document.head.appendChild(s);
   });
-  async function montar(opcoes = {}, aoEscolher = () => {}) {
+  const foraDaTela = tag => {
+    const el = document.createElement(tag);
+    el.style.cssText = "position:absolute;left:-9999px;top:0;width:360px";
+    document.body.appendChild(el);
+    return el;
+  };
+  async function montar(opcoes = {}, aoEscolher = () => {}, separar = false) {
     await carregarTela();
-    const host = document.createElement("section");
+    const host = foraDaTela("section");
     host.hidden = true;
-    host.style.cssText = "position:absolute;left:-9999px;width:360px";
-    document.body.appendChild(host);
+    let comparar = null;
+    let duvida = null;
+    if (separar) {
+      // Como no Reality: a dúvida mora dentro de um details fechado.
+      const aprofundar = foraDaTela("details");
+      aprofundar.innerHTML = '<summary>Se quiser aprofundar</summary><div data-t="comparar"></div><div data-t="duvida"></div>';
+      comparar = aprofundar.querySelector('[data-t="comparar"]');
+      duvida = aprofundar.querySelector('[data-t="duvida"]');
+    }
     const c = cenario(opcoes);
-    window.FinckInteligenciaUI.mostrar({ ctx: c.ctx, entrada: c.entrada, resultado: c.resultado, linhaTempo: c.linhaTempo, host: host, aoEscolher: aoEscolher });
-    return { host, c, fim: () => { window.FinckInteligenciaUI.limpar(); host.remove(); } };
+    window.FinckInteligenciaUI.mostrar({ ctx: c.ctx, entrada: c.entrada, resultado: c.resultado, linhaTempo: c.linhaTempo, host: host, hosts: separar ? { comparar: comparar, duvida: duvida } : undefined, aoEscolher: aoEscolher });
+    return {
+      host, comparar, duvida, c,
+      fim: () => {
+        window.FinckInteligenciaUI.limpar();
+        host.remove();
+        comparar?.closest("details")?.remove();
+      }
+    };
   }
+  // O texto visível, sem o que está dentro da pergunta livre.
+  const textoForaDaPerguntaLivre = raizes => raizes.filter(Boolean).map(r => {
+    const copia = r.cloneNode(true);
+    copia.querySelectorAll('[data-af="livre"]').forEach(x => x.remove());
+    return copia.textContent;
+  }).join(" ");
+  // Respostas falsas para a ajuda opcional: nada sai da página nos testes.
+  function comFetch(resposta, fn) {
+    const original = window.fetch;
+    window.fetch = () => Promise.resolve(new Response(JSON.stringify(resposta), { status: 200, headers: { "Content-Type": "application/json" } }));
+    return Promise.resolve().then(fn).finally(() => {
+      window.fetch = original;
+    });
+  }
+  function comXHR(status, corpo, fn) {
+    const Original = window.XMLHttpRequest;
+    const enviados = [];
+    window.XMLHttpRequest = class {
+      constructor() {
+        this.upload = {};
+        this.status = 0;
+        this.responseText = "";
+      }
+      open() {}
+      setRequestHeader() {}
+      abort() {}
+      send(dados) {
+        enviados.push(dados);
+        setTimeout(() => {
+          this.upload.onload?.();
+          this.status = status;
+          this.responseText = JSON.stringify(corpo);
+          this.onload?.();
+        }, 0);
+      }
+    };
+    return Promise.resolve().then(() => fn(enviados)).finally(() => {
+      window.XMLHttpRequest = Original;
+    });
+  }
+  const pausa = ms => new Promise(ok => setTimeout(ok, ms));
 
-  descrever("Análise FinCK: tela", () => {
+  descrever("O que merece atenção: tela", () => {
     teste("desenha no host, tira o hidden e escapa os nomes das metas", async () => {
       const metas = [ { id: "x", name: '<img src=x onerror="window.__xss=1">', target_amount: 3000, current_amount: 200, deadline: "2027-10-08" } ];
       const { host, fim } = await montar({ metas: metas });
@@ -377,6 +455,89 @@
         esperar(host.innerHTML).aConter("&lt;img");
         esperar(host.querySelectorAll(".ponto-finck").length >= 1).aSerVerdadeiro();
         esperar(host.querySelectorAll("button:not([type])").length).aSer(0);
+      } finally {
+        fim();
+      }
+    });
+
+    teste("título \"O que merece atenção\", no máximo 2 pontos e um só \"Como foi calculado?\" por ponto", async () => {
+      const { host, fim } = await montar({ preco: 2900, meses: 12 });
+      try {
+        esperar(host.querySelector("#tituloAnaliseFinck").textContent).aSer("O que merece atenção");
+        const pontos = [ ...host.querySelectorAll(".ponto-finck") ];
+        esperar(pontos.length).aSer(2);
+        pontos.forEach(p => {
+          const detalhes = p.querySelectorAll("details");
+          esperar(detalhes.length).aSer(1);
+          esperar(detalhes[0].querySelector("summary").textContent).aSer("Como foi calculado?");
+          // Fatores e conta juntos, com o selo explicado lá dentro.
+          esperar(Boolean(detalhes[0].querySelector(".ponto-finck__fatores li"))).aSerVerdadeiro();
+          esperar(Boolean(detalhes[0].querySelector(".cadeia-finck li"))).aSerVerdadeiro();
+          esperar(/Dado confirmado|Estimativa/.test(p.querySelector(".selo-certeza").textContent)).aSerVerdadeiro();
+        });
+        esperar(host.textContent.includes("Por que o FinCK diz isso?")).aSerFalso();
+        esperar(host.textContent.includes("Como chegamos nisso?")).aSerFalso();
+        esperar(host.querySelector('[data-af="leitura"] h5').textContent).aSer("O que mais pesa neste cenário");
+        esperar(host.querySelector('[data-af="leitura"]').textContent.includes("A decisão continua sendo sua.")).aSerFalso();
+        esperar(host.querySelector('[data-af="resumo"]').hidden).aSerVerdadeiro();
+      } finally {
+        fim();
+      }
+    });
+
+    teste("sem nenhum ponto, uma linha diz que o impacto acima já é o essencial", async () => {
+      const { host, fim } = await montar({ preco: 30, metas: [], categoria: "Alimentação" });
+      try {
+        esperar(host.querySelectorAll(".ponto-finck").length).aSer(0);
+        const resumo = host.querySelector('[data-af="resumo"]');
+        esperar(resumo.hidden).aSerFalso();
+        esperar(resumo.textContent).aSer("Além do impacto acima, nenhum outro ponto pesa nesta compra.");
+      } finally {
+        fim();
+      }
+    });
+
+    teste("nenhum ✦ e nenhuma palavra IA fora da pergunta livre; lá dentro, o aviso diz que é IA", async () => {
+      for (const separar of [ false, true ]) {
+        const { host, comparar, duvida, fim } = await montar({ preco: 2900 }, () => {}, separar);
+        try {
+          const todos = [ host, comparar, duvida ].filter(Boolean);
+          esperar(todos.some(r => r.innerHTML.includes("✦"))).aSerFalso();
+          esperar(/\bIA\b|FINCK AI|Análise FinCK|E se\.\.\.|Converse/.test(textoForaDaPerguntaLivre(todos))).aSerFalso();
+          const livre = (duvida || host).querySelector('[data-af="livre"]');
+          esperar(livre.querySelector("summary").textContent).aConter("Pergunta livre");
+          esperar(livre.querySelector("summary").textContent).aConter("(Ajuda opcional)");
+          esperar(/\bIA\b/.test(livre.querySelector("summary").textContent)).aSerFalso();
+          esperar(/\bIA\b/.test(livre.textContent)).aSerVerdadeiro();
+          esperar(livre.querySelector('[data-af="enviar"]').textContent).aSer("Enviar pergunta");
+        } finally {
+          fim();
+        }
+      }
+    });
+
+    teste("com hosts, a comparação e a dúvida saem do bloco principal", async () => {
+      const { host, comparar, duvida, fim } = await montar({}, () => {}, true);
+      try {
+        esperar(Boolean(host.querySelector('[data-af="cenarios"]'))).aSerFalso();
+        esperar(Boolean(host.querySelector('[data-af="historico"]'))).aSerFalso();
+        esperar(comparar.querySelector(".secao-finck__nome").textContent).aSer("Comparar formas de decidir");
+        esperar(comparar.querySelectorAll(".cenario-finck").length).aSer(3);
+        esperar(comparar.querySelector(".cenario-finck__titulo").textContent).aSer("Comprar agora");
+        esperar(duvida.querySelector(".secao-finck__nome").textContent).aSer("Tirar uma dúvida sobre o cálculo");
+        esperar(duvida.querySelector(".conversa-finck__grupo").textContent).aSer("Cálculo do FinCK");
+        // Sugestões primeiro, pergunta livre depois e recolhida.
+        const ordem = [ ...duvida.querySelectorAll('[data-af="sugestoes"], [data-af="livre"]') ].map(x => x.dataset.af).join(",");
+        esperar(ordem).aSer("sugestoes,livre");
+        esperar(duvida.querySelector('[data-af="livre"]').open).aSerFalso();
+        // Sem hosts, tudo fica no bloco principal (compatibilidade).
+        const unico = await montar();
+        try {
+          esperar(Boolean(unico.host.querySelector('[data-af="cenarios"]'))).aSerVerdadeiro();
+          esperar(Boolean(unico.host.querySelector('[data-af="historico"]'))).aSerVerdadeiro();
+        } finally {
+          unico.fim();
+        }
       } finally {
         fim();
       }
@@ -395,10 +556,10 @@
     });
 
     teste("sugestões viram respostas do cálculo do FinCK, e só as 3 últimas ficam", async () => {
-      const { host, fim } = await montar();
+      const { duvida, fim } = await montar({}, () => {}, true);
       try {
-        [ "linha", "comparar", "economizar", "porque" ].forEach(id => host.querySelector(`[data-af="sugestoes"] [data-sugestao="${id}"]`).click());
-        const trocas = host.querySelectorAll('[data-af="historico"] .troca-finck');
+        [ "linha", "comparar", "economizar", "porque" ].forEach(id => duvida.querySelector(`[data-af="sugestoes"] [data-sugestao="${id}"]`).click());
+        const trocas = duvida.querySelectorAll('[data-af="historico"] .troca-finck');
         esperar(trocas.length).aSer(3);
         esperar(trocas[0].querySelector(".troca-finck__origem").textContent).aSer("Cálculo do FinCK");
         esperar(trocas[0].querySelector(".troca-finck__pergunta").textContent).aConter("Por que o impacto");
@@ -407,17 +568,87 @@
       }
     });
 
-    teste("atualizar mantém a conversa; limpar esvazia e esconde", async () => {
-      const { host, c, fim } = await montar();
+    teste("atualizar redesenha os três lugares e mantém as dúvidas; limpar esvazia tudo", async () => {
+      const { host, comparar, duvida, c, fim } = await montar({}, () => {}, true);
       try {
-        host.querySelector('[data-sugestao="economizar"]').click();
+        duvida.querySelector('[data-sugestao="economizar"]').click();
+        const antes = comparar.querySelector(".cenario-finck--parcelado .cenario-finck__valor").textContent;
         const b = L.base(c.ctx, { hoje: HOJE, horizonte: 12 });
         b.dia_a_dia = 900;
-        window.FinckInteligenciaUI.atualizar({ linhaTempo: L.analisar(b, { preco: 800, forma: "avista", parcelas: 10, juros_am: 0 }) });
-        esperar(host.querySelectorAll(".troca-finck").length).aSer(1);
+        window.FinckInteligenciaUI.atualizar({ linhaTempo: L.analisar(b, { preco: 800, forma: "parcelado", parcelas: 4, juros_am: 0 }) });
+        esperar(comparar.querySelector(".cenario-finck--parcelado .cenario-finck__valor").textContent === antes).aSerFalso();
+        esperar(duvida.querySelectorAll(".troca-finck").length).aSer(1);
         window.FinckInteligenciaUI.limpar();
         esperar(host.hidden).aSerVerdadeiro();
         esperar(host.innerHTML).aSer("");
+        esperar(comparar.innerHTML).aSer("");
+        esperar(duvida.innerHTML).aSer("");
+      } finally {
+        fim();
+      }
+    });
+
+    teste("perguntar abre o que está em volta, a dúvida e a pergunta livre, e foca o campo sem enviar", async () => {
+      const { duvida, fim } = await montar({}, () => {}, true);
+      try {
+        await comFetch({ ok: true, ia: true }, async () => {
+          const aprofundar = duvida.closest("details");
+          esperar(aprofundar.open).aSerFalso();
+          esperar(window.FinckInteligenciaUI.perguntar("Explique a simulação.")).aSerVerdadeiro();
+          esperar(aprofundar.open).aSerVerdadeiro();
+          esperar(duvida.querySelector('[data-af="duvida-caixa"]').open).aSerVerdadeiro();
+          esperar(duvida.querySelector('[data-af="livre"]').open).aSerVerdadeiro();
+          const campo = duvida.querySelector("#perguntaFinck");
+          esperar(campo.value).aSer("Explique a simulação.");
+          esperar(document.activeElement === campo).aSerVerdadeiro();
+          esperar(duvida.querySelectorAll(".troca-finck").length).aSer(0);
+          await pausa(60);
+        });
+      } finally {
+        fim();
+      }
+    });
+
+    teste("resposta escrita por IA tem o rótulo honesto, sem modelo nem tempo", async () => {
+      const { duvida, fim } = await montar({}, () => {}, true);
+      try {
+        await comXHR(200, { resposta: "Texto de teste.", modelo: "modelo-x", tempo_ms: 1234 }, async enviados => {
+          duvida.querySelector('[data-af="livre"]').open = true;
+          duvida.querySelector("#perguntaFinck").value = "Vale esperar?";
+          duvida.querySelector('[data-af="form"]').requestSubmit();
+          await pausa(30);
+          const corpo = JSON.parse(enviados[0]);
+          esperar(corpo.pergunta).aSer("Vale esperar?");
+          esperar(corpo.contexto.includes(ITEM)).aSerFalso();
+          const troca = duvida.querySelector(".troca-finck--ia");
+          esperar(troca.querySelector(".troca-finck__origem").textContent).aSer("Resposta escrita por IA a partir dos números desta análise.");
+          esperar(troca.textContent.includes("modelo-x")).aSerFalso();
+          esperar(/\d+,\d s\b/.test(troca.textContent)).aSerFalso();
+          esperar(troca.textContent.includes("✦")).aSerFalso();
+        });
+      } finally {
+        fim();
+      }
+    });
+
+    teste("fora do ar, a pergunta livre vira um aviso sem jargão, e as perguntas calculadas continuam", async () => {
+      const { duvida, fim } = await montar({}, () => {}, true);
+      try {
+        await comXHR(404, { erro: "A FINCK AI não está configurada neste servidor." }, async () => {
+          duvida.querySelector('[data-af="livre"]').open = true;
+          duvida.querySelector("#perguntaFinck").value = "E se eu esperar?";
+          duvida.querySelector('[data-af="form"]').requestSubmit();
+          await pausa(30);
+          const erro = duvida.querySelector(".troca-finck--erro");
+          esperar(erro.querySelector(".troca-finck__texto").textContent).aSer("A ajuda opcional não está disponível agora.");
+          esperar(erro.textContent).aConter("Os números acima continuam valendo.");
+          esperar(/servidor|FINCK AI|404/.test(erro.textContent)).aSerFalso();
+          esperar(erro.querySelectorAll("[data-sugestao]").length >= 3).aSerVerdadeiro();
+          const aviso = duvida.querySelector('[data-af="indisponivel"]');
+          esperar(aviso.hidden).aSerFalso();
+          esperar(aviso.textContent).aSer("A ajuda opcional não está disponível agora. Os números acima continuam valendo.");
+          esperar(duvida.querySelector('[data-af="campos"]').hidden).aSerVerdadeiro();
+        });
       } finally {
         fim();
       }

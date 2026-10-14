@@ -1,7 +1,7 @@
 // Tela da linha do tempo da compra, dentro do resultado do FinCK of Reality.
 // As contas são do motor (js/linha-tempo-engine.js); aqui só se lê o
-// formulário e se desenha o resultado. A explicação em palavras fica na
-// conversa da Análise FinCK, a única entrada da FINCK AI no resultado.
+// formulário e se desenha o resultado. Quem quiser tirar uma dúvida vai para
+// "Tirar uma dúvida sobre o cálculo" (js/inteligencia.js).
 //
 // Ordem da leitura: primeiro uma conclusão curta e os quatro cartões, depois
 // os controles para testar outros cenários, e por fim a simulação completa
@@ -125,16 +125,17 @@ window.FinckLinhaTempoUI = (() => {
       form.insertAdjacentElement("beforebegin", resumo);
     }
     $("ltResumo").innerHTML = `
-      <p class="linha-tempo__exemplo" id="ltExemplo" hidden></p>
       <p class="linha-tempo__conclusao" id="ltConclusao" aria-live="polite"></p>
+      <p class="linha-tempo__exemplo" id="ltExemplo" hidden></p>
       <p class="nota linha-tempo__selo" id="ltSelo" hidden></p>
       <div class="linha-tempo__falta" id="ltFalta" hidden>
         <p id="ltFaltaTexto"></p>
         <button type="button" class="btn-secundario btn-mini" data-lt-informar="ltDiaADia">Informar os gastos do dia a dia</button>
       </div>
-      <p class="nota linha-tempo__simulacao">Cálculo do FinCK, sem IA. É uma simulação com os números desta tela, não previsão garantida: se a renda ou os gastos mudarem, o resultado muda.</p>
+      <p class="nota linha-tempo__simulacao">Cálculo do FinCK. É uma simulação com os números desta tela, não previsão garantida: se a renda ou os gastos mudarem, o resultado muda.</p>
       <div class="orcamento-concreto linha-tempo__cartoes" id="ltCartoes"></div>
-      <p class="nota linha-tempo__dica-controles">Para testar outro cenário, mude abaixo a forma de pagamento, as parcelas ou o imprevisto. <button type="button" class="btn-texto linha-tempo__perguntar" data-lt-perguntar>Perguntar à FINCK AI sobre esta simulação</button></p>`;
+      <p class="nota linha-tempo__dica-controles">Para testar outro cenário, mude abaixo a forma de pagamento, as parcelas ou o imprevisto.</p>
+      <button type="button" class="btn-texto linha-tempo__perguntar" data-lt-perguntar>Tirar uma dúvida sobre esta simulação</button>`;
     // Só a conclusão é anunciada a cada mudança; ler o resultado inteiro a
     // cada número digitado cansaria quem usa leitor de tela.
     $("linhaTempoResultado").removeAttribute("aria-live");
@@ -162,15 +163,28 @@ window.FinckLinhaTempoUI = (() => {
     });
     form.addEventListener("submit", e => e.preventDefault());
     // O botão da pergunta leva ao campo que falta; o scroll-padding do html
-    // deixa o campo abaixo das barras presas. "Perguntar à FINCK AI" abre a
-    // conversa da Análise FinCK com a pergunta escrita, sem enviar.
+    // deixa o campo abaixo das barras presas.
     $("ltResumo").addEventListener("click", e => {
       const alvo = e.target.closest("[data-lt-informar]");
       if (alvo) $(alvo.dataset.ltInformar)?.focus();
-      if (e.target.closest("[data-lt-perguntar]")) {
-        window.FinckInteligenciaUI?.perguntar?.("Explique em linguagem simples o que a simulação dos próximos meses mostra sobre esta compra.");
-      }
+      if (e.target.closest("[data-lt-perguntar]")) irParaDuvida();
     });
+  }
+
+  // "Tirar uma dúvida sobre esta simulação" leva a #duvidaCalculo: abre o
+  // "Se quiser aprofundar" em volta, se estiver fechado, e a pergunta livre
+  // com o texto pronto e o foco no campo. Nada é enviado sem a pessoa pedir.
+  function irParaDuvida() {
+    const destino = $("duvidaCalculo");
+    let d = destino ? destino.closest("details") : null;
+    while (d) {
+      d.open = true;
+      d = d.parentElement ? d.parentElement.closest("details") : null;
+    }
+    const foi = window.FinckInteligenciaUI?.perguntar?.("Explique em linguagem simples o que a simulação dos próximos meses mostra sobre esta compra.");
+    if (!foi && destino) {
+      destino.scrollIntoView({ block: "start" });
+    }
   }
 
   // --------------------------------------------------------------- contas
@@ -342,7 +356,7 @@ window.FinckLinhaTempoUI = (() => {
     const t = analise.taxas;
     return `
       <details class="detalhes-hipoteses linha-tempo__formulas" data-lt-detalhe="formulas">
-        <summary>Como calculamos</summary>
+        <summary>Como foi calculado?</summary>
         <ol>
           <li><strong>Sobra de cada mês</strong> = renda − despesas fixas − gastos do dia a dia − parcelas que você já tem − parcela desta compra − imprevisto.</li>
           <li><strong>Dinheiro guardado</strong> começa no seu saldo de hoje e soma a sobra de cada mês. À vista, o preço sai do saldo hoje.</li>
@@ -358,11 +372,11 @@ window.FinckLinhaTempoUI = (() => {
       </details>`;
   }
 
-  // O link do Reality para o Assistente leva uma pergunta neutra, só com
-  // valores: sem o nome do item e sem pedir veredito. A forma entra depois
-  // que a pessoa escolhe uma.
+  // O link do Reality para a Revisão financeira leva uma pergunta neutra, só
+  // com valores: sem o nome do item e sem pedir veredito. A forma entra
+  // depois que a pessoa escolhe uma.
   function atualizarLinkAssistente() {
-    const link = document.querySelector("#respostaReality a[data-link-assistente]");
+    const link = document.querySelector("a[data-link-assistente]");
     if (!link) return;
     const e = analise.escolhido.resumo;
     const forma = !escolheuForma() ? "" : e.forma === "avista" ? " à vista" : ` em ${e.parcelas}x de ${moeda(e.parcela)}`;
@@ -447,10 +461,10 @@ window.FinckLinhaTempoUI = (() => {
     mostrarCamposDaForma();
   }
 
-  // Chamado pelo Reality a cada análise. Outro item: tudo volta ao padrão e
-  // a explicação da FINCK AI some. O mesmo item de novo (a pessoa mudou a
-  // quantidade, a vida útil ou o preço): a forma de pagamento e os outros
-  // campos que ela mexeu continuam como estavam.
+  // Chamado pelo Reality a cada análise. Outro item: tudo volta ao padrão. O
+  // mesmo item de novo (a pessoa mudou a quantidade, a vida útil ou o preço):
+  // a forma de pagamento e os outros campos que ela mexeu continuam como
+  // estavam.
   function mostrar({ ctx, item, preco, nivel = null }) {
     const bloco = $("blocoLinhaTempo");
     if (!bloco || !$("formLinhaTempo") || !L || !(Number(preco) > 0)) return;

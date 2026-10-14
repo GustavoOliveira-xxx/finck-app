@@ -1,9 +1,14 @@
 @charset "UTF-8";
 /* ==========================================================================
-   FinCK of Reality: o fluxo da análise (compra, revelação, contexto,
-   decisão e registro). Só usa os tokens do app (style-principal.css) e
-   completa o que já existe em clareza.css; nada aqui muda a identidade.
+   FinCK of Reality: o fluxo da análise (compra, impacto, decisão e o
+   contexto recolhido em "Se quiser aprofundar"). Só usa os tokens do app
+   (style-principal.css) e completa o que já existe em clareza.css; nada aqui
+   muda a identidade. Acabamento em três níveis: a revelação é expressiva, a
+   decisão é moderada e o que fica em "Se quiser aprofundar" é plano.
    ========================================================================== */
+
+/* --- Etapas: Compra, Impacto, Decisão ------------------------------------- */
+.etapas-reality--tres ol{ grid-template-columns:repeat(3,minmax(0,1fr)); }
 
 /* --- Carregamento com as etapas reais da análise -------------------------- */
 .progresso-analise{
@@ -13,11 +18,7 @@
   background:linear-gradient(150deg, rgba(104,12,144,.2), rgba(14,10,20,.55));
 }
 .progresso-analise--pronta{ border-color:rgba(31,209,143,.38); }
-.progresso-analise__marca{
-  margin:0; font-family:var(--fonte-display); font-size:.76rem; font-weight:700;
-  letter-spacing:.1em; text-transform:uppercase; color:var(--texto);
-}
-.progresso-analise__marca span{ color:var(--amarelo); text-shadow:0 0 12px var(--amarelo-glow); }
+.progresso-analise__pronto{ margin:0; font-size:.86rem; font-weight:600; color:var(--verde); }
 .progresso-analise__etapas{
   list-style:none; margin:0; padding:0;
   display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .8rem;
@@ -190,14 +191,71 @@
 .reflexao--respondida .reflexao__tema::after{ content:"✓"; content:"✓" / " respondida"; color:var(--verde); letter-spacing:0; }
 .mais-reflexoes > summary{ line-height:1.45; }
 
-/* --- Decisão: o ciclo que ela fecha --------------------------------------- */
-.ciclo-decisao{
-  display:grid; gap:.45rem;
-  padding:.7rem .9rem; border-radius:var(--raio-md);
-  border:1px dashed var(--superficie-borda-forte); background:rgba(255,255,255,.015);
+/* --- Importar preço: atalho recolhido, abaixo do botão --------------------- */
+.importar-preco{
+  margin-top:.9rem;
+  border:1px solid var(--superficie-borda); border-radius:14px;
+  background:var(--superficie);
 }
+.importar-preco > summary,
+.pensar-antes > summary,
+.aprofundar__detalhes > summary{
+  display:grid; gap:.1rem; position:relative;
+  min-height:44px; padding:.7rem 2.4rem .7rem 1rem;
+  cursor:pointer; list-style:none;
+}
+.importar-preco > summary::-webkit-details-marker,
+.pensar-antes > summary::-webkit-details-marker,
+.aprofundar__detalhes > summary::-webkit-details-marker{ display:none; }
+.importar-preco > summary::after,
+.pensar-antes > summary::after,
+.aprofundar__detalhes > summary::after{
+  content:"+"; content:"+" / ""; position:absolute; right:1rem; top:.7rem;
+  font-family:var(--fonte-dados); font-size:1.1rem; color:var(--amarelo);
+}
+.importar-preco[open] > summary::after,
+.pensar-antes[open] > summary::after,
+.aprofundar__detalhes[open] > summary::after{ content:"−"; content:"−" / ""; }
+.importar-preco > summary:focus-visible,
+.pensar-antes > summary:focus-visible,
+.aprofundar__detalhes > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:14px; }
+.importar-preco > summary > span{ font-weight:700; color:var(--texto); }
+.importar-preco > summary > small{ font-size:.8rem; color:var(--texto-fraco); }
+.importar-preco__corpo{ display:grid; gap:.7rem; padding:0 1rem 1rem; }
+.importar-preco__intro,
+.importar-preco__demo{ margin:0; font-size:.88rem; line-height:1.5; color:var(--texto); }
+.importar-preco .atalho-preco{ margin:0; padding:0; border:0; background:none; }
+.importar-preco .busca-preco__aviso{ margin:0; }
+.importar-preco__como{ font-size:.84rem; color:var(--texto-fraco); }
+.importar-preco__como > summary{
+  display:inline-flex; align-items:center; min-height:44px;
+  cursor:pointer; font-weight:600; color:var(--texto-fraco);
+}
+.importar-preco__como > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:6px; }
+.importar-preco__como p{ margin:.2rem 0 .5rem; line-height:1.5; }
+
+/* --- Decisão: logo depois do impacto, sem abrir nada ----------------------- */
+.decisao-reality__pergunta{
+  margin:0 0 .2rem; font-family:var(--fonte-display); font-size:1.08rem; font-weight:600;
+  line-height:1.4; color:var(--texto);
+}
+.decisao-reality__sua{ margin:0 0 .8rem; font-size:.86rem; color:var(--texto-fraco); }
+.confirmacao-decisao--falta{ border-color:rgba(254,200,0,.45); }
+.pensar-antes{
+  margin-top:1rem;
+  border:1px solid var(--superficie-borda); border-radius:14px;
+  background:rgba(255,255,255,.015);
+}
+.pensar-antes > summary > span{ font-weight:700; color:var(--texto); }
+.pensar-antes > summary > span small{ font-weight:500; color:var(--texto-fraco); }
+.pensar-antes__resumo{ font-size:.8rem; color:var(--texto-fraco); }
+.pensar-antes__corpo{ display:grid; gap:.7rem; padding:0 1rem 1rem; }
+.pensar-antes__corpo > .descricao{ margin:0; }
+
+/* --- O ciclo que a decisão fecha, em uma linha discreta -------------------- */
 .ciclo-decisao__passos{
-  list-style:none; margin:0; padding:0;
+  list-style:none; margin:1rem 0 0; padding:.6rem 0 0;
+  border-top:1px dashed var(--superficie-borda-forte);
   display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .35rem;
   font-size:.78rem; font-weight:600; color:var(--texto-fraquissimo);
 }
@@ -208,7 +266,6 @@
 .ciclo-decisao__passos li[data-estado="atual"]{ color:var(--amarelo); }
 .ciclo-decisao__passos li[data-estado="atual"]::before{ content:"◉"; content:"◉" / "agora: "; }
 .ciclo-decisao__passos li[data-estado="opcional"]{ font-weight:500; }
-.ciclo-decisao__frase{ margin:0; font-size:.86rem; line-height:1.5; color:var(--texto-fraco); }
 
 /* --- Registro: o que aconteceu de verdade --------------------------------- */
 .confirmacao-decisao__titulo{
@@ -308,13 +365,44 @@ html[data-animacoes="desligada"] #btnVerImpacto::before{ animation:none !importa
   .revelacao__veredito .resposta-reality__sintese{ font-size:.95rem; line-height:1.4; }
 }
 
-/* --- Quer olhar mais fundo? O contexto recolhido, um tema por linha -------- */
-.mais-fundo{ margin-top:1.4rem; display:grid; gap:.6rem; }
-.mais-fundo__titulo{ margin:0; font-family:var(--fonte-display); font-size:1.08rem; }
-.mais-fundo__intro{ margin:0 0 .2rem; }
+/* --- Se quiser aprofundar: o contexto recolhido, plano (nível 3) ---------- */
+.aprofundar{ margin-top:1.2rem; }
+.aprofundar__detalhes{
+  border:1px solid var(--superficie-borda); border-radius:var(--raio-lg, 18px);
+  background:rgba(255,255,255,.015);
+}
+.aprofundar__titulo{ font-family:var(--fonte-display); font-size:1.05rem; font-weight:700; color:var(--texto); }
+.aprofundar__resumo{ font-size:.82rem; line-height:1.45; color:var(--texto-fraco); }
+.mais-fundo{ display:grid; gap:.6rem; padding:0 .8rem .9rem; }
 .mais-fundo__item{
   border:1px solid var(--superficie-borda); border-radius:14px;
-  background:var(--superficie);
+  background:transparent; box-shadow:none;
+}
+.mais-fundo__host:empty{ display:none; }
+.mais-fundo__item .mais-fundo__nome{ flex-wrap:wrap; row-gap:.25rem; }
+.mais-fundo__item .selo-estimativa{ white-space:nowrap; }
+/* Nível 3: dentro de "Se quiser aprofundar" nada brilha; os blocos internos
+   e os cartões ficam planos, com a borda só para separar. */
+.aprofundar .bloco-interno,
+.aprofundar .bloco-impacto{
+  background:transparent; box-shadow:none;
+  border-color:var(--superficie-borda);
+}
+.aprofundar .bloco-interno::before,
+.aprofundar .bloco-interno::after{ display:none; }
+.aprofundar .card-indicador,
+.aprofundar .card-indicador:hover{ background:rgba(255,255,255,.02); box-shadow:none; transform:none; border-color:var(--superficie-borda); }
+.aprofundar .card-indicador::before,
+.aprofundar .card-indicador::after{ display:none; }
+.mais-fundo__link{ margin:.8rem 0 0; }
+/* Links soltos (fora de uma frase) com alvo de toque de verdade. */
+.resposta-reality__links .link-mais,
+.mais-fundo__link .link-mais,
+.aprofundar .alternativa__links a{ display:inline-flex; align-items:center; min-height:24px; }
+@media (pointer: coarse){
+  .resposta-reality__links .link-mais,
+  .mais-fundo__link .link-mais,
+  .aprofundar .alternativa__links a{ min-height:44px; }
 }
 .mais-fundo__item > summary{
   display:grid; gap:.15rem; padding:.75rem 2.4rem .75rem 1rem;
@@ -332,6 +420,11 @@ html[data-animacoes="desligada"] #btnVerImpacto::before{ animation:none !importa
 .mais-fundo__resumo:empty{ display:none; }
 .mais-fundo__corpo{ padding:0 1rem 1rem; }
 .mais-fundo__item .bloco-interno h5{ margin:0 0 .5rem; font-size:.98rem; }
+.selo-estimativa{
+  display:inline-block; padding:.02rem .45rem; border-radius:99px;
+  font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--amarelo); border:1px solid rgba(254,200,0,.45); background:var(--amarelo-fraco);
+}
 
 /* Números do orçamento: cada valor inteiro numa linha, sem separar o número
    da unidade. */
