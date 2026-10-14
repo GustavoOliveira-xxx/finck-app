@@ -75,7 +75,7 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .preferencia-animacao legend{ font-weight:700; margin-bottom:.2rem; }
 .preferencia-animacao__opcao{
   display:flex; gap:.75rem; align-items:flex-start;
-  padding:.75rem .9rem; border-radius:var(--raio-md);
+  padding:.75rem .9rem; border-radius:var(--raio-controle);
   border:1px solid var(--superficie-borda); background:var(--superficie-alta);
   cursor:pointer;
 }
@@ -99,7 +99,7 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
   font-size:.84rem; color:var(--texto-fraco);
 }
 .reality-cta__ods .selo-ods12{
-  padding:.12rem .5rem; border-radius:999px;
+  padding:.12rem .5rem; border-radius:var(--raio-selo);
   background:var(--verde); color:#07120e;
   font-family:var(--fonte-display); font-size:.7rem; font-weight:700; letter-spacing:.04em;
 }
@@ -108,7 +108,7 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .grupo-home__cabecalho{ display:grid; gap:.15rem; }
 .grupo-home__cabecalho h2{ font-size:clamp(1.15rem,1.05rem + .5vw,1.4rem); }
 .grupo-home__papel{
-  font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+  font-size:.72rem; letter-spacing:.01em; text-transform:none; font-weight:700;
   color:var(--roxo-neon);
 }
 
@@ -257,7 +257,7 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .progresso-etapas__nome{ font-weight:600; color:var(--texto); }
 .progresso-etapas__estado{ font-size:.7rem; }
 .progresso-etapas li[data-estado="atual"]{ border-color:var(--roxo-neon); background:var(--roxo-vidro); }
-.progresso-etapas li[data-estado="atual"] .progresso-etapas__num{ background:var(--grad-marca); color:#fff; }
+.progresso-etapas li[data-estado="atual"] .progresso-etapas__num{ background:var(--roxo-claro); color:#fff; }
 .progresso-etapas li[data-estado="atual"] .progresso-etapas__estado{ color:var(--amarelo); font-weight:700; }
 .progresso-etapas li[data-estado="feita"] .progresso-etapas__num{ background:var(--verde); color:#07120e; }
 .progresso-etapas li[data-estado="pulada"]{ opacity:.65; }
@@ -281,14 +281,14 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .etapas-reality{
   position:sticky; top:calc(3.9rem + env(safe-area-inset-top)); z-index:20;
   margin-block:.6rem .8rem;
-  padding:.35rem; border-radius:999px;
+  padding:.35rem; border-radius:var(--raio-md);
   background:rgba(12,9,18,.86); border:1px solid var(--superficie-borda);
   -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
 }
 .etapas-reality ol{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; }
 .etapas-reality a{
   display:flex; align-items:center; justify-content:center; gap:.35rem; min-height:36px;
-  padding:.3rem .4rem; border-radius:999px;
+  padding:.3rem .4rem; border-radius:var(--raio-controle);
   font-size:.8rem; font-weight:600; color:var(--texto-fraco); text-decoration:none;
 }
 .etapas-reality__num{
@@ -296,7 +296,7 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
   font-family:var(--fonte-dados); font-size:.72rem; background:rgba(255,255,255,.07);
 }
 .etapas-reality li[data-estado="atual"] a{ background:var(--roxo-vidro); color:var(--texto); box-shadow:inset 0 0 0 1px var(--roxo-neon); }
-.etapas-reality li[data-estado="atual"] .etapas-reality__num{ background:var(--grad-marca); color:#fff; }
+.etapas-reality li[data-estado="atual"] .etapas-reality__num{ background:var(--roxo-claro); color:#fff; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num{ background:var(--verde); color:#07120e; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num{ font-size:0; }
 .etapas-reality li[data-estado="feita"] .etapas-reality__num::after{ content:"✓"; font-size:.72rem; }
@@ -334,7 +334,7 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 /* Print e link como alternativa ao preço digitado, com peso secundário. */
 .atalho-preco{
   display:grid; gap:.45rem;
-  padding:.75rem .9rem; border-radius:var(--raio-md);
+  padding:.75rem .9rem; border-radius:var(--raio-controle);
   border:1px dashed var(--superficie-borda-forte); background:rgba(255,255,255,.02);
 }
 .atalho-preco__titulo{ margin:0; font-size:.84rem; font-weight:600; color:var(--texto-fraco); }
@@ -384,7 +384,7 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 /* Quem chegou pelo teclado (Enter no formulário) vê onde o foco parou. */
 .resposta-reality:focus-visible{ outline:2px solid var(--amarelo); outline-offset:3px; }
 .resposta-reality__item{ margin:0; font-size:.88rem; color:var(--texto-fraco); }
-.resposta-reality__rotulo{ margin:.3rem 0 0; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--roxo-neon); }
+.resposta-reality__rotulo{ margin:.3rem 0 0; font-size:.8rem; letter-spacing:.01em; text-transform:none; font-weight:700; color:var(--roxo-neon); }
 .resposta-reality__tempo{ margin:0; font-family:var(--fonte-display); font-size:clamp(1.2rem,1rem + 1vw,1.6rem); color:var(--texto); }
 .resposta-reality__tempo strong{
   display:block; font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
@@ -396,7 +396,7 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 .resposta-reality__sintese{ margin:.2rem 0 .5rem; font-size:1rem; font-weight:600; color:var(--texto); max-width:62ch; }
 .impacto-nivel{ margin-top:.2rem; }
 .impacto-nivel__rotulo{
-  font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; font-weight:800; color:currentColor;
+  font-size:.72rem; letter-spacing:.01em; text-transform:none; font-weight:800; color:currentColor;
 }
 .impacto-nivel__nao-julga{ font-size:.82rem !important; font-style:italic; }
 .resposta-reality__categoria{ margin:.4rem 0 0; font-size:.86rem; color:var(--texto-fraco); }
@@ -424,7 +424,7 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 .titulo-secao-ods{ display:flex; align-items:center; gap:.5rem; margin-top:1.4rem; font-size:1.05rem; }
 .descricao--ods{ margin-top:.2rem; }
 .titulo-secao-ods .selo-ods12{
-  padding:.12rem .5rem; border-radius:999px; background:var(--verde); color:#07120e;
+  padding:.12rem .5rem; border-radius:var(--raio-selo); background:var(--verde); color:#07120e;
   font-family:var(--fonte-display); font-size:.7rem; font-weight:700;
 }
 
@@ -498,7 +498,7 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 
 .hero__subtitulo{
   display:block; margin-top:.2rem;
-  font-family:var(--fonte-corpo); font-size:.85rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  font-family:var(--fonte-corpo); font-size:.85rem; font-weight:600; letter-spacing:.01em; text-transform:none;
   color:var(--roxo-neon); -webkit-text-fill-color:var(--roxo-neon);
 }
 .hero--jornada .btn-primario{ justify-self:start; margin-top:.4rem; }

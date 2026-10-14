@@ -453,7 +453,7 @@ window.FINCK_CONFIG = {
     level: 17,
     titulo: "Tony Stark",
     xp: 13600,
-    icone: "🤖",
+    icone: "🦾",
     lema: "Transformou as próprias decisões em um sistema que funciona."
   }, {
     level: 18,

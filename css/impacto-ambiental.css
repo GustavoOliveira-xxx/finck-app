@@ -15,7 +15,7 @@
 
 .selo-ods12{
   padding:.12rem .5rem;
-  border-radius:999px;
+  border-radius:var(--raio-selo);
   background:var(--verde);
   color:#07120e;
   font-family:var(--fonte-display);
@@ -116,7 +116,7 @@
   display:inline-block;
   margin-right:.3rem;
   padding:.05rem .45rem;
-  border-radius:999px;
+  border-radius:var(--raio-selo);
   font-size:.72rem;
   font-weight:700;
   border:1px solid currentColor;
