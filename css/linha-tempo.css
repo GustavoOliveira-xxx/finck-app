@@ -16,7 +16,7 @@
 .linha-tempo__opcoes{ display:flex; flex-wrap:wrap; gap:.5rem; }
 .linha-tempo__opcao{
   position:relative; display:inline-flex; flex-direction:row; align-items:center; justify-content:center;
-  min-height:44px; padding:0 1.1rem; border-radius:999px; cursor:pointer;
+  min-height:44px; padding:0 1.1rem; border-radius:var(--raio-controle); cursor:pointer;
   border:1px solid var(--superficie-borda-forte); background:var(--superficie-alta);
   font-weight:600; color:var(--texto-fraco);
   transition:border-color var(--dur-rapida), background var(--dur-rapida), color var(--dur-rapida);
@@ -59,7 +59,7 @@
 /* Dado confirmado x estimativa: o mesmo selo nos campos e na lista. */
 .linha-tempo__tipo{
   display:inline-flex; align-items:center;
-  padding:.12rem .5rem; border-radius:999px;
+  padding:.12rem .5rem; border-radius:var(--raio-selo);
   font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
   white-space:nowrap; vertical-align:middle;
 }
@@ -140,3 +140,7 @@
   .linha-tempo__origem dl > div{ flex-direction:column; gap:.1rem; }
   .linha-tempo__origem dd{ justify-items:start; text-align:left; }
 }
+
+/* Alvo mínimo de 24px (44px no toque) para abrir a conta. */
+.linha-tempo__completa > summary{ min-height:24px; display:flex; align-items:center; }
+@media (pointer: coarse){ .linha-tempo__completa > summary{ min-height:44px; } }

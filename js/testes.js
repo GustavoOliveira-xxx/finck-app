@@ -3849,7 +3849,7 @@ window.FinckTestes = (() => {
       esperar(r.impacto_metas[0].dias_trabalho_extra).aSerPerto(3.75, 2);
     });
   });
-  descrever("Assistente: diagnóstico da vida financeira (FinckDiagnostico)", () => {
+  descrever("Revisão financeira: diagnóstico da vida financeira (FinckDiagnostico)", () => {
     const D = window.FinckDiagnostico;
     const hoje = new Date("2026-10-15T12:00:00");
     const t = (date, type, amount, extra = {}) => ({
@@ -3886,6 +3886,28 @@ window.FinckTestes = (() => {
       ...extra
     });
     const dim = (d, id) => d.dimensoes.find(x => x.id === id);
+    // As perguntas prontas da Revisão são respondidas pelo próprio motor,
+    // sem IA: cada resposta traz a conta e o selo de certeza.
+    teste("perguntas prontas: no máximo 5, sem repetição e todas respondidas", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      const prontas = D.perguntasProntas(d);
+      esperar(prontas.length > 0 && prontas.length <= 5).aSerVerdadeiro();
+      esperar(new Set(prontas.map(x => x.id)).size).aSer(prontas.length);
+      prontas.forEach(x => {
+        const r = D.responder(d, x.id);
+        esperar(Boolean(r && r.texto && r.calculo.length)).aSerVerdadeiro();
+        esperar([ "confirmado", "estimativa" ].includes(r.certeza)).aSerVerdadeiro();
+        esperar(/\bIA\b|FINCK AI|✦|XPTO/.test(JSON.stringify(r))).aSerFalso();
+      });
+    });
+    teste("pergunta desconhecida não tem resposta", () => {
+      const d = D.diagnosticar(base(), {
+        hoje: hoje
+      });
+      esperar(D.responder(d, "lua")).aSer(null);
+    });
     teste("janela usa os meses completos com movimento, do mais recente", () => {
       const j = D.janelaDeMeses(base().transacoesRealizadas, hoje, 3);
       esperar(j.meses.join(",")).aSer("2026-09,2026-08");

@@ -152,7 +152,7 @@
 
 .panorama__selo{
   padding:.2rem .5rem;
-  border-radius:999px;
+  border-radius:var(--raio-selo);
   background:var(--verde-fraco);
   border:1px solid rgba(31,209,143,.4);
   color:var(--verde);

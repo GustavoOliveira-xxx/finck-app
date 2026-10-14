@@ -43,7 +43,7 @@
 /* Mesmo desenho dos selos da linha do tempo, para a página falar uma língua só. */
 .selo-certeza{
   display:inline-flex; align-items:center;
-  padding:.12rem .5rem; border-radius:999px;
+  padding:.12rem .5rem; border-radius:var(--raio-selo);
   font-family:var(--fonte-corpo); font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
   line-height:1.4; white-space:nowrap; vertical-align:middle;
   border:1px solid var(--superficie-borda-forte);
@@ -146,7 +146,7 @@
   border-color:rgba(180,92,240,.45);
   background:rgba(147,51,196,.08);
 }
-.chip-finck[aria-pressed="true"]{ color:#fff; background:var(--grad-marca); border-color:transparent; }
+.chip-finck[aria-pressed="true"]{ color:#fff; background:var(--roxo-claro); border-color:transparent; }
 .chip-finck:disabled{ cursor:default; transform:none; }
 .chip-finck:disabled:not([aria-pressed="true"]){ opacity:.55; }
 
@@ -194,7 +194,7 @@
 }
 .cenario-finck__titulo{
   margin:0; font-family:var(--fonte-corpo);
-  font-size:.76rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--roxo-neon);
+  font-size:.76rem; font-weight:800; letter-spacing:.01em; text-transform:none; color:var(--roxo-neon);
 }
 .cenario-finck--esperar .cenario-finck__titulo{ color:var(--amarelo); }
 .cenario-finck__valor{ font-family:var(--fonte-dados); font-variant-numeric:tabular-nums; font-size:1.15rem; font-weight:700; color:var(--texto); overflow-wrap:anywhere; }
@@ -218,7 +218,7 @@
 /* --- Tirar uma dúvida sobre o cálculo ------------------------------------ */
 .conversa-finck{ gap:.8rem; }
 .conversa-finck__grupo{
-  font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amarelo);
+  font-size:.72rem; font-weight:800; letter-spacing:.01em; text-transform:none; color:var(--amarelo);
 }
 .conversa-finck .chips-finck{ margin-top:0; }
 .conversa-finck__historico{ display:grid; gap:.6rem; }
@@ -233,7 +233,7 @@
 }
 .troca-finck__pergunta{ font-size:.9rem; font-weight:600; color:var(--texto); overflow-wrap:anywhere; }
 .troca-finck__resposta{ display:grid; gap:.4rem; min-width:0; }
-.troca-finck__origem{ font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--amarelo); }
+.troca-finck__origem{ font-size:.72rem; font-weight:800; letter-spacing:.01em; text-transform:none; color:var(--amarelo); }
 .troca-finck--ia .troca-finck__origem{ font-size:.8rem; font-weight:600; letter-spacing:0; text-transform:none; color:#d9b3f7; }
 .troca-finck--erro .troca-finck__origem{ color:var(--texto-fraco); }
 .troca-finck__titulo{ font-weight:700; color:var(--texto); }
@@ -352,3 +352,7 @@ html[data-animacoes="desligada"] .secao-finck *::before{ animation:none !importa
   .secao-finck *::before,
   .secao-finck *::after{ animation:none !important; transition:none !important; }
 }
+
+/* Alvo mínimo de 24px (44px no toque) para abrir a conta. */
+.ponto-finck__detalhe > summary{ min-height:24px; display:flex; align-items:center; }
+@media (pointer: coarse){ .ponto-finck__detalhe > summary{ min-height:44px; } }

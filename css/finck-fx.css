@@ -238,7 +238,7 @@ body.finck-carregando{ overflow:hidden; }
   position:absolute; bottom:0; left:50%; translate:-50% 0;
   display:inline-flex; align-items:center; gap:.45rem;
   padding:.34rem .8rem;
-  border-radius:99px;
+  border-radius:var(--raio-controle);
   font-size:.74rem; color:var(--texto-fraco, #a49bb2);
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.09);
@@ -345,7 +345,7 @@ body.finck-carregando{ overflow:hidden; }
   font-size:.7rem; font-weight:700;
   color:#2a1c00;
   background:rgba(255,255,255,.42);
-  padding:.1rem .5rem; border-radius:99px;
+  padding:.1rem .5rem; border-radius:var(--raio-selo);
 }
 .medalha__titulo{
   font-family:var(--fonte-display, sans-serif);
@@ -366,7 +366,7 @@ body.finck-carregando{ overflow:hidden; }
 .medalha-dica{
   position:absolute; bottom:0; left:50%; translate:-50% 0;
   padding:.28rem .7rem;
-  border-radius:99px;
+  border-radius:var(--raio-controle);
   font-size:.68rem; white-space:nowrap;
   color:var(--texto-fraco, #a49bb2);
   background:rgba(255,255,255,.05);

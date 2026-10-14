@@ -247,11 +247,11 @@ window.FinckRevisao = (() => {
       rotulo: rotulo
     };
   }
-  // O vencido ganha borda tracejada em linha até existir um estilo próprio.
+  // O vencido ganha a borda tracejada de .selo-vencido, além do texto.
   function seloEstado(oc, hoje) {
     const e = estadoVisivel(oc, hoje);
-    const extra = e.id === "vencido" ? ' style="color:var(--amarelo);border:1px dashed currentColor"' : "";
-    return `<span class="${e.classe}" data-estado="${e.id}" title="${U.escapeHTML(e.explica)}"${extra}><span aria-hidden="true">${e.marca}</span> ${U.escapeHTML(e.rotulo)}</span>`;
+    const classe = e.id === "vencido" ? `${e.classe} selo-vencido` : e.classe;
+    return `<span class="${classe}" data-estado="${e.id}" title="${U.escapeHTML(e.explica)}"><span aria-hidden="true">${e.marca}</span> ${U.escapeHTML(e.rotulo)}</span>`;
   }
   function montarSeletorConta(oc, contas) {
     const ativas = (contas || []).filter(c => c.active !== false);

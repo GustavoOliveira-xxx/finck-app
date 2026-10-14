@@ -13,7 +13,7 @@
 /* Demonstração identificada uma vez, aqui. Dourado: informação especial. */
 .selo-exemplo{
   display:inline-flex; align-items:center; min-height:24px;
-  padding:.1rem .6rem; border-radius:999px;
+  padding:.1rem .6rem; border-radius:var(--raio-selo);
   border:1px solid rgba(254,200,0,.35); background:var(--amarelo-fraco);
   color:var(--amarelo); font-size:.7rem; font-weight:700; letter-spacing:.04em;
   white-space:nowrap;
@@ -70,7 +70,7 @@ button.link-mais{ padding:0; }
   flex:1 1 8.5rem;
   display:inline-flex; align-items:center; justify-content:center; gap:.35rem;
   min-height:44px; padding:.4rem .55rem;
-  border-radius:var(--raio-md);
+  border-radius:var(--raio-controle);
   border:1px solid var(--superficie-borda-forte);
   background:rgba(255,255,255,.03);
   color:var(--texto); font-size:.86rem; font-weight:600; white-space:nowrap;
@@ -143,7 +143,7 @@ button.link-mais{ padding:0; }
 /* --- Sua situação hoje: registrado x previsão ---------------------------- */
 .selo-natureza{
   display:inline-block; margin-left:.25rem; padding:.05rem .45rem;
-  border-radius:999px; vertical-align:.08em;
+  border-radius:var(--raio-selo); vertical-align:.08em;
   font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
   white-space:nowrap;
 }
@@ -151,7 +151,7 @@ button.link-mais{ padding:0; }
 .painel-subtitulo{
   display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap;
   margin:1.1rem 0 0;
-  font-family:var(--fonte-corpo); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  font-family:var(--fonte-corpo); font-size:.78rem; font-weight:700; letter-spacing:.01em; text-transform:none;
   color:var(--texto);
 }
 .painel-subtitulo span{ font-weight:500; letter-spacing:.02em; text-transform:none; color:var(--texto-fraco); }

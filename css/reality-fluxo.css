@@ -71,8 +71,7 @@
   font-family:var(--fonte-dados); font-variant-numeric:tabular-nums;
 }
 .chip-meses[aria-pressed="true"]{
-  color:#fff; background:var(--grad-marca); border-color:transparent;
-  box-shadow:0 8px 22px -12px var(--roxo-glow);
+  color:#fff; background:var(--roxo-claro); border-color:transparent;
 }
 .chip-meses:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; }
 @media (pointer: coarse){ .chip-meses{ min-height:44px; } }
@@ -142,7 +141,7 @@
 .cadeia-impacto__passo--horas .cadeia-impacto__rotulo{ font-family:var(--fonte-display); font-size:1.05rem; color:var(--texto); }
 .cadeia-impacto__passo--meta::before{ background:var(--amarelo); box-shadow:0 0 10px var(--amarelo-glow); }
 .cadeia-impacto__selo{
-  display:inline-block; margin-left:.2rem; padding:.02rem .45rem; border-radius:99px;
+  display:inline-block; margin-left:.2rem; padding:.02rem .45rem; border-radius:var(--raio-selo);
   font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; vertical-align:.1em;
   color:var(--amarelo); border:1px solid rgba(254,200,0,.45); background:var(--amarelo-fraco);
 }
@@ -155,7 +154,7 @@
 }
 .selo-impacto{
   display:inline-flex; align-items:center; gap:.45rem;
-  padding:.28rem .75rem; border-radius:99px;
+  padding:.28rem .75rem; border-radius:var(--raio-selo);
   font-size:.74rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
   border:1px solid currentColor;
 }
@@ -184,7 +183,7 @@
 }
 .reflexao__tema{
   display:flex; align-items:center; gap:.4rem; margin-bottom:.2rem;
-  font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  font-size:.72rem; font-weight:700; letter-spacing:.01em; text-transform:none;
   color:var(--roxo-neon);
 }
 .reflexao--respondida{ border-color:rgba(31,209,143,.38); }
@@ -274,7 +273,7 @@
 }
 .confirmacao-decisao__titulo > span[aria-hidden="true"]{ color:var(--verde); }
 .confirmacao-decisao__escolha{
-  padding:.08rem .55rem; border-radius:99px;
+  padding:.08rem .55rem; border-radius:var(--raio-selo);
   font-family:var(--fonte-corpo); font-size:.76rem; font-weight:600;
   background:rgba(255,255,255,.08); color:var(--texto-fraco);
 }
@@ -421,7 +420,7 @@ html[data-animacoes="desligada"] #btnVerImpacto::before{ animation:none !importa
 .mais-fundo__corpo{ padding:0 1rem 1rem; }
 .mais-fundo__item .bloco-interno h5{ margin:0 0 .5rem; font-size:.98rem; }
 .selo-estimativa{
-  display:inline-block; padding:.02rem .45rem; border-radius:99px;
+  display:inline-block; padding:.02rem .45rem; border-radius:var(--raio-selo);
   font-size:.66rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
   color:var(--amarelo); border:1px solid rgba(254,200,0,.45); background:var(--amarelo-fraco);
 }
