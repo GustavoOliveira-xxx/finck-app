@@ -184,7 +184,7 @@ window.FinckGame = (() => {
     if (l.total >= REGRAS.TETO_DIARIO) {
       return {
         ok: false,
-        motivo: "Teto diário de XP atingido. Volte amanhã."
+        motivo: "Teto diário de XP atingido. O que você registrar continua salvo normalmente."
       };
     }
     if ((l.acoes[tipo] || 0) >= regra.limiteDia) {

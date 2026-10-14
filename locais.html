@@ -62,8 +62,8 @@
     <section class="bloco procurar" id="procurar">
       <h3>Procurar perto de você</h3>
       <p class="descricao">
-        Quem conserta, vende usado, troca, aluga, recebe doação ou faz descarte correto no seu
-        bairro, direto do <span class="marca-maps" translate="no">Google Maps</span>. Você confere e
+        Busca automática no <span class="marca-maps" translate="no">Google Maps</span>: quem conserta,
+        vende usado, troca, aluga, recebe doação ou faz descarte correto no seu bairro. Você confere e
         salva na sua rede só o que fizer sentido.
       </p>
       <form id="formProcurar" novalidate>
@@ -86,10 +86,14 @@
           </button>
           <a class="btn-secundario" id="linkProcurarMaps" href="https://www.google.com/maps" target="_blank" rel="noopener"><span>Abrir no <span class="marca-maps" translate="no">Google Maps</span></span></a>
         </div>
-        <p class="nota" id="notaProcurar">
-          A busca vai para o Google, que encontra os lugares no Maps: use bairro e cidade, não o
-          endereço da sua casa. O FinCK não guarda o resultado; só entra na sua rede o que você salvar.
-        </p>
+        <p class="nota" id="notaProcurar" hidden></p>
+        <details class="detalhes-hipoteses procurar__privacidade">
+          <summary>Dados e privacidade</summary>
+          <p class="nota">
+            A busca vai para o Google, que encontra os lugares no Maps: use bairro e cidade, não o
+            endereço da sua casa. O FinCK não guarda o resultado; só entra na sua rede o que você salvar.
+          </p>
+        </details>
       </form>
       <div id="resultadoProcurar" aria-live="polite"></div>
     </section>
@@ -136,7 +140,7 @@
         <a href="reality.html">FinCK of Reality</a> e, 30 dias depois, diz em
         <a href="decisoes.html">Decisões</a> o que realmente aconteceu. O que o grupo mede é o
         próprio comportamento declarado. O impacto ambiental que o FinCK of Reality mostra é uma
-        estimativa feita por IA, boa para comparar ordens de grandeza, e não uma medição.
+        estimativa, boa para comparar ordens de grandeza, e não uma medição.
       </p>
     </section>
 

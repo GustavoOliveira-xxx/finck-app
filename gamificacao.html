@@ -61,9 +61,9 @@
            alt="Financial CK" loading="lazy" decoding="async"></div>
       <div>
         <h2>Sua jornada <small class="hero__subtitulo">Conquistas e hábitos</small></h2>
-        <p>Títulos, XP e conquistas por constância no registro, metas alcançadas e decisões conscientes registradas. Os limites diários existem para que o XP acompanhe <strong>uso real do app</strong>, não repetição de cliques.</p>
-        <p class="nota">XP é uma mecânica educativa, não prova de impacto. Registrar uma saída é organizar-se; adiar, reparar ou reutilizar é reduzir consumo. As duas coisas rendem pontos, e a lista abaixo mostra qual é qual.</p>
-        <a class="btn-primario" href="#conquistas">Ver próxima conquista</a>
+        <p>Títulos e conquistas que chegam com o uso normal do FinCK: registrar o que aconteceu, cumprir metas e analisar antes de comprar. O progresso acompanha o que você já faz.</p>
+        <p class="nota">XP é uma mecânica educativa, não prova de impacto.</p>
+        <a class="btn-secundario" href="#conquistas">Ver conquistas</a>
       </div>
     </section>
 
@@ -81,17 +81,11 @@
       <div class="grade-conquistas" id="listaConquistas"></div>
     </section>
 
-    <section class="bloco">
-      <div class="bloco-cabecalho">
-        <h3>XP de hoje</h3>
-        <span class="chip" id="chipTeto"></span>
-      </div>
-      <p class="descricao">Cada ação vale XP até um limite diário. Análises, conquistas e decisões só pagam uma vez cada: repetir o mesmo registro não gera XP novo.</p>
+    <details class="detalhes-hipoteses bloco--regras como-xp">
+      <summary style="padding-block:.2rem">Como o XP é contado <span class="chip" id="chipTeto"></span></summary>
+      <p class="descricao">O XP vem do uso real, com limite por dia: repetir o mesmo registro não gera XP novo. Registrar uma saída é organizar-se; adiar, reparar ou reutilizar é reduzir consumo, e a lista separa os dois.</p>
       <ul class="lista-simples" id="listaXP"></ul>
-    </section>
-
-    <section class="bloco bloco--regras">
-      <h3>Regras anti-farm</h3>
+      <h4>Regras anti-farm</h4>
       <ul class="lista-regras">
         <li>Teto diário global de XP, válido para todas as ações somadas.</li>
         <li>Limite de repetições por tipo de ação a cada dia.</li>
@@ -100,7 +94,7 @@
         <li>Intervalo mínimo entre ganhos, bloqueando cliques em rajada.</li>
         <li>Conquistas são recalculadas dos seus dados reais, nunca somadas de novo.</li>
       </ul>
-    </section>
+    </details>
 
     <p class="link-rodape"><a href="home.html">← Voltar ao início</a></p>
   </main>

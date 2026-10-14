@@ -267,4 +267,100 @@
       esperar(primeira.descricao).aConter("Analisou a primeira compra");
     });
   });
+
+  // O FinCK calcula primeiro: o que é cálculo ou regra não se apresenta como
+  // IA, e a palavra só aparece onde a pessoa pediu ajuda escrita.
+  const FALA_DE_IA = /\bIA\b|✦|\bFin[Cc][Kk] AI\b|FINCK AI\b|Assistente|[Ii]ntelig[êe]ncia|Gemini|Claude|Anthropic|OpenRouter/;
+
+  descrever("Linguagem: demais telas sem cara de IA", () => {
+    teste("rótulos e textos visíveis do config não falam em IA nem em Assistente", () => {
+      const achados = [];
+      const visiveis = new Set([ "rotulo", "label", "titulo", "descricao", "consequencia", "lema", "pergunta", "texto", "dimensao", "nome", "curto" ]);
+      const varrer = (valor, chave) => {
+        if (typeof valor === "string") {
+          if (visiveis.has(chave) && FALA_DE_IA.test(valor)) {
+            achados.push(valor);
+          }
+        } else if (valor && typeof valor === "object") {
+          Object.entries(valor).forEach(([k, v]) => varrer(v, Array.isArray(valor) ? chave : k));
+        }
+      };
+      varrer(cfg, "");
+      esperar(achados).aTerTamanho(0);
+    });
+
+    teste("avisos de importação e busca não citam IA nem provedor", () => {
+      const msg = window.FinckIA.MSG;
+      Object.values(msg).forEach(t => esperar(FALA_DE_IA.test(t)).aSerFalso());
+      esperar(msg.demo).aConter("conta");
+    });
+
+    teste("as telas do pacote não mostram IA, ✦ nem Assistente no texto", async () => {
+      const paginas = [ "metas", "contas", "decisoes", "gamificacao", "relatorios", "planejamento", "recorrentes", "cenarios", "perfil", "locais", "analises", "onboarding" ];
+      for (const nome of paginas) {
+        const html = await (await fetch(`${nome}.html`, { cache: "no-store" })).text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        doc.querySelectorAll("script, style").forEach(el => el.remove());
+        const texto = `${doc.title} ${doc.body.textContent}`;
+        if (FALA_DE_IA.test(texto)) {
+          throw new Error(`${nome}.html ainda fala em IA: ${texto.match(FALA_DE_IA)[0]}`);
+        }
+      }
+    });
+
+    teste("a filosofia não se repete nas telas do pacote", async () => {
+      for (const nome of [ "decisoes", "perfil", "relatorios" ]) {
+        const html = await (await fetch(`${nome}.html`, { cache: "no-store" })).text();
+        esperar(/decisão continua sendo sua|a decisão é sua|sem julgar|sem comparar com ninguém/i.test(html)).aSerFalso();
+      }
+    });
+  });
+
+  descrever("Previsões: previsto, vencido e confirmado", () => {
+    const R = window.FinckRevisao;
+    const hoje = "2026-10-14";
+
+    teste("o estado vem do status e da data, sem depender da cor", () => {
+      esperar(R.estadoVisivel({ status: "previsto", due_date: "2026-10-20" }, hoje).id).aSer("previsto");
+      esperar(R.estadoVisivel({ status: "previsto", due_date: "2026-10-01" }, hoje).id).aSer("vencido");
+      esperar(R.estadoVisivel({ status: "previsto", due_date: hoje }, hoje).id).aSer("vencido");
+      esperar(R.estadoVisivel({ status: "pendente", due_date: "2026-10-20" }, hoje).id).aSer("vencido");
+      esperar(R.estadoVisivel({ status: "confirmado", due_date: "2026-10-01" }, hoje).id).aSer("confirmado");
+      const ajustado = R.estadoVisivel({ status: "ajustado", due_date: "2026-10-01" }, hoje);
+      esperar(ajustado.id).aSer("confirmado");
+      esperar(ajustado.rotulo).aSer("Confirmado com outro valor");
+      esperar(R.estadoVisivel({ status: "nao_pago" }, hoje).rotulo).aSer("Não pago");
+    });
+
+    teste("cada estado tem rótulo e marca próprios, e só o confirmado está no saldo", () => {
+      const estados = Object.values(R.ESTADOS_VISIVEIS);
+      esperar(new Set(estados.map(e => e.rotulo)).size).aSer(estados.length);
+      esperar(new Set(estados.map(e => e.marca)).size).aSer(estados.length);
+      esperar(R.ESTADOS_VISIVEIS.confirmado.explica).aConter("Já está no saldo");
+      esperar(R.ESTADOS_VISIVEIS.previsto.explica).aConter("Não altera o saldo");
+      esperar(R.ESTADOS_VISIVEIS.vencido.explica).aConter("fora do saldo");
+    });
+
+    teste("o selo escreve o estado por extenso e esconde a marca do leitor de tela", () => {
+      const html = R.seloEstado({ status: "pendente", due_date: "2026-10-01" }, hoje);
+      esperar(html).aConter('data-estado="vencido"');
+      esperar(html).aConter("Vencido");
+      esperar(html).aConter('<span aria-hidden="true">!</span>');
+      esperar(html.includes(TRAVESSAO)).aSerFalso();
+    });
+  });
+
+  descrever("Jornada: progresso como consequência do uso", () => {
+    teste("o teto diário não manda voltar nem registrar mais", () => {
+      const G = window.FinckGame;
+      const estado = {
+        xp: 0,
+        ledger: { dia: window.FinckUtils.hojeISO(), total: cfg.XP.TETO_DIARIO, acoes: {}, ultimo: 0, chaves: [] }
+      };
+      const r = G.podePremiar(estado, "entrada", null, { ignorarIntervalo: true });
+      esperar(r.ok).aSerFalso();
+      esperar(/volte|registre mais|não perca/i.test(r.motivo)).aSerFalso();
+      esperar(r.motivo).aConter("continua salvo");
+    });
+  });
 })();

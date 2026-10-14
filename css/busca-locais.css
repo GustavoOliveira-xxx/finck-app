@@ -1,5 +1,5 @@
-/* "Procurar perto de você" em Ações locais: lugares do Google Maps buscados
-   pela rota da IA (api/buscar-preco-ia.js, pedido { locais }). */
+/* "Procurar perto de você" em Ações locais: busca automática de lugares no
+   Google Maps, pela rota api/buscar-preco-ia.js (pedido { locais }). */
 
 .procurar__tipos{
   margin:0;
@@ -49,6 +49,11 @@
 @keyframes procurar-giro{ to{ transform:rotate(360deg); } }
 
 #notaProcurar{ margin:0; }
+#notaProcurar[hidden]{ display:none; }
+/* Privacidade fica num detalhe: nível discreto, plano. */
+.procurar__privacidade{ margin-top:0; padding:.5rem .9rem; background:transparent; }
+.procurar__privacidade summary{ padding-block:.25rem; font-size:.85rem; color:var(--texto-fraco); }
+.procurar__privacidade .nota{ margin:.5rem 0 0; }
 
 #resultadoProcurar{
   display:flex;

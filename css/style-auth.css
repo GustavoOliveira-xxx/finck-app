@@ -748,3 +748,47 @@ input:-webkit-autofill{
   -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
   mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 33%);
 }
+
+/* ==========================================================================
+   Entrada: a demonstração é a ação dominante; entrar é o caminho secundário
+   ========================================================================== */
+/* Cartão de login mais leve que a vitrine: sem halo, sem linha luminosa e
+   sem giro 3D. O fundo atrás dele fica calmo (ui-fx.js, data-fundo-calmo). */
+.auth-card--secundario{
+  width:100%; max-width:430px; justify-self:center;
+  padding:clamp(1.2rem,1.1rem + .8vw,1.8rem);
+  background:rgba(14,11,20,.62);
+  border-color:var(--superficie-borda);
+  box-shadow:none;
+}
+.auth-card--secundario::before,
+.auth-card--secundario::after{ display:none; }
+.auth-card--secundario h2{ font-size:clamp(1.15rem,1.05rem + .4vw,1.35rem); letter-spacing:-.02em; }
+.auth-card--secundario .auth-sub{ margin-bottom:1rem; font-size:.86rem; }
+.auth-card--secundario .auth-rodape{ margin-top:1.1rem; padding-top:.9rem; }
+@media (max-width: 900px){
+  .auth-card--secundario{ max-width:none; }
+}
+
+/* Botão secundário: borda e texto, sem o gradiente da ação principal. */
+.btn-secundario{
+  display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+  width:100%; min-height:44px;
+  padding:.75rem 1.3rem; margin-top:.2rem;
+  font-family:var(--fonte-display); font-size:.95rem; font-weight:600;
+  color:var(--texto);
+  border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda-forte);
+  background:rgba(255,255,255,.045);
+  transition:border-color var(--dur-rapida) var(--ease-out), background var(--dur-rapida) var(--ease-out);
+}
+.btn-secundario:hover:not([disabled]){ border-color:rgba(147,51,196,.55); background:var(--roxo-vidro); }
+.btn-secundario:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; }
+.btn-secundario[disabled]{ opacity:.5; cursor:not-allowed; }
+
+/* O CAPTCHA entra quando a pessoa começa a preencher (js/auth.js). */
+.captcha-grupo:not([hidden]){ animation:msg-entra .35s var(--ease-out) both; }
+/* Avisa o js/auth.js de que o navegador preencheu um campo sozinho. */
+input:-webkit-autofill{ animation-name:preenchido-automatico; animation-duration:.01s; }
+input:autofill{ animation-name:preenchido-automatico; animation-duration:.01s; }
+@keyframes preenchido-automatico{ from{ outline-color:transparent; } to{ outline-color:transparent; } }

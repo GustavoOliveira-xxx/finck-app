@@ -42,8 +42,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       meses: 6
     });
     const furo = P.primeiroMesNegativo(linhas);
-    $("chipProjecao").textContent = `${linhas.length} meses`;
-    $("alertaProjecao").innerHTML = furo ? `<article class="proxima-acao proxima-acao--alerta">\n           <div class="proxima-acao__texto">\n             <span class="proxima-acao__etiqueta">Atenção</span>\n             <h2>O saldo fica negativo em ${U.escapeHTML(furo.rotulo)}</h2>\n             <p>Mantendo as recorrentes e as parcelas de hoje, o saldo chega a\n                ${U.moeda(furo.saldoFim)} no fim daquele mês. Dá tempo de agir agora.</p>\n           </div>\n           <a class="btn-primario" href="recorrentes.html">Revisar compromissos</a>\n         </article>` : `<article class="proxima-acao proxima-acao--bom">\n           <div class="proxima-acao__texto">\n             <span class="proxima-acao__etiqueta">Projeção</span>\n             <h2>O saldo se mantém positivo nos próximos ${linhas.length} meses</h2>\n             <p>Fecha em ${U.moeda(linhas[linhas.length - 1].saldoFim)} se nada mudar.</p>\n           </div>\n         </article>`;
+    $("chipProjecao").textContent = `próximos ${linhas.length} meses`;
+    $("alertaProjecao").innerHTML = furo ? `<article class="proxima-acao proxima-acao--alerta">\n           <div class="proxima-acao__texto">\n             <span class="proxima-acao__etiqueta">Atenção</span>\n             <h2>O caixa previsto fica negativo em ${U.escapeHTML(furo.rotulo)}</h2>\n             <p>Mantendo as recorrentes e as parcelas de hoje, o caixa previsto chega a\n                ${U.moeda(furo.saldoFim)} no fim daquele mês. É previsão: o saldo atual não muda.</p>\n           </div>\n           <a class="btn-primario" href="recorrentes.html">Revisar compromissos</a>\n         </article>` : `<article class="proxima-acao proxima-acao--bom">\n           <div class="proxima-acao__texto">\n             <span class="proxima-acao__etiqueta">Próximos ${linhas.length} meses</span>\n             <h2>O caixa previsto se mantém positivo nos próximos ${linhas.length} meses</h2>\n             <p>Fecha em ${U.moeda(linhas[linhas.length - 1].saldoFim)} se nada mudar.</p>\n           </div>\n         </article>`;
     const maior = Math.max(...linhas.map(l => Math.abs(l.saldoFim)), 1);
     $("projecaoGrafico").innerHTML = linhas.map(l => {
       const altura = Math.max(4, Math.abs(l.saldoFim) / maior * 100);
@@ -63,12 +63,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       month: "long",
       year: "numeric"
     });
-    const eventos = P.eventosDoMes({
+    const eventos = semDuplicar(P.eventosDoMes({
       recorrentes: ctx.recorrentes,
       parcelamentos: parcelamentos,
       pagamentos: pagamentos,
       transacoes: ctx.transacoes
-    }, mesVisivel);
+    }, mesVisivel));
     const celulas = [];
     NOMES_DIA.forEach(n => celulas.push(`<div class="calendario__cabecalho" aria-hidden="true">${n}</div>`));
     for (let i = 0; i < inicioSemana; i++) {
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const entradas = doDia.filter(e => e.sinal > 0).length;
       const saidas = doDia.filter(e => e.sinal < 0 && e.tipo !== "parcela").length;
       const parcelas = doDia.filter(e => e.tipo === "parcela").length;
-      const saldoDia = doDia.reduce((s, e) => s + e.valor * e.sinal, 0);
+      const saldoDia = doDia.reduce((s, e) => s + valorNoDia(e), 0);
       const ehHoje = ehMesAtual && dia === hoje.getDate();
       celulas.push(`\n        <button type="button"\n                class="calendario__dia${doDia.length ? " calendario__dia--com-evento" : ""}${ehHoje ? " calendario__dia--hoje" : ""}"\n                data-dia="${dia}"\n                ${doDia.length ? "" : "disabled"}\n                aria-label="Dia ${dia}${doDia.length ? `, ${doDia.length} compromisso(s), resultado ${U.moeda(saldoDia)}` : ", sem compromissos"}">\n          <span class="calendario__numero">${dia}</span>\n          <span class="calendario__pontos" aria-hidden="true">\n            ${entradas ? '<span class="ponto ponto--entrada"></span>' : ""}\n            ${saidas ? '<span class="ponto ponto--saida"></span>' : ""}\n            ${parcelas ? '<span class="ponto ponto--parcela"></span>' : ""}\n          </span>\n        </button>`);
     }
@@ -90,10 +90,48 @@ document.addEventListener("DOMContentLoaded", async () => {
       mostrarDia(hoje.getDate(), eventos);
     }
   }
+  const ocorrenciaDe = e => e.tipo === "recorrente" ? ocorrencias.find(o => o.cycle === mesVisivel && o.description === e.titulo) || null : null;
+  // Conta fixa confirmada já aparece como lançamento no dia em que entrou:
+  // mostrar as duas somaria o mesmo dinheiro duas vezes.
+  function semDuplicar(eventos) {
+    const lancadas = new Set((ctx.transacoes || []).map(t => String(t.id)));
+    for (const [dia, lista] of eventos) {
+      const restantes = lista.filter(e => {
+        const oc = ocorrenciaDe(e);
+        return !(oc && (oc.status === "confirmado" || oc.status === "ajustado") && lancadas.has(String(oc.transaction_id)));
+      });
+      if (restantes.length) {
+        eventos.set(dia, restantes);
+      } else {
+        eventos.delete(dia);
+      }
+    }
+    return eventos;
+  }
+  // A conta fixa marcada como não acontecida continua na lista, fora da soma.
+  function valorNoDia(e) {
+    const oc = ocorrenciaDe(e);
+    return oc && (oc.status === "nao_realizado" || oc.status === "nao_pago") ? 0 : e.valor * e.sinal;
+  }
+  // Previsto, vencido e confirmado com texto e marca (js/ocorrencias-ui.js).
+  // A conta fixa usa o estado do mês dela, quando ele já existe.
+  function seloDoEvento(e, dia) {
+    if (e.estado === "realizado") {
+      return `<span class="selo-realizado"><span aria-hidden="true">✓</span> registrado</span>`;
+    }
+    const R = window.FinckRevisao;
+    if (!R) {
+      return `<span class="selo-previsto">previsto</span>`;
+    }
+    return R.seloEstado(ocorrenciaDe(e) || {
+      status: "previsto",
+      due_date: `${mesVisivel}-${String(dia).padStart(2, "0")}`
+    });
+  }
   function mostrarDia(dia, eventos) {
     const lista = eventos.get(dia) || [];
-    const total = lista.reduce((s, e) => s + e.valor * e.sinal, 0);
-    $("detalheDia").innerHTML = `\n      <h4>Dia ${dia}</h4>\n      <ul class="lista-simples">\n        ${lista.map(e => `\n          <li class="item-lista">\n            <span class="item-desc">${U.escapeHTML(e.titulo)}</span>\n            <span class="item-dia">\n              ${e.tipo === "parcela" ? "parcela" : e.tipo === "recorrente" ? "fixa" : "lançada"}\n              <span class="${e.estado === "realizado" ? "selo-realizado" : "selo-previsto"}">${e.estado === "realizado" ? "realizado" : "previsto"}</span>\n            </span>\n            <span class="item-valor ${e.sinal > 0 ? "cor-verde" : "cor-vermelha"}">\n              ${e.sinal > 0 ? "+" : "−"} ${U.moeda(e.valor)}\n            </span>\n          </li>`).join("")}\n      </ul>\n      <p class="total-linha"><span>Resultado do dia</span>\n        <strong class="${total < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(total)}</strong></p>\n      <p class="nota">Previsto é compromisso que ainda não moveu dinheiro. Realizado já está no saldo.</p>`;
+    const total = lista.reduce((s, e) => s + valorNoDia(e), 0);
+    $("detalheDia").innerHTML = `\n      <h4>Dia ${dia}</h4>\n      <ul class="lista-simples">\n        ${lista.map(e => `\n          <li class="item-lista">\n            <span class="item-desc">${U.escapeHTML(e.titulo)}</span>\n            <span class="item-dia">\n              ${e.tipo === "parcela" ? "parcela" : e.tipo === "recorrente" ? "fixa" : "lançada"}\n              ${seloDoEvento(e, dia)}\n            </span>\n            <span class="item-valor ${e.sinal > 0 ? "cor-verde" : "cor-vermelha"}">\n              ${e.sinal > 0 ? "+" : "−"} ${U.moeda(e.valor)}\n            </span>\n          </li>`).join("")}\n      </ul>\n      <p class="total-linha"><span>Resultado do dia</span>\n        <strong class="${total < 0 ? "cor-vermelha" : "cor-verde"}">${U.moeda(total)}</strong></p>\n      <p class="nota">Previsto ainda não venceu; vencido já venceu e espera você confirmar. Os dois ficam fora do saldo até a confirmação. Registrado e confirmado já estão no saldo.</p>`;
   }
   $("mesAnterior").addEventListener("click", () => {
     const [a, m] = mesVisivel.split("-").map(Number);
@@ -151,7 +189,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }));
     $("listaParcelas").querySelectorAll("[data-editar-parcela]").forEach(b => b.addEventListener("click", () => abrirParcela(b.dataset.editarParcela)));
     $("listaParcelas").querySelectorAll("[data-excluir-parcela]").forEach(b => b.addEventListener("click", async () => {
-      if (!await U.confirmar("Excluir este parcelamento?", "Ele sai da projeção e do calendário de compromissos.", {
+      if (!await U.confirmar("Excluir este parcelamento?", "Ele sai do caixa previsto e do calendário de compromissos.", {
         confirmar: "Excluir"
       })) {
         return;

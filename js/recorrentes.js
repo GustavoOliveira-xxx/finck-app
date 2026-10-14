@@ -16,13 +16,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const $ = id => document.getElementById(id);
   let itens = [];
   let contas = [];
+  let ocorrenciasDoMes = [];
   let editando = null;
   document.getElementById("recCategoria").innerHTML = cfg.CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join("");
   async function carregar() {
-    [itens, contas] = await Promise.all([ S.listar("recurring_transactions", {
+    let ocorrencias = [];
+    [itens, contas, ocorrencias] = await Promise.all([ S.listar("recurring_transactions", {
       ordem: "day_of_month",
       asc: true
-    }), S.listar("accounts") ]);
+    }), S.listar("accounts"), S.listar(OCORRENCIAS).catch(() => []) ]);
+    const ciclo = O.cicloDe(new Date);
+    ocorrenciasDoMes = ocorrencias.filter(o => o.cycle === ciclo);
     $("recConta").innerHTML = `<option value="">Sem conta (só no saldo geral)</option>` + contas.filter(c => c.active !== false).map(c => `<option value="${c.id}">${U.escapeHTML(c.name)}</option>`).join("");
     render();
   }
@@ -31,13 +35,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ativos = itens.filter(i => i.active !== false);
     const entradas = F.soma(ativos.filter(i => i.type === "entrada"));
     const saidas = F.soma(ativos.filter(i => i.type === "saida"));
-    $("resumoRecorrentes").innerHTML = `\n      <article class="card-indicador"><span>Entradas previstas</span><strong class="cor-verde">${U.moeda(entradas)}</strong></article>\n      <article class="card-indicador"><span>Despesas fixas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong></article>\n      <article class="card-indicador"><span>Sobra prevista</span><strong class="${entradas - saidas < 0 ? "cor-vermelha" : ""}">${U.moeda(entradas - saidas)}</strong></article>\n      <article class="card-indicador"><span>Itens ativos</span><strong>${ativos.length}</strong></article>`;
+    $("resumoRecorrentes").innerHTML = `\n      <article class="card-indicador"><span>Entradas previstas</span><strong class="cor-verde">${U.moeda(entradas)}</strong></article>\n      <article class="card-indicador"><span>Despesas fixas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong></article>\n      <article class="card-indicador" title="Entradas fixas menos despesas fixas. É o que sobra por mês, não o que você tem."><span>Sobra da renda <small class="indicador-quando">por mês</small></span><strong class="${entradas - saidas < 0 ? "cor-vermelha" : ""}">${U.moeda(entradas - saidas)}</strong></article>\n      <article class="card-indicador"><span>Itens ativos</span><strong>${ativos.length}</strong></article>`;
     $("vazioRecorrentes").hidden = itens.length > 0;
     const host = $("listaRecorrentes");
     host.innerHTML = itens.map(i => {
       const conta = nomeConta(i.account_id);
       const detalhes = [ `dia ${i.day_of_month}`, i.type === "saida" ? i.category || "sem categoria" : null, conta || "sem conta" ].filter(Boolean).join(" · ");
-      return `\n      <li class="item-lista ${i.active === false ? "inativo" : ""}">\n        <span class="item-desc">${U.escapeHTML(i.description)}</span>\n        <span class="item-dia">${U.escapeHTML(detalhes)}</span>\n        <strong class="${i.type === "entrada" ? "cor-verde" : "cor-vermelha"}">\n          ${i.type === "entrada" ? "+" : "−"} ${U.moeda(i.amount)}\n        </strong>\n        ${T.selo(i.amount, {
+      // Estado deste mês (previsto, vencido ou confirmado), quando já existe.
+      const doMes = i.active === false || !window.FinckRevisao ? null : ocorrenciasDoMes.find(o => String(o.recurring_id) === String(i.id));
+      const estadoMes = doMes ? ` <span class="visualmente-oculto">Este mês:</span>${window.FinckRevisao.seloEstado(doMes)}` : "";
+      return `\n      <li class="item-lista ${i.active === false ? "inativo" : ""}">\n        <span class="item-desc">${U.escapeHTML(i.description)}${estadoMes}</span>\n        <span class="item-dia" style="white-space:normal;line-height:1.35">${U.escapeHTML(detalhes)}</span>\n        <strong class="${i.type === "entrada" ? "cor-verde" : "cor-vermelha"}">\n          ${i.type === "entrada" ? "+" : "−"} ${U.moeda(i.amount)}\n        </strong>\n        ${T.selo(i.amount, {
         classe: i.type === "entrada" ? "selo-tempo--entrada" : ""
       })}\n        <label class="switch">\n          <input type="checkbox" data-ativo="${i.id}" ${i.active === false ? "" : "checked"}>\n          <span>${i.active === false ? "Pausado" : "Ativo"}</span>\n        </label>\n        <button type="button" class="btn-secundario btn-mini" data-editar="${i.id}">Editar</button>\n        <button type="button" class="btn-excluir-item" data-excluir="${i.id}" aria-label="Excluir">✕</button>\n      </li>`;
     }).join("");

@@ -132,13 +132,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     U.toast(id ? "Ponto atualizado." : "Ponto cadastrado.", "sucesso");
     carregar();
   });
-  // Procurar perto de você: a rota da IA consulta o Google Maps e devolve só
+  // Procurar perto de você: a busca automática consulta o Google Maps e devolve só
   // lugares que vieram das fontes dele (api/buscar-preco-ia.js). O resultado
   // fica só na tela; entra na rede o que a pessoa salvar, com o nome que ela
   // confirmar e o link do lugar.
   const CHAVE_ONDE = "finck.locais.onde";
-  // A mesma busca, aberta no próprio Google Maps: funciona sem conta, sem IA e
-  // sem cota, e é a saída quando a busca aqui não traz nada.
+  // A mesma busca, aberta no próprio Google Maps: funciona sem conta e sem
+  // cota, e é a saída quando a busca aqui não traz nada.
   const TERMOS_MAPS = {
     reparo: item => item ? `conserto de ${item}` : "conserto e assistência técnica",
     usado: item => item ? `${item} usado` : "brechó",
@@ -215,11 +215,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p class="nota">Antes de ir, confira o horário e se o lugar faz o que você precisa.</p>`;
     $("resultadoProcurar").querySelectorAll("[data-salvar]").forEach(b => b.addEventListener("click", () => salvarAchado(Number(b.dataset.salvar))));
   }
+  // As mensagens da rota falam do serviço por trás; aqui a tela diz o que
+  // aconteceu com a busca e o que dá para fazer.
+  const AVISOS_BUSCA = {
+    IA_OCUPADA: "A busca automática está cheia agora. Tente de novo em um minuto ou abra direto no Google Maps.",
+    IA_FALHOU: "A busca automática não respondeu desta vez. Tente de novo ou abra direto no Google Maps.",
+    IA_INDISPONIVEL: "A busca automática não está disponível neste endereço. Abra a mesma busca direto no Google Maps.",
+    LIMITE: "A busca automática chegou ao limite de agora. Espere alguns minutos ou abra direto no Google Maps."
+  };
+  const textoAviso = r => AVISOS_BUSCA[r.codigo] || (r.codigo === "SEM_LOGIN" ? IA.MSG.sessao : "") || r.motivo || IA.MSG.rede;
   function mostrarAviso(pedido, r) {
     const repetir = [ "SEM_LUGARES", "IA_OCUPADA", "IA_FALHOU", "REDE" ].includes(r.codigo);
     $("resultadoProcurar").innerHTML = `
       <div class="procurar__aviso">
-        <p>${U.escapeHTML(r.motivo || IA.MSG.rede)}</p>
+        <p>${U.escapeHTML(textoAviso(r))}</p>
         <div class="procurar__aviso-acoes">
           <a class="btn-secundario btn-mini" href="${U.escapeHTML(linkMaps(pedido))}" target="_blank" rel="noopener">Abrir no ${MARCA_MAPS}</a>
           ${repetir ? `<button type="button" class="btn-texto" data-repetir>Tentar de novo</button>` : ""}
@@ -303,17 +312,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   // A rede falhar não pode levar a busca junto.
   await carregar().catch(() => U.toast("Não consegui carregar a sua rede agora. Recarregue a página para tentar de novo.", "erro"));
-  // Sem IA aqui (demonstração, servidor sem chave), a busca segue pelo link
-  // do Google Maps, que vira o botão principal.
+  // Sem a busca automática aqui (demonstração, servidor sem chave), a busca
+  // segue pelo link do Google Maps, que vira o botão principal.
   const disponivel = IA ? await IA.disponivel() : {
-    ok: false,
-    motivo: "Os recursos de IA não estão disponíveis neste servidor."
+    ok: false
   };
   iaPronta = disponivel.ok;
   if (!disponivel.ok) {
     $("btnProcurar").hidden = true;
     $("linkProcurarMaps").className = "btn-primario";
-    $("notaProcurar").innerHTML = `${U.escapeHTML(disponivel.motivo)} Enquanto isso, o botão abre a mesma busca direto no ${MARCA_MAPS}.`;
+    $("notaProcurar").innerHTML = disponivel.demo ? `Na demonstração, o botão abre a busca direto no ${MARCA_MAPS}. Com uma conta, os lugares aparecem aqui mesmo.` : `O botão abre a busca direto no ${MARCA_MAPS}.`;
+    $("notaProcurar").hidden = false;
   }
   if (veioDoReality) {
     $("procurar").scrollIntoView({

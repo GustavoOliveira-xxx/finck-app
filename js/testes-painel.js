@@ -167,16 +167,35 @@
       esperar(PN().tarefasDoPainel({ ...base, projecoes: proj(coberto) }).length).aSer(0);
       const como = PN().respostaComoEstou(proj(coberto));
       esperar(como.tom).aSer("neutro");
-      esperar(como.nota).aConter("Com as entradas previstas");
-      esperar(como.nota).aConter("não fica negativo");
+      esperar(como.status).aSer("coberto");
+      esperar(como.nota).aConter(PN().COBERTO.toLowerCase());
       esperar(como.nota.includes(U.moeda(-1380))).aSerFalso();
-      esperar(PN().proximoPasso({ tarefas: PN().tarefasDoPainel({ ...base, projecoes: proj(coberto) }), metas: [ { name: "PC", target_amount: 5000, current_amount: 3100 } ] }).acao).aSer("Ver progresso");
+      // Nada a fazer: o próximo passo é a frase neutra, sem botão.
+      const passo = PN().proximoPasso({ tarefas: PN().tarefasDoPainel({ ...base, projecoes: proj(coberto) }), metas: [ { name: "PC", target_amount: 5000, current_amount: 3100 } ] });
+      esperar(passo.texto).aSer(PN().SEM_PENDENCIA);
+      esperar(passo.acao).aSer(null);
       const alerta = PN().tarefasDoPainel({ ...base, projecoes: proj(curto) });
       esperar(alerta.length).aSer(1);
       esperar(alerta[0].nivel).aSer("alerta");
       esperar(alerta[0].texto).aConter("12/10");
       esperar(alerta[0].texto).aConter(U.moeda(-380));
       esperar([ como.nota, alerta[0].texto ].every(textoLimpo)).aSerVerdadeiro();
+    });
+    teste("a programação e o resumo usam o mesmo status da previsão", async () => {
+      const coberto = P().panorama(fonte, 2000, { dias: 60, referencia: referencia });
+      const curto = P().panorama(fonte, 1500, { dias: 60, referencia: referencia });
+      const sCoberto = PN().statusPrevisao(PN().projecoesDoPanorama(coberto));
+      esperar(sCoberto.tipo).aSer("coberto");
+      esperar(sCoberto.valor).aSer(null);
+      esperar(sCoberto.soSaidas).aSer(-1380);
+      const sCurto = PN().statusPrevisao(PN().projecoesDoPanorama(curto));
+      esperar(sCurto.tipo).aSer("falta");
+      esperar(sCurto.valor).aSer(-380);
+      esperar(iso(sCurto.quando)).aSer("2026-10-12");
+      // Pelos nomes de ctx.projecoes, o mesmo panorama dá o mesmo status.
+      const proj = c => F.projecoesDe({ saldo: c.saldo, saidasPrevistas: c.comprometidoTotal, entradasPrevistas: c.entradasPrevistas, menorCaixaComEntradas: c.menorCaixaComEntradas, descobertoEm: c.descobertoComEntradasEm });
+      esperar(PN().statusPrevisao(proj(coberto)).tipo).aSer("coberto");
+      esperar(PN().statusPrevisao(proj(curto)).tipo).aSer("falta");
     });
     teste("previsão em aberto de recorrente apagado não vira compromisso", async () => {
       const ocorrencias = [
@@ -243,17 +262,91 @@
       esperar(r.maior.percentual).aSerPerto(60, 2);
       esperar(PN().resumoGastos([]).maior).aSer(null);
     });
-    teste("\"O que fazer agora?\" dá uma ação só, começando pelas previsões vencidas", async () => {
+    teste("\"Próximo passo\" dá uma ação só, começando pelas previsões vencidas", async () => {
       const tarefas = [ { nivel: "info", texto: "info", acao: "A", href: "a.html" }, { nivel: "alerta", texto: "alerta", acao: "B", href: "b.html" } ];
       esperar(PN().proximoPasso({ pendentes: [ { description: "Aluguel" } ], tarefas: tarefas }).tipo).aSer("revisar");
       esperar(PN().proximoPasso({ pendentes: [ { description: "Aluguel" } ] }).texto).aConter("Aluguel");
       esperar(PN().proximoPasso({ tarefas: tarefas }).acao).aSer("B");
+      // O progresso de uma meta não é um passo a dar: frase neutra, sem botão.
       const meta = PN().proximoPasso({ metas: [ { name: "PC", target_amount: 5000, current_amount: 3100 } ] });
-      esperar(meta.texto).aConter("62%");
-      esperar(meta.acao).aSer("Ver progresso");
+      esperar(meta.texto).aSer("Nenhuma pendência agora.");
+      esperar(meta.tipo).aSer("neutro");
+      esperar(meta.acao).aSer(null);
+      esperar(meta.href).aSer(null);
+      esperar(/em dia/i.test(meta.texto)).aSerFalso();
       const semMeta = PN().proximoPasso({ metas: [] });
       esperar(semMeta.texto).aSer("Você ainda não definiu uma meta.");
       esperar(semMeta.acao).aSer("Criar meta");
+    });
+    teste("a previsão tem um status só e nunca fica vermelha sem faltar de verdade", async () => {
+      const st = p => PN().statusPrevisao(p);
+      const sem = st({ saldoAtual: 100, caixaAposPrevisoes60Dias: null });
+      esperar(sem.tipo).aSer("sem-previsao");
+      const nada = st({ saldoAtual: 800, saidasPrevistas60Dias: 0, caixaAposPrevisoes60Dias: 800 });
+      esperar(nada.tipo).aSer("sem-saidas");
+      esperar(nada.valor).aSer(800);
+      const cobre = st({ saldoAtual: 2000, saidasPrevistas60Dias: 1500, caixaAposPrevisoes60Dias: 500 });
+      esperar(cobre.tipo).aSer("saldo-cobre");
+      esperar(cobre.valor).aSer(500);
+      esperar(cobre.tom).aSer("ok");
+      // As saídas passam o saldo, mas as entradas chegam antes de faltar.
+      const coberto = st({ saldoAtual: 2000, saidasPrevistas60Dias: 3380, caixaAposPrevisoes60Dias: -1380, entradasPrevistas60Dias: 3500, menorCaixaComEntradas60Dias: 120 });
+      esperar(coberto.tipo).aSer("coberto");
+      esperar(coberto.status).aSer("Coberto pelas entradas previstas");
+      esperar(coberto.valor).aSer(null);
+      esperar(coberto.soSaidas).aSer(-1380);
+      esperar(coberto.tom).aSer("neutro");
+      esperar(PN().SO_SAIDAS).aSer("Só com as saídas");
+      const falta = st({ saldoAtual: 1500, saidasPrevistas60Dias: 3380, caixaAposPrevisoes60Dias: -1880, entradasPrevistas60Dias: 3500, menorCaixaComEntradas60Dias: -380, descobertoEm60Dias: new Date(2026, 9, 12) });
+      esperar(falta.tipo).aSer("falta");
+      esperar(falta.tom).aSer("alerta");
+      esperar(falta.valor).aSer(-380);
+      esperar(falta.comEntradas).aSerVerdadeiro();
+      esperar(falta.soSaidas).aSer(-1880);
+      const semEntradas = st({ saldoAtual: 500, saidasPrevistas60Dias: 900, caixaAposPrevisoes60Dias: -400 });
+      esperar(semEntradas.tipo).aSer("falta");
+      esperar(semEntradas.valor).aSer(-400);
+      esperar(semEntradas.comEntradas).aSerFalso();
+      const todos = [ sem, nada, cobre, coberto, falta, semEntradas ];
+      esperar(todos.some(s => /em dia/i.test(s.status))).aSerFalso();
+      esperar(todos.filter(s => s.tom === "alerta").map(s => s.tipo).join(",")).aSer("falta,falta");
+      esperar(todos.every(s => textoLimpo(s.status))).aSerVerdadeiro();
+    });
+    teste("conta real sem registros mostra um começo, não uma parede de zeros", async () => {
+      const vazio = { todasTransacoes: [], recorrentes: [], parcelamentos: [], metas: [], analises: [], contas: [], saldo: 0 };
+      esperar(PN().contaSemDados(vazio)).aSerVerdadeiro();
+      esperar(PN().contaSemDados({})).aSerVerdadeiro();
+      esperar(PN().contaSemDados({ ...vazio, todasTransacoes: [ { id: 1 } ] })).aSerFalso();
+      esperar(PN().contaSemDados({ ...vazio, metas: [ { id: "m1" } ] })).aSerFalso();
+      esperar(PN().contaSemDados({ ...vazio, recorrentes: [ { id: "r1" } ] })).aSerFalso();
+      esperar(PN().contaSemDados({ ...vazio, saldo: 1500 })).aSerFalso();
+      await comSessaoLimpa(async () => {
+        // A demonstração tem dados de exemplo e nunca cai no começo.
+        await F.carregarDemo();
+        esperar(PN().contaSemDados(await F.carregarContexto())).aSerFalso();
+        // Sem nada registrado e sem saldo inicial, volta ao começo.
+        await S.limparDados();
+        await S.salvarPerfil({ income_monthly: 3000, work_days_month: 22, work_hours_day: 8, initial_balance: 0 });
+        esperar(PN().contaSemDados(await F.carregarContexto())).aSerVerdadeiro();
+      });
+    });
+    teste("Mais ferramentas: quatro atalhos por tarefa e o resto em \"Ver todas\"", async () => {
+      const { visiveis, todas } = PN().atalhosDaHome();
+      esperar(visiveis.length).aSer(4);
+      esperar(visiveis.every(a => a.tarefa && a.href && a.nome)).aSerVerdadeiro();
+      const secundarios = todas.map(a => a.nome);
+      [ "Jornada", "Cenários", "Relatórios", "Alternativas perto de você" ].forEach(n => esperar(secundarios.includes(n)).aSerVerdadeiro());
+      esperar(visiveis.some(a => [ "gamificacao.html", "cenarios.html", "locais.html", "relatorios.html" ].includes(a.href))).aSerFalso();
+      // Nada se perde: cada tela aparece uma vez, à vista ou em "Ver todas".
+      const hrefs = [ ...visiveis, ...todas ].map(a => a.href);
+      esperar(new Set(hrefs).size).aSer(PN().ATALHOS.length);
+      [ "contas.html", "assistente.html", "analises.html", "recorrentes.html", "planejamento.html", "decisoes.html" ].forEach(h => esperar(hrefs.includes(h)).aSerVerdadeiro());
+      esperar(PN().ATALHOS.every(a => a.familia === "financas" || a.familia === "reality")).aSerVerdadeiro();
+      // Vocabulário: Revisão financeira no lugar de Assistente, sem "IA" e sem o símbolo de IA.
+      const textos = PN().ATALHOS.map(a => `${a.nome} ${a.tarefa}`).join(" | ");
+      esperar(textos).aConter("Revisão financeira");
+      esperar(/assistente|\bIA\b|\u2726/i.test(textos)).aSerFalso();
+      esperar(textoLimpo(textos)).aSerVerdadeiro();
     });
     teste("tarefas usam o caixa de 60 dias e, sem ele, as parcelas", async () => {
       const base = { perfil: { income_monthly: 3000 }, contas: [], transacoesRealizadas: [ { id: 1 } ] };
@@ -362,6 +455,28 @@
       } finally {
         limpar();
         // Devolve o padrão de primeira visita para os outros testes.
+        PN().iniciarRecolhiveis(usuario);
+        limpar();
+      }
+    });
+    teste("\"Ver todas as ferramentas\" começa fechado mesmo para quem já usa o app", async () => {
+      const usuario = "teste-painel-ferramentas";
+      const chaves = [ "visitou", "aberto.todas", "aberto.outra" ].map(n => PN().chave(usuario, n));
+      const limpar = () => chaves.forEach(k => PN().gravarLocal(k, null));
+      limpar();
+      try {
+        PN().iniciarRecolhiveis(usuario);
+        esperar(PN().iniciarRecolhiveis(usuario)).aSerVerdadeiro();
+        const raiz = document.createElement("div");
+        raiz.innerHTML = '<details data-recolhivel="todas" data-recolhivel-padrao="fechado"><summary>Ver todas</summary></details><details data-recolhivel="outra"><summary>Outra</summary></details>';
+        PN().ligarRecolhiveis(raiz, usuario);
+        esperar(raiz.querySelector('[data-recolhivel="todas"]').open).aSerFalso();
+        esperar(raiz.querySelector('[data-recolhivel="outra"]').open).aSerVerdadeiro();
+        PN().abrirRecolhiveisSemEscolha(raiz, usuario);
+        esperar(raiz.querySelector('[data-recolhivel="todas"]').open).aSerFalso();
+        await new Promise(r => setTimeout(r, 50));
+      } finally {
+        limpar();
         PN().iniciarRecolhiveis(usuario);
         limpar();
       }

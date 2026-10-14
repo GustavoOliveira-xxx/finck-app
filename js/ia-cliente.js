@@ -6,10 +6,12 @@ window.FinckIA = (() => {
   // fica só lá; daqui sai apenas o pedido, com o token da sessão.
   const IA = cfg.BUSCA_IA || {};
   const ATIVA = IA.ATIVA === true && !!IA.ENDPOINT;
+  // Estes textos aparecem na tela: falam do recurso (importar preço,
+  // estimativa, busca de lugares), não do serviço que responde por trás.
   const MSG = {
-    semIA: "Os recursos de IA não estão disponíveis neste servidor.",
-    demo: "Na demonstração, os recursos de IA ficam desligados. Entre com uma conta para usar.",
-    sessao: "Sua sessão expirou. Entre novamente para usar a IA.",
+    semIA: "Este recurso não está disponível neste endereço.",
+    demo: "Na demonstração, este recurso funciona só com uma conta. Entre para usar.",
+    sessao: "Sua sessão expirou. Entre novamente para continuar.",
     rede: "Não consegui falar com o servidor. Confira sua internet e tente de novo."
   };
   let situacao = null;
