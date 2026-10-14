@@ -75,13 +75,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // A categoria é sugestão, não decisão: a pílula diz de onde ela veio
-  // e a pessoa confirma ou troca. Pelo nome do item é regra do FinCK; pelo
-  // print ou pelo link lido pela IA, é a IA do Google; lida direto na página
-  // da loja, sem IA, é o leitor da página.
+  // e a pessoa confirma ou troca. Pelo nome do item é regra do FinCK; pela
+  // importação do preço, é o que foi lido na imagem ou na página da loja.
   const pilulaCategoria = $("categoriaInferida");
   const ORIGEM_CATEGORIA = {
-    "ia-print": "Sugestão da IA do Google, lida no print",
-    "ia-link": "Sugestão da IA do Google, lida no link",
+    imagem: "Sugestão lida na imagem",
     pagina: "Sugestão lida na página da loja"
   };
   function estadoCategoria() {
@@ -201,8 +199,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }));
   campoMeses.addEventListener("input", marcarChipsMeses);
 
-  // 1 Compra, 2 Revelação (com "Quer olhar mais fundo?"), 3 Reflexão, 4 Decisão.
-  const ORDEM_ETAPAS = [ "passoDados", "passoResultado", "passoReflexao", "passoDecisao" ];
+  // 1 Compra, 2 Impacto, 3 Decisão. "Se quiser aprofundar" aparece junto com
+  // o resultado, mas não é etapa: é contexto opcional.
+  const ORDEM_ETAPAS = R.ETAPAS_FLUXO.map(e => e.id);
+  const BLOCOS_RESULTADO = [ "passoResultado", "passoDecisao", "aprofundar" ];
+  const mostrarBlocosResultado = visiveis => BLOCOS_RESULTADO.forEach(id => {
+    $(id).hidden = !visiveis;
+  });
   function marcarEtapas() {
     const nav = $("etapasReality");
     if (!nav) {
@@ -276,8 +279,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
   const TEXTO_BOTAO = {
-    inicial: "Ver o impacto da compra",
-    atualizar: "Atualizar o impacto"
+    inicial: "Calcular o impacto",
+    atualizar: "Atualizar o impacto",
+    pronto: R.CARREGAMENTO_PRONTO.replace(/\.$/, "")
   };
   function botaoOcupado(texto) {
     botaoVer.disabled = true;
@@ -293,7 +297,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // As quatro etapas da análise, marcadas conforme cada parte da conta
   // termina de verdade. Entre uma e outra o navegador só desenha a tela.
   const progresso = $("progressoAnalise");
-  const ETAPAS_ANALISE = [ "dados", "orcamento", "metas", "cenarios" ];
+  const ETAPAS_ANALISE = R.ETAPAS_CARREGAMENTO.map(e => e.id);
+  const textoCarga = i => R.ETAPAS_CARREGAMENTO[i].texto;
   const TEXTO_ESTADO = {
     feita: "Feito: ",
     atual: "Em andamento: ",
@@ -316,7 +321,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         texto.textContent = TEXTO_ESTADO[estado];
       }
     });
-    progresso.classList.toggle("progresso-analise--pronta", atual >= ETAPAS_ANALISE.length);
+    const pronta = atual >= ETAPAS_ANALISE.length;
+    progresso.classList.toggle("progresso-analise--pronta", pronta);
+    const fim = progresso.querySelector("[data-progresso-pronto]");
+    if (fim) {
+      fim.hidden = !pronta;
+    }
   }
   const deixarPintar = () => new Promise(resolver => {
     if (document.hidden) {
@@ -345,8 +355,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Uma análise inteira. rolar=false é a análise refeita de dentro do
-  // resultado (uma resposta na Análise FinCK): a tela fica onde a pessoa
-  // está e o foco fica com quem pediu.
+  // resultado (uma resposta em "O que merece atenção"): a tela fica onde a
+  // pessoa está e o foco fica com quem pediu.
   async function analisar({rolar: rolar = true} = {}) {
     if (analisando) {
       return;
@@ -380,16 +390,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const primeiraVez = $("passoResultado").hidden;
     analisando = true;
     let pronta = false;
-    // Refeita de dentro da Análise FinCK (rolar=false), quem anuncia é o
-    // próprio bloco; aqui as etapas ficam só na tela.
+    // Refeita de dentro de "O que merece atenção" (rolar=false), quem anuncia
+    // é o próprio bloco; aqui as etapas ficam só na tela.
     const anunciar = texto => {
       if (rolar) {
         etapa(texto);
       }
     };
-    botaoOcupado("Lendo seus dados…");
-    marcarProgresso(0);
-    anunciar("Lendo seus dados financeiros…");
+    // Botão, lista e leitor de tela dizem a mesma etapa, ao mesmo tempo.
+    const passarPara = i => {
+      botaoOcupado(textoCarga(i));
+      marcarProgresso(i);
+      anunciar(textoCarga(i));
+    };
+    passarPara(0);
     sinalizarAnalise(true);
     // A lista de etapas nasce logo abaixo do botão; se ele estava no pé da
     // tela, sobe o bastante para ela não ficar atrás da navegação.
@@ -413,9 +427,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         etapa("");
         return;
       }
-      botaoOcupado("Calculando o impacto…");
-      marcarProgresso(1);
-      anunciar("Calculando o impacto no orçamento…");
+      passarPara(1);
       await deixarPintar();
       const quantidade = Number($("itemQuantidade").value) || null;
       const mesesDeUso = Number(campoMeses.value) || null;
@@ -471,12 +483,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderResposta(mudancas);
       renderIndicadores();
       renderOrcamento();
-      marcarProgresso(2);
-      anunciar("Conferindo suas metas…");
+      passarPara(2);
       await deixarPintar();
       renderMetas();
-      marcarProgresso(3);
-      anunciar("Montando os cenários…");
+      passarPara(3);
       await deixarPintar();
       // O filme da compra: os próximos meses, parcelas e o teste do imprevisto.
       window.FinckLinhaTempoUI?.mostrar({
@@ -485,13 +495,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         preco: price * (quantidade || 1),
         nivel: resultado.semaforo.nivel
       });
-      // A Análise FinCK lê os mesmos números e a linha do tempo recém-feita.
+      // "O que merece atenção" lê os mesmos números e a linha do tempo
+      // recém-feita. Comparar formas de decidir e a dúvida sobre o cálculo
+      // ficam em "Se quiser aprofundar".
       window.FinckInteligenciaUI?.mostrar({
         ctx: ctx,
         entrada: entrada,
         resultado: resultado,
         linhaTempo: window.FinckLinhaTempoUI?.analiseAtual?.() || null,
         host: $("analiseFinck"),
+        hosts: {
+          comparar: $("compararFormas"),
+          duvida: $("duvidaCalculo")
+        },
         aoEscolher: aoEscolher
       });
       renderAlternativas();
@@ -506,20 +522,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         nome: item_name,
         resultado: resultado
       };
-      // ODS 12: o que a compra pesa para o planeta, estimado por IA. Carrega à
-      // parte, depois do resultado, e não segura a análise financeira.
-      window.FinckImpacto?.mostrar({
+      // ODS 12: a estimativa ambiental fica guardada para quando a pessoa
+      // abrir Sustentabilidade; se já estiver aberta, sai agora.
+      prepararImpacto({
         item: item_name,
         categoria: category,
         preco: price,
         quantidade: quantidade,
         mesesDeUso: mesesDeUso
-      }, $("impactoAmbiental"), {
-        pontos: blocoPontos
       });
-      [ "passoResultado", "passoReflexao", "passoDecisao" ].forEach(id => {
-        $(id).hidden = false;
-      });
+      mostrarBlocosResultado(true);
       window.FinckFundo?.tom(resultado.semaforo.nivel === "verde" ? "positivo" : "neutro");
       marcarProgresso(ETAPAS_ANALISE.length);
       pronta = true;
@@ -529,8 +541,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           preventScroll: true
         });
       } else if (topoAntes !== null) {
-        // O bloco de cima pode ter mudado de altura; a Análise FinCK fica
-        // onde estava na tela.
+        // O bloco de cima pode ter mudado de altura; "O que merece atenção"
+        // fica onde estava na tela.
         rolarJanela(window.scrollY + ancora.getBoundingClientRect().top - topoAntes, {
           imediato: true
         });
@@ -538,7 +550,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("btnRegistrarCalculo").disabled = false;
       escreverSeMudou($("statusRegistro"), anteriorSalva ? `A análise anterior continua em Minhas análises, com a decisão ${anteriorSalva}. Esta é uma análise nova, ainda não salva.` : registroId ? "Análise salva antes desta mudança. Salve de novo para guardar a versão atualizada." : "Esta análise ainda não foi salva. Salve para guardar no seu histórico.");
       if (rolar) {
-        etapa(primeiraVez ? "Análise pronta. Etapa 2 liberada: o que essa compra significa. As etapas 3 e 4 também estão abertas." : "Análise atualizada.");
+        etapa(primeiraVez ? `${R.CARREGAMENTO_PRONTO} Etapa 2: o impacto. A etapa 3, sua decisão, vem logo depois.` : `${R.CARREGAMENTO_PRONTO} Impacto atualizado.`);
       }
       if (primeiraVez) {
         destacarLiberadas();
@@ -555,7 +567,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } finally {
       analisando = false;
       sinalizarAnalise(false);
-      botaoLivre(pronta ? "Análise pronta" : resultado ? TEXTO_BOTAO.atualizar : TEXTO_BOTAO.inicial);
+      botaoLivre(pronta ? TEXTO_BOTAO.pronto : resultado ? TEXTO_BOTAO.atualizar : TEXTO_BOTAO.inicial);
     }
   }
 
@@ -603,13 +615,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("formLinhaTempo")?.addEventListener("input", agendarAtualizacaoAnalise);
   $("formLinhaTempo")?.addEventListener("change", agendarAtualizacaoAnalise);
 
+  // A estimativa ambiental só é pedida quando a pessoa abre Sustentabilidade
+  // (dentro de "Se quiser aprofundar"). Uma análise nova troca o que está
+  // guardado e limpa a estimativa do item anterior.
+  let impactoPendente = null;
+  const sustentabilidadeAberta = () => Boolean($("detalhesAprofundar")?.open && $("detalhesSustentabilidade")?.open);
+  function estimarImpacto() {
+    if (!impactoPendente || !sustentabilidadeAberta()) {
+      return;
+    }
+    const pedido = impactoPendente;
+    impactoPendente = null;
+    window.FinckImpacto?.mostrar(pedido, $("impactoAmbiental"), {
+      pontos: blocoPontos
+    });
+  }
+  function prepararImpacto(pedido) {
+    impactoPendente = pedido;
+    if (!pedido) {
+      $("impactoAmbiental").innerHTML = "";
+      $("blocoImpacto").hidden = true;
+      return;
+    }
+    estimarImpacto();
+  }
+  [ "detalhesAprofundar", "detalhesSustentabilidade" ].forEach(id => $(id)?.addEventListener("toggle", estimarImpacto));
+
   // Meses ou dias, do jeito que se fala: "12 dias", "2,5 meses".
   const duracao = dias => R.textoDuracao(dias);
 
-  // A mesma origem da pílula: cada caminho diz quem leu de verdade.
+  // A mesma origem da pílula: lida na imagem ou na página da loja.
   const ORIGEM_NA_RESPOSTA = {
-    "ia-print": " (sugestão da IA do Google)",
-    "ia-link": " (sugestão da IA do Google)",
+    imagem: " (lida na imagem)",
     pagina: " (lida na página da loja)"
   };
   function textoCategoriaResposta() {
@@ -635,9 +672,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // O texto do semáforo só aparece quando diz algo que a frase-síntese não
   // diz; nos outros casos ele repetiria o mesmo número.
   const TEXTO_SEMAFORO_NOVO = new Set([ "impacto_meta", "deficit_fixos" ]);
-  // O link para o Assistente leva uma pergunta neutra, só com valores: sem o
-  // nome do item e sem pedir veredito. A forma de pagamento entra quando a
-  // pessoa escolheu uma na linha do tempo.
+  // O link para a Revisão financeira (em "Orçamento completo") leva uma
+  // pergunta neutra, só com valores: sem o nome do item e sem pedir veredito.
+  // A forma de pagamento entra quando a pessoa escolheu uma na linha do tempo.
   function linkAssistente(total, forma = null) {
     const como = forma && forma.forma === "parcelado" ? ` em ${forma.parcelas}x de ${U.moeda(forma.parcela)}` : forma && forma.forma === "avista" ? " à vista" : "";
     return `assistente.html?pergunta=${encodeURIComponent(`Como uma compra de ${U.moeda(total)}${como} mexe no meu planejamento?`)}`;
@@ -680,17 +717,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       <div class="semaforo-card semaforo--${r.semaforo.nivel} impacto-nivel">
         <strong>${esc(r.semaforo.titulo)}</strong>
         ${TEXTO_SEMAFORO_NOVO.has(r.semaforo.motivo) ? `<p>${esc(r.semaforo.texto)}</p>` : ""}
-        <p class="impacto-nivel__nao-julga">O selo mede o peso desta compra no seu dinheiro de agora, não se você deve comprar. A decisão continua sendo sua.</p>
+        <p class="impacto-nivel__nao-julga">O selo mede o peso desta compra no seu dinheiro de agora, não se você deve comprar.</p>
       </div>
       ${mudancas.length ? `<div class="o-que-mudou"><p class="o-que-mudou__titulo">O que mudou desde a última análise</p><ul>${mudancas.map(textoMudanca).join("")}</ul></div>` : ""}
       <p class="resposta-reality__categoria">${textoCategoriaResposta()}</p>
       <div class="resposta-reality__links">
-        <a class="link-mais resposta-reality__mais" href="#maisFundo" data-abrir-detalhe="detalhesAnalise">Ver todos os números</a>
-        <a class="link-mais" data-link-assistente href="${linkAssistente(cadeia.total)}">Ver como esta compra cabe no seu planejamento</a>
+        <a class="link-mais resposta-reality__mais" href="#detalhesAnalise" data-abrir-detalhe="detalhesAnalise">Ver o orçamento completo</a>
       </div>`;
     const cena = $("respostaReality").querySelector(".marca3d-cena--resultado");
     if (cena) {
       window.FinckFX?.montarMarca?.(cena);
+    }
+    const revisao = document.querySelector("a[data-link-assistente]");
+    if (revisao) {
+      revisao.href = linkAssistente(cadeia.total);
     }
   }
 
@@ -777,7 +817,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       </article>`).join("") + (r.impacto_metas.length > 3 ? `<p class="nota">Mostrando as 3 metas mais afetadas de ${r.impacto_metas.length}.</p>` : "");
   }
 
-  // Uma linha por tema em "Quer olhar mais fundo?": o essencial à vista e o
+  // Uma linha por tema em "Se quiser aprofundar": o essencial à vista e o
   // resto a um toque.
   function resumirMaisFundo() {
     const r = resultado;
@@ -861,9 +901,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     esquecerRegistro();
     anterior = null;
     window.FinckInteligenciaUI?.limpar?.();
-    [ "passoResultado", "passoReflexao", "passoDecisao" ].forEach(id => {
-      $(id).hidden = true;
-    });
+    prepararImpacto(null);
+    mostrarBlocosResultado(false);
     const faixa = $("faixaComparando");
     faixa.hidden = false;
     faixa.innerHTML = `<p>Comparando com <strong>${esc(comparando.nome)}</strong> · ${U.moeda(comparando.resultado.total)} · ${R.formatarTempo(comparando.resultado.work_hours, horasPorDia()).horas} de trabalho. Agora informe a outra opção.</p>
@@ -1065,7 +1104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <span class="indicador-responsavel__etiqueta">O que suas respostas mostram</span>
         <p class="indicador-responsavel__rotulo">${esc(ind.rotulo)}</p>
         <p>${esc(ind.sintese)}</p>
-        <p class="indicador-responsavel__cobertura">Indicador de decisão responsável: <strong>${ind.pontuacao} de 100</strong>, com ${ind.respondidas} de ${ind.total} perguntas respondidas. A decisão continua sendo sua.</p>
+        <p class="indicador-responsavel__cobertura">Indicador de decisão responsável: <strong>${ind.pontuacao} de 100</strong>, com ${ind.respondidas} de ${ind.total} perguntas respondidas.</p>
       </article>
       ${ind.alertas.length ? `<ul class="lista-alertas-reflexao">${ind.alertas.map(a => `<li><strong>${esc(a.dimensao)}:</strong> ${esc(a.texto)}</li>`).join("")}</ul>` : ""}
       <details class="detalhes-hipoteses">
@@ -1136,7 +1175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     decisao = null;
     $("confirmacaoDecisao").hidden = true;
     const salvar = $("btnSalvarDecisao");
-    salvar.disabled = true;
+    salvar.disabled = false;
     salvar.textContent = "Salvar decisão";
     $("btnBuscarAlternativa")?.addEventListener("click", e => {
       const grupo = $("alternativasDecisao");
@@ -1303,7 +1342,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
   $("btnSalvarDecisao").addEventListener("click", async () => {
-    if (!resultado || !decisao || decisaoSalva()) {
+    if (!resultado || decisaoSalva()) {
+      return;
+    }
+    // O botão fica sempre disponível; sem escolha, ele diz o que falta e
+    // leva o foco à primeira opção.
+    if (!decisao) {
+      const aviso = $("confirmacaoDecisao");
+      aviso.hidden = false;
+      aviso.className = "confirmacao-decisao confirmacao-decisao--falta";
+      aviso.innerHTML = "<p>Escolha uma das opções acima para salvar a decisão.</p>";
+      document.querySelector("[data-decisao]")?.focus();
       return;
     }
     const botao = $("btnSalvarDecisao");
@@ -1457,6 +1506,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     comparando = null;
     anterior = null;
     window.FinckInteligenciaUI?.limpar?.();
+    prepararImpacto(null);
     $("btnRegistrarCalculo").disabled = false;
     $("statusRegistro").textContent = "";
     form.reset();
@@ -1466,10 +1516,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("faixaComparando").hidden = true;
     $("comparacao").innerHTML = "";
     $("alertaRenda").hidden = true;
-    [ "passoResultado", "passoReflexao", "passoDecisao" ].forEach(id => {
-      $(id).hidden = true;
-    });
-    $("btnSalvarDecisao").disabled = true;
+    mostrarBlocosResultado(false);
+    $("btnSalvarDecisao").disabled = false;
     $("btnSalvarDecisao").textContent = "Salvar decisão";
     botaoLivre(TEXTO_BOTAO.inicial);
     marcarProgresso(null);
@@ -1479,7 +1527,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     rolarJanela(0);
   });
 
-  // "Ver todos os números" abre o tema recolhido e leva até ele.
+  // "Ver o orçamento completo" abre o tema recolhido (e "Se quiser
+  // aprofundar", que o contém) e leva até ele.
   document.addEventListener("click", e => {
     const link = e.target.closest("[data-abrir-detalhe]");
     if (!link) {
@@ -1490,7 +1539,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     e.preventDefault();
-    alvo.open = true;
+    for (let d = alvo.closest("details"); d; d = d.parentElement?.closest("details")) {
+      d.open = true;
+    }
     rolarAte(alvo);
     alvo.querySelector("summary")?.focus({
       preventScroll: true
@@ -1499,7 +1550,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Vindo de Cenários ou de "Analisar de novo" em Minhas análises: item,
   // preço e quantidade chegam pela URL e só preenchem o formulário. A pessoa
-  // confere e toca em "Ver o impacto"; a URL volta limpa.
+  // confere e toca em "Calcular o impacto"; a URL volta limpa.
   (function preencherPelaUrl() {
     const params = new URLSearchParams(location.search);
     const item = (params.get("item") || "").trim().slice(0, 120);
@@ -1524,6 +1575,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     botaoVer.focus({
       preventScroll: true
     });
-    escreverSeMudou($("statusProcesso"), "Item e preço preenchidos. Confira e toque em Ver o impacto da compra.");
+    escreverSeMudou($("statusProcesso"), `Item e preço preenchidos. Confira e toque em ${TEXTO_BOTAO.inicial}.`);
   })();
 });

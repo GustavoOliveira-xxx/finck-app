@@ -108,15 +108,26 @@
 .linha-tempo__formulas ol{ display:grid; gap:.55rem; margin:.8rem 0; padding-left:1.2rem; color:var(--texto-fraco); line-height:1.55; }
 .linha-tempo__formulas strong{ color:var(--texto); }
 
-/* Antes de a pessoa escolher a forma, a simulação é um exemplo e diz isso. */
+/* Antes de a pessoa escolher a forma, a simulação é um exemplo e diz isso,
+   logo abaixo da conclusão. */
 .linha-tempo__exemplo{
-  margin:0 0 .5rem; padding:.55rem .8rem; border-radius:var(--raio-md);
+  margin:0; padding:.55rem .8rem; border-radius:var(--raio-md);
   border:1px dashed rgba(254,200,0,.45); background:var(--amarelo-fraco);
   font-size:.88rem; line-height:1.45; color:var(--texto);
 }
 .linha-tempo__selo{ margin:.4rem 0 0; }
-.linha-tempo__perguntar{ display:inline; min-height:auto; padding:0; color:var(--amarelo); text-decoration:underline; }
+/* Leva a "Tirar uma dúvida sobre o cálculo": um link discreto, com alvo de
+   toque inteiro. */
+.linha-tempo__perguntar{
+  display:inline-flex; align-items:center; justify-self:start;
+  min-height:44px; padding:0 .2rem; text-align:left;
+  color:var(--roxo-neon); text-decoration:underline; text-underline-offset:3px;
+}
+.linha-tempo__perguntar:hover{ color:var(--amarelo); }
+.linha-tempo__perguntar:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:var(--raio-sm); }
 .linha-tempo__completa{ margin-top:1rem; }
+/* Aberto, o resumo da linha repetiria a conclusão logo abaixo. */
+.linha-tempo[open] > summary [data-resumo="linha"]{ display:none; }
 
 @media (max-width:560px){
   .linha-tempo__controles{ padding:.85rem; }

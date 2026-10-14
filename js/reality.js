@@ -621,7 +621,7 @@ window.FinckReality = (() => {
     rotulo: "Suas respostas apontam impulso",
     texto: "Suas respostas indicam pouca necessidade, pouco uso ou vida útil curta."
   } ];
-  const LIMITE_RESPONSABILIDADE = "Este indicador resume apenas o que você declarou nas seis perguntas. Ele não mede impacto ambiental: o carbono e a água que o FinCK mostra na análise são estimativas feitas por IA, não medição.";
+  const LIMITE_RESPONSABILIDADE = "Este indicador resume apenas o que você declarou nas seis perguntas. Ele não mede impacto ambiental: o carbono e a água que o FinCK mostra em Sustentabilidade são estimativas, não medição.";
   function indicadorResponsavel(reflexoes = {}) {
     const pesos = cfg.PESOS_RESPONSABILIDADE;
     const criterios = cfg.REFLEXOES.map(q => {
@@ -879,12 +879,42 @@ window.FinckReality = (() => {
     },
     resultado_ambiental: {
       rotulo: "Resultado ambiental",
-      definicao: "Não medido pelo FinCK. O app registra decisões e reflexões e mostra, para cada item analisado, uma estimativa de carbono e água feita por IA; não mede o impacto real nem prova que um produto deixou de ser fabricado.",
+      definicao: "Não medido pelo FinCK. O app registra decisões e reflexões e, quando você abre Sustentabilidade numa análise, mostra uma estimativa de carbono e água para um item parecido; não mede o impacto real nem prova que um produto deixou de ser fabricado.",
       referencia: "fora do escopo"
     }
   };
+  // As três etapas do fluxo na tela e o que o carregamento diz enquanto a
+  // conta roda. Cada etapa do carregamento é uma parte da conta que existe
+  // de verdade (js/reality-page.js marca uma por vez).
+  const ETAPAS_FLUXO = Object.freeze([ {
+    id: "passoDados",
+    rotulo: "Compra"
+  }, {
+    id: "passoResultado",
+    rotulo: "Impacto"
+  }, {
+    id: "passoDecisao",
+    rotulo: "Decisão"
+  } ]);
+  const ETAPAS_CARREGAMENTO = Object.freeze([ {
+    id: "dados",
+    texto: "Lendo seus dados registrados…"
+  }, {
+    id: "orcamento",
+    texto: "Calculando o peso no mês…"
+  }, {
+    id: "metas",
+    texto: "Verificando suas metas…"
+  }, {
+    id: "cenarios",
+    texto: "Comparando cenários…"
+  } ]);
+  const CARREGAMENTO_PRONTO = "Resultado pronto.";
   return {
     calcular: calcular,
+    ETAPAS_FLUXO: ETAPAS_FLUXO,
+    ETAPAS_CARREGAMENTO: ETAPAS_CARREGAMENTO,
+    CARREGAMENTO_PRONTO: CARREGAMENTO_PRONTO,
     formatarTempo: formatarTempo,
     sintese: sintese,
     textoDuracao: textoDuracao,

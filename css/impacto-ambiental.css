@@ -22,6 +22,7 @@
   font-size:.7rem;
   font-weight:800;
   letter-spacing:.03em;
+  white-space:nowrap;
 }
 
 .impacto__base{
@@ -150,6 +151,17 @@
   line-height:1.5;
   color:var(--texto-fraquissimo);
 }
+
+.impacto__nota .selo-estimativa{ margin-right:.3rem; vertical-align:.08em; }
+
+/* De onde vêm as faixas: recolhido, para quem quiser conferir. */
+.impacto__como{ font-size:.8rem; color:var(--texto-fraco); }
+.impacto__como > summary{
+  display:inline-flex; align-items:center; min-height:44px;
+  cursor:pointer; font-weight:600;
+}
+.impacto__como > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:6px; }
+.impacto__como p{ margin:.1rem 0 .4rem; line-height:1.5; }
 
 .impacto__carregando{
   display:flex;

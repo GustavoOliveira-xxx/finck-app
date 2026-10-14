@@ -298,6 +298,123 @@
     });
   });
 
+  descrever("Reality: compra, impacto e decisão, sem cara de IA (UX)", () => {
+    const IA = /(^|[^\p{L}])IA([^\p{L}]|$)/u;
+    const PROVEDOR = /Google|Gemini|Claude|Anthropic|OpenRouter|✦|FINCK AI/;
+    const lerPagina = async () => {
+      const fonte = await fetch("reality.html", { cache: "no-store" }).then(r => r.text());
+      return new DOMParser().parseFromString(fonte, "text/html");
+    };
+    const texto = el => (el ? el.textContent : "").replace(/\s+/g, " ").trim();
+    const antes = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    teste("as etapas são Compra, Impacto e Decisão, nessa ordem", () => {
+      esperar(R.ETAPAS_FLUXO.map(e => e.id).join(",")).aSer("passoDados,passoResultado,passoDecisao");
+      esperar(R.ETAPAS_FLUXO.map(e => e.rotulo).join(",")).aSer("Compra,Impacto,Decisão");
+    });
+    teste("o carregamento diz as partes reais da conta, sem marca e sem IA", () => {
+      const textos = R.ETAPAS_CARREGAMENTO.map(e => e.texto);
+      esperar(textos.join(" | ")).aSer("Lendo seus dados registrados… | Calculando o peso no mês… | Verificando suas metas… | Comparando cenários…");
+      esperar(R.ETAPAS_CARREGAMENTO.map(e => e.id).join(",")).aSer("dados,orcamento,metas,cenarios");
+      esperar(R.CARREGAMENTO_PRONTO).aSer("Resultado pronto.");
+      const todos = textos.concat(R.CARREGAMENTO_PRONTO);
+      esperar(todos.some(t => IA.test(t) || PROVEDOR.test(t) || /FinCK/.test(t))).aSerFalso();
+      esperar(semTravessao(todos)).aSerVerdadeiro();
+    });
+    teste("a página mostra as mesmas etapas, do indicador ao carregamento", async () => {
+      const doc = await lerPagina();
+      const itens = [ ...doc.querySelectorAll("#etapasReality [data-etapa-reality]") ];
+      esperar(itens.map(li => li.dataset.etapaReality).join(",")).aSer(R.ETAPAS_FLUXO.map(e => e.id).join(","));
+      itens.forEach((li, i) => {
+        esperar(texto(li)).aSer(`${i + 1} ${R.ETAPAS_FLUXO[i].rotulo}`);
+        esperar(li.querySelector("a").getAttribute("href")).aSer(`#${R.ETAPAS_FLUXO[i].id}`);
+        esperar(Boolean(doc.getElementById(R.ETAPAS_FLUXO[i].id))).aSerVerdadeiro();
+      });
+      const carga = [ ...doc.querySelectorAll("#progressoAnalise [data-etapa-analise]") ];
+      esperar(carga.map(li => li.dataset.etapaAnalise).join(",")).aSer(R.ETAPAS_CARREGAMENTO.map(e => e.id).join(","));
+      carga.forEach((li, i) => esperar(texto(li)).aSer(R.ETAPAS_CARREGAMENTO[i].texto.replace(/…$/, "")));
+      esperar(texto(doc.querySelector("[data-progresso-pronto]"))).aSer(R.CARREGAMENTO_PRONTO);
+      esperar(texto(doc.getElementById("btnVerImpacto"))).aSer("Calcular o impacto");
+      esperar(Boolean(doc.getElementById("passoReflexao"))).aSerFalso();
+    });
+    teste("a decisão vem logo depois do que merece atenção, fora de qualquer detalhe", async () => {
+      const doc = await lerPagina();
+      const atencao = doc.getElementById("analiseFinck");
+      const decisao = doc.getElementById("passoDecisao");
+      const aprofundar = doc.getElementById("aprofundar");
+      esperar(antes(doc.getElementById("respostaReality"), atencao)).aSerVerdadeiro();
+      esperar(antes(atencao, decisao)).aSerVerdadeiro();
+      esperar(antes(decisao, aprofundar)).aSerVerdadeiro();
+      esperar(Boolean(decisao.closest("details"))).aSerFalso();
+      esperar(Boolean(doc.getElementById("opcoesDecisao").closest("details"))).aSerFalso();
+      esperar(texto(doc.getElementById("perguntaDecisao"))).aSer("Você já viu o impacto. O que quer fazer agora?");
+      // A reflexão continua, opcional e recolhida perto da decisão.
+      const pensar = doc.getElementById("formReflexao").closest("details");
+      esperar(pensar && pensar.id).aSer("pensarAntes");
+      esperar(pensar.hasAttribute("open")).aSerFalso();
+      esperar(texto(pensar.querySelector("summary"))).aConter("Pensar antes de decidir (opcional)");
+      esperar(Boolean(pensar.closest("#passoDecisao"))).aSerVerdadeiro();
+      // Salvar a decisão não começa desligado: sem escolha, ele explica o que falta.
+      esperar(doc.getElementById("btnSalvarDecisao").hasAttribute("disabled")).aSerFalso();
+    });
+    teste("o contexto fica em \"Se quiser aprofundar\", fechado", async () => {
+      const doc = await lerPagina();
+      const det = doc.getElementById("detalhesAprofundar");
+      esperar(det.tagName).aSer("DETAILS");
+      esperar(det.hasAttribute("open")).aSerFalso();
+      esperar(texto(det.querySelector("summary"))).aConter("Se quiser aprofundar");
+      [ "detalhesAnalise", "detalhesMetas", "blocoLinhaTempo", "compararFormas", "detalhesSustentabilidade", "detalhesAlternativas", "duvidaCalculo" ].forEach(id => {
+        esperar(`${id}: ${Boolean(doc.getElementById(id)?.closest("#detalhesAprofundar"))}`).aSer(`${id}: true`);
+      });
+      // Nada lá dentro nasce aberto: a sustentabilidade só é estimada ao abrir.
+      esperar(det.querySelectorAll("details[open]").length).aSer(0);
+      esperar(texto(doc.querySelector("#detalhesSustentabilidade summary"))).aConter("Estimativa");
+    });
+    teste("importar o preço é recolhido e diz para revisar", async () => {
+      const doc = await lerPagina();
+      const importar = doc.getElementById("importarPreco");
+      esperar(importar.tagName).aSer("DETAILS");
+      esperar(importar.hasAttribute("open")).aSerFalso();
+      [ "btnLerPrint", "btnMostrarLink", "itemLink", "btnBuscarPreco", "avisoLoja", "importarDemo" ].forEach(id => {
+        esperar(`${id}: ${Boolean(doc.getElementById(id)?.closest("#importarPreco"))}`).aSer(`${id}: true`);
+      });
+      esperar(texto(doc.querySelector(".importar-preco__intro"))).aSer("Importar o preço de uma imagem ou de uma página. Revise antes de usar.");
+      esperar(texto(doc.getElementById("importarDemo"))).aConter("funciona quando você entra com uma conta");
+      esperar(IA.test(texto(doc.getElementById("importarDemo")))).aSerFalso();
+      // O botão principal vem antes de qualquer atalho recolhido.
+      esperar(antes(doc.getElementById("btnVerImpacto"), importar)).aSerVerdadeiro();
+    });
+    teste("fora do \"Como funciona\", a página não fala em IA nem em provedor", async () => {
+      const doc = await lerPagina();
+      doc.querySelectorAll(".importar-preco__como").forEach(el => el.remove());
+      const corpo = texto(doc.body);
+      esperar(IA.test(corpo)).aSerFalso();
+      esperar(PROVEDOR.test(corpo)).aSerFalso();
+      esperar((corpo.match(/sem julgar/g) || []).length).aSer(1);
+      esperar(Boolean(doc.querySelector(".hero--reality")?.textContent.includes("sem julgar"))).aSerVerdadeiro();
+      esperar(semTravessao([ corpo ])).aSerVerdadeiro();
+    });
+    teste("\"A decisão continua sendo sua.\" aparece uma vez, na decisão", async () => {
+      const doc = await lerPagina();
+      const frase = "A decisão continua sendo sua.";
+      esperar((texto(doc.body).split(frase).length - 1)).aSer(1);
+      esperar(texto(doc.querySelector("#passoDecisao .decisao-reality__sua"))).aSer(frase);
+      const pagina = await fetch("js/reality-page.js", { cache: "no-store" }).then(r => r.text());
+      esperar(pagina.includes(frase)).aSerFalso();
+    });
+    teste("os scripts do Reality não mostram IA, provedor nem ✦ no caminho principal", async () => {
+      for (const arq of [ "js/reality-page.js", "js/buscar-preco.js" ]) {
+        const fonte = await fetch(arq, { cache: "no-store" }).then(r => r.text());
+        // Só o que vira texto na tela: as linhas de comentário ficam de fora.
+        const tela = fonte.split("\n").filter(l => !/^\s*\/\//.test(l)).join("\n");
+        esperar(`${arq}: ${/IA do Google|Gemini|✦|FINCK AI|passoReflexao/.test(tela)}`).aSer(`${arq}: false`);
+        // "IA" como palavra dentro de um texto entre aspas; nomes como IA_ATIVA
+        // e IA.ENDPOINT são código, não tela.
+        esperar(`${arq}: ${/"[^"\n]*(^|[^\p{L}_$.])IA(?![\p{L}_])(?!\.\w)[^"\n]*"/u.test(tela.replace(/"IA_[A-Z_]+"/g, ""))}`).aSer(`${arq}: false`);
+      }
+      esperar(IA.test(R.LIMITE_RESPONSABILIDADE)).aSerFalso();
+    });
+  });
+
   descrever("Reality: a reflexão é retrato, não prova (UX)", () => {
     teste("os rótulos descrevem as respostas sem julgar a pessoa", () => {
       const textos = R.FAIXAS_RESPONSABILIDADE.flatMap(f => [ f.rotulo, f.texto ]);

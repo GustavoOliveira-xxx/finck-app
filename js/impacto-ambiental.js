@@ -1,12 +1,13 @@
 window.FinckImpacto = (() => {
   const U = window.FinckUtils;
   const IA = window.FinckIA;
-  // ODS 12: o resultado do FinCK of Reality mostra também o que a compra pesa
-  // para o planeta. A IA estima faixas para um item parecido (carbono, água,
-  // vida útil) e dá o contexto: a etapa que mais pesa, os materiais, o reparo
-  // e o descarte. As contas que dependem desta compra, como a quantidade, os
+  // ODS 12: em "Se quiser aprofundar", Sustentabilidade mostra o que a compra
+  // pesa para o planeta. Só é pedida quando a pessoa abre esse trecho. O
+  // servidor estima faixas para um item parecido (carbono, água, vida útil) e
+  // dá o contexto: a etapa que mais pesa, os materiais, o reparo e o
+  // descarte. As contas que dependem desta compra, como a quantidade, os
   // meses de uso que a pessoa espera e o que se evita comprando usado, são
-  // feitas aqui, sempre a partir dessas faixas e sem número novo da IA.
+  // feitas aqui, sempre a partir dessas faixas e sem número novo.
   const significativo = n => Number(Number(n).toPrecision(2));
   const meio = f => (f.min + f.max) / 2;
   function calcular(estimativa, {quantidade: quantidade = 1, mesesDeUso: mesesDeUso = null} = {}) {
@@ -121,7 +122,7 @@ window.FinckImpacto = (() => {
     const contasHtml = [ contas.porMes ? `<li>${contas.porMes.daPessoa ? `Pelo uso que você espera (${contas.porMes.meses} meses)` : `Na vida útil típica (cerca de ${contas.porMes.meses} meses)`}, são <strong>${numero(contas.porMes.valor)} kg de CO₂e por mês de uso</strong>. Quanto mais o item dura, menor fica essa conta.</li>` : "", contas.evitavelUsado ? `<li>Comprar usado ou recondicionado evita a parte da fabricação: cerca de <strong>${formatarCarbono(contas.evitavelUsado)}</strong>.</li>` : "", e.premissa ? `<li class="impacto__premissa">A faixa supõe ${U.escapeHTML(noMeio(e.premissa).replace(/\.$/, ""))}.</li>` : "" ].join("");
     const detalhes = [ e.materiais && e.materiais.length ? `<div><dt>Materiais</dt><dd>${e.materiais.map(U.escapeHTML).join(", ")}</dd></div>` : "", e.reparo ? `<div><dt>Reparo</dt><dd><span class="impacto__nivel impacto__nivel--${e.reparo.nivel}">${REPARO[e.reparo.nivel]}</span> ${U.escapeHTML(e.reparo.texto)}</dd></div>` : "", e.descarte ? `<div><dt>Descarte</dt><dd>${U.escapeHTML(e.descarte)}</dd></div>` : "" ].join("");
     const mapa = PONTOS_POR_RESIDUO[e.residuo];
-    return `\n      <p class="impacto__base">Estimativa para <strong>${U.escapeHTML(e.tipo || "este item")}</strong>${contas.quantidade > 1 ? `, ${contas.quantidade} unidades` : ""} · ${CONFIANCA[e.confianca] || CONFIANCA.media}</p>\n      <div class="cards-indicadores impacto__numeros">${cards}</div>\n      ${contasHtml ? `<ul class="impacto__contas">${contasHtml}</ul>` : ""}\n      ${detalhes ? `<dl class="impacto__detalhes">${detalhes}</dl>` : ""}\n      ${mapa && typeof pontos === "function" ? pontos(mapa) : ""}\n      ${e.dicas && e.dicas.length ? `<div class="impacto__dicas"><p class="impacto__dicas-titulo">Para pesar menos no planeta</p><ul>${e.dicas.map(d => `<li>${U.escapeHTML(d)}</li>`).join("")}</ul></div>` : ""}\n      <p class="impacto__nota">Estimativa feita por IA a partir de ${U.escapeHTML(noMeio(e.base || "médias de produtos parecidos").replace(/\.$/, ""))}. Varia com marca, modelo e uso: mostra a ordem de grandeza, não é medição.</p>`;
+    return `\n      <p class="impacto__base">Estimativa para <strong>${U.escapeHTML(e.tipo || "este item")}</strong>${contas.quantidade > 1 ? `, ${contas.quantidade} unidades` : ""} · ${CONFIANCA[e.confianca] || CONFIANCA.media}</p>\n      <div class="cards-indicadores impacto__numeros">${cards}</div>\n      ${contasHtml ? `<ul class="impacto__contas">${contasHtml}</ul>` : ""}\n      ${detalhes ? `<dl class="impacto__detalhes">${detalhes}</dl>` : ""}\n      ${mapa && typeof pontos === "function" ? pontos(mapa) : ""}\n      ${e.dicas && e.dicas.length ? `<div class="impacto__dicas"><p class="impacto__dicas-titulo">Para pesar menos no planeta</p><ul>${e.dicas.map(d => `<li>${U.escapeHTML(d)}</li>`).join("")}</ul></div>` : ""}\n      <p class="impacto__nota"><span class="selo-estimativa">Estimativa</span> Varia com marca, modelo e uso: mostra a ordem de grandeza, não é medição.</p>\n      <details class="impacto__como">\n        <summary>Como foi estimado?</summary>\n        <p>As faixas de carbono, água e vida útil foram estimadas por IA a partir de ${U.escapeHTML(noMeio(e.base || "médias de produtos parecidos").replace(/\.$/, ""))}, para um item parecido com este. As contas desta compra (quantidade, meses de uso e a parte evitável comprando usado) são feitas pelo FinCK a partir dessas faixas, sem número novo.</p>\n      </details>`;
   }
   // Trecho que entra no meio de uma frase da tela: "a partir de médias de...".
   // Sigla como "ACV" fica como está.
@@ -134,10 +135,6 @@ window.FinckImpacto = (() => {
       return;
     }
     const bloco = host.closest(".bloco-interno") || host;
-    if (!IA || !IA.ATIVA) {
-      bloco.hidden = true;
-      return;
-    }
     bloco.hidden = false;
     // Uma análise nova pode começar antes de a anterior voltar: só a última
     // desenha na tela.
@@ -154,15 +151,20 @@ window.FinckImpacto = (() => {
         botao.addEventListener("click", () => mostrar(entrada, host, opcoes));
       }
     };
+    // Sem a rota no config, Sustentabilidade abre com a explicação, não vazia.
+    if (!IA || !IA.ATIVA) {
+      aviso("A estimativa ambiental não está disponível neste endereço.");
+      return;
+    }
     const lembrada = lembrancas.get(chave(entrada));
     let resposta = lembrada;
     if (!resposta) {
       const pode = await IA.disponivel();
       if (!pode.ok) {
-        aviso(pode.demo ? "Na demonstração, a estimativa de impacto ambiental fica desligada. Entre com uma conta para ver o que esta compra pesa para o planeta." : pode.motivo);
+        aviso(pode.demo ? "Na demonstração, a estimativa ambiental funciona só com uma conta. Entre para ver o que esta compra pesa para o planeta." : "A estimativa ambiental não está disponível agora.");
         return;
       }
-      desenhar(`<p class="impacto__carregando"><span class="busca-preco__giro" aria-hidden="true"></span> Calculando uma estimativa ambiental… <small>É uma estimativa feita por IA a partir de estudos de ciclo de vida, não uma medição. O resto da análise já está pronto acima.</small></p>`);
+      desenhar(`<p class="impacto__carregando"><span class="busca-preco__giro" aria-hidden="true"></span> Estimando o impacto ambiental… <small>Estimativa a partir de estudos de ciclo de vida de produtos parecidos, não medição.</small></p>`);
       resposta = await IA.pedir({
         impacto: {
           item: entrada.item,
@@ -178,10 +180,13 @@ window.FinckImpacto = (() => {
         return;
       }
       if (r.codigo === "SEM_LOGIN" && window.FinckStore.emDemo()) {
-        aviso("Na demonstração, a estimativa de impacto ambiental fica desligada. Entre com uma conta para ver o que esta compra pesa para o planeta.");
+        aviso("Na demonstração, a estimativa ambiental funciona só com uma conta. Entre para ver o que esta compra pesa para o planeta.");
         return;
       }
-      aviso(r.motivo || "Não consegui estimar o impacto agora.", r.codigo !== "SEM_LOGIN" && r.codigo !== "IA_INDISPONIVEL");
+      // As mensagens da rota falam do serviço por trás; aqui a tela diz só
+      // o que aconteceu com a estimativa e o que dá para fazer.
+      const texto = r.codigo === "SEM_LOGIN" ? "Sua sessão expirou. Entre novamente para ver a estimativa." : r.codigo === "IA_INDISPONIVEL" ? "A estimativa ambiental não está disponível agora." : "Não deu para estimar o impacto agora.";
+      aviso(texto, r.codigo !== "SEM_LOGIN" && r.codigo !== "IA_INDISPONIVEL");
       return;
     }
     lembrancas.set(chave(entrada), resposta);

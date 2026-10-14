@@ -1,5 +1,6 @@
-// Linha do tempo: a leitura em palavras, a origem de cada número e o resumo
-// que vai para a FINCK AI. As contas em si estão na suíte "Linha do tempo da
+// Linha do tempo: a leitura em palavras, a origem de cada número, o resumo
+// que vai para a ajuda opcional e a tela (js/linha-tempo.js, carregada aqui
+// só para estes testes). As contas em si estão na suíte "Linha do tempo da
 // compra (FinckLinhaTempo)", em js/testes.js.
 (() => {
   const { descrever, teste, esperar } = window.FinckTestes;
@@ -30,7 +31,7 @@
   // Consultor, não juiz: nenhuma frase manda, proíbe ou elogia a compra.
   const JULGAMENTOS = [ "não compre", "não deve comprar", "compra ruim", "ótima compra", "boa compra", "mais caro do país" ];
 
-  descrever("Linha do tempo: leitura, origem dos números e FINCK AI (UX)", () => {
+  descrever("Linha do tempo: leitura, origem dos números e ajuda opcional (UX)", () => {
     teste("a conclusão curta vem do cenário e cabe numa frase", () => {
       const a = analisar({}, {});
       const l = L.leitura(a);
@@ -110,7 +111,7 @@
       esperar(juros.valor).aSer(null);
       esperar(juros.taxa_am * 100).aSerPerto(15.02, 2);
     });
-    teste("o resumo para a FINCK AI separa dado confirmado de estimativa e cabe no limite da rota", () => {
+    teste("o resumo para a ajuda opcional separa dado confirmado de estimativa e cabe no limite da rota", () => {
       const a = analisar({}, { imprevisto: { valor: 400, mes: 1 } });
       const texto = L.paraIA(a, { item: "geladeira" });
       esperar(texto).aConter("Conclusão calculada pelo FinCK: Neste cenário");
@@ -132,7 +133,7 @@
       b.dia_a_dia = 700;
       esperar(L.leitura(L.analisar(b, { preco: 3000, forma: "parcelado", parcelas: 10 })).perguntas.length).aSer(0);
     });
-    teste("sem o nome do item, o resumo para a FINCK AI leva só números", () => {
+    teste("sem o nome do item, o resumo para a ajuda opcional leva só números", () => {
       const a = analisar({}, { imprevisto: { valor: 400, mes: 1 } });
       const texto = L.paraIA(a);
       esperar(texto.startsWith("Compra de R$ 3000.00. Forma escolhida: em 10x de R$ 300.00")).aSerVerdadeiro();
@@ -140,6 +141,76 @@
       esperar(texto.includes("\u2014")).aSerFalso();
       // Plural certo também no texto que vai para fora.
       esperar(/\b1 meses\b/.test(texto)).aSerFalso();
+    });
+  });
+
+  // A tela da linha do tempo, montada com o bloco do reality.html de verdade,
+  // fora da tela, dentro de um "Se quiser aprofundar" fechado.
+  const carregar = (global, src) => window[global] ? Promise.resolve() : new Promise((ok, falha) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = ok;
+    s.onerror = () => falha(new Error(`não carregou ${src}`));
+    document.head.appendChild(s);
+  });
+  const SEM_CARA_DE_IA = /\bIA\b|FINCK AI|✦/;
+
+  descrever("Linha do tempo: tela sem cara de IA", () => {
+    teste("conclusão primeiro, selos e aviso de simulação; o botão leva a \"Tirar uma dúvida\" e foca o campo", async () => {
+      await carregar("FinckLinhaTempoUI", "js/linha-tempo.js");
+      await carregar("FinckInteligenciaUI", "js/inteligencia.js");
+      const html = await fetch("reality.html", { cache: "no-store" }).then(r => r.text());
+      const bloco = new DOMParser().parseFromString(html, "text/html").getElementById("blocoLinhaTempo");
+      esperar(Boolean(bloco)).aSerVerdadeiro();
+      const caixa = document.createElement("div");
+      caixa.style.cssText = "position:absolute;left:-9999px;top:0;width:360px";
+      caixa.innerHTML = `<details id="tAprofundar"><summary>Se quiser aprofundar</summary>${bloco.outerHTML}<div id="duvidaCalculo"></div></details><section id="tAnalise" hidden></section>`;
+      document.body.appendChild(caixa);
+      const fetchOriginal = window.fetch;
+      try {
+        window.FinckMoeda?.ligarTodos?.(caixa);
+        caixa.querySelector("#blocoLinhaTempo").open = true;
+        const perfil = { income_monthly: 2500, work_days_month: 22, work_hours_day: 8 };
+        const c = { ...ctx(), perfil: perfil, metas: [], movimentosMeta: [] };
+        window.FinckLinhaTempoUI.mostrar({ ctx: c, item: "Geladeira", preco: 3000, nivel: "atencao" });
+        const resultado = window.FinckReality.calcular(3000, perfil, { saldo: 0, despesasFixas: 1600, metas: [], movimentosMeta: [], hoje: hoje, diaADia: 500 });
+        window.FinckInteligenciaUI.mostrar({
+          ctx: c, entrada: { item_name: "Geladeira", price: 3000, category: "Eletrodomésticos" }, resultado: resultado,
+          linhaTempo: window.FinckLinhaTempoUI.analiseAtual(), host: caixa.querySelector("#tAnalise"),
+          hosts: { comparar: null, duvida: caixa.querySelector("#duvidaCalculo") }
+        });
+        const resumo = caixa.querySelector("#ltResumo");
+        const conclusao = resumo.querySelector("#ltConclusao");
+        esperar(conclusao.textContent.length > 20).aSerVerdadeiro();
+        // A conclusão vem antes dos cartões e dos controles.
+        esperar(Boolean(conclusao.compareDocumentPosition(resumo.querySelector("#ltCartoes")) & Node.DOCUMENT_POSITION_FOLLOWING)).aSerVerdadeiro();
+        esperar(Boolean(resumo.compareDocumentPosition(caixa.querySelector("#formLinhaTempo")) & Node.DOCUMENT_POSITION_FOLLOWING)).aSerVerdadeiro();
+        esperar(resumo.querySelector(".linha-tempo__simulacao").textContent).aConter("Cálculo do FinCK. É uma simulação");
+        esperar(caixa.querySelectorAll("#blocoLinhaTempo .linha-tempo__tipo--estimativa").length >= 2).aSerVerdadeiro();
+        esperar(caixa.querySelector("#linhaTempoResultado").textContent).aConter("Dado confirmado");
+        esperar(caixa.querySelector('[data-lt-detalhe="formulas"] summary').textContent).aSer("Como foi calculado?");
+        esperar(SEM_CARA_DE_IA.test(caixa.querySelector("#blocoLinhaTempo").textContent)).aSerFalso();
+        const botao = resumo.querySelector("[data-lt-perguntar]");
+        esperar(botao.textContent).aSer("Tirar uma dúvida sobre esta simulação");
+        esperar(botao.getAttribute("type")).aSer("button");
+        // A disponibilidade da ajuda opcional é conferida sem sair da página.
+        window.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true, ia: true }), { status: 200, headers: { "Content-Type": "application/json" } }));
+        const aprofundar = caixa.querySelector("#tAprofundar");
+        aprofundar.open = false;
+        botao.click();
+        esperar(aprofundar.open).aSerVerdadeiro();
+        esperar(caixa.querySelector('#duvidaCalculo [data-af="duvida-caixa"]').open).aSerVerdadeiro();
+        esperar(caixa.querySelector('#duvidaCalculo [data-af="livre"]').open).aSerVerdadeiro();
+        const foco = document.activeElement;
+        esperar(foco && (foco.id === "perguntaFinck" || foco.dataset.af === "indisponivel")).aSerVerdadeiro();
+        // Nada foi enviado: nenhuma resposta apareceu.
+        esperar(caixa.querySelectorAll("#duvidaCalculo .troca-finck").length).aSer(0);
+        await new Promise(ok => setTimeout(ok, 60));
+      } finally {
+        window.fetch = fetchOriginal;
+        window.FinckInteligenciaUI.limpar();
+        caixa.remove();
+      }
     });
   });
 })();

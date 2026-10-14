@@ -407,7 +407,7 @@ window.FinckLinhaTempo = (() => {
 
   // De onde vem cada número: o que está registrado no FinCK (dado
   // confirmado) e o que é estimativa ou hipótese de teste. A tela mostra os
-  // dois grupos separados, e a FINCK AI recebe a mesma separação.
+  // dois grupos separados, e a ajuda opcional recebe a mesma separação.
   function numerosUsados(a) {
     const b = a.base;
     const parcelas = (b.parcelas_existentes || []).slice(1, b.horizonte + 1);
@@ -441,7 +441,7 @@ window.FinckLinhaTempo = (() => {
     return { confirmados, estimativas };
   }
 
-  // Resumo em texto para a FINCK AI explicar. Só números já calculados:
+  // Resumo em texto para a ajuda opcional explicar. Só números já calculados:
   // a IA não refaz conta nenhuma, e cada número vai marcado como dado
   // confirmado ou estimativa. O nome do item só entra se quem chama passar;
   // a tela do Reality não passa, para ir só número para fora.

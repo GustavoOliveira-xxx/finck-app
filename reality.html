@@ -76,15 +76,14 @@
 
     <div id="painelCalculo" class="painel-aba" role="tabpanel" aria-labelledby="abaCalculo">
 
-    <!-- Onde a pessoa está e quanto falta. A narrativa da análise: a compra
-         que ela quer, o que o preço revela (com o contexto em "Quer olhar
-         mais fundo?"), a reflexão dela e a decisão. -->
-    <nav class="etapas-reality" id="etapasReality" aria-label="Etapas da análise">
+    <!-- Onde a pessoa está e quanto falta: a compra, o impacto e a decisão.
+         O contexto fica em "Se quiser aprofundar", fora das etapas. Os
+         rótulos vêm de FinckReality.ETAPAS_FLUXO. -->
+    <nav class="etapas-reality etapas-reality--tres" id="etapasReality" aria-label="Etapas da análise">
       <ol>
         <li data-etapa-reality="passoDados"><a href="#passoDados"><span class="etapas-reality__num">1</span> Compra</a></li>
-        <li data-etapa-reality="passoResultado"><a href="#passoResultado" aria-disabled="true"><span class="etapas-reality__num">2</span> Revelação</a></li>
-        <li data-etapa-reality="passoReflexao"><a href="#passoReflexao" aria-disabled="true"><span class="etapas-reality__num">3</span> Reflexão</a></li>
-        <li data-etapa-reality="passoDecisao"><a href="#passoDecisao" aria-disabled="true"><span class="etapas-reality__num">4</span> Decisão</a></li>
+        <li data-etapa-reality="passoResultado"><a href="#passoResultado" aria-disabled="true"><span class="etapas-reality__num">2</span> Impacto</a></li>
+        <li data-etapa-reality="passoDecisao"><a href="#passoDecisao" aria-disabled="true"><span class="etapas-reality__num">3</span> Decisão</a></li>
       </ol>
     </nav>
 
@@ -92,8 +91,8 @@
       <h3 id="tituloDados">1. Sua compra</h3>
       <div class="comparando" id="faixaComparando" hidden></div>
       <form id="formReality" novalidate>
-        <!-- Duas informações bastam para o resultado. O resto
-             deixa a análise mais precisa e fica recolhido. -->
+        <!-- Item e preço bastam para o resultado. Importar o preço e deixar
+             a conta mais precisa ficam recolhidos, abaixo do botão. -->
         <label>O que você quer comprar?
           <input type="text" id="itemName" required placeholder="Ex.: Fone de ouvido" autocomplete="off">
         </label>
@@ -103,58 +102,75 @@
           <small class="ajuda-campo" id="ajudaPreco">Digite como você vê o preço: 800 ou R$ 800,00.</small>
         </label>
 
-        <div class="atalho-preco" role="group" aria-labelledby="tituloAtalhoPreco">
-          <p class="atalho-preco__titulo" id="tituloAtalhoPreco">Não quer digitar o preço?</p>
-          <div class="atalho-preco__botoes">
-            <button type="button" class="btn-secundario btn-mini busca-preco__botao" id="btnLerPrint" aria-describedby="dicaPrint">
-              <span class="busca-preco__giro" aria-hidden="true"></span>
-              <svg class="busca-preco__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></svg>
-              <span class="busca-preco__rotulo">Ler preço de um print</span>
-            </button>
-            <button type="button" class="btn-secundario btn-mini" id="btnMostrarLink" aria-expanded="false" aria-controls="areaLink">Buscar pelo link da loja</button>
-          </div>
-          <input type="file" id="entradaPrint" accept="image/*" hidden>
-          <p class="busca-preco__dica" id="dicaPrint">
-            Funciona em qualquer loja, inclusive Shopee e Amazon.
-            <span class="busca-preco__dica-mouse">Também dá para colar (Ctrl+V) ou arrastar a imagem.</span>
-            A IA do Google lê a imagem e o FinCK não a guarda; evite prints com dados pessoais.
-          </p>
-
-          <div class="area-link" id="areaLink" hidden>
-            <label>Link do produto
-              <span class="campo-com-icone">
-                <svg class="campo-com-icone__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 14.5 14.5 9.5"/><path d="M8 15 5.8 17.2a3 3 0 1 1-4.2-4.2L4 10.7"/><path d="M16 9l2.2-2.2a3 3 0 1 1 4.2 4.2L20 13.3"/></svg>
-                <input type="url" id="itemLink" placeholder="Cole o link do produto, do anúncio ou da loja" aria-describedby="dicaLink">
-              </span>
-            </label>
-            <div class="busca-preco">
-              <button type="button" class="btn-secundario busca-preco__botao" id="btnBuscarPreco" disabled aria-describedby="dicaLink">
-                <span class="busca-preco__giro" aria-hidden="true"></span>
-                <span class="busca-preco__rotulo">Buscar preço neste link</span>
-              </button>
-              <button type="button" class="busca-preco__ajuda" id="btnLojasSuportadas" aria-haspopup="dialog">
-                Quais lojas funcionam?
-              </button>
-            </div>
-            <p class="busca-preco__dica" id="dicaLink">Cole um link de produto para habilitar a busca. A IA abre a página e mostra o preço encontrado; o campo só muda quando você tocar em <strong>Usar este preço</strong>.</p>
-          </div>
-        </div>
-        <div class="busca-preco__aviso" id="avisoLoja" role="status" hidden></div>
-
         <div class="alerta-fluxo" id="alertaRenda" role="alert" hidden></div>
-        <button type="submit" class="btn-primario btn-grande" id="btnVerImpacto">Ver o impacto da compra</button>
+        <button type="submit" class="btn-primario btn-grande" id="btnVerImpacto">Calcular o impacto</button>
         <!-- Cada linha corresponde a uma parte da conta que de fato roda;
-             nada aqui é espera de enfeite. -->
+             nada aqui é espera de enfeite. Textos em FinckReality.ETAPAS_CARREGAMENTO. -->
         <div class="progresso-analise" id="progressoAnalise" hidden>
-          <p class="progresso-analise__marca"><span aria-hidden="true">✦</span> Análise FinCK</p>
           <ol class="progresso-analise__etapas">
-            <li data-etapa-analise="dados"><span class="sr-only" data-estado-texto></span>Dados financeiros</li>
-            <li data-etapa-analise="orcamento"><span class="sr-only" data-estado-texto></span>Impacto no orçamento</li>
-            <li data-etapa-analise="metas"><span class="sr-only" data-estado-texto></span>Suas metas</li>
-            <li data-etapa-analise="cenarios"><span class="sr-only" data-estado-texto></span>Cenários</li>
+            <li data-etapa-analise="dados"><span class="sr-only" data-estado-texto></span>Lendo seus dados registrados</li>
+            <li data-etapa-analise="orcamento"><span class="sr-only" data-estado-texto></span>Calculando o peso no mês</li>
+            <li data-etapa-analise="metas"><span class="sr-only" data-estado-texto></span>Verificando suas metas</li>
+            <li data-etapa-analise="cenarios"><span class="sr-only" data-estado-texto></span>Comparando cenários</li>
           </ol>
+          <p class="progresso-analise__pronto" data-progresso-pronto hidden>Resultado pronto.</p>
         </div>
         <p class="status-processo sr-only" id="statusProcesso" aria-live="polite"></p>
+
+        <!-- Importar o preço é um atalho, não o caminho: imagem ou página da
+             loja, sempre revisado antes de entrar no campo. -->
+        <details class="importar-preco" id="importarPreco">
+          <summary>
+            <span>Importar preço</span>
+            <small>De uma imagem ou de uma página da loja</small>
+          </summary>
+          <div class="importar-preco__corpo">
+            <p class="importar-preco__intro">Importar o preço de uma imagem ou de uma página. Revise antes de usar.</p>
+            <p class="importar-preco__demo" id="importarDemo" hidden>Na demonstração, digite o preço no campo acima. A importação funciona quando você entra com uma conta.</p>
+            <div class="atalho-preco" id="atalhoPreco" role="group" aria-label="Formas de importar o preço">
+              <div class="atalho-preco__botoes">
+                <button type="button" class="btn-secundario btn-mini busca-preco__botao" id="btnLerPrint" aria-describedby="dicaPrint">
+                  <span class="busca-preco__giro" aria-hidden="true"></span>
+                  <svg class="busca-preco__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/></svg>
+                  <span class="busca-preco__rotulo">De uma imagem</span>
+                </button>
+                <button type="button" class="btn-secundario btn-mini" id="btnMostrarLink" aria-expanded="false" aria-controls="areaLink">De uma página</button>
+              </div>
+              <input type="file" id="entradaPrint" accept="image/*" hidden>
+              <p class="busca-preco__dica" id="dicaPrint">
+                Um print da tela do produto, de qualquer loja.
+                <span class="busca-preco__dica-mouse">Também dá para colar (Ctrl+V) ou arrastar a imagem.</span>
+                A imagem não fica guardada; evite prints com dados pessoais.
+              </p>
+
+              <div class="area-link" id="areaLink" hidden>
+                <label>Link do produto
+                  <span class="campo-com-icone">
+                    <svg class="campo-com-icone__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 14.5 14.5 9.5"/><path d="M8 15 5.8 17.2a3 3 0 1 1-4.2-4.2L4 10.7"/><path d="M16 9l2.2-2.2a3 3 0 1 1 4.2 4.2L20 13.3"/></svg>
+                    <input type="url" id="itemLink" placeholder="Cole o link do produto, do anúncio ou da loja" aria-describedby="dicaLink">
+                  </span>
+                </label>
+                <div class="busca-preco">
+                  <button type="button" class="btn-secundario busca-preco__botao" id="btnBuscarPreco" aria-describedby="dicaLink">
+                    <span class="busca-preco__giro" aria-hidden="true"></span>
+                    <span class="busca-preco__rotulo">Importar o preço desta página</span>
+                  </button>
+                  <button type="button" class="busca-preco__ajuda" id="btnLojasSuportadas" aria-haspopup="dialog">
+                    Quais lojas funcionam?
+                  </button>
+                </div>
+                <p class="busca-preco__dica" id="dicaLink">Cole o link da página do produto. O campo de preço só muda quando você tocar em <strong>Usar este preço</strong>.</p>
+              </div>
+            </div>
+            <div class="busca-preco__aviso" id="avisoLoja" role="status" hidden></div>
+
+            <details class="importar-preco__como">
+              <summary>Como funciona</summary>
+              <p>A imagem ou o endereço da página vai para o servidor do FinCK, que faz a leitura automática com o Gemini, um modelo de IA do Google, e devolve o produto, o preço e as condições de pagamento. Nas lojas que deixam, a página também é lida direto, sem esse modelo.</p>
+              <p>O FinCK não guarda a imagem. O valor lido é uma sugestão: o formulário só muda quando você toca em <strong>Usar este preço</strong>, e a conta do impacto é sempre feita pelo FinCK, com o valor que está no campo.</p>
+            </details>
+          </div>
+        </details>
 
         <details class="detalhes-hipoteses detalhes-precisao" id="detalhesVidaUtil">
           <summary>
@@ -193,7 +209,7 @@
     </section>
 
     <section class="bloco resultado" id="passoResultado" hidden aria-labelledby="tituloResultado">
-      <h3 id="tituloResultado">2. O que essa compra significa</h3>
+      <h3 id="tituloResultado">2. O impacto</h3>
 
       <div id="comparacao"></div>
 
@@ -202,131 +218,31 @@
            para dizer em voz alta. O 3D do Reality ancora o resultado. -->
       <article class="resposta-reality" id="respostaReality" tabindex="-1" aria-labelledby="tituloResultado"></article>
 
-      <!-- Análise FinCK: só o que a revelação ainda não mostrou, a leitura,
-           os cenários recolhidos e a conversa sobre esta compra. Desenhada
-           por js/inteligencia.js. -->
+      <!-- O que merece atenção: no máximo dois fatos, cada um com o selo e
+           "Como foi calculado?". Desenhado por js/inteligencia.js. -->
       <section class="analise-finck" id="analiseFinck" aria-labelledby="tituloAnaliseFinck" hidden></section>
-
-      <!-- O contexto da compra, um tema por vez e recolhido: cada linha diz o
-           essencial e abre o resto. -->
-      <section class="mais-fundo" id="maisFundo" aria-labelledby="tituloMaisFundo">
-        <h4 class="mais-fundo__titulo" id="tituloMaisFundo">Quer olhar mais fundo?</h4>
-        <p class="descricao mais-fundo__intro">Metas, orçamento, os próximos meses e a sustentabilidade. Toque em um tema para ver os detalhes.</p>
-
-        <details class="mais-fundo__item" id="detalhesMetas">
-          <summary><span class="mais-fundo__nome">Efeito sobre suas metas</span> <span class="mais-fundo__resumo" data-resumo="metas"></span></summary>
-          <div class="mais-fundo__corpo" id="impactoMetas"></div>
-        </details>
-
-        <details class="mais-fundo__item" id="detalhesAnalise">
-          <summary><span class="mais-fundo__nome">Impacto no orçamento</span> <span class="mais-fundo__resumo" data-resumo="orcamento"></span></summary>
-          <div class="mais-fundo__corpo">
-            <div class="cards-indicadores" id="indicadores"></div>
-            <div id="impactoOrcamento"></div>
-          </div>
-        </details>
-
-        <!-- Linha do tempo da compra: o que a compra faz com os próximos meses,
-             com as parcelas que a pessoa já tem e um imprevisto de teste.
-             Contas em js/linha-tempo-engine.js; tela em js/linha-tempo.js. -->
-        <details class="mais-fundo__item linha-tempo" id="blocoLinhaTempo" hidden>
-          <summary><span class="mais-fundo__nome">E nos próximos meses?</span> <span class="mais-fundo__resumo" data-resumo="linha"></span></summary>
-          <div class="mais-fundo__corpo">
-            <p class="descricao">Veja, mês a mês, como a compra convive com a sua renda, os fixos e as parcelas que você já tem, e teste um imprevisto.</p>
-            <form id="formLinhaTempo" class="linha-tempo__controles" novalidate>
-              <fieldset class="linha-tempo__forma">
-                <legend>Como você pagaria?</legend>
-                <div class="linha-tempo__opcoes">
-                  <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="parcelado" checked> <span>Parcelado</span></label>
-                  <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="avista"> <span>À vista</span></label>
-                </div>
-              </fieldset>
-              <div class="linha-dupla" data-lt-parcelado>
-                <label>Parcelas
-                  <input type="number" id="ltParcelas" min="1" max="24" step="1" value="10" inputmode="numeric">
-                </label>
-                <label>Juros do parcelamento (% ao mês)
-                  <input type="number" id="ltJuros" min="0" max="20" step="0.01" value="0" inputmode="decimal" aria-describedby="ajudaLtJuros">
-                  <small class="ajuda-campo" id="ajudaLtJuros">Deixe 0 se for "sem juros".</small>
-                </label>
-              </div>
-              <label data-lt-avista hidden>Desconto à vista (%)
-                <input type="number" id="ltDesconto" min="0" max="95" step="0.5" value="0" inputmode="decimal">
-              </label>
-              <label>Gastos do dia a dia por mês
-                <input type="text" inputmode="decimal" data-moeda id="ltDiaADia" aria-describedby="ajudaLtDiaADia">
-                <small class="ajuda-campo" id="ajudaLtDiaADia"></small>
-              </label>
-              <fieldset class="linha-tempo__imprevisto">
-                <legend>E se aparecer um imprevisto?</legend>
-                <div class="linha-dupla">
-                  <label>Valor do imprevisto
-                    <input type="text" inputmode="decimal" data-moeda id="ltImprevisto" aria-describedby="ajudaLtImprevisto">
-                  </label>
-                  <label>Em qual mês
-                    <select id="ltMesImprevisto"></select>
-                  </label>
-                </div>
-                <small class="ajuda-campo" id="ajudaLtImprevisto">Um conserto, um remédio, uma conta que veio maior. Deixe zero para ver só a compra.</small>
-              </fieldset>
-            </form>
-            <div id="linhaTempoResultado"></div>
-          </div>
-        </details>
-
-        <details class="mais-fundo__item" id="detalhesSustentabilidade">
-          <summary><span class="mais-fundo__nome">Sustentabilidade <span class="selo-ods12" title="Objetivo de Desenvolvimento Sustentável 12: consumo e produção responsáveis">ODS 12</span></span> <span class="mais-fundo__resumo">Impacto ambiental estimado, alternativas e o destino do item.</span></summary>
-          <div class="mais-fundo__corpo">
-            <p class="descricao descricao--ods">Para enriquecer a decisão, não para interrompê-la.</p>
-
-            <div class="bloco-interno bloco-impacto" id="blocoImpacto" hidden>
-              <h5>Impacto ambiental estimado</h5>
-              <div id="impactoAmbiental" aria-live="polite"></div>
-            </div>
-
-            <div class="bloco-interno">
-              <h5>Alternativas mais sustentáveis</h5>
-              <ul class="lista-alternativas" id="alternativas"></ul>
-            </div>
-
-            <div class="bloco-interno" id="blocoDestino" hidden>
-              <h5>Depois do uso: para onde este item vai</h5>
-              <div id="destinoItem"></div>
-            </div>
-          </div>
-        </details>
-      </section>
-
-      <div class="acoes-etapa acoes-etapa--registro">
-        <button type="button" class="btn-primario" id="btnRegistrarCalculo">Salvar esta análise</button>
-        <button type="button" class="btn-secundario" id="btnComparar">Comparar com outra opção</button>
-        <button type="button" class="btn-secundario" data-ir-aba="calculos">Minhas análises</button>
-      </div>
-      <p class="nota status-registro" id="statusRegistro" aria-live="polite"></p>
     </section>
 
-    <section class="bloco" id="passoReflexao" hidden aria-labelledby="tituloReflexao">
-      <h3 id="tituloReflexao">3. Pense na sua compra</h3>
-      <p class="descricao">Uma reflexão rápida sobre o que só você sabe: se precisa agora, quanto vai usar e quanto dura. Toque no que mais combina com você, sem resposta certa. Nenhuma resposta bloqueia a compra.</p>
-      <form id="formReflexao" class="reflexoes"></form>
-      <div id="sinteseReflexao" aria-live="polite"></div>
-    </section>
-
-    <section class="bloco" id="passoDecisao" hidden aria-labelledby="tituloDecisao">
-      <h3 id="tituloDecisao">4. E agora, o que você decide?</h3>
-      <div class="ciclo-decisao">
-        <ol class="ciclo-decisao__passos" id="cicloDecisao" aria-label="Do impulso à decisão">
-          <li data-ciclo="quero">Quero comprar</li>
-          <li data-ciclo="analiso">Analiso</li>
-          <li data-ciclo="entendo">Entendo</li>
-          <li data-ciclo="reflito">Reflito</li>
-          <li data-ciclo="decido">Decido</li>
-          <li data-ciclo="registro">Registro</li>
-        </ol>
-        <p class="ciclo-decisao__frase">O FinCK não decide por você. Ele transforma uma compra por impulso em uma decisão consciente.</p>
-      </div>
-      <div class="opcoes-decisao" id="opcoesDecisao" role="radiogroup" aria-labelledby="tituloDecisao"></div>
+    <!-- A decisão logo depois do impacto, sem abrir nada. Pensar antes de
+         decidir é opcional e fica recolhido aqui mesmo. -->
+    <section class="bloco decisao-reality" id="passoDecisao" hidden aria-labelledby="tituloDecisao">
+      <h3 id="tituloDecisao">3. Sua decisão</h3>
+      <p class="decisao-reality__pergunta" id="perguntaDecisao">Você já viu o impacto. O que quer fazer agora?</p>
+      <p class="decisao-reality__sua">A decisão continua sendo sua.</p>
+      <div class="opcoes-decisao" id="opcoesDecisao" role="radiogroup" aria-labelledby="perguntaDecisao"></div>
       <div class="confirmacao-decisao" id="confirmacaoDecisao" aria-live="polite" hidden></div>
+
+      <details class="pensar-antes" id="pensarAntes">
+        <summary>
+          <span>Pensar antes de decidir <small>(opcional)</small></span>
+          <small class="pensar-antes__resumo">Se precisa agora, quanto vai usar e quanto dura</small>
+        </summary>
+        <div class="pensar-antes__corpo">
+          <p class="descricao">O que só você sabe sobre esta compra. Toque no que mais combina com você; nenhuma resposta bloqueia a decisão, e as respostas são salvas com a análise.</p>
+          <form id="formReflexao" class="reflexoes"></form>
+          <div id="sinteseReflexao" aria-live="polite"></div>
+        </div>
+      </details>
 
       <label class="campo-nota">Por quê? <small>(opcional)</small>
         <input type="text" id="decisaoNota" placeholder="Ex.: vou esperar a promoção / já tenho um parecido">
@@ -334,8 +250,129 @@
 
       <div class="acoes-etapa">
         <button type="button" class="btn-secundario" id="btnNovaAnalise">Nova análise</button>
-        <button type="button" class="btn-primario" id="btnSalvarDecisao" disabled>Salvar decisão</button>
+        <button type="button" class="btn-primario" id="btnSalvarDecisao">Salvar decisão</button>
       </div>
+
+      <div class="acoes-etapa acoes-etapa--registro">
+        <button type="button" class="btn-secundario" id="btnRegistrarCalculo">Salvar esta análise</button>
+        <button type="button" class="btn-secundario" id="btnComparar">Comparar com outra opção</button>
+        <button type="button" class="btn-secundario" data-ir-aba="calculos">Minhas análises</button>
+      </div>
+      <p class="nota status-registro" id="statusRegistro" aria-live="polite"></p>
+
+      <ol class="ciclo-decisao__passos" id="cicloDecisao" aria-label="Do impulso à decisão">
+        <li data-ciclo="quero">Quero comprar</li>
+        <li data-ciclo="analiso">Analiso</li>
+        <li data-ciclo="entendo">Entendo</li>
+        <li data-ciclo="reflito">Reflito</li>
+        <li data-ciclo="decido">Decido</li>
+        <li data-ciclo="registro">Registro</li>
+      </ol>
+    </section>
+
+    <!-- Se quiser aprofundar: o contexto inteiro, recolhido e discreto. Cada
+         tema abre sozinho; a sustentabilidade só é estimada quando abre. -->
+    <section class="aprofundar" id="aprofundar" hidden aria-label="Se quiser aprofundar">
+      <details class="aprofundar__detalhes" id="detalhesAprofundar">
+        <summary>
+          <span class="aprofundar__titulo">Se quiser aprofundar</span>
+          <small class="aprofundar__resumo">Orçamento, metas, próximos meses, formas de decidir, sustentabilidade, alternativas e dúvidas sobre o cálculo.</small>
+        </summary>
+        <div class="mais-fundo" id="maisFundo">
+
+          <details class="mais-fundo__item" id="detalhesAnalise">
+            <summary><span class="mais-fundo__nome">Orçamento completo</span> <span class="mais-fundo__resumo" data-resumo="orcamento"></span></summary>
+            <div class="mais-fundo__corpo">
+              <div class="cards-indicadores" id="indicadores"></div>
+              <div id="impactoOrcamento"></div>
+              <p class="mais-fundo__link"><a class="link-mais" data-link-assistente href="assistente.html">Ver esta compra na Revisão financeira</a></p>
+            </div>
+          </details>
+
+          <details class="mais-fundo__item" id="detalhesMetas">
+            <summary><span class="mais-fundo__nome">Metas em detalhe</span> <span class="mais-fundo__resumo" data-resumo="metas"></span></summary>
+            <div class="mais-fundo__corpo" id="impactoMetas"></div>
+          </details>
+
+          <!-- Linha do tempo da compra: o que a compra faz com os próximos meses,
+               com as parcelas que a pessoa já tem e um imprevisto de teste.
+               Contas em js/linha-tempo-engine.js; tela em js/linha-tempo.js. -->
+          <details class="mais-fundo__item linha-tempo" id="blocoLinhaTempo" hidden>
+            <summary><span class="mais-fundo__nome">Próximos meses</span> <span class="mais-fundo__resumo" data-resumo="linha"></span></summary>
+            <div class="mais-fundo__corpo">
+              <p class="descricao">Veja, mês a mês, como a compra convive com a sua renda, os fixos e as parcelas que você já tem, e teste um imprevisto.</p>
+              <form id="formLinhaTempo" class="linha-tempo__controles" novalidate>
+                <fieldset class="linha-tempo__forma">
+                  <legend>Como você pagaria?</legend>
+                  <div class="linha-tempo__opcoes">
+                    <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="parcelado" checked> <span>Parcelado</span></label>
+                    <label class="linha-tempo__opcao"><input type="radio" name="ltForma" value="avista"> <span>À vista</span></label>
+                  </div>
+                </fieldset>
+                <div class="linha-dupla" data-lt-parcelado>
+                  <label>Parcelas
+                    <input type="number" id="ltParcelas" min="1" max="24" step="1" value="10" inputmode="numeric">
+                  </label>
+                  <label>Juros do parcelamento (% ao mês)
+                    <input type="number" id="ltJuros" min="0" max="20" step="0.01" value="0" inputmode="decimal" aria-describedby="ajudaLtJuros">
+                    <small class="ajuda-campo" id="ajudaLtJuros">Deixe 0 se for "sem juros".</small>
+                  </label>
+                </div>
+                <label data-lt-avista hidden>Desconto à vista (%)
+                  <input type="number" id="ltDesconto" min="0" max="95" step="0.5" value="0" inputmode="decimal">
+                </label>
+                <label>Gastos do dia a dia por mês
+                  <input type="text" inputmode="decimal" data-moeda id="ltDiaADia" aria-describedby="ajudaLtDiaADia">
+                  <small class="ajuda-campo" id="ajudaLtDiaADia"></small>
+                </label>
+                <fieldset class="linha-tempo__imprevisto">
+                  <legend>E se aparecer um imprevisto?</legend>
+                  <div class="linha-dupla">
+                    <label>Valor do imprevisto
+                      <input type="text" inputmode="decimal" data-moeda id="ltImprevisto" aria-describedby="ajudaLtImprevisto">
+                    </label>
+                    <label>Em qual mês
+                      <select id="ltMesImprevisto"></select>
+                    </label>
+                  </div>
+                  <small class="ajuda-campo" id="ajudaLtImprevisto">Um conserto, um remédio, uma conta que veio maior. Deixe zero para ver só a compra.</small>
+                </fieldset>
+              </form>
+              <div id="linhaTempoResultado"></div>
+            </div>
+          </details>
+
+          <!-- Comparar formas de decidir: os cenários, desenhados por
+               js/inteligencia.js. -->
+          <div class="mais-fundo__host" id="compararFormas"></div>
+
+          <details class="mais-fundo__item" id="detalhesSustentabilidade">
+            <summary><span class="mais-fundo__nome">Sustentabilidade <span class="selo-ods12" title="Objetivo de Desenvolvimento Sustentável 12: consumo e produção responsáveis">ODS 12</span> <span class="selo-estimativa">Estimativa</span></span> <span class="mais-fundo__resumo">Carbono, água, vida útil e o destino do item. Estimado quando você abre.</span></summary>
+            <div class="mais-fundo__corpo">
+              <div class="bloco-interno bloco-impacto" id="blocoImpacto" hidden>
+                <h5>Impacto ambiental estimado</h5>
+                <div id="impactoAmbiental" aria-live="polite"></div>
+              </div>
+
+              <div class="bloco-interno" id="blocoDestino" hidden>
+                <h5>Depois do uso: para onde este item vai</h5>
+                <div id="destinoItem"></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="mais-fundo__item" id="detalhesAlternativas">
+            <summary><span class="mais-fundo__nome">Alternativas</span> <span class="mais-fundo__resumo">Usado, conserto, aluguel e espera, com os pontos que você cadastrou.</span></summary>
+            <div class="mais-fundo__corpo">
+              <ul class="lista-alternativas" id="alternativas"></ul>
+            </div>
+          </details>
+
+          <!-- Tirar uma dúvida sobre o cálculo: sugestões calculadas e, se a
+               pessoa quiser, uma pergunta livre. Desenhado por js/inteligencia.js. -->
+          <div class="mais-fundo__host" id="duvidaCalculo"></div>
+        </div>
+      </details>
     </section>
 
     </div>
@@ -401,7 +438,7 @@
   <div id="modalLojas" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tituloLojas">
     <div class="modal">
       <button type="button" class="fechar" data-fechar="modalLojas" aria-label="Fechar">✕</button>
-      <h3 id="tituloLojas">Lojas e busca automática de preço</h3>
+      <h3 id="tituloLojas">Lojas e importação de preço</h3>
       <div id="conteudoLojas"></div>
     </div>
   </div>

@@ -1,12 +1,14 @@
-// Análise FinCK: a leitura da compra dentro do resultado do FinCK of Reality.
+// "O que merece atenção": os pontos da compra dentro do resultado do FinCK of
+// Reality, a comparação das formas de decidir e as respostas calculadas.
 //
-// Este motor não é IA. Ele junta os números que o Reality, as metas e a linha
-// do tempo já calcularam, escolhe só os pontos que podem mudar a decisão e
-// guarda, para cada um, os fatores considerados e a cadeia da conta. Assim a
-// tela consegue responder "por que o FinCK diz isso?" sem mágica.
+// São regras do FinCK, não IA. O motor junta os números que o Reality, as
+// metas e a linha do tempo já calcularam, escolhe só os pontos que podem
+// mudar a decisão e guarda, para cada um, os fatores considerados e a cadeia
+// da conta ("Como foi calculado?").
 //
-// A FINCK AI entra só quando a pessoa faz uma pergunta livre, e recebe apenas
-// o texto de contexto(): números, sem nome de item, meta, conta ou lançamento.
+// A ajuda opcional (texto escrito por IA) só entra quando a pessoa envia uma
+// pergunta livre, e recebe apenas o texto de contexto(): números, sem nome de
+// item, meta, conta ou lançamento.
 //
 // Puro: sem DOM e sem rede. As mesmas entradas dão sempre a mesma análise.
 window.FinckInteligencia = (() => {
@@ -19,16 +21,16 @@ window.FinckInteligencia = (() => {
   // projeto, num lugar só para poderem ser lidas e discutidas; não são dados
   // de pesquisa. As que vêm do config usam a mesma régua do resto do app.
   const P = {
-    // Se tudo vira destaque, nada é destaque: no máximo três pontos, só os
+    // Se tudo vira destaque, nada é destaque: no máximo dois pontos, só os
     // que passam da relevância mínima e não repetem a revelação (o peso no
     // mês, o saldo que não cobre e o atraso na meta já estão nela).
-    MAX_PONTOS: 3,
+    MAX_PONTOS: 2,
     RELEVANCIA_MINIMA: 40,
     MESES_ESPERA: 2,
     // "Compare com uma opção de R$ X": uma opção 20% mais barata, arredondada.
     FRACAO_ALTERNATIVA: .8,
     VIDA_UTIL_OPCOES: [ 12, 24, 36 ],
-    // Abaixo disso a vida útil quase não muda a conversa, então não se pergunta.
+    // Abaixo disso a vida útil quase não muda a análise, então não se pergunta.
     VIDA_UTIL_MINIMO_REAIS: 100,
     VIDA_UTIL_MINIMO_PCT_RENDA: 3,
     CATEGORIAS_SEM_VIDA_UTIL: [ "Alimentação" ],
@@ -63,7 +65,6 @@ window.FinckInteligencia = (() => {
     folga: "menos de 10% da renda e menos de 25% da sobra, sem pesar numa meta: impacto baixo"
   };
   const NIVEL_TEXTO = { verde: "baixo", atencao: "moderado", alerta: "alto" };
-  const FECHO = "A decisão continua sendo sua.";
 
   // ------------------------------------------------------------ formatação
 
@@ -357,7 +358,7 @@ window.FinckInteligencia = (() => {
     const texto = p <= 100 ? `Essa compra equivale a ${pct(p)} do que você já guardou nas suas metas (${moeda(n.total_guardado)}).` : `Essa compra é maior que tudo o que você já guardou nas suas metas (${moeda(n.total_guardado)}): equivale a ${numero(p / 100, 1)} vezes esse valor.`;
     return {
       id: "oportunidade",
-      titulo: "Oportunidade",
+      titulo: "Guardado nas metas",
       texto: texto,
       certeza: "confirmado",
       relevancia: p >= 75 ? 66 : p >= 40 ? 52 : p >= 20 ? 42 : 25,
@@ -428,7 +429,7 @@ window.FinckInteligencia = (() => {
       relevancia: relevancia,
       motivo: motivo,
       fatores: [
-        "a forma de pagamento simulada na linha do tempo",
+        "a forma de pagamento simulada nos próximos meses",
         "renda, despesas fixas e gastos do dia a dia iguais todo mês",
         "as parcelas que você já tem",
         "o saldo de hoje como ponto de partida"
@@ -440,54 +441,56 @@ window.FinckInteligencia = (() => {
 
   // ----------------------------------------------------------------- leitura
 
-  // "Nossa leitura": uma frase de consultor sobre o maior ponto de atenção,
-  // escrita por regra. Mostra o que pesa, nunca diz o que fazer.
+  // "O que mais pesa neste cenário": uma frase, escrita por regra, sobre o
+  // ponto mais relevante (inclusive os que já estão na revelação). Diz o que
+  // pesa e por quê; nunca diz o que fazer. A frase de autonomia fica só na
+  // decisão do Reality, uma vez por fluxo.
   function leituraDe(ponto, n, nivel) {
     let texto;
     switch (ponto && ponto.id) {
       case "saldo":
         texto = ponto.motivo === "sem_caixa"
-          ? "O maior ponto de atenção é o momento: hoje o saldo não cobre a compra, então ela dependeria de crédito ou da próxima entrada de dinheiro."
+          ? "O momento: hoje o saldo não cobre a compra, então ela dependeria de crédito ou da próxima entrada de dinheiro."
           : ponto.motivo === "sem_caixa60"
-            ? "O maior ponto de atenção é o calendário: a compra cabe hoje, mas disputa espaço com contas que já estão marcadas para os próximos dias."
+            ? "O calendário: a compra cabe no saldo de hoje, mas disputa espaço com contas já marcadas para os próximos 60 dias."
             : ponto.motivo === "sem_projetado"
-            ? "O maior ponto de atenção são os compromissos que você já assumiu: a compra cabe hoje, mas disputa espaço com as parcelas que ainda vão vencer."
-            : "O maior ponto de atenção é o que sobra de reserva: depois da compra, o saldo cobre menos de um mês das despesas fixas.";
+            ? "As parcelas que você já tem: a compra cabe no saldo de hoje, mas disputa espaço com as parcelas que ainda vão vencer."
+            : "A reserva que fica: depois da compra, o saldo cobre menos de um mês das despesas fixas.";
         break;
       case "meta":
         texto = ponto.motivo === "cobre"
-          ? "O valor desta compra seria suficiente para concluir uma das suas metas hoje: o ponto é qual das duas coisas você quer primeiro."
+          ? "A meta: o valor desta compra seria suficiente para concluir uma das suas metas hoje, então as duas disputam o mesmo dinheiro."
           : ponto.motivo === "prazo"
-            ? `Financeiramente, o maior ponto de atenção não é o preço isolado, mas o tempo que ele tira da sua meta: pela conta do FinCK, o prazo estimado ${efeitoNoPrazo(n.meta_atraso)}.`
-            : `O maior ponto de atenção é o tamanho da compra perto do que ainda falta para a sua meta: ela equivale a ${pct(n.meta_pct_restante)} desse valor.`;
+            ? `O tempo até a meta, mais do que o preço isolado: o prazo estimado ${efeitoNoPrazo(n.meta_atraso)}.`
+            : `O tamanho da compra perto do que falta para a sua meta: ela equivale a ${pct(n.meta_pct_restante)} desse valor.`;
         break;
       case "durabilidade":
-        texto = "Financeiramente, o maior ponto de atenção não é o preço isolado, mas a relação entre custo e tempo de uso.";
+        texto = `A relação entre custo e tempo de uso, mais do que o preço isolado: ${moeda(n.por_mes_uso)} por mês de uso.`;
         break;
       case "oportunidade":
-        texto = `O maior ponto de atenção é o tamanho da compra perto do que você já guardou: ela equivale a ${pct(n.pct_guardado)} das suas economias para metas.`;
+        texto = `O tamanho da compra perto do que você já guardou: ela equivale a ${pct(n.pct_guardado)} do que está nas suas metas.`;
         break;
       case "parcelas":
         texto = {
-          avista: "O maior ponto de atenção é o momento do pagamento: à vista, o saldo de hoje não cobre o valor.",
-          cartao: "O maior ponto de atenção está nos próximos meses: na simulação, a conta não fecha sem usar o cartão, e o rotativo costuma ter juros muito altos.",
-          parcelas: "O maior ponto de atenção está nos próximos meses: somadas, as parcelas ocupam uma parte grande da renda.",
-          apertado: "O maior ponto de atenção está nos próximos meses: há um mês em que a sobra fica negativa.",
-          folga: "O maior ponto de atenção é a folga para imprevistos, que fica pequena nos próximos meses."
-        }[ponto.motivo] || "O maior ponto de atenção está nos próximos meses.";
+          avista: "O momento do pagamento: à vista, o saldo de hoje não cobre o valor.",
+          cartao: "Os próximos meses: na simulação, a conta não fecha sem usar o cartão, e o rotativo costuma ter juros muito altos.",
+          parcelas: "Os próximos meses: somadas, as parcelas ocupam uma parte grande da renda.",
+          apertado: "Os próximos meses: há um mês em que a sobra fica negativa.",
+          folga: "A folga para imprevistos, que fica pequena nos próximos meses."
+        }[ponto.motivo] || "Os próximos meses.";
         break;
       default:
         texto = n.renda <= 0
-          ? "Sem a renda mensal, o FinCK não consegue dizer quanto esta compra pesa para você."
+          ? "Sem a renda mensal, o FinCK não consegue medir quanto esta compra pesa para você."
           : nivel === "alerta"
             ? n.sem_folga
-              ? "O impacto financeiro é alto para o seu cenário atual: as despesas fixas já levam toda a renda, então a compra sairia do saldo guardado."
-              : "O impacto financeiro é alto para o seu cenário atual: a compra ocupa uma parte grande do que sobra no mês."
+              ? "O peso no mês: as despesas fixas já levam toda a renda, então a compra sairia do saldo guardado."
+              : "O peso no mês: a compra ocupa uma parte grande do que sobra depois das despesas fixas."
             : nivel === "atencao"
-              ? "A compra cabe no mês, mas reduz a folga que você teria para o resto dele."
-              : "A compra cabe com folga no seu cenário atual. Se quiser, vale comparar durabilidade e uso antes de fechar.";
+              ? "A folga do mês: a compra cabe, mas reduz o que sobra para o resto dele."
+              : "Nada pesa muito: a compra cabe com folga no seu cenário atual.";
     }
-    return { texto: `${texto} ${FECHO}`, ponto: ponto ? ponto.id : null };
+    return { texto: texto, ponto: ponto ? ponto.id : null };
   }
 
   // --------------------------------------------------------------- perguntas
@@ -530,7 +533,7 @@ window.FinckInteligencia = (() => {
     const atrasoAgora = atrasoDe(parteAgora);
     const agora = {
       id: "agora",
-      titulo: "Agora",
+      titulo: "Comprar agora",
       destaque: moeda(n.total),
       sub: "sai de uma vez",
       meta: naMeta(atrasoAgora),
@@ -549,7 +552,7 @@ window.FinckInteligencia = (() => {
     const quando = hoje instanceof Date && !Number.isNaN(hoje.getTime()) ? rotuloMes(new Date(hoje.getFullYear(), hoje.getMonth() + espera, 1)) : null;
     const esperar = {
       id: "esperar",
-      titulo: `Daqui a ${espera} meses`,
+      titulo: `Esperar ${espera} meses`,
       destaque: moeda(n.total),
       sub: quando ? `em ${quando}, mesmo preço` : "mesmo preço",
       meta: naMeta(atrasoEspera),
@@ -570,12 +573,12 @@ window.FinckInteligencia = (() => {
     const naoCobertoParc = parteDe(Array.from({ length: parc.n }, (_, i) => ({ mes: i, valor: parc.parcela })));
     const atrasoParc = atrasoDe(naoCobertoParc);
     const notaParc = [
-      parc.exemplo ? `Exemplo em ${parc.n}x${parc.juros > 0 ? "" : " sem juros"}; a forma se escolhe na linha do tempo.` : null,
+      parc.exemplo ? `Exemplo em ${parc.n}x${parc.juros > 0 ? "" : " sem juros"}; a forma se escolhe na simulação dos próximos meses.` : null,
       parc.cabe ? null : "Na simulação, a conta não fecha sem o cartão."
     ].filter(Boolean).join(" ");
     const parcelado = {
       id: "parcelado",
-      titulo: "Parcelado",
+      titulo: "Parcelar",
       destaque: `${parc.n}x de ${moeda(parc.parcela)}`,
       sub: parc.juros > 0 ? `com ${moeda(parc.juros)} de juros` : "sem juros",
       meta: naMeta(atrasoParc),
@@ -598,11 +601,11 @@ window.FinckInteligencia = (() => {
   // A linha que fica à vista com os cenários recolhidos.
   function resumoCenarios(cen, meta) {
     const [agora, esperar, parcelado] = cen;
-    const juros = parcelado.juros > 0 ? ` Parcelado custa ${moeda(parcelado.juros)} de juros.` : "";
+    const juros = parcelado.juros > 0 ? ` Parcelando, são ${moeda(parcelado.juros)} de juros.` : "";
     if (meta && meta.aporte_mensal > 0) {
-      return `Na meta: agora, ${agora.meta}; daqui a ${P.MESES_ESPERA} meses, ${esperar.meta}; parcelado, ${parcelado.meta}.${juros}`;
+      return `Na meta: comprando agora, ${agora.meta}; esperando ${P.MESES_ESPERA} meses, ${esperar.meta}; parcelando, ${parcelado.meta}.${juros}`;
     }
-    return `Agora ${agora.destaque} de uma vez; daqui a ${P.MESES_ESPERA} meses, ${moeda(esperar.mes_valor)} por mês para juntar; parcelado, ${parcelado.destaque}.${juros}`;
+    return `Comprando agora, ${agora.destaque} de uma vez; esperando ${P.MESES_ESPERA} meses, ${moeda(esperar.mes_valor)} por mês para juntar; parcelando, ${parcelado.destaque}.${juros}`;
   }
 
   // ------------------------------------------------------------------ análise
@@ -720,9 +723,11 @@ window.FinckInteligencia = (() => {
       linha: linha,
       pontos: pontos,
       // Os pontos que a revelação já mostra: não aparecem no bloco, mas
-      // contam para a leitura e para o contexto da FINCK AI.
+      // contam para "O que mais pesa" e para o contexto da ajuda opcional.
       pontos_da_revelacao: relevantes.filter(p => p.na_revelacao),
-      cabecalho: !pontos.length ? "A revelação acima já mostra o que mais pesa nesta compra." : pontos.length === 1 ? "Além da revelação, 1 ponto pode influenciar sua decisão." : `Além da revelação, ${pontos.length} pontos podem influenciar sua decisão.`,
+      // Sem frase de "encontramos": com pontos, a lista fala sozinha; sem
+      // nenhum, uma linha diz que o impacto acima já é o essencial.
+      cabecalho: pontos.length ? "" : "Além do impacto acima, nenhum outro ponto pesa nesta compra.",
       leitura: leituraDe(principal, n, nivel),
       perguntas: perguntasDe(n, entrada, linha, formaConfirmada),
       cenarios: cenarios,
@@ -752,8 +757,8 @@ window.FinckInteligencia = (() => {
 
   // --------------------------------------------------------------- respostas
 
-  // As sugestões da conversa são respondidas aqui, na hora, com a conta à
-  // vista. É cálculo do FinCK, não texto de IA.
+  // As perguntas sugeridas em "Tirar uma dúvida sobre o cálculo" são
+  // respondidas aqui, na hora, com a conta à vista: cálculo do FinCK.
   function responder(analise, id, extra = {}) {
     if (!analise) {
       return null;
@@ -779,7 +784,7 @@ window.FinckInteligencia = (() => {
         texto += " A conta não fecha sem usar o cartão, e o rotativo costuma ter juros muito altos.";
       }
       if (c.exemplo) {
-        texto += ` As ${c.parcelas} parcelas são um exemplo: em “E nos próximos meses?” você escolhe a forma, o número de parcelas e os juros reais.`;
+        texto += ` As ${c.parcelas} parcelas são um exemplo: na simulação dos próximos meses você escolhe a forma, o número de parcelas e os juros reais.`;
       }
       const calculo = [
         { rotulo: "Compra", valor: moeda(n.total) },
@@ -838,7 +843,6 @@ window.FinckInteligencia = (() => {
       if (n.meses_uso > 0) {
         texto += ` Com a mesma vida útil de ${meses(n.meses_uso)}, custaria ${moeda(x / n.meses_uso)} por mês de uso.`;
       }
-      texto += " Para comparar com uma opção real, use “Comparar com outra opção” no fim do resultado.";
       return {
         titulo: `Uma opção de ${moeda(x)}`,
         texto: texto,
@@ -880,7 +884,7 @@ window.FinckInteligencia = (() => {
       if (j === 0) {
         texto += " O saldo de hoje já cobre o valor à vista: a pergunta é de onde você prefere que o dinheiro saia.";
       } else if (j > 0) {
-        texto += ` Pela linha do tempo, contando o saldo de hoje, dá para pagar à vista em cerca de ${meses(j)}.`;
+        texto += ` Pela simulação dos próximos meses, contando o saldo de hoje, dá para pagar à vista em cerca de ${meses(j)}.`;
       }
       if (n.horas > 0) {
         texto += ` Em tempo de trabalho, são ${tempo(n.horas, n.horas_dia)}.`;
@@ -928,9 +932,9 @@ window.FinckInteligencia = (() => {
 
   // ---------------------------------------------------------------- contexto
 
-  // O que vai para a FINCK AI quando a pessoa faz uma pergunta livre: só
-  // números e rótulos genéricos. Nada de nome do item, das metas, das contas
-  // ou de lançamentos, mesmo que a tela mostre esses nomes.
+  // O que vai para a ajuda opcional quando a pessoa envia uma pergunta
+  // livre: só números e rótulos genéricos. Nada de nome do item, das metas,
+  // das contas ou de lançamentos, mesmo que a tela mostre esses nomes.
   function contexto(analise) {
     if (!analise) {
       return "";
@@ -954,7 +958,7 @@ window.FinckInteligencia = (() => {
       linha ? `Linha do tempo (simulação, renda e despesas iguais todo mês): forma ${linha.forma === "avista" ? `à vista por ${moeda(linha.total)}` : `parcelado em ${linha.parcelas}x de ${moeda(linha.parcela)}`}, ${analise.forma_confirmada ? "confirmada pela pessoa" : "ainda não confirmada pela pessoa"}; ${linha.mes_apertado ? `mês mais apertado ${linha.mes_apertado.rotulo} com sobra de ${moeda(linha.mes_apertado.sobra)}; ` : ""}${linha.cabe_sem_imprevisto ? `folga para imprevistos ${moeda(linha.folga)}` : `não fecha sem o cartão, juros de ${moeda(linha.juros_cartao)} por causa da compra`}; parcelas no mês mais carregado ${pct(linha.peso_parcelas_pct)} da renda; custo real sem imprevisto ${moeda(linha.custo_real)}.` : null,
       cen.agora ? `Cenários (simulação, mesmo preço, mesma regra de atraso): agora, meta ${cen.agora.meta}; daqui a ${P.MESES_ESPERA} meses, meta ${cen.esperar.meta}; parcelado em ${cen.parcelado.destaque}${cen.parcelado.juros > 0 ? ` (total ${moeda(cen.parcelado.total_pago)}, com ${moeda(cen.parcelado.juros)} de juros)` : ""}${cen.parcelado.exemplo ? " como exemplo" : ""}, meta ${cen.parcelado.meta}.` : null,
       `Pontos destacados pelo FinCK: ${[ ...(analise.pontos_da_revelacao || []), ...analise.pontos ].map(p => p.titulo).join(", ") || "nenhum além do impacto"}.`,
-      `Leitura do FinCK, feita por regra: ${analise.leitura.texto}`
+      `O que mais pesa neste cenário, pela regra do FinCK: ${analise.leitura.texto}`
     ].filter(Boolean);
     const texto = linhas.join("\n");
     return texto.length > P.LIMITE_CONTEXTO ? texto.slice(0, P.LIMITE_CONTEXTO) : texto;
