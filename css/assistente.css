@@ -222,3 +222,37 @@ html[data-animacoes="desligada"] .ponto-espera{ animation:none; }
 }
 
 
+
+/* Selos do topo: o papel da página e a FINCK AI lado a lado. */
+.hero-revisao__selos{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .6rem; }
+
+/* Painel da FINCK AI, logo depois das próximas ações. Chama atenção para a
+   ajuda com IA sem tomar o lugar das contas do FinCK, que vêm antes. */
+.painel-ia{
+  position:relative; overflow:hidden;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem 1.4rem;
+  padding:1.25rem 1.35rem;
+  border-radius:var(--raio-lg);
+  border:1px solid rgba(180,92,240,.5);
+  background:
+    radial-gradient(110% 150% at 0% 0%, rgba(180,92,240,.2), transparent 55%),
+    linear-gradient(150deg, rgba(147,51,196,.16), rgba(18,14,24,.78) 65%);
+  box-shadow:0 18px 44px -32px var(--roxo-glow);
+}
+.painel-ia::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:2px;
+  background:var(--grad-marca);
+}
+.painel-ia__texto{ flex:1 1 22rem; display:grid; gap:.45rem; }
+.painel-ia__texto h3{ margin:0; font-size:clamp(1.05rem,1rem + .4vw,1.3rem); }
+.painel-ia__texto p{ margin:0; max-width:64ch; font-size:.9rem; line-height:1.55; color:var(--texto-fraco); }
+.painel-ia__texto .painel-ia__nota{ font-size:.82rem; color:var(--amarelo); }
+.painel-ia__acoes{ display:flex; flex-wrap:wrap; align-items:center; gap:.55rem .8rem; }
+@media (max-width:560px){
+  .painel-ia__acoes{ width:100%; }
+  .painel-ia__acoes .btn-primario,.painel-ia__acoes .btn-secundario{ flex:1 1 100%; }
+}
+
+/* Selo pequeno dentro dos títulos dos trechos com IA. */
+.selo-ia--mini{ padding:.08rem .38rem; font-size:.6rem; vertical-align:middle; margin-left:.25rem; }
+.selo-ia--mini::before{ display:none; }

@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ROTULO_EXPLICACAO = "Explicação escrita por IA a partir dos números desta revisão.";
   const PROVEDORES = {
     anthropic: "o Claude, da Anthropic",
+    gemini: "o Gemini, do Google",
     openrouter: "modelos gratuitos do OpenRouter"
   };
 
@@ -281,12 +282,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
   function quemEscreve() {
     if (infoIA.provedor && PROVEDORES[infoIA.provedor]) {
-      return `Neste servidor, ${PROVEDORES[infoIA.provedor]}${infoIA.modelo ? ` (modelo ${infoIA.modelo})` : ""}, chamado pela função do FinCK na Vercel. A chave fica no servidor, nunca na página.`;
+      // No plano gratuito do Gemini, o Google pode usar o conteúdo enviado
+      // para melhorar os produtos dele: a pessoa precisa saber disso aqui.
+      const gratuito = infoIA.provedor === "gemini" ? " No plano gratuito do Gemini, o Google pode usar o que é enviado para melhorar os produtos dele; por isso só vai o retrato agregado." : "";
+      return `Neste servidor, ${PROVEDORES[infoIA.provedor]}${infoIA.modelo ? ` (modelo ${infoIA.modelo})` : ""}, chamado pela função do FinCK na Vercel. A chave fica no servidor, nunca na página.${gratuito}`;
     }
     if (!comExplicacao) {
       return `Modelos gratuitos do OpenRouter${infoIA.modelo ? ` (neste servidor, ${infoIA.modelo})` : ""}, chamados pela função do FinCK na Vercel. A chave fica no servidor, nunca na página.`;
     }
-    return "Um serviço de IA chamado pela função do FinCK na Vercel: o Claude, da Anthropic, quando o servidor tem essa chave; senão, modelos gratuitos do OpenRouter. A chave fica no servidor, nunca na página.";
+    return "Um serviço de IA chamado pela função do FinCK na Vercel: o Claude, da Anthropic, quando o servidor tem essa chave; senão, o Gemini, do Google; senão, modelos gratuitos do OpenRouter. A chave fica no servidor, nunca na página.";
   }
   function renderPrivacidade() {
     const linhas = comExplicacao ? [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", "Só quando você pede a explicação escrita ou envia uma pergunta livre: o retrato agregado mostrado abaixo, com números arredondados e nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. Os dois pedidos exigem a sua conta." ], [ "Quem escreve o texto", quemEscreve() ], [ "Se a rota da revisão não responder", "A pergunta livre vai pela rota geral do FinCK, com o retrato em texto mostrado abaixo, sem nomes de metas, contas ou lançamentos." ], [ "Onde fica salvo", "A última explicação escrita fica só neste aparelho, no navegador. O servidor não grava o pedido nem a resposta em banco ou log; a mesma explicação fica até 10 minutos na memória da função. A conversa some quando você sai da página." ] ] : [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", `Só quando você envia uma pergunta livre: a pergunta e o retrato em texto mostrado abaixo, ${demo ? "com os números de exemplo da demonstração" : "com os seus números agregados"}. Não vão nomes de metas, contas ou lançamentos.` ], [ "Quem escreve a resposta", quemEscreve() ], [ "Onde fica salvo", "Em nenhum lugar: a conversa some quando você sai da página. O registro do servidor guarda só o status, o modelo e o tempo da chamada, nunca o texto." ] ];
@@ -896,6 +900,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  // ------------------------------------------------------------ painel da FINCK AI
+
+  // Os botões do painel só abrem o trecho certo no fim da página e levam o
+  // foco até ele. O envio continua no botão de lá, que diz o que vai.
+  if (comExplicacao) {
+    $("atalhoExplicacao").hidden = false;
+  }
+  if (demo) {
+    $("notaPainelIA").hidden = false;
+  }
+  document.querySelectorAll("[data-ir-para]").forEach(botao => botao.addEventListener("click", () => {
+    const alvo = $(botao.dataset.irPara);
+    if (!alvo || alvo.hidden) {
+      return;
+    }
+    if (alvo === perguntaLivre) {
+      $("secaoConversa").open = true;
+    }
+    alvo.open = true;
+    rolarAte(alvo, "start");
+    const foco = alvo === perguntaLivre ? campo : alvo === secaoExplicacao ? btnExplicacao : alvo.querySelector("summary");
+    foco?.focus({
+      preventScroll: true
+    });
+  }));
 
   // ------------------------------------------------------------ vinda do Reality
 

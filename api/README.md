@@ -539,14 +539,39 @@ e os erros da rota viram frases da própria tela, sem nome de serviço.
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | uma das duas | Chave criada em console.anthropic.com. Com ela, o assistente usa o Claude. |
-| `OPENROUTER_API_KEY` | uma das duas | Sem a chave da Anthropic, o assistente usa os modelos gratuitos do OpenRouter (`api/_openrouter.js`), com molde de JSON e até três tentativas. Sem nenhuma das duas, o GET responde `ia: false` e a tela usa o plano por regras. |
+| `ANTHROPIC_API_KEY` | uma das chaves | Chave criada em console.anthropic.com. Com ela, o assistente usa o Claude. |
+| `ASSISTENTE_GEMINI_API_KEY` | uma das chaves | Chave do Google AI Studio só para a revisão. Sem a chave da Anthropic, o assistente usa o Gemini (`api/_gemini.js`). Se faltar, vale a `GEMINI_API_KEY` da busca de preço. |
+| `GEMINI_API_KEY` | uma das chaves | A da busca de preço. Sem `ASSISTENTE_GEMINI_API_KEY`, a revisão usa esta. |
+| `OPENROUTER_API_KEY` | uma das chaves | Sem as chaves acima, o assistente usa os modelos gratuitos do OpenRouter (`api/_openrouter.js`), com molde de JSON e até três tentativas. Sem nenhuma chave, o GET responde `ia: false` e a tela usa o plano por regras. |
+| `ASSISTENTE_PROVEDOR` | não | `anthropic`, `gemini` ou `openrouter`: escolhe um provedor que tenha chave, mesmo com outro antes dele na ordem. Sem chave daquele provedor, é ignorada. |
+| `ASSISTENTE_GEMINI_MODELO` | não | Modelo do Gemini tentado antes dos padrões (`gemini-3.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.1-flash-lite`). |
 | `ASSISTENTE_MODELO` | não | `claude-opus-5-5` (padrão) ou `claude-sonnet-5-5`, mais barato. Outro valor é ignorado. |
 | `ASSISTENTE_TETO_DIA` | não | Teto global de pedidos por dia. Padrão 100. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | não | Iguais às da rota de preço; o padrão é o projeto de `js/config.js`. |
 
 Além do teto do dia, cada pessoa tem até 20 pedidos por hora, e o mesmo
 retrato não gera um plano novo por 10 minutos (cache na instância).
+
+### Pelo Gemini
+
+A ordem é Claude, Gemini e OpenRouter, pela chave que existir. Com o Gemini,
+o pedido vai com as mesmas regras de sistema (`systemInstruction`) e o mesmo
+esquema da resposta, traduzido para o `responseSchema` do Gemini (tipos em
+maiúsculas, sem `additionalProperties`, com `propertyOrdering`). A resposta
+passa pelas mesmas conferências e pela de tom: com ordem de compra ou
+veredito, ou fora do esquema, vai o próximo modelo da lista. Sem cota (429)
+ou modelo fora do ar, também. Chave inválida para na hora, sem gastar os
+outros modelos.
+
+Uma chave de outro projeto do Google AI Studio em `ASSISTENTE_GEMINI_API_KEY`
+tem cota própria: a revisão não disputa os pedidos do dia com a leitura de
+preço. No plano gratuito, o Google pode usar o que é enviado para melhorar
+os produtos dele; a ficha "Dados e privacidade" diz isso quando o provedor é
+o Gemini, e o que vai é só o retrato agregado.
+
+Medido em 14/10/2026 com `gemini-3.5-flash-lite` na chave gratuita: plano em
+2,9 s e pergunta em 2,0 s pelo teste ao vivo; no navegador, explicação
+escrita em 5,4 s.
 
 ### Pedidos
 
@@ -576,11 +601,11 @@ ou veredito conta como fora do formato e a função pede outra.
 
 | Código | Status | Quando |
 |---|---|---|
-| `IA_INDISPONIVEL` | 503 | Sem nenhuma das duas chaves, ou chave recusada pelo provedor |
+| `IA_INDISPONIVEL` | 503 | Sem nenhuma chave, ou chave recusada pelo provedor |
 | `SEM_LOGIN` | 401 | Sem token ou sessão vencida |
 | `LIMITE` | 429 | Teto do dia ou limite por hora |
 | `PEDIDO_INVALIDO` | 400 | Retrato fora do formato, pergunta vazia |
-| `OCUPADA` | 429 | A API da Anthropic pediu para esperar |
+| `OCUPADA` | 429 | A API da Anthropic pediu para esperar, ou todos os modelos do Gemini estão sem cota |
 | `REDE` | 503 | A IA não respondeu dentro do prazo |
 | `RECUSA` | 200 | O modelo (e o fallback) recusou o pedido |
 | `CORTADA` | 200 | A resposta passou de `max_tokens` |
@@ -599,7 +624,11 @@ dia, o pior caso é de uns US$ 7 por dia. `claude-sonnet-5-5` custa metade.
 ```
 node ferramentas/testar-assistente.mjs
 ANTHROPIC_API_KEY=... node ferramentas/testar-assistente.mjs --ao-vivo
+GEMINI_API_KEY=... node ferramentas/testar-assistente.mjs --ao-vivo
 ```
+
+O modo ao vivo usa o provedor que as variáveis apontam, na mesma ordem da
+rota.
 
 O primeiro roda sem rede: validação do pedido, prompt, esquemas,
 guarda-corpo, recusa, resposta cortada, cache, a rota inteira com o SDK
