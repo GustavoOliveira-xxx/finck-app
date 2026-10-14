@@ -23,8 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById(btnId);
     let arrastando = false;
     let max = 0;
+    // A medida é tomada na hora do uso: o grupo começa escondido e só tem
+    // largura depois que aparece.
     const medir = () => {
-      max = track.clientWidth - slider.clientWidth - 4;
+      max = Math.max(0, track.clientWidth - slider.clientWidth - 4);
     };
     medir();
     window.addEventListener("resize", medir);
@@ -36,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
       slider.style.transform = `translateX(${Math.max(0, Math.min(pos, max))}px)`;
     };
     const validar = () => {
+      medir();
       if (texto) {
         texto.textContent = "Confirmado";
       }
@@ -72,10 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
     slider.addEventListener("mousedown", e => {
+      medir();
       arrastando = true;
       e.preventDefault();
     });
     slider.addEventListener("touchstart", e => {
+      medir();
       arrastando = true;
     }, {
       passive: true
@@ -101,6 +106,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   initCaptcha("captchaSlider", "captchaText", "btnEntrar");
   initCaptcha("captchaSliderCad", "captchaTextCad", "btnCadastrar");
+  // O CAPTCHA só aparece quando a pessoa começa a entrar ou a se cadastrar:
+  // foco, digitação ou preenchimento automático num campo do formulário.
+  // Quem vai pela demonstração nunca passa por ele. Na ordem do Tab, ele
+  // vem logo depois dos campos, antes do botão.
+  function captchaSobDemanda(formId) {
+    const form = document.getElementById(formId);
+    const grupo = form ? form.querySelector(".captcha-grupo") : null;
+    if (!grupo) {
+      return;
+    }
+    const mostrar = () => {
+      grupo.hidden = false;
+    };
+    form.addEventListener("focusin", mostrar);
+    form.addEventListener("input", mostrar);
+    form.addEventListener("change", mostrar);
+    form.addEventListener("pointerdown", mostrar);
+    // Preenchimento automático do navegador não dispara "input": o CSS
+    // (style-auth.css) marca o campo com uma animação curta e ela avisa.
+    form.addEventListener("animationstart", e => {
+      if (e.animationName === "preenchido-automatico") {
+        mostrar();
+      }
+    });
+    // Voltando pelo histórico, os campos podem chegar preenchidos.
+    window.addEventListener("pageshow", () => {
+      if ([ ...form.querySelectorAll("input:not([type=checkbox])") ].some(i => i.value)) {
+        mostrar();
+      }
+    });
+  }
+  captchaSobDemanda("loginForm");
+  captchaSobDemanda("cadastroForm");
   const msg = (el, texto, tipo = "") => {
     if (!el) {
       return;

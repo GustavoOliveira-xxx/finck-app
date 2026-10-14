@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const previstas = noPeriodo(ctx.transacoesFuturas);
     const entradas = F.soma(transacoes.filter(F.ehEntrada));
     const saidas = F.soma(transacoes.filter(F.ehSaida));
-    document.getElementById("notaRegime").textContent = regime() === "ambos" ? `Os números abaixo somam realizado e previsto. O previsto (${previstas.length} lançamento(s), ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas) ainda não saiu do caixa.` : previstas.length ? `Os números abaixo contam apenas o que já aconteceu. Há ${previstas.length} lançamento(s) previsto(s) no período, somando ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas, que não entram neste total.` : "Os números abaixo contam apenas o que já aconteceu.";
+    document.getElementById("notaRegime").textContent = regime() === "ambos" ? `Os números abaixo somam o registrado e a previsão. A previsão (${previstas.length} lançamento(s), ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas) ainda não saiu do caixa nem está no saldo atual.` : previstas.length ? `Os números abaixo contam apenas o que já aconteceu. Há ${previstas.length} lançamento(s) de previsão no período, somando ${U.moeda(F.soma(previstas.filter(F.ehSaida)))} em saídas, que não entram neste total.` : "Os números abaixo contam apenas o que já aconteceu.";
     const dias = Number(ctx.perfil?.work_days_month || 22);
     const horas = Number(ctx.perfil?.work_hours_day || 8);
     const valorHora = Number(ctx.perfil?.income_monthly || 0) / dias / horas;
@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Cada número diz a janela de tempo e o que entra na conta.
     const seletor = document.getElementById("filtroPeriodo");
     const periodo = seletor.value === "tudo" ? "Todo o histórico" : seletor.selectedOptions[0]?.textContent || "";
-    const janela = U.escapeHTML(`${periodo}, ${regime() === "ambos" ? "realizado e previsto" : "só o realizado"}.`);
+    const janela = U.escapeHTML(`${periodo}, ${regime() === "ambos" ? "registrado e previsão" : "só o registrado"}.`);
     const explicaHoras = valorHora > 0 ? `Saídas do período divididas pelo valor da sua hora (${U.moeda(valorHora)}).` : "Preencha a renda no perfil para ver as saídas em horas de trabalho.";
     document.getElementById("resumoAnalises").innerHTML = `\n      <article class="card-indicador"><span>Entradas</span><strong class="cor-verde">${U.moeda(entradas)}</strong>\n        <small class="explica-numero">${janela}</small></article>\n      <article class="card-indicador"><span>Saídas</span><strong class="cor-vermelha">${U.moeda(saidas)}</strong>\n        <small class="explica-numero">${janela}</small></article>\n      <article class="card-indicador"><span>Resultado</span><strong>${U.moeda(entradas - saidas)}</strong>\n        <small class="explica-numero">Entradas menos saídas no mesmo período.</small></article>\n      <article class="card-indicador"><span>Tempo gasto</span><strong>${U.numero(horasGastas, 1)} h de trabalho</strong>\n        <small class="explica-numero">${U.escapeHTML(explicaHoras)}</small></article>`;
     const categorias = F.porCategoria(transacoes);

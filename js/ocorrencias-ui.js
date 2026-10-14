@@ -201,6 +201,58 @@ window.FinckRevisao = (() => {
       status: "pendente"
     });
   }
+  // Previsto, vencido e confirmado se distinguem pelo texto e pela marca,
+  // não só pela cor: quem não enxerga a cor lê o mesmo estado.
+  const ESTADOS_VISIVEIS = {
+    previsto: {
+      rotulo: "Previsto",
+      marca: "◌",
+      classe: "selo-previsto",
+      explica: "Ainda não venceu. Não altera o saldo até você confirmar."
+    },
+    vencido: {
+      rotulo: "Vencido",
+      marca: "!",
+      classe: "selo-previsto selo-vencido",
+      explica: "Já venceu e espera você dizer se aconteceu. Ainda fora do saldo."
+    },
+    confirmado: {
+      rotulo: "Confirmado",
+      marca: "✓",
+      classe: "selo-realizado",
+      explica: "Você confirmou que aconteceu. Já está no saldo."
+    },
+    nao_aconteceu: {
+      rotulo: "Não aconteceu",
+      marca: "×",
+      classe: "selo-previsto",
+      explica: "Marcado como não realizado. Não entrou no saldo."
+    }
+  };
+  function estadoVisivel(oc, hoje = U.hojeISO()) {
+    const status = oc && oc.status;
+    let id = "previsto";
+    if (status === "confirmado" || status === "ajustado") {
+      id = "confirmado";
+    } else if (status === "nao_realizado" || status === "nao_pago") {
+      id = "nao_aconteceu";
+    } else if (status === "pendente" || String(oc && oc.due_date || "") <= hoje) {
+      id = "vencido";
+    }
+    const base = ESTADOS_VISIVEIS[id];
+    const rotulo = status === "ajustado" ? "Confirmado com outro valor" : status === "nao_pago" ? "Não pago" : base.rotulo;
+    return {
+      id: id,
+      ...base,
+      rotulo: rotulo
+    };
+  }
+  // O vencido ganha borda tracejada em linha até existir um estilo próprio.
+  function seloEstado(oc, hoje) {
+    const e = estadoVisivel(oc, hoje);
+    const extra = e.id === "vencido" ? ' style="color:var(--amarelo);border:1px dashed currentColor"' : "";
+    return `<span class="${e.classe}" data-estado="${e.id}" title="${U.escapeHTML(e.explica)}"${extra}><span aria-hidden="true">${e.marca}</span> ${U.escapeHTML(e.rotulo)}</span>`;
+  }
   function montarSeletorConta(oc, contas) {
     const ativas = (contas || []).filter(c => c.active !== false);
     if (!ativas.length) {
@@ -208,14 +260,14 @@ window.FinckRevisao = (() => {
     }
     const preferida = oc.account_id || ativas.find(c => c.is_default)?.id || "";
     const opcoes = ativas.map(c => `<option value="${c.id}"${String(preferida) === String(c.id) ? " selected" : ""}>${U.escapeHTML(c.name)}</option>`).join("");
-    return `\n      <label class="revisao__conta">Em qual conta isso entrou ou saiu?\n        <select id="revisaoConta">\n          ${opcoes}\n          <option value="__sem_conta"${preferida ? "" : " selected"}>Fora das contas — só no saldo geral</option>\n        </select>\n      </label>\n      <p class="revisao__dica revisao__dica--conta" data-aviso-conta hidden>\n        Escolha declarada: o lançamento entra no saldo geral e fica marcado como\n        não alocado. Ele não aparece em nenhuma conta cadastrada, e a\n        reconciliação vai contá-lo como fora delas de propósito.\n      </p>`;
+    return `\n      <label class="revisao__conta">Em qual conta isso entrou ou saiu?\n        <select id="revisaoConta">\n          ${opcoes}\n          <option value="__sem_conta"${preferida ? "" : " selected"}>Fora das contas (só no saldo geral)</option>\n        </select>\n      </label>\n      <p class="revisao__dica revisao__dica--conta" data-aviso-conta hidden>\n        Escolha declarada: o lançamento entra no saldo geral e fica marcado como\n        não alocado. Ele não aparece em nenhuma conta cadastrada, e a\n        reconciliação vai contá-lo como fora delas de propósito.\n      </p>`;
   }
   function montarCartao(oc, indice, total, contas) {
     const entrada = oc.type === "entrada";
-    return `\n      <div class="revisao">\n        <p class="revisao__passo">${indice} de ${total}</p>\n\n        <div class="revisao__cabeca">\n          <span class="revisao__tipo ${entrada ? "revisao__tipo--entrada" : "revisao__tipo--saida"}">\n            ${entrada ? "Entrada prevista" : "Saída prevista"}\n          </span>\n          <strong class="revisao__valor">${U.moeda(oc.planned_amount)}</strong>\n          <p class="revisao__item">${U.escapeHTML(oc.description)} · ${U.dataBR(oc.due_date)}${oc.category ? ` · ${U.escapeHTML(oc.category)}` : ""}</p>\n        </div>\n\n        ${montarSeletorConta(oc, contas)}\n\n        <p class="revisao__pergunta">Essa movimentação realmente aconteceu?</p>\n\n        <div class="revisao__acoes">\n          <button type="button" class="btn-primario" data-acao="confirmar">\n            Sim, ${U.moeda(oc.planned_amount)}\n          </button>\n          <button type="button" class="btn-secundario" data-acao="outro">\n            ${entrada ? "Recebi outro valor" : "Paguei outro valor"}\n          </button>\n          <button type="button" class="btn-secundario" data-acao="nao_realizado">\n            Não aconteceu\n          </button>\n          ${entrada ? "" : `\n          <button type="button" class="btn-secundario" data-acao="nao_pago">\n            Decidi não pagar\n          </button>`}\n          <button type="button" class="revisao__adiar" data-acao="adiar">Decidir depois</button>\n        </div>\n\n        <form class="revisao__outro" data-outro hidden>\n          <label>Valor real\n            <input type="text" inputmode="decimal" data-moeda id="revisaoValor">\n          </label>\n          <p class="revisao__dica">\n            Previsto ${U.moeda(oc.planned_amount)}. O valor previsto continua guardado para comparação.\n          </p>\n          <button type="submit" class="btn-primario">Registrar valor real</button>\n        </form>\n      </div>`;
+    return `\n      <div class="revisao">\n        <p class="revisao__passo">${indice} de ${total}</p>\n\n        <div class="revisao__cabeca">\n          <span class="revisao__tipo ${entrada ? "revisao__tipo--entrada" : "revisao__tipo--saida"}">\n            ${entrada ? "Entrada prevista" : "Saída prevista"}\n          </span>\n          ${seloEstado(oc)}\n          <strong class="revisao__valor">${U.moeda(oc.planned_amount)}</strong>\n          <p class="revisao__item">${U.escapeHTML(oc.description)} · ${String(oc.due_date) === U.hojeISO() ? "vence hoje" : `venceu em ${U.dataBR(oc.due_date)}`}${oc.category ? ` · ${U.escapeHTML(oc.category)}` : ""}</p>\n          <p class="revisao__item">Ainda fora do saldo até você confirmar.</p>\n        </div>\n\n        ${montarSeletorConta(oc, contas)}\n\n        <p class="revisao__pergunta">Essa movimentação realmente aconteceu?</p>\n\n        <div class="revisao__acoes">\n          <button type="button" class="btn-primario" data-acao="confirmar">\n            Sim, ${U.moeda(oc.planned_amount)}\n          </button>\n          <button type="button" class="btn-secundario" data-acao="outro">\n            ${entrada ? "Recebi outro valor" : "Paguei outro valor"}\n          </button>\n          <button type="button" class="btn-secundario" data-acao="nao_realizado">\n            Não aconteceu\n          </button>\n          ${entrada ? "" : `\n          <button type="button" class="btn-secundario" data-acao="nao_pago">\n            Decidi não pagar\n          </button>`}\n          <button type="button" class="revisao__adiar" data-acao="adiar">Decidir depois</button>\n        </div>\n\n        <form class="revisao__outro" data-outro hidden>\n          <label>Valor real\n            <input type="text" inputmode="decimal" data-moeda id="revisaoValor">\n          </label>\n          <p class="revisao__dica">\n            Previsto ${U.moeda(oc.planned_amount)}. O valor previsto continua guardado para comparação.\n          </p>\n          <button type="submit" class="btn-primario">Registrar valor real</button>\n        </form>\n      </div>`;
   }
   function montarResumo(contagem, cicloPronto) {
-    return `\n      <div class="revisao revisao--fim">\n        <p class="revisao__passo">revisão concluída</p>\n        <ul class="revisao__placar">\n          <li><strong>${contagem.confirmadas}</strong><span>confirmadas</span></li>\n          <li><strong>${contagem.ajustadas}</strong><span>ajustadas</span></li>\n          <li><strong>${contagem.naoRealizadas}</strong><span>não aconteceram</span></li>\n          <li><strong>${contagem.naoPagas}</strong><span>não pagas</span></li>\n          <li><strong>${contagem.pendentes}</strong><span>ainda pendentes</span></li>\n        </ul>\n        <p class="revisao__nota">\n          O saldo já reflete o que você confirmou. Nada foi contado por suposição.\n        </p>\n        <div class="revisao__acoes">\n          ${cicloPronto ? `<button type="button" class="btn-primario" data-acao="fechar">Ver fechamento do mês</button>` : ""}\n          <button type="button" class="btn-secundario" data-acao="sair">Voltar ao início</button>\n        </div>\n      </div>`;
+    return `\n      <div class="revisao revisao--fim">\n        <p class="revisao__passo">revisão concluída</p>\n        <ul class="revisao__placar">\n          <li><strong>${contagem.confirmadas}</strong><span>confirmadas</span></li>\n          <li><strong>${contagem.ajustadas}</strong><span>ajustadas</span></li>\n          <li><strong>${contagem.naoRealizadas}</strong><span>não aconteceram</span></li>\n          <li><strong>${contagem.naoPagas}</strong><span>não pagas</span></li>\n          <li><strong>${contagem.pendentes}</strong><span>para depois</span></li>\n        </ul>\n        <p class="revisao__nota">\n          O saldo já reflete o que você confirmou. Nada foi contado por suposição.\n        </p>\n        <div class="revisao__acoes">\n          ${cicloPronto ? `<button type="button" class="btn-primario" data-acao="fechar">Ver fechamento do mês</button>` : ""}\n          <button type="button" class="btn-secundario" data-acao="sair">Voltar ao início</button>\n        </div>\n      </div>`;
   }
   async function abrir(pendentes, {aoTerminar: aoTerminar, cicloPronto: cicloPronto = false, contas: contas} = {}) {
     const host = document.getElementById("conteudoRevisao");
@@ -223,6 +275,22 @@ window.FinckRevisao = (() => {
       return;
     }
     const disponiveis = contas || await S.listar("accounts");
+    // Retorno de cada escolha: fica fora do cartão, que é trocado a cada
+    // passo, para o leitor de tela anunciar o que acabou de acontecer.
+    let retorno = document.getElementById("retornoRevisao");
+    if (!retorno) {
+      retorno = document.createElement("p");
+      retorno.id = "retornoRevisao";
+      retorno.className = "nota revisao__retorno";
+      retorno.setAttribute("role", "status");
+      host.before(retorno);
+    }
+    retorno.textContent = "";
+    retorno.hidden = true;
+    const avisar = texto => {
+      retorno.textContent = texto;
+      retorno.hidden = false;
+    };
     const contagem = {
       confirmadas: 0,
       ajustadas: 0,
@@ -295,9 +363,11 @@ window.FinckRevisao = (() => {
           }
         });
       };
+      const nome = oc.description || "Lançamento";
       umaVez(host.querySelector('[data-acao="confirmar"]'), async () => {
         await confirmar(oc, oc.planned_amount, alocacao());
         contagem.confirmadas++;
+        avisar(`✓ Confirmado: ${nome}, ${U.moeda(oc.planned_amount)}. Já está no saldo.`);
         avancar();
       });
       host.querySelector('[data-acao="outro"]').addEventListener("click", () => {
@@ -317,8 +387,10 @@ window.FinckRevisao = (() => {
           const r = await confirmar(oc, valor, alocacao());
           if (r.status === "ajustado") {
             contagem.ajustadas++;
+            avisar(`✓ Registrado com outro valor: ${nome}, ${U.moeda(valor)} (previsto ${U.moeda(oc.planned_amount)}). Já está no saldo.`);
           } else {
             contagem.confirmadas++;
+            avisar(`✓ Confirmado: ${nome}, ${U.moeda(valor)}. Já está no saldo.`);
           }
           avancar();
         } catch (err) {
@@ -329,16 +401,19 @@ window.FinckRevisao = (() => {
       umaVez(host.querySelector('[data-acao="nao_realizado"]'), async () => {
         await naoAconteceu(oc, "nao_realizado");
         contagem.naoRealizadas++;
+        avisar(`Não aconteceu: ${nome}. Nada mudou no saldo.`);
         avancar();
       });
       umaVez(host.querySelector('[data-acao="nao_pago"]'), async () => {
         await naoAconteceu(oc, "nao_pago");
         contagem.naoPagas++;
+        avisar(`Não pago: ${nome}. Nada mudou no saldo.`);
         avancar();
       });
       umaVez(host.querySelector('[data-acao="adiar"]'), async () => {
         await adiar(oc);
         contagem.pendentes++;
+        avisar(`Fica para depois: ${nome} continua vencido e fora do saldo.`);
         avancar();
       });
     };
@@ -393,6 +468,9 @@ window.FinckRevisao = (() => {
   return {
     sincronizar: sincronizar,
     reconciliar: reconciliar,
+    ESTADOS_VISIVEIS: ESTADOS_VISIVEIS,
+    estadoVisivel: estadoVisivel,
+    seloEstado: seloEstado,
     confirmar: confirmar,
     naoAconteceu: naoAconteceu,
     adiar: adiar,

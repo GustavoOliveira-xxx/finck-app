@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       faixa.hidden = false;
       // O alerta vira tarefa: o que revisar, de quanto, e só depois
       // a opção de deixar para mais tarde.
-      const tarefa = oc => `<li><strong>${oc.type === "entrada" ? "Confirmar entrada" : "Confirmar saída"} de ${U.moeda(oc.planned_amount)}</strong> · ${U.escapeHTML(oc.description)}, venceu em ${U.dataBR(oc.due_date)}</li>`;
+      const tarefa = oc => `<li>${R.seloEstado(oc)} <strong>${oc.type === "entrada" ? "Confirmar entrada" : "Confirmar saída"} de ${U.moeda(oc.planned_amount)}</strong> · ${U.escapeHTML(oc.description)}, venceu em ${U.dataBR(oc.due_date)}</li>`;
       faixa.innerHTML = `\n        <div class="aviso-revisao__texto">\n          <p><strong>${pendentes.length === 1 ? "1 previsão venceu" : `${pendentes.length} previsões venceram`}</strong> e espera${pendentes.length === 1 ? "" : "m"} você dizer se aconteceu. Elas ainda não mexeram no saldo.</p>\n          <ul class="aviso-revisao__lista">${pendentes.slice(0, 3).map(tarefa).join("")}</ul>\n          ${pendentes.length > 3 ? `<p class="nota">e mais ${pendentes.length - 3}.</p>` : ""}\n        </div>\n        <button type="button" class="btn-primario" id="btnRevisarAgora">Revisar lançamentos pendentes</button>\n        <button type="button" class="btn-texto" id="btnVerAppPrimeiro">Decidir depois</button>`;
       document.getElementById("btnRevisarAgora").addEventListener("click", () => {
         faixa.hidden = true;
@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       document.getElementById("btnVerAppPrimeiro").addEventListener("click", () => {
         faixa.hidden = true;
+        U.toast(`Fica para depois. ${pendentes.length === 1 ? "A previsão vencida continua" : "As previsões vencidas continuam"} fora do saldo até você confirmar.`, "info");
       });
     } else {
       await abrirRevisao();

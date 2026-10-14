@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FinCK | Planejamento</title>
-  <meta name="description" content="Parcelas, calendário do mês, orçamento por categoria e projeção do saldo futuro.">
+  <meta name="description" content="Parcelas, calendário do mês, orçamento por categoria e caixa previsto dos próximos meses.">
   <link rel="icon" href="assets/favicon-finck.png" type="image/png">
   <meta name="theme-color" content="#07060a">
   <link rel="manifest" href="manifest.json">
@@ -56,23 +56,23 @@
 
     <section class="hero">
       <h2>Planejamento</h2>
-      <p>O que já está comprometido daqui para frente: parcelas, contas do mês, tetos por categoria e para onde o saldo caminha. Comece pelos próximos compromissos ou cadastre uma compra parcelada.</p>
+      <p>O que já está comprometido daqui para frente: parcelas, contas do mês, tetos por categoria e o caixa previsto. Comece pelos próximos compromissos ou cadastre uma compra parcelada.</p>
     </section>
 
     <section id="alertaProjecao" aria-live="polite"></section>
 
     <section class="bloco">
       <div class="bloco-cabecalho">
-        <h3>Projeção do saldo</h3>
+        <h3>Caixa previsto</h3>
         <span class="chip" id="chipProjecao"></span>
       </div>
-      <p class="descricao">Parte do saldo de hoje e aplica, mês a mês, as recorrentes e as parcelas que vencem. No mês corrente só entra o que ainda não passou.</p>
-      <div class="projecao-grafico" id="projecaoGrafico" role="img" aria-label="Projeção do saldo nos próximos meses"></div>
-      <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Projeção mensal; deslize horizontalmente para ver todas as colunas">
+      <p class="descricao">Parte do saldo atual (registrado) e aplica, mês a mês, as recorrentes e as parcelas que vencem. No mês corrente só entra o que ainda não passou. É previsão: não altera o saldo até você confirmar.</p>
+      <div class="projecao-grafico" id="projecaoGrafico" role="img" aria-label="Caixa previsto nos próximos meses"></div>
+      <div class="tabela-wrapper" tabindex="0" role="region" aria-label="Caixa previsto por mês; deslize horizontalmente para ver todas as colunas">
         <table class="tabela" id="tabelaProjecao">
-          <caption class="visualmente-oculto">Projeção de entradas, saídas e saldo por mês</caption>
+          <caption class="visualmente-oculto">Caixa previsto: entradas, saídas e caixa no fim de cada mês</caption>
           <thead>
-            <tr><th scope="col">Mês</th><th scope="col">Entradas</th><th scope="col">Saídas</th><th scope="col">Parcelas</th><th scope="col">Saldo no fim</th></tr>
+            <tr><th scope="col">Mês</th><th scope="col">Entradas</th><th scope="col">Saídas</th><th scope="col">Parcelas</th><th scope="col">Caixa no fim</th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -105,7 +105,7 @@
       </div>
       <section class="cards-indicadores" id="resumoParcelas"></section>
       <div id="listaParcelas" class="itens-lista"></div>
-      <p class="vazio" id="vazioParcelas" hidden>Nenhuma compra parcelada cadastrada. As parcelas entram na projeção e no calendário automaticamente.</p>
+      <p class="vazio" id="vazioParcelas" hidden>Nenhuma compra parcelada cadastrada. As parcelas entram no caixa previsto e no calendário automaticamente.</p>
     </section>
 
     <section class="bloco">
@@ -187,6 +187,8 @@
   <script src="js/finance.js"></script>
   <script src="js/tempo.js"></script>
   <script src="js/planejamento-engine.js"></script>
+  <script src="js/ocorrencias.js"></script>
+  <script src="js/ocorrencias-ui.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/planejamento.js"></script>

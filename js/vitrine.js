@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pct = Math.min(100, r.income_percent);
     barra.style.width = `${pct}%`;
     barra.dataset.nivel = r.income_percent >= 30 ? "alerta" : r.income_percent >= 10 ? "atencao" : "verde";
-    legenda.textContent = `Isso é ${U.percentual(r.income_percent, 1)} da sua renda do mês.` + (r.income_percent >= 30 ? " Uma fatia grande — vale comparar alternativas antes." : r.income_percent >= 10 ? " Cabe, mas pesa no mês." : " Um impacto pequeno no mês.");
+    legenda.textContent = `Isso é ${U.percentual(r.income_percent, 1)} da sua renda do mês.` + (r.income_percent >= 30 ? " Uma fatia grande: vale comparar alternativas antes." : r.income_percent >= 10 ? " Cabe, mas pesa no mês." : " Um impacto pequeno no mês.");
   }
   [ campoPreco, campoRenda ].forEach(c => {
     c.addEventListener("input", calcular);

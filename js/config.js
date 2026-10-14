@@ -8,8 +8,9 @@ window.FINCK_CONFIG = {
     // por exemplo "https://finck-app.vercel.app/api/buscar-preco-ia".
     ENDPOINT: "/api/buscar-preco-ia"
   },
-  // Assistente FinCK: plano e conversa com IA (Claude, da Anthropic). Exige
-  // conta; na demonstração o plano é montado pelas regras, no navegador.
+  // Revisão financeira: as próximas ações saem das regras, no navegador. A
+  // explicação escrita e a conversa com IA são extras opcionais, pela rota
+  // abaixo, e exigem conta.
   ASSISTENTE_IA: {
     ATIVA: true,
     ENDPOINT: "/api/assistente-ia"
@@ -116,7 +117,7 @@ window.FINCK_CONFIG = {
     id: "investimento",
     rotulo: "Investimento (manual)"
   } ],
-  // Assistente FinCK: parâmetros do diagnóstico, todos num lugar só para
+  // Revisão financeira: parâmetros do diagnóstico, todos num lugar só para
   // poderem ser lidos, discutidos e ajustados. São referências didáticas,
   // não regras: a regra 50/30/20 (Warren e Tyagi, 2005) para o peso das
   // despesas fixas e da poupança, de 3 a 6 meses de custo fixo como reserva

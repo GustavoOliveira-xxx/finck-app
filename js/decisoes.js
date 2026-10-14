@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         outcome: sel.value,
         outcome_at: (new Date).toISOString()
       });
-      U.toast("Acompanhamento registrado. Obrigado pela honestidade.", "sucesso");
+      U.toast("Acompanhamento registrado.", "sucesso");
       carregar();
     }));
   }

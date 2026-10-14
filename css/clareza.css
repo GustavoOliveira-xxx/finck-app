@@ -139,10 +139,13 @@ html[data-animacoes="desligada"] .prisma-dica{ display:none; }
 .tarefa--em-dia strong{ color:var(--verde); }
 /* Se a revisão de previsões apareceu, "em dia" deixa de ser verdade. */
 .bloco--atencao:has(.aviso-fechamento:not([hidden])) .tarefa--em-dia{ display:none; }
+/* Sem tarefa e sem aviso, a seção some: a frase neutra fica no "Próximo
+   passo" do resumo. */
+.bloco--atencao:not(:has(.tarefa:not(.tarefa--em-dia))):not(:has(.aviso-fechamento:not([hidden]))){ display:none; }
 .aviso-revisao__texto{ flex:1 1 18rem; display:grid; gap:.4rem; }
 .aviso-revisao__lista{ margin:0; padding-left:1.1rem; display:grid; gap:.25rem; font-size:.88rem; }
 
-/* Cartão do Assistente FinCK (IA). Secundário em relação ao Reality. */
+/* Cartão da Revisão financeira (regras do FinCK). Secundário em relação ao Reality. */
 .cartao-assistente{
   display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
   margin-block:1.2rem; padding:1.1rem 1.25rem;
@@ -500,3 +503,45 @@ html:has(.etapas-reality){ --altura-barra-presa: calc(var(--altura-etapas-realit
 }
 .hero--jornada .btn-primario{ justify-self:start; margin-top:.4rem; }
 .resposta-reality__links{ display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; margin-top:.2rem; }
+
+/* ==========================================================================
+   Hierarquia de acabamento: .acabamento-1 expressivo (brilho, 3D, borda luminosa), .acabamento-2 moderado (vidro e borda discreta, sem brilho animado), .acabamento-3 discreto (plano).
+   A paleta é a mesma nos três; muda a intensidade. Roxo marca ação e foco;
+   dourado, conquistas e destaques.
+   ========================================================================== */
+.acabamento-1{
+  border-color:rgba(180,92,240,.5);
+  box-shadow:
+    var(--sombra-card),
+    0 0 0 1px rgba(180,92,240,.2),
+    0 0 36px -12px rgba(180,92,240,.5),
+    0 32px 70px -44px rgba(254,200,0,.4);
+}
+
+.acabamento-2{ border-color:var(--superficie-borda); }
+.acabamento-2,
+.acabamento-2:hover{ box-shadow:var(--sombra-card); }
+.acabamento-2:hover{ transform:none; border-color:var(--superficie-borda-forte); }
+.acabamento-2::after,
+.acabamento-2:hover::after{ animation:none; }
+/* Sem o halo que respira e sem a varredura de luz no hover. */
+.hero.acabamento-2::after,
+.balance-card.acabamento-2::after{ display:none; }
+.hero.acabamento-2 h2{
+  background:none; -webkit-background-clip:border-box; background-clip:border-box;
+  color:var(--texto);
+}
+.balance-card.acabamento-2{ border-color:rgba(147,51,196,.22); }
+.acabamento-2 :is(.card-meta,.card-indicador):hover{ transform:none; box-shadow:var(--sombra-baixa); }
+
+.acabamento-3,
+.acabamento-3 :is(.bloco,.bloco-interno,.card-indicador,.card-meta){
+  background-image:none;
+  box-shadow:none;
+  backdrop-filter:none; -webkit-backdrop-filter:none;
+}
+.acabamento-3 :is(.bloco,.bloco-interno,.card-indicador,.card-meta)::before,
+.acabamento-3 :is(.bloco,.bloco-interno,.card-indicador,.card-meta)::after{ display:none; }
+.acabamento-3 :is(.bloco,.bloco-interno,.card-indicador,.card-meta):hover{
+  transform:none; box-shadow:none; border-color:var(--superficie-borda);
+}

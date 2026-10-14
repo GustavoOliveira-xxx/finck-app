@@ -101,9 +101,23 @@
         podeVerde: i % 3 === 0
       };
     };
+    // Zona calma: atrás do formulário marcado com data-fundo-calmo (login),
+    // os pontos quase somem. O fundo continua; só não disputa com os campos.
+    let calma = null;
+    function medirCalma() {
+      const el = document.querySelector("[data-fundo-calmo]");
+      const r = el ? el.getBoundingClientRect() : null;
+      calma = r && r.width ? {
+        x0: r.left - 40,
+        y0: r.top - 40,
+        x1: r.right + 40,
+        y1: r.bottom + 40
+      } : null;
+    }
     function medir() {
       L = window.innerWidth;
       A = window.innerHeight;
+      medirCalma();
       const dpr = Math.min(window.devicePixelRatio || 1, L < 700 ? 1.5 : 2);
       tela.width = Math.max(1, Math.round(L * dpr));
       tela.height = Math.max(1, Math.round(A * dpr));
@@ -200,7 +214,8 @@
             y += dy / distancia * forca;
           }
         }
-        const brilho = .4 + .2 * Math.sin(t * .6 + p.fase);
+        const naCalma = calma && x > calma.x0 && x < calma.x1 && y > calma.y0 && y < calma.y1;
+        const brilho = (.4 + .2 * Math.sin(t * .6 + p.fase)) * (naCalma ? .18 : 1);
         const tamanho = p.tamanho * escala;
         const [r, g, b] = p.podeVerde && verde > .01 ? misturar(p.cor, VERDE, verde) : p.cor;
         // Trilha curta: um trecho fixo de arco, sem rastro longo.
@@ -221,7 +236,7 @@
         ctx.beginPath();
         ctx.arc(x, y, tamanho * 5, 0, TAU);
         ctx.fill();
-        ctx.fillStyle = `rgba(${r},${g},${b},${(.4 + brilho * .45).toFixed(3)})`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${((.4 + brilho * .45) * (naCalma ? .18 : 1)).toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(x, y, tamanho, 0, TAU);
         ctx.fill();
@@ -288,6 +303,31 @@
     }, {
       passive: true
     });
+    // A zona calma acompanha a rolagem e a entrada do cartão na tela.
+    if (document.querySelector("[data-fundo-calmo]")) {
+      let medindo = false;
+      window.addEventListener("scroll", () => {
+        if (medindo) {
+          return;
+        }
+        medindo = true;
+        raf(() => {
+          medirCalma();
+          medindo = false;
+          if (parado) {
+            quadro(0);
+          }
+        });
+      }, {
+        passive: true
+      });
+      setTimeout(() => {
+        medirCalma();
+        if (parado) {
+          quadro(0);
+        }
+      }, 1200);
+    }
     let aguardando;
     window.addEventListener("resize", () => {
       clearTimeout(aguardando);
@@ -478,7 +518,8 @@
       return;
     }
     const cartao = document.querySelector(".balance-card");
-    if (!cartao) {
+    // O giro 3D é do nível expressivo; o cartão do saldo da home é moderado.
+    if (!cartao || cartao.closest(".acabamento-2,.acabamento-3")) {
       return;
     }
     const limite = 5;

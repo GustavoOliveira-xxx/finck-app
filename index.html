@@ -111,9 +111,11 @@
     </section>
    </div>
 
-    <section class="auth-card cena3d-eco" data-cena3d-eco>
-      <h2>Entrar na minha conta</h2>
-      <p class="auth-sub">Para quem já tem cadastro. Seus dados ficam salvos e acessíveis em qualquer aparelho.</p>
+    <!-- Caminho secundário: quem já tem conta. O cartão é mais leve que a
+         vitrine e o fundo fica calmo atrás dele (data-fundo-calmo). -->
+    <section class="auth-card auth-card--secundario" data-fundo-calmo aria-labelledby="tituloEntrar">
+      <h2 id="tituloEntrar">Já tem conta? Entrar</h2>
+      <p class="auth-sub">Seus dados ficam salvos e acessíveis em qualquer aparelho.</p>
 
       <form id="loginForm" novalidate>
         <label for="email">E-mail
@@ -127,7 +129,8 @@
           </span>
         </label>
 
-        <div class="captcha-grupo">
+        <!-- Aparece quando a pessoa começa a entrar (js/auth.js). -->
+        <div class="captcha-grupo" hidden>
           <p class="captcha-rotulo" id="captchaTrackRotulo">Confirme que você é uma pessoa</p>
           <div class="captcha" id="captchaTrack">
             <div class="captcha-slider" id="captchaSlider" role="slider" aria-labelledby="captchaTrackRotulo" aria-describedby="captchaTrackDica" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Ainda não confirmado" tabindex="0"><span aria-hidden="true">→</span></div>
@@ -138,7 +141,7 @@
 
         <p id="mensagem" class="mensagem" role="alert"></p>
 
-        <button type="submit" id="btnEntrar" class="btn-primario" disabled>Entrar</button>
+        <button type="submit" id="btnEntrar" class="btn-secundario" disabled>Entrar</button>
       </form>
 
       <div class="auth-rodape">
