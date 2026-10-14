@@ -1,4 +1,18 @@
-# Análise FinCK: a FINCK AI no resultado do Reality
+# Análise FinCK: os pontos de atenção e a ajuda opcional no Reality
+
+> **Atualização da terceira rodada (outubro de 2026).** Na tela, o bloco não
+> se chama mais "Análise FinCK" e não usa o símbolo ✦: virou "O que merece
+> atenção", com no máximo dois pontos escritos como fatos
+> (`PARAMETROS.MAX_PONTOS = 2`), cada um com o selo Dado confirmado ou
+> Estimativa e um único "Como foi calculado?" (no lugar do par "Por que o FinCK
+> diz isso?" e "Como chegamos nisso?"). "Nossa leitura" virou "O que mais pesa
+> neste cenário". "E se...?" virou "Comparar formas de decidir" e a conversa
+> virou "Tirar uma dúvida sobre o cálculo", os dois dentro de "Se quiser
+> aprofundar" (`FinckInteligenciaUI.mostrar({ ..., hosts: { comparar, duvida } })`).
+> A pergunta livre é a "Ajuda opcional", recolhida, e a resposta vem rotulada
+> "Resposta escrita por IA a partir dos números desta análise.", sem modelo nem
+> tempo. Os detalhes estão em `docs/ux-sem-cara-de-ia.md`; onde este documento
+> usa os nomes antigos, vale aquele.
 
 ## 1. Problema e posicionamento
 
