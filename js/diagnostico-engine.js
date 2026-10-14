@@ -1,15 +1,15 @@
-// Assistente FinCK: diagnóstico da vida financeira inteira.
+// Revisão financeira: diagnóstico da vida financeira inteira.
 //
 // O FinCK of Reality olha uma compra de cada vez. Este motor olha o conjunto:
 // renda, despesas fixas, gastos do dia a dia, parcelas, reserva, metas e as
 // decisões de consumo já registradas. Ele é determinístico e roda no próprio
 // aparelho: os números saem daqui, sempre com a regra que os produziu.
 //
-// A IA (api/buscar-preco-ia.js, pedido { planejamento }) recebe só o retrato
-// agregado que paraIA() monta, sem descrição de lançamento nem dado pessoal, e
-// devolve linguagem: explicação, plano e respostas. Ela interpreta números,
-// não os calcula. Quando a IA não está disponível (demonstração, servidor sem
-// chave, sem internet), planoLocal() monta o plano só com as regras daqui.
+// As próximas ações (planoLocal), a conta de cada uma (calculo) e as
+// respostas às perguntas prontas (responder) também saem daqui, sem IA. A IA
+// é opcional: só quando a pessoa pede, a rota api/assistente-ia.js recebe o
+// retrato agregado que paraIA() monta, sem descrição de lançamento nem dado
+// pessoal, e devolve texto. Ela interpreta números, não os calcula.
 window.FinckDiagnostico = (() => {
   const cfg = window.FINCK_CONFIG;
   const P = () => cfg.DIAGNOSTICO;
@@ -21,6 +21,11 @@ window.FinckDiagnostico = (() => {
     minimumFractionDigits: casas,
     maximumFractionDigits: casas
   })}%`;
+  const casa1 = v => num(v).toLocaleString("pt-BR", {
+    maximumFractionDigits: 1
+  });
+  const meses = n => `${casa1(n)} ${arred(n, 1) === 1 ? "mês" : "meses"}`;
+  const dataBR = iso => window.FinckUtils ? window.FinckUtils.dataBR(iso) : String(iso || "");
   const chaveMes = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   const ehEntrada = t => t.type === "entrada";
   // Saída ligada a uma meta é dinheiro guardado, não consumo.
@@ -94,6 +99,7 @@ window.FinckDiagnostico = (() => {
         media_mensal: valor / meses.length,
         participacao: total > 0 ? valor / total * 100 : 0,
         ultimo_mes: ultimo,
+        media_anterior: mediaAnterior,
         tendencia_pct: mediaAnterior && mediaAnterior > 0 ? (ultimo - mediaAnterior) / mediaAnterior * 100 : null
       };
     }).sort((a, b) => b.media_mensal - a.media_mensal);
@@ -223,7 +229,7 @@ window.FinckDiagnostico = (() => {
   function dimensaoMetas(r) {
     const abertas = r.metas.filter(m => !m.concluida);
     if (!r.metas.length) {
-      return semDados("metas", "Metas", "Você ainda não tem metas. Uma meta dá direção ao que sobra no mês.");
+      return semDados("metas", "Metas", "Nenhuma meta cadastrada. Com uma meta, a sobra do mês ganha um destino.");
     }
     if (!abertas.length) {
       return {
@@ -255,7 +261,7 @@ window.FinckDiagnostico = (() => {
   function dimensaoConsumo(r) {
     const c = r.consumo;
     if (!c.analises) {
-      return semDados("consumo", "Consumo consciente", "Analise a próxima compra no FinCK of Reality: é assim que o FinCK aprende como você decide.");
+      return semDados("consumo", "Consumo consciente", "Nenhuma compra analisada ainda. As decisões registradas no FinCK of Reality entram nesta dimensão.");
     }
     const taxa = c.decididas ? c.taxa_consciente : 0;
     const nota = c.indicador_medio === null ? taxa : (taxa + c.indicador_medio) / 2;
@@ -286,32 +292,152 @@ window.FinckDiagnostico = (() => {
 
   // ------------------------------------------------------------- prioridades
 
-  // Cada prioridade diz o que fazer, por quê (com o número que a disparou) e
-  // onde fazer no app. A ordem segue a gravidade: primeiro o que ameaça o
-  // mês, depois o que constrói segurança, por fim os hábitos.
+  // ------------------------------------------------- como foi calculado
+
+  // A conta de cada dimensão, passo a passo, com os mesmos números que deram
+  // a nota. Só monta texto: nenhuma conta nova sai daqui.
+  function calculoDaDimensao(r, d) {
+    const p = P();
+    const linhas = [];
+    const add = (rotulo, valor) => linhas.push({
+      rotulo: rotulo,
+      valor: valor
+    });
+    if (!d) {
+      return linhas;
+    }
+    if (d.id === "fluxo") {
+      add("Renda declarada", r.renda > 0 ? moeda(r.renda) : "não informada");
+      if (r.renda > 0) {
+        add("Despesas fixas", moeda(r.despesas_fixas));
+        add("Parte da renda em fixos", `${moeda(r.despesas_fixas)} ÷ ${moeda(r.renda)} = ${pct(d.valor)}`);
+        add("Sobra após os fixos", `${moeda(r.renda)} − ${moeda(r.despesas_fixas)} = ${moeda(r.sobra_mensal)}`);
+        add("Regra da nota", `100 com os fixos até ${p.FIXOS_REFERENCIA_PCT}% da renda; cada ponto percentual acima tira 2,5 pontos`);
+      }
+    }
+    if (d.id === "poupanca") {
+      const n = r.meses_considerados;
+      const sobra = r.base_renda - r.media_gastos;
+      if (n) {
+        add(r.mes_parcial ? "Entradas consideradas (mês em andamento)" : `Entradas (média de ${meses(n)})`, moeda(r.base_renda));
+        add(r.mes_parcial ? "Gastos considerados (mês em andamento)" : `Gastos (média de ${meses(n)})`, moeda(r.media_gastos));
+        add("Sobra por mês", `${moeda(r.base_renda)} − ${moeda(r.media_gastos)} = ${moeda(sobra)}`);
+        if (r.base_renda > 0) {
+          add("Taxa de poupança", `${moeda(sobra)} ÷ ${moeda(r.base_renda)} = ${pct(r.taxa_poupanca)}`);
+        }
+        if (r.mes_parcial) {
+          add("Mês em andamento", "a renda vale pelo menos a declarada, e os gastos, pelo menos as despesas fixas");
+        }
+        add("Regra da nota", `proporcional à taxa: ${p.POUPANCA_IDEAL_PCT}% ou mais vale 100; sobra negativa deixa a dimensão crítica`);
+      } else {
+        add("Meses registrados", "nenhum");
+      }
+    }
+    if (d.id === "reserva") {
+      const saldo = Math.max(0, r.saldo);
+      const emMetas = num(r.reserva_em_metas);
+      add("Saldo atual", moeda(saldo));
+      if (emMetas > 0) {
+        add("Guardado em metas de reserva", moeda(emMetas));
+        add("Reserva", `${moeda(saldo)} + ${moeda(emMetas)} = ${moeda(r.reserva)}`);
+      }
+      if (r.custo_mensal > 0) {
+        add(r.despesas_fixas > 0 ? "Custo fixo do mês" : "Custo do mês (média de gastos)", moeda(r.custo_mensal));
+        add("Meses cobertos", `${moeda(r.reserva)} ÷ ${moeda(r.custo_mensal)} = ${meses(r.reserva_meses)}`);
+        add(`Primeiro degrau (${p.RESERVA_MINIMA_MESES} meses)`, moeda(r.custo_mensal * p.RESERVA_MINIMA_MESES));
+        add(`Alvo (${p.RESERVA_IDEAL_MESES} meses)`, moeda(r.custo_mensal * p.RESERVA_IDEAL_MESES));
+        add("Regra da nota", `proporcional: ${p.RESERVA_IDEAL_MESES} meses ou mais vale 100`);
+      } else {
+        add("Custo fixo do mês", "não cadastrado");
+      }
+    }
+    if (d.id === "compromissos") {
+      add("Parcelas por mês", moeda(r.parcelas_mensais));
+      add("Renda declarada", r.renda > 0 ? moeda(r.renda) : "não informada");
+      if (r.renda > 0) {
+        add("Peso na renda", `${moeda(r.parcelas_mensais)} ÷ ${moeda(r.renda)} = ${pct(d.valor)}`);
+        add("Parcelas e previsões em aberto", moeda(r.compromissos_abertos));
+        add("Saldo depois desses compromissos", moeda(r.disponivel_projetado));
+        add("Regra da nota", `100 sem parcelas; cada ponto percentual da renda em parcelas tira ${casa1(60 / p.PARCELAS_LIMITE_PCT)} pontos; compromissos acima do saldo limitam a nota a 30`);
+      }
+    }
+    if (d.id === "metas") {
+      const abertas = r.metas.filter(m => !m.concluida);
+      if (!r.metas.length) {
+        add("Metas cadastradas", "nenhuma");
+      } else if (!abertas.length) {
+        add("Metas cadastradas", `${r.metas.length}, todas alcançadas`);
+      } else {
+        add("Metas em andamento", String(abertas.length));
+        add("No ritmo do prazo", `${abertas.filter(m => m.no_ritmo).length} de ${abertas.length}`);
+        abertas.filter(m => !m.no_ritmo).slice(0, 3).forEach(m => {
+          add(`Meta "${m.nome}"`, m.necessario_mensal ? `aportes de ${moeda(m.ritmo_mensal)} por mês; o prazo pede ${moeda(m.necessario_mensal)}` : "sem aportes nos últimos 3 meses");
+        });
+        add("Regra", "uma meta está no ritmo quando os aportes dos últimos 3 meses chegam a 90% do que o prazo pede; sem prazo, quando recebe aporte");
+        add("Regra da nota", "metas no ritmo ÷ metas em andamento");
+      }
+    }
+    if (d.id === "consumo") {
+      const c = r.consumo;
+      add("Compras analisadas", String(c.analises));
+      add("Com decisão registrada", String(c.decididas));
+      if (c.decididas) {
+        add("Decisões conscientes", `${c.conscientes} (esperar, buscar alternativa ou não comprar)`);
+        add("Taxa", `${c.conscientes} ÷ ${c.decididas} = ${pct(c.taxa_consciente)}`);
+      }
+      if (c.indicador_medio !== null) {
+        add("Indicador médio de decisão responsável", `${c.indicador_medio}/100`);
+      }
+      if (c.analises) {
+        add("Regra da nota", c.indicador_medio === null ? "a taxa de decisões conscientes" : "média entre a taxa e o indicador médio");
+      }
+    }
+    if (d.referencia) {
+      add("Referência", d.referencia);
+    }
+    add("Nota", d.nota !== null ? `${d.nota}/100, ${NIVEIS[d.nivel].toLowerCase()}` : NIVEIS.sem_dados);
+    return linhas;
+  }
+
+  // ------------------------------------------------------------- prioridades
+
+  // Cada prioridade diz o que fazer, por quê (com o número que a disparou),
+  // por que isso importa (uma frase), como foi calculada e onde fazer no app.
+  // A ordem segue a gravidade: primeiro o que ameaça o mês, depois o que
+  // constrói segurança, por fim os hábitos.
   function prioridades(r, dims) {
     const p = P();
     const d = Object.fromEntries(dims.map(x => [ x.id, x ]));
     const lista = [];
-    const add = (nivel, titulo, porque, acao, href, dimensao) => lista.push({
+    const add = (nivel, titulo, porque, acao, href, dimensao, extra = {}) => lista.push({
       nivel: nivel,
       titulo: titulo,
       porque: porque,
       acao: acao,
       href: href,
-      dimensao: dimensao
+      dimensao: dimensao,
+      importa: extra.importa || "",
+      calculo: extra.calculo || calculoDaDimensao(r, d[dimensao])
     });
     if (!(r.renda > 0)) {
-      add("critico", "Informar a sua renda mensal", "Sem ela, o FinCK não converte compras em tempo de trabalho nem mede o peso dos gastos.", "Ir para o Perfil", "perfil.html", "fluxo");
+      add("critico", "Informar a sua renda mensal", "Sem ela, o FinCK não converte compras em tempo de trabalho nem mede o peso dos gastos.", "Ir para o Perfil", "perfil.html", "fluxo", {
+        importa: "A renda é a base das outras contas: o valor da sua hora, o peso de cada gasto e a sobra do mês."
+      });
     }
     if (d.fluxo.nivel === "critico") {
-      add("critico", "Reduzir as despesas fixas", d.fluxo.explicacao, "Revisar recorrentes", "recorrentes.html", "fluxo");
+      add("critico", "Reduzir as despesas fixas", d.fluxo.explicacao, "Revisar recorrentes", "recorrentes.html", "fluxo", {
+        importa: "Com os fixos acima da renda, cada gasto variável sai do saldo guardado, e o saldo diminui a cada mês."
+      });
     }
     if (d.compromissos.nivel === "critico") {
-      add("critico", "Não assumir novas parcelas por enquanto", d.compromissos.explicacao, "Ver compromissos", "planejamento.html", "compromissos");
+      add("critico", "Não assumir novas parcelas por enquanto", d.compromissos.explicacao, "Ver compromissos", "planejamento.html", "compromissos", {
+        importa: "Parcelas já assumidas ocupam a renda dos próximos meses; com elas acima do limite, um imprevisto vira atraso."
+      });
     }
     if (d.poupanca.nivel === "critico") {
-      add("critico", "Fechar o mês sem gastar mais do que entra", d.poupanca.explicacao, "Ver para onde vai o dinheiro", "analises.html", "poupanca");
+      add("critico", "Fechar o mês sem gastar mais do que entra", d.poupanca.explicacao, "Ver para onde vai o dinheiro", "analises.html", "poupanca", {
+        importa: "Gastar mais do que entra consome o saldo e a reserva, e o mês seguinte começa com menos."
+      });
     }
     if (d.reserva.nivel === "critico" || d.reserva.nivel === "atencao") {
       const minimo = r.custo_mensal * p.RESERVA_MINIMA_MESES;
@@ -321,30 +447,86 @@ window.FinckDiagnostico = (() => {
       const passouMinimo = r.reserva_meses >= p.RESERVA_MINIMA_MESES;
       const degrau = passouMinimo ? `O primeiro degrau (${moeda(minimo)}, ${p.RESERVA_MINIMA_MESES} meses de custo fixo) já foi alcançado; o próximo alvo é ${moeda(ideal)} (${p.RESERVA_IDEAL_MESES} meses).` : `O primeiro degrau é ${moeda(minimo)} (${p.RESERVA_MINIMA_MESES} meses de custo fixo).`;
       const titulo = temMetaReserva ? "Reforçar a reserva de emergência" : passouMinimo ? "Separar a reserva de emergência numa meta" : "Começar uma reserva de emergência";
-      add(d.reserva.nivel, titulo, `${d.reserva.explicacao} ${degrau}`, temMetaReserva ? "Ver minhas metas" : "Criar a meta de reserva", temMetaReserva ? "metas.html" : "metas.html#nova", "reserva");
+      add(d.reserva.nivel, titulo, `${d.reserva.explicacao} ${degrau}`, temMetaReserva ? "Ver minhas metas" : "Criar a meta de reserva", temMetaReserva ? "metas.html" : "metas.html#nova", "reserva", {
+        importa: "A reserva paga imprevistos (saúde, conserto, perda de renda) sem recorrer a crédito, que costuma ter juros altos."
+      });
     }
     const emAlta = r.categorias.find(c => c.tendencia_pct !== null && c.tendencia_pct >= p.TENDENCIA_ALTA_PCT && c.participacao >= 10);
     if (emAlta) {
-      add("atencao", `Olhar os gastos com ${emAlta.nome}`, `No último mês eles foram ${moeda(emAlta.ultimo_mes)}, ${pct(emAlta.tendencia_pct)} acima da média dos meses anteriores.`, "Ver análise dos gastos", "analises.html", "poupanca");
+      const anterior = num(emAlta.media_anterior);
+      add("atencao", `Olhar os gastos com ${emAlta.nome}`, `No último mês eles foram ${moeda(emAlta.ultimo_mes)}, ${pct(emAlta.tendencia_pct)} acima da média dos meses anteriores.`, "Ver análise dos gastos", "analises.html", "poupanca", {
+        importa: "Uma categoria que cresce de um mês para o outro é o lugar mais rápido para ver para onde o dinheiro foi.",
+        calculo: [ {
+          rotulo: `${emAlta.nome} no último mês`,
+          valor: moeda(emAlta.ultimo_mes)
+        }, {
+          rotulo: "Média dos meses anteriores",
+          valor: moeda(anterior)
+        }, {
+          rotulo: "Diferença",
+          valor: `${moeda(emAlta.ultimo_mes)} − ${moeda(anterior)} = ${moeda(emAlta.ultimo_mes - anterior)} (${pct(emAlta.tendencia_pct)} a mais)`
+        }, {
+          rotulo: "Parte dos gastos",
+          valor: pct(emAlta.participacao)
+        }, {
+          rotulo: "Regra",
+          valor: `aparece quando uma categoria com pelo menos 10% dos gastos sobe ${p.TENDENCIA_ALTA_PCT}% ou mais`
+        } ]
+      });
     }
     if (d.poupanca.nivel === "atencao") {
-      add("atencao", "Guardar um valor fixo assim que o dinheiro entrar", `${d.poupanca.explicacao} Separar a poupança no dia do pagamento, antes dos gastos, costuma funcionar melhor do que guardar o que sobra.`, "Escolher uma meta", "metas.html", "poupanca");
+      add("atencao", "Guardar um valor fixo assim que o dinheiro entrar", `${d.poupanca.explicacao} Separar a poupança no dia do pagamento, antes dos gastos, costuma funcionar melhor do que guardar o que sobra.`, "Escolher uma meta", "metas.html", "poupanca", {
+        importa: "Com pouca sobra, sobra pouco espaço para metas e imprevistos; um valor separado no dia do pagamento fica previsível."
+      });
     }
     const jaFalouDeReserva = lista.some(x => x.dimensao === "reserva");
     r.metas.filter(m => !m.concluida && !m.no_ritmo && !(jaFalouDeReserva && /reserva|emerg/i.test(m.nome || ""))).slice(0, 2).forEach(m => {
-      add("atencao", `Ajustar o ritmo da meta "${m.nome}"`, m.necessario_mensal ? `O prazo pede ${moeda(m.necessario_mensal)} por mês e os aportes recentes estão em ${moeda(m.ritmo_mensal)}.` : "Ela não recebeu aportes nos últimos 3 meses.", "Ver a meta", "metas.html", "metas");
+      const calculo = [ {
+        rotulo: "Guardado",
+        valor: `${moeda(m.atual)} de ${moeda(m.alvo)}`
+      }, {
+        rotulo: "Falta",
+        valor: moeda(m.falta)
+      }, {
+        rotulo: "Prazo",
+        valor: m.prazo ? dataBR(m.prazo) : "sem prazo"
+      }, {
+        rotulo: "Aportes recentes",
+        valor: `${moeda(m.ritmo_mensal)} por mês (média dos últimos 3 meses)`
+      } ];
+      if (m.necessario_mensal) {
+        calculo.push({
+          rotulo: "O prazo pede",
+          valor: `${moeda(m.falta)} ÷ meses até o prazo = ${moeda(m.necessario_mensal)} por mês`
+        }, {
+          rotulo: "Diferença",
+          valor: `${moeda(Math.max(0, m.necessario_mensal - m.ritmo_mensal))} por mês`
+        });
+      }
+      add("atencao", `Ajustar o ritmo da meta "${m.nome}"`, m.necessario_mensal ? `O prazo pede ${moeda(m.necessario_mensal)} por mês e os aportes recentes estão em ${moeda(m.ritmo_mensal)}.` : "Ela não recebeu aportes nos últimos 3 meses.", "Ver a meta", "metas.html", "metas", {
+        importa: m.necessario_mensal ? "No ritmo atual, a meta não chega no prazo; ajustar o aporte ou o prazo deixa a conta possível." : "Sem aportes, a meta fica parada; um valor mensal, mesmo pequeno, dá a ela uma data para chegar.",
+        calculo: calculo
+      });
     });
     if (d.compromissos.nivel === "atencao") {
-      add("atencao", "Esperar as parcelas atuais terminarem antes de parcelar de novo", d.compromissos.explicacao, "Ver parcelas", "planejamento.html", "compromissos");
+      add("atencao", "Esperar as parcelas atuais terminarem antes de parcelar de novo", d.compromissos.explicacao, "Ver parcelas", "planejamento.html", "compromissos", {
+        importa: "Cada nova parcela se soma às atuais e reduz a sobra dos próximos meses."
+      });
     }
     if (d.fluxo.nivel === "atencao") {
-      add("atencao", "Rever uma despesa fixa", `${d.fluxo.explicacao} Assinaturas e planos são os mais fáceis de renegociar.`, "Revisar recorrentes", "recorrentes.html", "fluxo");
+      add("atencao", "Rever uma despesa fixa", `${d.fluxo.explicacao} Assinaturas e planos são os mais fáceis de renegociar.`, "Revisar recorrentes", "recorrentes.html", "fluxo", {
+        importa: "Uma despesa fixa se repete todo mês: reduzir uma delas libera dinheiro em todos os meses seguintes."
+      });
     }
     if (d.metas.nivel === "sem_dados") {
-      add("info", "Criar uma meta", "Com uma meta, o FinCK mostra quanto cada compra atrasa aquilo que importa para você.", "Criar meta", "metas.html#nova", "metas");
+      add("info", "Criar uma meta", "Com uma meta, o FinCK mostra quanto cada compra atrasa aquilo que importa para você.", "Criar meta", "metas.html#nova", "metas", {
+        importa: "Uma meta dá destino à sobra do mês e deixa visível o efeito de cada compra nesse objetivo."
+      });
     }
     if (d.consumo.nivel === "sem_dados" || d.consumo.nivel === "critico") {
-      add("info", "Analisar a próxima compra antes de comprar", d.consumo.nivel === "sem_dados" ? d.consumo.explicacao : `${d.consumo.explicacao} Usar o FinCK of Reality antes de comprar ajuda a separar necessidade de impulso.`, "Analisar uma compra", "reality.html", "consumo");
+      add("info", "Analisar a próxima compra antes de comprar", d.consumo.nivel === "sem_dados" ? d.consumo.explicacao : `${d.consumo.explicacao} Usar o FinCK of Reality antes de comprar ajuda a separar necessidade de impulso.`, "Analisar uma compra", "reality.html", "consumo", {
+        importa: "A análise mostra o preço em horas de trabalho e o efeito no mês e nas metas antes de a compra acontecer."
+      });
     }
     const peso = {
       critico: 0,
@@ -452,7 +634,7 @@ window.FinckDiagnostico = (() => {
       prioridades: prio,
       pontos_fortes: fortes,
       lacunas: lacunas,
-      resumo: indice === null ? "Ainda faltam dados para um retrato completo. Comece pela renda e pelas despesas fixas." : `Sua vida financeira está ${rotuloIndice(indice)} (${indice}/100).${prio.length ? ` O que mais pede atenção agora: ${prio[0].titulo.charAt(0).toLowerCase()}${prio[0].titulo.slice(1)}.` : " Nenhum ponto crítico no momento."}`
+      resumo: indice === null ? "Faltam dados para calcular o índice. Os primeiros são a renda e as despesas fixas." : `Índice FinCK de ${indice}/100: vida financeira ${rotuloIndice(indice)}.${prio.length ? ` Primeira das próximas ações: ${prio[0].titulo.charAt(0).toLowerCase()}${prio[0].titulo.slice(1)}.` : " Nenhuma ação pendente no momento."}`
     };
   }
 
@@ -518,7 +700,7 @@ window.FinckDiagnostico = (() => {
     };
   }
 
-  // O mesmo retrato em texto, para a conversa pela rota da FINCK AI
+  // O mesmo retrato em texto, para a pergunta livre pela rota geral
   // (api/ia.js, campo "contexto"). Só números, níveis e nomes de categoria:
   // metas entram numeradas, sem o nome, e nenhuma conta ou lançamento vai.
   function contextoDaConversa(diag) {
@@ -546,8 +728,9 @@ window.FinckDiagnostico = (() => {
 
   // ------------------------------------------------------------ plano local
 
-  // Mesmo formato do plano da IA, montado só com as regras. É o que aparece
-  // na demonstração e quando a IA não responde: o recurso degrada, não some.
+  // As próximas ações da Revisão financeira, montadas só com as regras. É o
+  // que a página mostra ao abrir, em qualquer modo. A explicação escrita por
+  // IA (opcional) usa o mesmo formato, sem a conta e o "por que importa".
   const PRAZO_POR_NIVEL = {
     critico: "esta semana",
     atencao: "este mês",
@@ -579,13 +762,158 @@ window.FinckDiagnostico = (() => {
         passos: [],
         acao: x.acao,
         prazo: PRAZO_POR_NIVEL[x.nivel] || "este mês",
-        href: x.href
+        href: x.href,
+        nivel: x.nivel,
+        importa: x.importa || "",
+        calculo: x.calculo || []
       })),
       metas_sugeridas: sugestoes,
-      habito_da_semana: "Antes de qualquer compra acima de uma hora de trabalho, passe pelo FinCK of Reality e espere um dia para decidir.",
+      habito_da_semana: "Para compras acima de uma hora de trabalho: analisar no FinCK of Reality e esperar um dia antes de decidir.",
       alerta: r.disponivel_projetado < 0 ? "Os compromissos em aberto passam do saldo. Se as parcelas ficarem impossíveis de pagar, procure renegociar direto com o credor ou o Procon da sua cidade antes de atrasar." : null,
-      limites: "Plano montado pelas regras do FinCK com os seus números. É educativo: não é recomendação de investimento nem consultoria financeira."
+      limites: "Ações montadas pelas regras do FinCK com os seus números. É educativo: não é recomendação de investimento nem consultoria financeira."
     };
+  }
+
+  // ------------------------------------------------------- perguntas prontas
+
+  // Perguntas sobre os próprios números, com resposta calculada aqui, na
+  // hora, sem IA e sem rede. A ordem segue as prioridades da pessoa: quem abre
+  // a ajuda vê primeiro o que tem a ver com o seu caso.
+  const curto = t => t.length > 28 ? `${t.slice(0, 27).trim()}…` : t;
+  const metaForaDoRitmo = r => r.metas.find(m => !m.concluida && !m.no_ritmo) || null;
+  const categoriaEmAlta = r => r.categorias.find(c => c.tendencia_pct !== null && c.tendencia_pct >= 10) || null;
+
+  function perguntasProntas(diag, limite = 5) {
+    const r = diag.retrato;
+    const lista = [];
+    const add = (id, rotulo) => {
+      if (rotulo && !lista.some(x => x.id === id) && lista.length < limite) {
+        lista.push({
+          id: id,
+          rotulo: rotulo
+        });
+      }
+    };
+    const meta = metaForaDoRitmo(r);
+    const subiu = categoriaEmAlta(r);
+    const porDimensao = {
+      reserva: () => r.custo_mensal > 0 && add("reserva", "Quanto falta para a minha reserva chegar à referência?"),
+      poupanca: () => r.meses_considerados && add("sobra", "Para onde está indo a sobra do meu mês?"),
+      compromissos: () => r.renda > 0 && add("parcelas", "Quanto as parcelas pesam na minha renda?"),
+      fluxo: () => r.renda > 0 && add("fixos", "Quanto da minha renda já tem destino fixo?"),
+      metas: () => meta && add("meta", `Quanto falta por mês para a meta "${curto(String(meta.nome || "Meta"))}"?`),
+      consumo: () => r.consumo.analises && add("consumo", "Como foram as minhas decisões de compra?")
+    };
+    diag.prioridades.forEach(x => porDimensao[x.dimensao]?.());
+    if (subiu) {
+      add("categoria", `Quanto ${curto(subiu.nome)} subiu no último mês?`);
+    }
+    if (diag.indice !== null) {
+      add("indice", `Por que o meu Índice FinCK está em ${diag.indice}?`);
+    }
+    if (r.meses_considerados) {
+      add("guardar", "Quanto sobra por mês para guardar?");
+    }
+    Object.values(porDimensao).forEach(f => f());
+    return lista;
+  }
+
+  // A resposta de uma pergunta pronta: texto curto, a conta passo a passo e
+  // o selo (dado confirmado ou estimativa). Null quando faltam os dados.
+  function responder(diag, id) {
+    const r = diag.retrato;
+    const p = P();
+    const dim = Object.fromEntries(diag.dimensoes.map(d => [ d.id, d ]));
+    const linha = (rotulo, valor) => ({
+      rotulo: rotulo,
+      valor: valor
+    });
+    const mediaEstimada = r.mes_parcial || r.meses_considerados < (p.JANELA_MESES || 3);
+    const pronta = (rotulo, texto, calculo, estimativa = false) => ({
+      id: id,
+      rotulo: rotulo,
+      texto: texto,
+      calculo: calculo,
+      certeza: estimativa ? "estimativa" : "confirmado"
+    });
+    const rotulo = (perguntasProntas(diag, 99).find(x => x.id === id) || {}).rotulo || "";
+    const sobra = r.base_renda - r.media_gastos;
+    if (id === "reserva" && r.custo_mensal > 0) {
+      const minimo = r.custo_mensal * p.RESERVA_MINIMA_MESES;
+      const ideal = r.custo_mensal * p.RESERVA_IDEAL_MESES;
+      const faltaMin = Math.max(0, minimo - r.reserva);
+      const faltaIdeal = Math.max(0, ideal - r.reserva);
+      const ritmo = sobra > 0 && faltaMin > 0 ? ` Se toda a sobra média (${moeda(sobra)} por mês) fosse para a reserva, o primeiro degrau chegaria em cerca de ${meses(Math.ceil(faltaMin / sobra))}.` : "";
+      const texto = faltaIdeal <= 0 ? `A reserva de ${moeda(r.reserva)} já cobre ${meses(r.reserva_meses)} de custo fixo, acima da referência de ${p.RESERVA_IDEAL_MESES} meses.` : faltaMin > 0 ? `A reserva de ${moeda(r.reserva)} cobre ${meses(r.reserva_meses)} de custo fixo. Faltam ${moeda(faltaMin)} para o primeiro degrau (${p.RESERVA_MINIMA_MESES} meses) e ${moeda(faltaIdeal)} para o alvo de ${p.RESERVA_IDEAL_MESES} meses.${ritmo}` : `A reserva de ${moeda(r.reserva)} já passou do primeiro degrau (${p.RESERVA_MINIMA_MESES} meses). Faltam ${moeda(faltaIdeal)} para o alvo de ${p.RESERVA_IDEAL_MESES} meses.`;
+      return pronta(rotulo, texto, [ ...calculoDaDimensao(r, dim.reserva).filter(x => !/^Regra|^Nota$|^Referência$/.test(x.rotulo)), linha(`Falta para ${p.RESERVA_MINIMA_MESES} meses`, `${moeda(minimo)} − ${moeda(r.reserva)} = ${moeda(faltaMin)}`), linha(`Falta para ${p.RESERVA_IDEAL_MESES} meses`, `${moeda(ideal)} − ${moeda(r.reserva)} = ${moeda(faltaIdeal)}`) ], !(r.despesas_fixas > 0) || Boolean(ritmo));
+    }
+    if ((id === "sobra" || id === "guardar") && r.meses_considerados) {
+      const n = r.meses_considerados;
+      const maiores = r.categorias.slice(0, 3);
+      const calculo = [ linha(r.mes_parcial ? "Entradas (mês em andamento)" : `Entradas (média de ${meses(n)})`, moeda(r.base_renda)), linha(r.mes_parcial ? "Gastos (mês em andamento)" : `Gastos (média de ${meses(n)})`, moeda(r.media_gastos)), linha("Sobra por mês", `${moeda(r.base_renda)} − ${moeda(r.media_gastos)} = ${moeda(sobra)}`), linha("Guardado em metas por mês", moeda(r.media_aportes)) ];
+      if (id === "sobra") {
+        maiores.forEach(c => calculo.push(linha(`${c.nome} (média por mês)`, `${moeda(c.media_mensal)}, ${pct(c.participacao)} dos gastos`)));
+        const texto = sobra < 0 ? `Os gastos (${moeda(r.media_gastos)}) passaram das entradas (${moeda(r.base_renda)}) em ${moeda(-sobra)} por mês.` : `Entram ${moeda(r.base_renda)} e saem ${moeda(r.media_gastos)} em gastos: sobram ${moeda(sobra)} por mês${r.media_aportes > 0 ? `, e ${moeda(r.media_aportes)} deles vão para metas` : "; nenhum valor foi para metas no período"}.`;
+        return pronta(rotulo, `${texto}${maiores.length ? ` Os maiores gastos: ${maiores.map(c => `${c.nome} (${pct(c.participacao)})`).join(", ")}.` : ""}`, calculo, mediaEstimada);
+      }
+      const declarado = r.plano_declarado || {};
+      const alvo = declarado.economia_valor ? num(declarado.economia_valor) : declarado.economia_pct && r.renda > 0 ? r.renda * num(declarado.economia_pct) / 100 : null;
+      if (alvo !== null) {
+        calculo.push(linha("Plano declarado no Perfil", declarado.economia_valor ? moeda(alvo) : `${pct(declarado.economia_pct)} da renda = ${moeda(alvo)}`));
+      }
+      const texto = sobra <= 0 ? `Na média, não sobra dinheiro depois dos gastos: as entradas são ${moeda(r.base_renda)} e os gastos, ${moeda(r.media_gastos)}.` : `Na média, sobram ${moeda(sobra)} por mês depois dos gastos (${pct(r.taxa_poupanca)} das entradas). ${r.media_aportes > 0 ? `Hoje ${moeda(r.media_aportes)} por mês vão para metas.` : "Nenhum valor foi para metas no período."}${alvo !== null ? ` O plano declarado no Perfil é guardar ${moeda(alvo)} por mês.` : ""}`;
+      return pronta(rotulo, texto, calculo, mediaEstimada);
+    }
+    if (id === "parcelas" && r.renda > 0) {
+      const peso = r.parcelas_mensais / r.renda * 100;
+      const texto = r.parcelas_mensais > 0 ? `As parcelas somam ${moeda(r.parcelas_mensais)} por mês, ${pct(peso)} da renda declarada (confortável até ${p.PARCELAS_ATENCAO_PCT}%, pesado acima de ${p.PARCELAS_LIMITE_PCT}%). Em aberto, entre parcelas e previsões, são ${moeda(r.compromissos_abertos)}.` : "Não há compra parcelada em aberto: nenhuma parte da renda dos próximos meses está presa em parcelas.";
+      return pronta(rotulo, texto, calculoDaDimensao(r, dim.compromissos).filter(x => !/^Regra|^Nota$/.test(x.rotulo)));
+    }
+    if (id === "fixos" && r.renda > 0) {
+      const fixos = r.despesas_fixas / r.renda * 100;
+      return pronta(rotulo, `${moeda(r.despesas_fixas)} de ${moeda(r.renda)} já têm destino todo mês: ${pct(fixos)} da renda (referência: até ${p.FIXOS_REFERENCIA_PCT}%). Depois dos fixos sobram ${moeda(r.sobra_mensal)}.`, calculoDaDimensao(r, dim.fluxo).filter(x => !/^Regra|^Nota$/.test(x.rotulo)));
+    }
+    if (id === "meta") {
+      const m = metaForaDoRitmo(r);
+      if (!m) {
+        return null;
+      }
+      const dif = m.necessario_mensal ? Math.max(0, m.necessario_mensal - m.ritmo_mensal) : null;
+      const calculo = [ linha("Guardado", `${moeda(m.atual)} de ${moeda(m.alvo)}`), linha("Falta", moeda(m.falta)), linha("Prazo", m.prazo ? dataBR(m.prazo) : "sem prazo"), linha("Aportes recentes", `${moeda(m.ritmo_mensal)} por mês (média dos últimos 3 meses)`) ];
+      if (m.necessario_mensal) {
+        calculo.push(linha("O prazo pede", `${moeda(m.necessario_mensal)} por mês`), linha("Diferença", `${moeda(m.necessario_mensal)} − ${moeda(m.ritmo_mensal)} = ${moeda(dif)} por mês`));
+      }
+      if (m.meses_para_concluir) {
+        calculo.push(linha("No ritmo atual", `${moeda(m.falta)} ÷ ${moeda(m.ritmo_mensal)} = ${meses(m.meses_para_concluir)}`));
+      }
+      const texto = m.necessario_mensal ? `Faltam ${moeda(m.falta)}. O prazo pede ${moeda(m.necessario_mensal)} por mês e os aportes recentes estão em ${moeda(m.ritmo_mensal)}: a diferença é de ${moeda(dif)} por mês.${m.meses_para_concluir ? ` No ritmo atual, a meta chega em cerca de ${meses(m.meses_para_concluir)}.` : ""}` : `Faltam ${moeda(m.falta)} e a meta não recebeu aportes nos últimos 3 meses, então ainda não dá para estimar quando ela chega.`;
+      return pronta(rotulo, texto, calculo, Boolean(m.meses_para_concluir));
+    }
+    if (id === "consumo" && r.consumo.analises) {
+      const c = r.consumo;
+      const texto = c.decididas ? `Foram ${c.analises} ${c.analises === 1 ? "compra analisada" : "compras analisadas"} e ${c.decididas} com decisão registrada. Em ${c.conscientes} delas a escolha foi esperar, buscar alternativa ou não comprar (${pct(c.taxa_consciente)}).${c.indicador_medio !== null ? ` Indicador médio de decisão responsável: ${c.indicador_medio}/100.` : ""}` : `Foram ${c.analises} ${c.analises === 1 ? "compra analisada" : "compras analisadas"}, ainda sem decisão registrada.`;
+      return pronta(rotulo, texto, calculoDaDimensao(r, dim.consumo).filter(x => !/^Regra|^Nota$/.test(x.rotulo)));
+    }
+    if (id === "categoria") {
+      const c = categoriaEmAlta(r);
+      if (!c) {
+        return null;
+      }
+      const anterior = num(c.media_anterior);
+      return pronta(rotulo, `${c.nome} somou ${moeda(c.ultimo_mes)} no último mês, contra ${moeda(anterior)} na média dos meses anteriores: ${moeda(c.ultimo_mes - anterior)} a mais (${pct(c.tendencia_pct)}). É ${pct(c.participacao)} dos gastos do período.`, [ linha(`${c.nome} no último mês`, moeda(c.ultimo_mes)), linha("Média dos meses anteriores", moeda(anterior)), linha("Diferença", `${moeda(c.ultimo_mes)} − ${moeda(anterior)} = ${moeda(c.ultimo_mes - anterior)}`), linha("Parte dos gastos", pct(c.participacao)) ], mediaEstimada);
+    }
+    if (id === "indice" && diag.indice !== null) {
+      const pesos = p.PESOS || {};
+      const comDados = diag.dimensoes.filter(d => d.nota !== null);
+      const pesoDe = d => (pesos[d.id] || 0) * (d.parcial ? .5 : 1);
+      const baixas = comDados.filter(d => d.nivel !== "saudavel").sort((a, b) => a.nota - b.nota).slice(0, 2);
+      const fora = diag.dimensoes.filter(d => d.nota === null).map(d => d.nome.toLowerCase());
+      const calculo = comDados.map(d => linha(d.nome, `nota ${d.nota} × peso ${pct(pesoDe(d) * 100)}`));
+      calculo.push(linha("Índice", `soma das notas × pesos ÷ soma dos pesos = ${diag.indice}/100`));
+      const texto = `O índice é a média das notas das dimensões com dados, cada uma com o seu peso. ${baixas.length ? `${baixas.length === 1 ? "A dimensão que mais puxa o índice para baixo é" : "As dimensões que mais puxam o índice para baixo são"} ${baixas.map(d => `${d.nome.toLowerCase()} (nota ${d.nota})`).join(" e ")}.` : "Todas as dimensões com dados estão no nível saudável."}${fora.length ? ` Ficaram fora da conta, por falta de dados: ${fora.join(", ")}.` : ""}`;
+      return pronta(rotulo, texto, calculo, comDados.some(d => d.parcial));
+    }
+    return null;
   }
 
   return {
@@ -594,6 +922,8 @@ window.FinckDiagnostico = (() => {
     paraIA: paraIA,
     contextoDaConversa: contextoDaConversa,
     planoLocal: planoLocal,
+    perguntasProntas: perguntasProntas,
+    responder: responder,
     janelaDeMeses: janelaDeMeses,
     categorias: categorias,
     parcelasMensais: parcelasMensais,

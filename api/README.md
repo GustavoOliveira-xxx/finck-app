@@ -21,9 +21,10 @@ E **procura lugares no Google Maps** para Ações locais: quem conserta, vende
 usado, troca, aluga, recebe doação ou faz descarte correto perto da pessoa
 (veja [Lugares no Google Maps](#lugares-no-google-maps-ações-locais)).
 
-E há uma segunda rota, `assistente-ia.js`, para o **Assistente FinCK**: o
-plano de ação e a conversa sobre a vida financeira inteira, com o Claude, da
-Anthropic (veja [Assistente de planejamento](#assistente-de-planejamento-claude)).
+E há uma segunda rota, `assistente-ia.js`, para a **Revisão financeira**: a
+explicação escrita das próximas ações e a pergunta livre sobre a vida
+financeira inteira, só quando a pessoa pede, com o Claude, da Anthropic (veja
+[Revisão financeira](#revisão-financeira-ia-só-sob-pedido)).
 
 ## Por que a chave fica aqui, e não no navegador
 
@@ -493,14 +494,22 @@ O print não usa ferramenta nenhuma, então ali o esquema vai e o JSON chega
 no formato. `chamarGemini` só manda o esquema quando a lista de
 ferramentas está vazia, para essa trava não voltar por descuido.
 
-## Assistente de planejamento (Claude)
+## Revisão financeira (IA só sob pedido)
 
-`assistente-ia.js` é outra função da Vercel, separada desta. O navegador
-calcula o raio-X da pessoa com `js/diagnostico-engine.js` e manda só o
-retrato agregado (`FinckDiagnostico.paraIA()`): números arredondados, nomes
-de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou
-nome da pessoa sai do aparelho. A tela mostra esse JSON, e o formato do
-pedido do plano e da conversa, em "O que é enviado para a FINCK AI".
+A página da Revisão financeira (`assistente.html`, o antigo Assistente)
+abre direto com o índice, as seis dimensões e as próximas ações, todos
+calculados no navegador por `js/diagnostico-engine.js`, sem IA e sem
+chamada de rede. Cada ação traz "Como foi calculado?" e "Por que isso
+importa?", e as perguntas prontas da ajuda opcional têm resposta calculada
+ali mesmo (`perguntasProntas` e `responder`).
+
+`assistente-ia.js` é outra função da Vercel, separada desta, e só é chamada
+quando a pessoa pede a explicação escrita das ações ou envia uma pergunta
+livre. Nesses dois casos o navegador manda só o retrato agregado
+(`FinckDiagnostico.paraIA()`): números arredondados, nomes de categoria e
+de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome da pessoa
+sai do aparelho. A tela mostra esse JSON, o formato dos dois pedidos, o
+provedor e o modelo num único "Dados e privacidade", recolhido no fim.
 
 A IA interpreta os números, não os calcula. A resposta vem num esquema JSON
 fixo (structured outputs, `output_config.format`), e a função confere tudo
@@ -515,16 +524,16 @@ um pedido comum por engano, a própria API refaz no modelo recomendado para
 aquela categoria. Recusa que sobra e resposta cortada viram mensagem para a
 pessoa, nunca erro técnico.
 
-Exige conta: sem token válido do Supabase a resposta é 401. Na demonstração
-a tela nem chama esta rota; o plano sai pelas regras do FinCK, no
-navegador, no mesmo formato.
+Exige conta: sem token válido do Supabase a resposta é 401. Na
+demonstração a tela nem mostra a explicação escrita; a pergunta livre vai
+pela rota geral (`api/ia.js`), com o retrato em texto e sem nomes.
 
-A tela declara o modo antes do clique. Ao abrir, ela descobre a
-situação: demonstração (não chama nada), conta com a FINCK AI
-indisponível (GET sem `ia`, com erro ou 404) ou conta com a FINCK AI
-disponível (GET com `ia: true` e `provedor`). O título, o texto e o botão
-mudam com isso ("Plano demonstrativo", "Plano local", "Plano com IA"), e
-o selo de origem aparece antes e depois de gerar.
+O GET (sem login e sem cota) só acontece quando a pessoa abre o trecho da
+explicação escrita ou o da pergunta livre, nunca ao carregar a página. 404
+ou `ia: false` tiram o botão e deixam uma frase ("não está disponível
+agora"); as próximas ações pelas regras continuam na tela. A resposta
+aparece rotulada como "escrita por IA a partir dos números desta revisão",
+e os erros da rota viram frases da própria tela, sem nome de serviço.
 
 ### Variáveis de ambiente
 
@@ -559,7 +568,8 @@ dos do retrato (a única exceção é o valor mensal de uma meta sugerida,
 que a função ainda confere contra a sobra do mês). Médias de menos de 3
 meses são ditas como estimativa, o dado que falta é perguntado, e uma
 pergunta de veredito ("posso comprar?") recebe o que muda no mês e nas
-metas, não um sim ou não. Pelo OpenRouter, resposta com ordem de compra
+metas, não um sim ou não. A decisão é sempre da pessoa, sem a frase pronta
+repetida em cada texto. Pelo OpenRouter, resposta com ordem de compra
 ou veredito conta como fora do formato e a função pede outra.
 
 ### Códigos de erro do assistente
@@ -592,8 +602,9 @@ ANTHROPIC_API_KEY=... node ferramentas/testar-assistente.mjs --ao-vivo
 ```
 
 O primeiro roda sem rede: validação do pedido, prompt, esquemas,
-guarda-corpo, recusa, resposta cortada, cache e a rota inteira com o SDK
-oficial falando com uma API simulada. O segundo gera um plano e responde uma
+guarda-corpo, recusa, resposta cortada, cache, a rota inteira com o SDK
+oficial falando com uma API simulada e o motor da página (próximas ações
+com a conta e o porquê, perguntas prontas com resposta calculada). O segundo gera um plano e responde uma
 pergunta de verdade, e mostra tempo e resultado.
 
 ## FINCK AI (OpenRouter, modelos gratuitos)
@@ -648,9 +659,10 @@ o rótulo "Pergunta da pessoa:" perde o rótulo antes do envio. Com
 contexto, o sistema ganha regras de análise: usar só os números que
 vieram, não refazer contas nem criar número novo, não dizer o que a pessoa
 deve fazer, mostrar o que muda entre os caminhos (agora, esperar,
-parcelar), dizer quando falta um dado, no máximo 120 palavras em texto
-simples e terminar com "A decisão continua sendo sua.". Se o modelo
-esquecer a frase, a rota acrescenta.
+parcelar), dizer quando falta um dado e no máximo 120 palavras em texto
+simples. A rota não acrescenta "A decisão continua sendo sua." no fim:
+essa frase aparece uma vez por fluxo, na decisão do Reality, e o prompt
+pede para o modelo não fechar com ela.
 
 Valem sempre, com ou sem contexto: a FINCK AI é consultora, não juíza nem
 vendedora (nada de "compre", "não compre", "ótima compra"), não inventa
@@ -680,8 +692,8 @@ mesmas três tentativas.
 O `erro` é sempre uma frase para a tela, sem detalhe técnico. Um 404 do
 OpenRouter (modelo que saiu do ar) nunca chega como 404: para o site, 404
 quer dizer que a rota não existe naquele endereço (servidor local sem as
-funções da Vercel), e a tela trata isso como "FINCK AI indisponível
-aqui".
+funções da Vercel), e a tela trata isso como "A ajuda opcional não está
+disponível agora".
 
 O log da Vercel guarda só status, modelo e tempo de cada chamada, nunca a
 pergunta nem o contexto.
@@ -709,12 +721,12 @@ Um `GET /api/ia` responde, sem gastar cota, se a chave está configurada
   "limites": { "pergunta": 3000, "pergunta_com_contexto": 600, "contexto": 4000 } }
 ```
 
-As telas chamam o GET antes de a pessoa escrever: 404 quer dizer que a
-FINCK AI não existe naquele endereço, `ia: false` que está desligada. A
+As telas chamam o GET quando a pessoa abre a pergunta livre, antes de
+escrever: 404 quer dizer que a rota não existe naquele endereço, `ia:
+false` que está desligada. A
 linha do tempo do Reality só manda a pergunta curta, com os números à parte
 em `contexto`, quando lê `contexto: true`; sem o sinal, os números também
-vão dentro da pergunta. Com contexto, a resposta já termina com "A decisão
-continua sendo sua.", então os rodapés das telas não repetem a frase.
+vão dentro da pergunta.
 
 ```
 node ferramentas/testar-ia.mjs
@@ -722,5 +734,6 @@ node ferramentas/testar-ia.mjs
 
 roda sem rede: leitura do pedido, limites, limpeza do contexto, proteção
 contra rótulo falso, prompt de sistema, `limparMarkdown`, erros, GET e o
-que vai para o log. A página `teste-ia.html` serve só para conferir a
-conexão de ponta a ponta com a chave de verdade.
+que vai para o log. A página `teste-ia.html` é interna, de desenvolvedor
+(`noindex`, fora da navegação do app), e serve só para conferir a conexão
+de ponta a ponta com a chave de verdade.
