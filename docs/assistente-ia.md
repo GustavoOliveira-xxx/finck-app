@@ -1,4 +1,19 @@
-# Assistente FinCK: planejamento pessoal com IA
+# Revisão financeira (antigo Assistente FinCK): planejamento pessoal
+
+> **Atualização da terceira rodada (outubro de 2026).** A página passou a se
+> chamar Revisão financeira e abre direto com o Índice FinCK, as próximas ações
+> montadas pelas regras (`FinckDiagnostico.planoLocal`) e as seis dimensões,
+> sem botão "Gerar plano" e sem chamada de rede ao carregar. Cada ação tem
+> "Como foi calculado?" e "Por que isso importa?". A IA virou extra opcional no
+> fim da página: perguntas prontas respondidas pelo próprio motor
+> (`perguntasProntas` e `responder`), a pergunta livre e a explicação escrita
+> das ações (só com conta e quando a pessoa pede). O que é enviado, o provedor
+> e o modelo ficam em "Dados e privacidade". `assistente.html?pergunta=`
+> preenche a pergunta livre sem enviar, e `/api/ia` não acrescenta mais uma
+> frase pronta ao fim das respostas. Os detalhes e as razões estão em
+> `docs/ux-sem-cara-de-ia.md`; onde este documento descreve o fluxo antigo
+> (modos declarados antes do clique, botão de gerar plano, conversa visível),
+> vale aquele.
 
 ## 1. Problema
 

@@ -594,6 +594,20 @@ total fica certo nelas); o XP mínimo de uma análise ainda compara o preço
 da unidade; o retrato do Assistente traz a média geral "guardado em metas"
 ao lado do ritmo por meta.
 
+## 6. Terceira rodada (outubro de 2026): menos cara de IA
+
+A terceira rodada aplicou duas auditorias externas focadas em tirar a "cara
+de IA" do FinCK e um pedido do autor por botões mais quadrados. Ela está
+documentada em `docs/ux-sem-cara-de-ia.md` e substitui o que as seções
+anteriores dizem sobre: as etapas do Reality (agora 1 Compra, 2 Impacto, 3
+Decisão, com a reflexão opcional junto da decisão), o bloco de análise (agora
+"O que merece atenção", com no máximo dois pontos), a conversa (agora "Tirar
+uma dúvida sobre o cálculo", com a pergunta livre como ajuda opcional), o
+Assistente (agora Revisão financeira, aberta direto nas próximas ações), os
+nomes das seções da home, o status da previsão ("Coberto pelas entradas
+previstas") e o acabamento visual (controles com cantos de 4 px, ação
+principal em cor sólida e três níveis de acabamento).
+
 ## Referências
 
 - BROOKE, J. SUS: a quick and dirty usability scale. In: JORDAN, P. W. et
