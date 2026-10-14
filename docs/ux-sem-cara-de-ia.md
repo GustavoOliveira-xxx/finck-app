@@ -135,6 +135,20 @@ cofre e fundo animado) continua; mudou a intensidade:
   `.acabamento-3` em `css/clareza.css`): o efeito forte fica com o Reality
   (cartão da home e revelação do resultado), os cartões principais ficam
   moderados e os detalhes e o conteúdo recolhido ficam planos.
+- **Painéis com cara de relatório**: seções, modais, tabelas e cartões
+  seguem um modelo mais corporativo e acadêmico, sem mexer nas cores nem nos
+  elementos 3D. Fundo escuro opaco no lugar do vidro translúcido, borda fina,
+  sombra discreta e uma faixa roxa de 3 px no topo dos painéis principais
+  (hero, modais, cartão de saldo, login). O título de cada seção ganha uma
+  linha divisória embaixo, como cabeçalho de documento.
+- **Tabelas no padrão de artigo**: cabeçalho em caixa normal com linha dupla
+  em cima e simples embaixo, linha de fechamento no fim e números com largura
+  fixa (`tabular-nums`) para alinhar valores em coluna.
+- **Cartões de indicador, lançamentos e atalhos** planos: sem brilho radial,
+  sem deslocamento ao passar o mouse e com destaque só na borda. Os atalhos
+  de entrada e saída mantêm a cor na borda esquerda.
+- **Modais** entram com um deslocamento curto de 8 px, sem escala, e
+  separam o título do conteúdo por uma linha.
 
 ## 4. As duas auditorias: acordos, divergências e decisões
 

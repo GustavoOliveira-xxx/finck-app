@@ -298,7 +298,7 @@
 #painelCalculos:has(#resumoCalculos [data-contador="0"]) #vazioCalculos{
   padding:1.4rem 1.2rem;
   border-style:solid; border-color:rgba(180,92,240,.3);
-  background:radial-gradient(420px 160px at 0% 0%, rgba(147,51,196,.16), transparent 70%), rgba(255,255,255,.015);
+  background:rgba(255,255,255,.02);
   color:var(--texto-fraco);
 }
 .resumo-decisoes__numeros li span{ color:var(--texto-fraco); }

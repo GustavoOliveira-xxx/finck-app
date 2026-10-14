@@ -19,11 +19,10 @@
 
 .indice-finck{
   display:flex; align-items:baseline; gap:.4rem 1rem; flex-wrap:wrap;
-  padding:1.1rem 1.25rem; border-radius:var(--raio-xl);
-  border:1px solid rgba(180,92,240,.4);
-  background:
-    radial-gradient(480px 200px at 100% 0%, rgba(254,200,0,.1), transparent 60%),
-    linear-gradient(150deg, rgba(104,12,144,.4), rgba(14,10,20,.94) 65%);
+  padding:1.1rem 1.25rem; border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda-forte);
+  border-top:3px solid var(--roxo-claro);
+  background:var(--superficie-alta);
 }
 .indice-finck__rotulo{
   flex:1 1 100%;
