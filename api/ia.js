@@ -1,8 +1,12 @@
-// FINCK AI: ponte entre o site e o OpenRouter, só com modelos gratuitos.
+// FINCK AI: ponte entre o site e a IA, para perguntas livres e para a ajuda
+// opcional do Reality e da Revisão financeira na demonstração.
 //
-// O navegador fala com esta rota, e só ela fala com o OpenRouter. A chave
-// vive na Vercel, nunca no código da página. A escolha de modelos, o descarte
-// de classificadores e as novas tentativas ficam em api/_openrouter.js.
+// Dois provedores, pela chave que existir: o Gemini, do Google
+// (api/_gemini.js), quando há ASSISTENTE_GEMINI_API_KEY ou GEMINI_API_KEY; senão
+// os modelos gratuitos do OpenRouter (api/_openrouter.js). Se o Gemini estiver
+// sem cota ou fora do ar e houver chave do OpenRouter, ele responde no lugar.
+// IA_PROVEDOR ("gemini" ou "openrouter") força um deles. O navegador fala só
+// com esta rota; as chaves vivem na Vercel, nunca no código da página.
 //
 // Dois jeitos de perguntar (POST):
 //   { pergunta }             pergunta livre, até 3000 caracteres
@@ -13,13 +17,27 @@
 // O log da Vercel guarda só status, modelo e tempo, nunca o texto.
 //
 // Variáveis de ambiente (Vercel, Settings, Environment Variables):
-//   OPENROUTER_API_KEY    obrigatória. Chave do painel do OpenRouter.
-//   IA_TETO_DIA           opcional. Padrão: 40 chamadas por dia, abaixo das
-//                         50 diárias do plano gratuito do OpenRouter.
+//   GEMINI_API_KEY        a mesma da busca de preço (ou ASSISTENTE_GEMINI_API_KEY).
+//   OPENROUTER_API_KEY    opcional com o Gemini; reserva quando ele falha.
+//   IA_PROVEDOR           opcional. "gemini" ou "openrouter".
+//   IA_TETO_DIA           opcional. Padrão: 150 chamadas por dia com o Gemini
+//                         e 40 com o OpenRouter (abaixo das 50 diárias do
+//                         plano gratuito dele).
 //   IA_MODELOS            opcional. Veja api/_openrouter.js.
 
 const A = require("./_acesso.js");
 const OR = require("./_openrouter.js");
+const G = require("./_gemini.js");
+
+// Gemini quando há chave dele; senão o OpenRouter. IA_PROVEDOR escolhe outro,
+// desde que ele tenha chave.
+const TEM_CHAVE = { gemini: () => G.configurado(), openrouter: () => OR.configurado() };
+function provedor() {
+  const pedido = String(process.env.IA_PROVEDOR || "").trim().toLowerCase();
+  if (TEM_CHAVE[pedido] && TEM_CHAVE[pedido]()) return pedido;
+  return ["gemini", "openrouter"].find((p) => TEM_CHAVE[p]()) || null;
+}
+const modeloDe = (via) => (via === "gemini" ? G.modelos()[0] : OR.MODELO);
 
 const MAX_PERGUNTA = 3000;
 const MAX_PERGUNTA_COM_CONTEXTO = 600;
@@ -128,14 +146,57 @@ function erroParaTela(status) {
 // Por IP: freio contra abuso numa rota pública, não contabilidade exata.
 const limites = A.criarLimites({
   porHora: 15,
-  tetoDia: Number(process.env.IA_TETO_DIA || 40),
+  tetoDia: Number(process.env.IA_TETO_DIA || (provedor() === "gemini" ? 150 : 40)),
 });
 
 const ipDoPedido = (req) =>
   String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() || "anonimo";
 
-async function perguntar(pergunta, { contexto = null, buscar = fetch, agora = Date.now } = {}) {
+// O Gemini responde num esquema com uma chave só ("resposta"); a mesma
+// conferência de veredito vale para ele.
+const ESQUEMA_RESPOSTA = {
+  type: "object",
+  required: ["resposta"],
+  properties: { resposta: { type: "string" } },
+};
+
+async function perguntarAoGemini(pergunta, { contexto, buscar, agora }) {
   const comContexto = Boolean(contexto);
+  const inicio = agora();
+  const r = await G.gerarJson({
+    sistema: `${sistema({ comContexto })}\nA resposta vai no campo "resposta" do JSON, em texto simples.`,
+    usuario: mensagemDoUsuario({ pergunta, contexto }),
+    esquema: ESQUEMA_RESPOSTA,
+    maxTokens: MAX_TOKENS,
+    prazoMs: 50000,
+    buscar,
+    agora,
+    aceitar: (json) => {
+      const texto = String(json?.resposta ?? "").trim();
+      if (!texto) return null;
+      return comContexto && OR.soaComoJuiz(texto) ? null : texto;
+    },
+  });
+  const tempo_ms = agora() - inicio;
+  console.log(`[ia] ${r.status} ${r.modelo || "gemini"} ${tempo_ms}ms`);
+  return { ...r, tempo_ms };
+}
+
+async function perguntar(pergunta, { contexto = null, buscar = fetch, agora = Date.now, via = provedor() } = {}) {
+  const comContexto = Boolean(contexto);
+  if (via === "gemini") {
+    const g = await perguntarAoGemini(pergunta, { contexto, buscar, agora });
+    if (g.status === 200) {
+      return { status: 200, resposta: limparMarkdown(g.valor), modelo: g.modelo, tempo_ms: g.tempo_ms };
+    }
+    // Sem cota, fora do ar ou sem resposta aproveitável: com chave do
+    // OpenRouter, ele responde; senão, a frase do erro.
+    const temReserva = OR.configurado() && [429, 500, 502, 503, 504, "cortada"].includes(g.status);
+    if (!temReserva) {
+      const status = g.status === 403 ? 403 : typeof g.status === "number" ? g.status : 502;
+      return { ...erroParaTela(status), tempo_ms: g.tempo_ms };
+    }
+  }
   const r = await OR.conversar({
     sistema: sistema({ comContexto }),
     usuario: mensagemDoUsuario({ pergunta, contexto }),
@@ -163,10 +224,12 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return A.preflight(res);
 
   if (req.method === "GET") {
+    const via = provedor();
     return A.responder(res, {
       ok: true,
-      ia: OR.configurado(),
-      modelo: OR.MODELO,
+      ia: Boolean(via),
+      provedor: via,
+      modelo: modeloDe(via),
       // Avisa que o POST lê o campo "contexto": quem manda números (como a
       // linha do tempo) pode enviar só a pergunta curta.
       contexto: true,
@@ -176,7 +239,7 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") return A.responder(res, { erro: "Use o método POST." }, 405);
 
-  if (!OR.configurado()) {
+  if (!provedor()) {
     return A.responder(res, { erro: "A FINCK AI não está configurada neste servidor." }, 500);
   }
 
@@ -195,6 +258,7 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.perguntar = perguntar;
+module.exports.provedor = provedor;
 module.exports.sistema = sistema;
 module.exports.lerPedido = lerPedido;
 module.exports.limparTexto = limparTexto;

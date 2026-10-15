@@ -32,7 +32,7 @@
 }
 
 /* --- Seção --------------------------------------------------------------- */
-.habitos{ display:grid; gap:.9rem; min-width:0; }
+.habitos{ display:grid; grid-template-columns:minmax(0,1fr); gap:.9rem; min-width:0; }
 .habitos .bloco-cabecalho{ flex-wrap:wrap; gap:.5rem; }
 .habitos__intro{ margin:0; max-width:72ch; color:var(--texto-fraco); font-size:.92rem; line-height:1.55; }
 
@@ -102,7 +102,7 @@
 .detalhe-habito > summary:hover{ color:var(--amarelo); }
 .detalhe-habito > summary:focus-visible{ outline:2px solid var(--amarelo); outline-offset:2px; border-radius:var(--raio-sm); }
 .detalhe-habito__corpo{
-  display:grid; gap:.55rem;
+  display:grid; grid-template-columns:minmax(0,1fr); gap:.55rem;
   padding:.7rem .85rem; margin:.15rem 0 .4rem;
   border-radius:var(--raio-md);
   background:rgba(255,255,255,.03); border:1px solid var(--superficie-borda);
@@ -154,8 +154,8 @@
 .tabela-meses--categorias th[scope="row"]{ text-transform:none; }
 
 /* --- Espelho financeiro (Revisão) ---------------------------------------- */
-.espelho{ display:grid; gap:1rem; min-width:0; }
-.espelho__grupo{ display:grid; gap:.6rem; min-width:0; }
+.espelho{ display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; min-width:0; }
+.espelho__grupo{ display:grid; grid-template-columns:minmax(0,1fr); gap:.6rem; min-width:0; }
 .espelho__grupo > h4{ margin:0; font-size:1rem; }
 .espelho__mudancas{ display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .espelho__mudancas > div{ padding:.8rem 1rem; border-radius:var(--raio-md); border:1px solid var(--superficie-borda); background:rgba(255,255,255,.025); }
@@ -164,6 +164,22 @@
 .espelho__mudancas .positivos-habitos{ border:none; padding:0; background:none; }
 
 .consumo-ods{ display:grid; gap:.6rem; }
+#consumoEspelho{ display:grid; grid-template-columns:minmax(0,1fr); gap:.7rem; }
+#consumoEspelho p{ margin:0; }
+.consumo-ods__duraveis{
+  padding:.55rem .75rem;
+  border-radius:var(--raio-md);
+  border-left:3px solid var(--verde);
+  background:var(--verde-fraco);
+  font-size:.88rem; line-height:1.5; color:var(--texto);
+}
+/* Links no meio do texto: cor e sublinhado, não só a cor. */
+.espelho p a:not(.link-mais):not([class*="btn"]),
+.habitos p a:not(.link-mais):not([class*="btn"]),
+.historico-reality a:not(.link-mais){
+  color:var(--roxo-neon); text-decoration:underline; text-underline-offset:2px;
+}
+.espelho p a:hover, .habitos p a:hover, .historico-reality a:hover{ color:var(--amarelo); }
 .consumo-ods__lista{ list-style:none; margin:0; padding:0; display:grid; gap:.35rem; grid-template-columns:repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
 .consumo-ods__lista li{
   display:grid; gap:.1rem; padding:.6rem .75rem;

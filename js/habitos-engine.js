@@ -990,6 +990,45 @@ window.FinckHabitos = (() => {
     return linhas.join("\n");
   }
 
+  // O que mudou do penúltimo para o último mês completo: gastos, sobra e a
+  // categoria do dia a dia que mais subiu ou caiu. Diferenças pequenas
+  // (menos de 2% da renda ou R$ 30) não entram. Os positivos do motor vêm
+  // junto, em "melhorou".
+  function mudancas(h) {
+    const completos = (h?.meses || []).filter(m => !m.parcial && m.com_registros);
+    const atencao = [];
+    const melhorou = [];
+    if (completos.length >= 2) {
+      const [antes, depois] = completos.slice(-2);
+      const minimo = Math.max(30, num(h.renda) * .02);
+      const dGastos = depois.gastos - antes.gastos;
+      if (Math.abs(dGastos) >= minimo) {
+        (dGastos > 0 ? atencao : melhorou).push(`Os gastos ${dGastos > 0 ? "subiram" : "caíram"} ${moeda(Math.abs(dGastos))} de ${antes.rotulo} (${moeda(antes.gastos)}) para ${depois.rotulo} (${moeda(depois.gastos)}).`);
+      }
+      const dSobra = depois.sobra - antes.sobra;
+      if (Math.abs(dSobra) >= minimo) {
+        (dSobra < 0 ? atencao : melhorou).push(`A sobra ${dSobra < 0 ? "diminuiu" : "aumentou"} de ${moeda(antes.sobra)} em ${antes.rotulo} para ${moeda(depois.sobra)} em ${depois.rotulo}.`);
+      }
+      const variacoes = (h.categorias || []).map(c => ({
+        nome: c.nome,
+        dif: num(c.valores[depois.mes]) - num(c.valores[antes.mes])
+      })).filter(c => Math.abs(c.dif) >= minimo);
+      const subiu = variacoes.filter(c => c.dif > 0).sort((a, b) => b.dif - a.dif)[0];
+      const caiu = variacoes.filter(c => c.dif < 0).sort((a, b) => a.dif - b.dif)[0];
+      if (subiu) {
+        atencao.push(`No dia a dia, ${subiu.nome} foi a categoria que mais subiu: ${moeda(subiu.dif)} a mais em ${depois.rotulo}.`);
+      }
+      if (caiu) {
+        melhorou.push(`No dia a dia, ${caiu.nome} foi a categoria que mais caiu: ${moeda(-caiu.dif)} a menos em ${depois.rotulo}.`);
+      }
+    }
+    (h?.positivos || []).filter(p => !String(p.id || "").startsWith("queda-")).forEach(p => melhorou.push(p.texto));
+    return {
+      atencao: atencao,
+      melhorou: melhorou
+    };
+  }
+
   // O hábito de consumo que mais pesa, para o resumo da home. A sobra do mês
   // e as contas fixas ficam na Revisão financeira; aqui vai um hábito.
   const DE_CONSUMO = new Set([ "pequenos", "repetido", "alta", "peso", "momento", "duraveis" ]);
@@ -998,6 +1037,7 @@ window.FinckHabitos = (() => {
   return {
     classificador: classificador,
     habitoPrincipal: habitoPrincipal,
+    mudancas: mudancas,
     analisar: analisar,
     simular: simular,
     metaDeReferencia: metaDeReferencia,

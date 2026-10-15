@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="css/inteligencia.css">
   <link rel="stylesheet" href="css/assistente.css">
   <link rel="stylesheet" href="css/clareza.css">
+  <link rel="stylesheet" href="css/habitos.css">
 </head>
 <body data-page="assistente">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -61,12 +62,41 @@
         <span class="grupo-home__papel">Planejamento pessoal</span>
         <span class="selo-ia">FINCK AI</span>
       </div>
-      <h2>Seus números e as próximas ações</h2>
-      <p>Renda, gastos, parcelas, reserva, metas e decisões de compra, calculados no seu aparelho com o que você registrou.<span id="avisoDemo" hidden> Na demonstração, os números são dados de exemplo.</span></p>
+      <h2>Seu espelho financeiro e as próximas ações</h2>
+      <p>Renda, gastos, hábitos, parcelas, reserva, metas e decisões de compra, calculados no seu aparelho com o que você registrou.<span id="avisoDemo" hidden> Na demonstração, os números são dados de exemplo.</span></p>
     </section>
 
     <section class="revisao-indice" aria-label="Índice FinCK">
       <div class="raiox__indice" id="indiceFinck"></div>
+    </section>
+
+    <!-- Espelho financeiro: a situação refletida nos registros, pelas regras do
+         FinCK (js/habitos-engine.js), sem IA. A explicação escrita dos hábitos
+         é opcional e fica no fim da página. -->
+    <section class="bloco espelho acabamento-2" id="espelho" aria-labelledby="tituloEspelho">
+      <div class="bloco-cabecalho">
+        <h3 id="tituloEspelho">Espelho financeiro</h3>
+        <span class="selo-origem selo-origem--regras">Regra do FinCK</span>
+      </div>
+      <p class="descricao">A sua situação refletida no que você registrou: os meses lado a lado, o que mudou e os hábitos que mais pesam. Os números são do FinCK; o que fazer com eles é escolha sua.</p>
+      <div id="confiancaEspelho"></div>
+      <div class="espelho__grupo">
+        <h4>Seus últimos meses</h4>
+        <div id="mesesEspelho"></div>
+      </div>
+      <div class="espelho__grupo" id="grupoMudancas">
+        <h4>O que mudou</h4>
+        <div class="espelho__mudancas" id="mudancasEspelho"></div>
+      </div>
+      <div class="espelho__grupo">
+        <h4>Hábitos que mais pesam</h4>
+        <div id="habitosEspelho"></div>
+        <a class="link-mais" href="analises.html#habitos">Ver todos os hábitos, com a conta de cada um</a>
+      </div>
+      <div class="espelho__grupo consumo-ods">
+        <h4>Consumo consciente <span class="selo-ods12">ODS 12</span></h4>
+        <div id="consumoEspelho"></div>
+      </div>
     </section>
 
     <section class="bloco bloco--acoes" aria-labelledby="tituloAcoes">
@@ -85,11 +115,12 @@
       <div class="painel-ia__texto">
         <span class="selo-ia">FINCK AI</span>
         <h3 id="tituloPainelIA">Quer isso explicado com as suas palavras?</h3>
-        <p>A FINCK AI escreve a explicação das próximas ações e responde perguntas sobre estes números. As contas continuam sendo do FinCK, e só os números agregados saem do aparelho, quando você pedir.</p>
-        <p class="painel-ia__nota" id="notaPainelIA" hidden>Na demonstração, a explicação escrita fica desligada; a pergunta livre funciona com os números de exemplo.</p>
+        <p>A FINCK AI explica os seus hábitos, escreve a explicação das próximas ações e responde perguntas sobre estes números. As contas continuam sendo do FinCK, e só os números agregados saem do aparelho, quando você pedir.</p>
+        <p class="painel-ia__nota" id="notaPainelIA" hidden>Na demonstração, a explicação escrita das ações fica desligada; a explicação dos hábitos e a pergunta livre funcionam com os números de exemplo.</p>
       </div>
       <div class="painel-ia__acoes">
-        <button type="button" class="btn-primario" data-ir-para="secaoExplicacao" id="atalhoExplicacao" hidden>Explicar as próximas ações</button>
+        <button type="button" class="btn-primario" data-ir-para="secaoHabitosIA" id="atalhoHabitos">Explicar meus hábitos</button>
+        <button type="button" class="btn-secundario" data-ir-para="secaoExplicacao" id="atalhoExplicacao" hidden>Explicar as próximas ações</button>
         <button type="button" class="btn-secundario" data-ir-para="perguntaLivre" id="atalhoPergunta">Fazer uma pergunta</button>
         <button type="button" class="btn-texto" data-ir-para="dadosPrivacidade">O que é enviado</button>
       </div>
@@ -149,6 +180,22 @@
         </div>
       </details>
 
+      <!-- Explicação dos hábitos: com conta, pela rota da revisão (resposta no
+           esquema, conferida); na demonstração, pela rota geral, em texto. -->
+      <details class="secao-finck" id="secaoHabitosIA">
+        <summary>
+          <span class="secao-finck__nome">Explicação dos seus hábitos <span class="selo-ia selo-ia--mini">IA</span></span>
+          <small class="secao-finck__resumo">Um texto sobre os padrões do Espelho financeiro, escrito só se você pedir.</small>
+        </summary>
+        <div class="secao-finck__corpo">
+          <p class="conversa-finck__como">Ao pedir, um serviço de IA explica os padrões que o FinCK encontrou, a partir dos números agregados mostrados em Dados e privacidade. Ele não recebe descrições de lançamentos, e os números continuam sendo do FinCK.</p>
+          <p class="conversa-finck__indisponivel" id="habitosIAIndisponivel" tabindex="-1" hidden></p>
+          <button type="button" class="btn-secundario conversa-finck__enviar" id="btnHabitosIA">Pedir explicação dos hábitos (usa IA)</button>
+          <p class="status-processo" id="statusHabitosIA" role="status" aria-live="polite"></p>
+          <div id="habitosIA"></div>
+        </div>
+      </details>
+
       <!-- Só com conta e com a rota configurada; na demonstração, nem aparece. -->
       <details class="secao-finck" id="secaoExplicacao" hidden>
         <summary>
@@ -196,6 +243,8 @@
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/diagnostico-engine.js"></script>
+  <script src="js/habitos-engine.js"></script>
+  <script src="js/habitos-ui.js"></script>
   <script src="js/assistente.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>
