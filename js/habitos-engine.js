@@ -688,8 +688,10 @@ window.FinckHabitos = (() => {
         q.certeza = "estimativa";
       });
     }
+    // O efeito acumulado vale para hábitos que se repetem; o peso de uma
+    // categoria inteira (com o mercado do mês, por exemplo) não é projetado.
     padroes.forEach(q => {
-      q.acumulado_12m = q.base_mensal ? arred(q.base_mensal * 12) : null;
+      q.acumulado_12m = q.base_mensal && q.id !== "peso" ? arred(q.base_mensal * 12) : null;
       q.horas_mes = q.base_mensal && valorHora > 0 ? arred(q.base_mensal / valorHora, 1) : null;
     });
     padroes.sort((a, b) => b.relevancia - a.relevancia);
@@ -876,6 +878,9 @@ window.FinckHabitos = (() => {
       texto = `${parteMes}${parteMedia}`;
     }
     const extra = noventa.length >= 2 ? `Nos últimos ${p.JANELA_LONGA_DIAS} dias foram ${noventa.length} compras nesta categoria, somando ${moeda(soma(noventa))}.` : "";
+    // ODS 12: em itens duráveis, a frequência de troca também conta.
+    const duravel = (p.DURAVEIS || []).includes(cat);
+    const ods12 = duravel && noventa.length + 1 >= p.DURAVEIS_MIN_COMPRAS ? `Com esta, seriam ${noventa.length + 1} compras de ${cat} em ${p.JANELA_LONGA_DIAS} dias. Itens duráveis podem ser consertados, trocados, comprados usados ou passados adiante quando ficam parados.` : null;
     return {
       categoria: cat,
       no_mes: noMes,
@@ -891,6 +896,7 @@ window.FinckHabitos = (() => {
       analisadas: analisadas.length,
       texto: texto,
       extra: extra,
+      ods12: ods12,
       certeza: mesesComRegistro.length >= p.MESES_COMPARADOS ? "confirmado" : "estimativa",
       calculo: linhas
     };
@@ -984,8 +990,14 @@ window.FinckHabitos = (() => {
     return linhas.join("\n");
   }
 
+  // O hábito de consumo que mais pesa, para o resumo da home. A sobra do mês
+  // e as contas fixas ficam na Revisão financeira; aqui vai um hábito.
+  const DE_CONSUMO = new Set([ "pequenos", "repetido", "alta", "peso", "momento", "duraveis" ]);
+  const habitoPrincipal = h => (h?.padroes || []).find(q => DE_CONSUMO.has(q.id)) || null;
+
   return {
     classificador: classificador,
+    habitoPrincipal: habitoPrincipal,
     analisar: analisar,
     simular: simular,
     metaDeReferencia: metaDeReferencia,

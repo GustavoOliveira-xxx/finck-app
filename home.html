@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/finck-fx.css">
   <link rel="stylesheet" href="css/clareza.css">
   <link rel="stylesheet" href="css/painel.css">
+  <link rel="stylesheet" href="css/habitos.css">
 </head>
 <body data-page="home">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -131,7 +132,14 @@
         <h2 id="tituloAssistente">Revisão financeira</h2>
         <p id="resumoAssistente">Renda, gastos, compromissos, reserva, metas e decisões lidos juntos, com as prioridades do seu planejamento.</p>
         <ul class="cartao-assistente__sinais" id="sinaisAssistente"></ul>
-        <p class="cartao-assistente__ia">As contas são do FinCK. Se você pedir, a FINCK AI explica as próximas ações e responde perguntas sobre os seus números.</p>
+        <!-- O hábito que mais pesa, pelas regras do FinCK (js/habitos-engine.js). -->
+        <div class="habito-home" id="habitoHome" hidden>
+          <span class="habito-home__rotulo">Hábito que merece atenção · regra do FinCK</span>
+          <p class="habito-home__texto" id="habitoHomeTexto"></p>
+          <p class="habito-home__comparacao" id="comparacaoHome" hidden></p>
+          <div class="habito-home__links"><a class="link-mais" href="analises.html#habitos">Ver todos os hábitos</a></div>
+        </div>
+        <p class="cartao-assistente__ia">As contas são do FinCK. O espelho financeiro põe os seus meses lado a lado e simula mudanças; se você pedir, a FINCK AI explica as próximas ações e os seus hábitos com palavras simples.</p>
       </div>
       <a class="btn-primario" href="assistente.html">Abrir revisão financeira</a>
     </section>
@@ -438,6 +446,7 @@
   <script src="js/programacao.js"></script>
   <script src="js/programacao-home.js"></script>
   <script src="js/diagnostico-engine.js"></script>
+  <script src="js/habitos-engine.js"></script>
   <script src="js/home.js"></script>
   <script src="js/fechamento-ui.js"></script>
   <script src="js/ui-fx.js"></script>

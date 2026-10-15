@@ -171,6 +171,31 @@
     });
   });
 
+  descrever("Hábitos: a tela", () => {
+    teste("a descrição digitada é escapada e o texto não fala de IA", () => {
+      const ctx = contexto({
+        transacoes: [ salario(em(-40)), ...[ -1, -4, -7, -10, -13 ].map(n => gasto(em(n), '<img src=x onerror="alert(1)">', "Lazer", 25)) ]
+      });
+      const h = H().analisar(ctx, { hoje: HOJE });
+      const html = window.FinckHabitosUI.htmlPadroes(h) + window.FinckHabitosUI.htmlMeses(h) + window.FinckHabitosUI.htmlConfianca(h.confianca);
+      esperar(html.includes("<img")).aSerFalso();
+      esperar(html).aConter("&lt;img");
+      const texto = new DOMParser().parseFromString(html, "text/html").body.textContent;
+      esperar(FALA_DE_IA.test(texto)).aSerFalso();
+      esperar(texto.includes(TRAVESSAO)).aSerFalso();
+    });
+
+    teste("a simulação diz que é possibilidade, não recomendação", () => {
+      const [s] = H().simular(300, { pcts: [ 20 ], meta: { nome: "Viagem", falta: 600, ritmo: 60 } });
+      const texto = window.FinckHabitosUI.textoSimulacao(s, "Lazer");
+      esperar(texto).aConter("Com 20% a menos em Lazer");
+      esperar(texto).aConter(U.moeda(720));
+      esperar(texto).aConter("Viagem");
+      const html = window.FinckHabitosUI.htmlPadroes(H().analisar(cenarioCompleto(), { hoje: HOJE }));
+      esperar(html).aConter("possibilidade matemática, não uma recomendação");
+    });
+  });
+
   descrever("Hábitos: confiança pelo tamanho do histórico", () => {
     const lanches = (inicio, n) => Array.from({ length: n }, (_, i) => gasto(em(inicio + i), "Lanche", "Alimentação", 14 + i));
     teste("poucos gastos: sem padrões de hábito", () => {
@@ -227,6 +252,10 @@
       esperar(h.calculo.some(l => l.valor === "1 esperar")).aSerVerdadeiro();
       const nova = H().historicoDaCategoria(ctx, "Saúde", 80, { hoje: HOJE });
       esperar(nova.texto).aConter("primeira compra da categoria");
+      // Eletrônicos é durável: as quatro compras dos últimos 90 dias (o cabo
+      // de 20 de julho também conta) e esta somariam 5 (ODS 12).
+      esperar(h.ods12).aConter("seriam 5 compras de Eletrônicos");
+      esperar(nova.ods12).aSer(null);
     });
 
     teste("mesmo período do mês anterior, sem misturar mês inteiro com metade", () => {

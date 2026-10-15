@@ -721,6 +721,9 @@ window.FinckInteligencia = (() => {
       numeros: n,
       meta: meta,
       linha: linha,
+      // A compra dentro do histórico da mesma categoria (js/habitos-engine.js),
+      // só com números: vai para o contexto da ajuda opcional.
+      historico: window.FinckHabitos ? window.FinckHabitos.historicoDaCategoria(ctx, entrada.category, total, { hoje: hoje }) : null,
       pontos: pontos,
       // Os pontos que a revelação já mostra: não aparecem no bloco, mas
       // contam para "O que mais pesa" e para o contexto da ajuda opcional.
@@ -952,6 +955,7 @@ window.FinckInteligencia = (() => {
       `Saldo hoje ${moeda(n.saldo)}; saldo depois da compra ${moeda(n.saldo_depois)}.${n.compromissos > 0 ? ` Parcelas a pagar ${moeda(n.compromissos)}; saldo depois das parcelas e da compra ${moeda(n.disponivel_depois)}.` : ""}${n.menor_caixa !== null ? ` Ponto mais baixo do caixa nos próximos 60 dias, com entradas e saídas previstas: ${moeda(n.menor_caixa)} sem a compra, ${moeda(n.menor_caixa_depois)} com ela.` : ""}`,
       n.horas > 0 ? `Tempo de trabalho: ${tempo(n.horas, n.horas_dia)}; valor da hora ${moeda(n.valor_hora)} (jornada de ${numero(n.dias_mes, 0)} dias por mês e ${numero(n.horas_dia, n.horas_dia % 1 ? 1 : 0)} h por dia).` : "Tempo de trabalho: sem renda informada para calcular.",
       `Peso: ${n.pct_renda !== null ? `${pct(n.pct_renda)} da renda mensal` : "sem renda"}; ${n.pct_sobra !== null ? `${pct(n.pct_sobra)} da sobra do mês` : "sem sobra mensal para comparar"}. Nível pela régua do FinCK: impacto ${analise.nivel_texto}${analise.semaforo.regra ? ` (${analise.semaforo.regra})` : ""}.`,
+      analise.historico ? `Histórico da categoria ${analise.historico.categoria}: ${moeda(analise.historico.no_mes)} gastos neste mês em ${analise.historico.registros_no_mes} registro(s); com a compra, ${moeda(analise.historico.com_compra)}${analise.historico.media_mensal !== null ? `; média mensal dos meses completos ${moeda(analise.historico.media_mensal)}` : ""}; nos últimos 90 dias, ${analise.historico.noventa_dias.compras} compra(s) somando ${moeda(analise.historico.noventa_dias.total)}${analise.historico.analisadas ? `; ${analise.historico.analisadas} compra(s) da categoria analisadas no FinCK` : ""}.` : null,
       meta ? `Metas: ${meta.ativas} em andamento; total já guardado nelas ${moeda(n.total_guardado)}, e a compra equivale a ${pct(n.pct_guardado)} disso. Meta mais afetada: guardado ${moeda(meta.atual)} de ${moeda(meta.alvo)}, faltam ${moeda(meta.falta)}; ${meta.aporte_mensal > 0 ? `ritmo considerado ${moeda(meta.aporte_mensal)} por mês (${base}); prazo estimado se comprar agora: ${textoAtraso(meta.atraso)}.` : "sem ritmo de aportes para estimar prazo."}` : n.total_guardado > 0 ? `Metas: nenhuma em andamento; total guardado nelas ${moeda(n.total_guardado)}.` : "Metas: nenhuma meta em andamento.",
       n.meses_uso > 0 ? `Vida útil informada pela pessoa: ${meses(n.meses_uso)}; custo por mês de uso ${moeda(n.por_mes_uso)}.` : "Vida útil: não informada.",
       `Sobra livre por mês ${moeda(n.sobra_livre)}${n.sobra_livre_com_dia_a_dia ? ` (renda menos fixos menos gastos do dia a dia de ${moeda(n.dia_a_dia)})` : " (renda menos fixos)"}; ${rotuloAportes(n.base_aportes).toLowerCase()} ${moeda(n.aportes_metas)} por mês; sobra fora das metas ${moeda(n.sobra_extra)} por mês; folga fora das metas hoje ${moeda(n.folga_hoje)}.`,

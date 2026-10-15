@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/style-principal.css">
   <link rel="stylesheet" href="css/finck-fx.css">
   <link rel="stylesheet" href="css/clareza.css">
+  <link rel="stylesheet" href="css/habitos.css">
 </head>
 <body data-page="relatorios">
   <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
@@ -55,7 +56,7 @@
   <main class="conteudo" id="conteudo" tabindex="-1">
     <section class="hero">
       <h2>Análises</h2>
-      <p>Para onde o seu dinheiro está indo, por categoria e mês a mês, e quanto do seu tempo de trabalho isso representa. É a tela para entender os gastos; para fechar o mês e exportar, use <a href="relatorios.html">Relatórios</a>.</p>
+      <p>Os hábitos que os seus registros mostram, para onde o dinheiro está indo, por categoria e mês a mês, e quanto do seu tempo de trabalho isso representa. É a tela para entender os gastos; para fechar o mês e exportar, use <a href="relatorios.html">Relatórios</a>.</p>
     </section>
 
     <div class="vazio vazio--guia" id="vazioAnalises" hidden>
@@ -63,6 +64,26 @@
       <p>Registre a primeira entrada ou saída e esta tela passa a mostrar para onde o dinheiro vai, por categoria e mês a mês.</p>
       <a class="btn-secundario" href="home.html#novo-lancamento">Adicionar lançamento</a>
     </div>
+
+    <!-- Hábitos de consumo: padrões encontrados pelas regras do FinCK
+         (js/habitos-engine.js) no histórico inteiro, sem filtro de período. -->
+    <section class="bloco habitos acabamento-2" id="habitos" aria-labelledby="tituloHabitos" data-com-lancamentos>
+      <div class="bloco-cabecalho">
+        <h3 id="tituloHabitos">Hábitos de consumo</h3>
+        <span class="selo-origem selo-origem--regras">Regra do FinCK</span>
+      </div>
+      <p class="habitos__intro">O que aparece quando se olha o conjunto: gastos que se repetem, categorias que crescem e o efeito acumulado ao longo dos meses. O FinCK não diz se um gasto é certo ou errado; ele mostra os números e a decisão fica com você.</p>
+      <div id="confiancaHabitos"></div>
+      <div id="padroesHabitos"></div>
+      <div id="positivosHabitos"></div>
+      <details class="detalhe-habito" id="detalheMeses">
+        <summary>Os meses lado a lado</summary>
+        <div class="detalhe-habito__corpo">
+          <div id="mesesHabitos"></div>
+          <div id="categoriasHabitos"></div>
+        </div>
+      </details>
+    </section>
 
     <section class="filtros" data-com-lancamentos>
       <label>Período
@@ -85,13 +106,13 @@
 
     <section class="cards-indicadores" id="resumoAnalises" data-com-lancamentos></section>
 
-    <section class="bloco" data-com-lancamentos>
+    <section class="bloco" id="categorias" data-com-lancamentos>
       <h3>Gastos por categoria</h3>
       <canvas id="graficoCategorias" width="600" height="320" role="img" aria-label="Gráfico de gastos por categoria"></canvas>
       <ul class="lista-categorias" id="listaCategorias"></ul>
     </section>
 
-    <section class="bloco" data-com-lancamentos>
+    <section class="bloco" id="mes-a-mes" data-com-lancamentos>
       <h3>Evolução mensal</h3>
       <canvas id="graficoMensal" width="600" height="320" role="img" aria-label="Gráfico de entradas e saídas por mês"></canvas>
     </section>
@@ -115,6 +136,9 @@
   <script src="js/charts.js"></script>
   <script src="js/gamification-engine.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/diagnostico-engine.js"></script>
+  <script src="js/habitos-engine.js"></script>
+  <script src="js/habitos-ui.js"></script>
   <script src="js/analises.js"></script>
   <script src="js/ui-fx.js"></script>
   <script src="js/finck-fx.js"></script>

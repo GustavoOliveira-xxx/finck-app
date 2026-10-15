@@ -18,6 +18,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   const ctx = await F.carregarContexto();
+  // Hábitos de consumo: o histórico inteiro, lido pelas regras do FinCK. Não
+  // depende dos filtros de período, que valem para os gráficos abaixo.
+  function renderHabitos() {
+    const HB = window.FinckHabitos;
+    const UI = window.FinckHabitosUI;
+    if (!HB || !UI) {
+      return;
+    }
+    const h = HB.analisar(ctx);
+    document.getElementById("confiancaHabitos").innerHTML = UI.htmlConfianca(h.confianca);
+    document.getElementById("padroesHabitos").innerHTML = UI.htmlPadroes(h);
+    document.getElementById("positivosHabitos").innerHTML = UI.htmlPositivos(h);
+    const meses = UI.htmlMeses(h);
+    document.getElementById("mesesHabitos").innerHTML = meses;
+    document.getElementById("categoriasHabitos").innerHTML = UI.htmlCategorias(h);
+    document.getElementById("detalheMeses").hidden = !meses;
+    UI.ligarSimuladores(document.getElementById("padroesHabitos"), {
+      meta: HB.metaDeReferencia(ctx),
+      valorHora: h.valor_hora
+    });
+    // Quem chega por um link (#habitos, #mes-a-mes) cai no lugar certo
+    // depois que o conteúdo existe.
+    if (location.hash) {
+      document.getElementById(location.hash.slice(1))?.scrollIntoView({
+        block: "start"
+      });
+    }
+  }
   const regime = () => document.getElementById("filtroRegime").value;
   const baseDoRegime = () => regime() === "ambos" ? ctx.transacoes : ctx.transacoesRealizadas;
   function noPeriodo(lista) {
@@ -86,4 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("filtroRegime").addEventListener("change", render);
   window.addEventListener("resize", () => render());
   render();
+  if (!semLancamentos) {
+    renderHabitos();
+  }
 });
