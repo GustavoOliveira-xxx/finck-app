@@ -158,9 +158,19 @@
       esperar(h.positivos.some(p => p.id === "analises")).aSerVerdadeiro();
     });
 
+    teste("o que mudou do penúltimo para o último mês completo", () => {
+      const m = H().mudancas(H().analisar(cenarioCompleto(), { hoje: HOJE }));
+      // Agosto: 1.250 de gastos; setembro: 3.920 (o conserto do carro).
+      esperar(m.atencao.some(t => t.startsWith("Os gastos subiram") && t.includes("agosto") && t.includes("setembro"))).aSerVerdadeiro();
+      esperar(m.atencao.some(t => t.startsWith("A sobra diminuiu"))).aSerVerdadeiro();
+      esperar(m.atencao.some(t => t.includes("Transporte foi a categoria que mais subiu"))).aSerVerdadeiro();
+      esperar(H().mudancas({ meses: [], categorias: [], positivos: [] }).atencao).aTerTamanho(0);
+    });
+
     teste("os textos não julgam, não falam de IA e não usam travessão", () => {
       const h = H().analisar(cenarioCompleto(), { hoje: HOJE });
-      const textos = [ ...h.padroes.flatMap(textosDoPadrao), ...h.positivos.map(p => p.texto), h.resumo, h.confianca.texto ];
+      const m = H().mudancas(h);
+      const textos = [ ...h.padroes.flatMap(textosDoPadrao), ...h.positivos.map(p => p.texto), h.resumo, h.confianca.texto, ...m.atencao, ...m.melhorou ];
       textos.forEach(t => {
         esperar(t.includes(TRAVESSAO)).aSerFalso();
         esperar(FALA_DE_IA.test(t)).aSerFalso();

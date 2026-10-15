@@ -36,7 +36,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ctx = await F.carregarContexto();
   const diag = D.diagnosticar(ctx);
   const retrato = D.paraIA(diag);
-  const contextoConversa = D.contextoDaConversa(diag);
+  // Hábitos de consumo (js/habitos-engine.js): o Espelho financeiro e, só
+  // agregados e sem descrições, o que a IA recebe quando a pessoa pede.
+  const HB = window.FinckHabitos;
+  const HUI = window.FinckHabitosUI;
+  const habitos = HB ? HB.analisar(ctx) : null;
+  const habitosIA = habitos ? HB.paraIA(habitos) : null;
+  if (habitosIA && (habitosIA.padroes.length || habitosIA.meses.length)) {
+    retrato.habitos = habitosIA;
+  }
+  // A rota geral aceita até 4.000 caracteres de contexto.
+  const contextoConversa = [ D.contextoDaConversa(diag), habitos ? HB.contexto(habitos) : "" ].filter(Boolean).join("\n").slice(0, 4000);
   const NOMES = Object.fromEntries(diag.dimensoes.map(d => [ d.id, d.nome ]));
   const DIMS = Object.fromEntries(diag.dimensoes.map(d => [ d.id, d ]));
   const chaveLocal = `finck-assistente-plano:${user.id || "local"}`;
@@ -64,8 +74,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     recusa: "A ajuda opcional não respondeu a este pedido. Tente escrever a pergunta de outro jeito."
   };
   const VALEM = "Os números e as próximas ações desta página continuam valendo.";
+  // O pedido da explicação dos hábitos pela rota geral (demonstração ou rota
+  // da revisão fora do ar): texto fixo, sem dado da pessoa.
+  const PEDIDO_HABITOS = "Explique em linguagem simples o que estes hábitos de consumo mostram sobre o meu mês: o que cada padrão muda na sobra, na reserva e nas metas, uma pergunta para eu pensar sobre cada um e uma ideia pequena e opcional para testar por uma semana.";
   const ROTULO_IA = "Resposta escrita por IA a partir dos números desta revisão.";
   const ROTULO_EXPLICACAO = "Explicação escrita por IA a partir dos números desta revisão.";
+  const ROTULO_HABITOS = "Explicação escrita por IA a partir dos hábitos que o FinCK calculou.";
   const PROVEDORES = {
     anthropic: "o Claude, da Anthropic",
     gemini: "o Gemini, do Google",
@@ -293,7 +307,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "Um serviço de IA chamado pela função do FinCK na Vercel: o Claude, da Anthropic, quando o servidor tem essa chave; senão, o Gemini, do Google; senão, modelos gratuitos do OpenRouter. A chave fica no servidor, nunca na página.";
   }
   function renderPrivacidade() {
-    const linhas = comExplicacao ? [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", "Só quando você pede a explicação escrita ou envia uma pergunta livre: o retrato agregado mostrado abaixo, com números arredondados e nomes de categoria e de meta. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. Os dois pedidos exigem a sua conta." ], [ "Quem escreve o texto", quemEscreve() ], [ "Se a rota da revisão não responder", "A pergunta livre vai pela rota geral do FinCK, com o retrato em texto mostrado abaixo, sem nomes de metas, contas ou lançamentos." ], [ "Onde fica salvo", "A última explicação escrita fica só neste aparelho, no navegador. O servidor não grava o pedido nem a resposta em banco ou log; a mesma explicação fica até 10 minutos na memória da função. A conversa some quando você sai da página." ] ] : [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", `Só quando você envia uma pergunta livre: a pergunta e o retrato em texto mostrado abaixo, ${demo ? "com os números de exemplo da demonstração" : "com os seus números agregados"}. Não vão nomes de metas, contas ou lançamentos.` ], [ "Quem escreve a resposta", quemEscreve() ], [ "Onde fica salvo", "Em nenhum lugar: a conversa some quando você sai da página. O registro do servidor guarda só o status, o modelo e o tempo da chamada, nunca o texto." ] ];
+    const linhas = comExplicacao ? [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", "Só quando você pede uma explicação escrita (das ações ou dos hábitos) ou envia uma pergunta livre: o retrato agregado mostrado abaixo, com números arredondados, nomes de categoria e de meta e os hábitos que o FinCK calculou. Nenhuma descrição de lançamento, conta, e-mail ou nome seu. Os pedidos exigem a sua conta." ], [ "Quem escreve o texto", quemEscreve() ], [ "Se a rota da revisão não responder", "A pergunta livre vai pela rota geral do FinCK, com o retrato em texto mostrado abaixo, sem nomes de metas, contas ou lançamentos." ], [ "Onde fica salvo", "A última explicação escrita das ações fica só neste aparelho, no navegador. A dos hábitos e a conversa somem quando você sai da página. O servidor não grava o pedido nem a resposta em banco ou log; a mesma explicação fica até 10 minutos na memória da função." ] ] : [ [ "O que fica no aparelho", "Todos os cálculos desta página: índice, dimensões, próximas ações e as respostas do Cálculo do FinCK. Nada disso é enviado." ], [ "O que é enviado, e quando", `Só quando você pede a explicação dos hábitos ou envia uma pergunta livre: o pedido e o retrato em texto mostrado abaixo, ${demo ? "com os números de exemplo da demonstração" : "com os seus números agregados"}. Não vão nomes de metas, contas ou lançamentos, nem descrições de gastos.` ], [ "Quem escreve a resposta", quemEscreve() ], [ "Onde fica salvo", "Em nenhum lugar: a conversa some quando você sai da página. O registro do servidor guarda só o status, o modelo e o tempo da chamada, nunca o texto." ] ];
     $("fichaPrivacidade").innerHTML = linhas.map(([ t, v ]) => `<div><dt>${esc(t)}</dt><dd>${esc(v)}</dd></div>`).join("");
   }
   function renderPedidos() {
@@ -310,6 +324,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           retrato: "(o retrato agregado abaixo)"
         }
       })}</pre>
+      <h4>Pedido da explicação dos hábitos</h4>
+      <pre class="json-enviado json-enviado--curto" tabindex="0">${json({
+        planejamento: {
+          modo: "habitos",
+          retrato: "(o retrato agregado abaixo, com os hábitos)"
+        }
+      })}</pre>
       <h4>Pedido de uma pergunta livre</h4>
       <pre class="json-enviado json-enviado--curto" tabindex="0">${json({
         planejamento: {
@@ -319,14 +340,72 @@ document.addEventListener("DOMContentLoaded", async () => {
           historico: "(até 6 mensagens anteriores desta conversa)"
         }
       })}</pre>
-      <h4>O retrato agregado, igual nos dois pedidos</h4>
+      <h4>O retrato agregado, igual nos três pedidos</h4>
       <pre class="json-enviado" id="jsonEnviado" tabindex="0">${json(retrato)}</pre>
       <h4>O retrato em texto, se a pergunta for pela rota geral</h4>
       <pre class="json-enviado" id="contextoEnviado" tabindex="0">${esc(contextoConversa)}</pre>` : `
       <h4>Pedido de uma pergunta livre</h4>
       <pre class="json-enviado json-enviado--curto" tabindex="0">${esc(livre)}</pre>
+      <h4>Pedido da explicação dos hábitos</h4>
+      <pre class="json-enviado json-enviado--curto" tabindex="0">${json({
+        pergunta: PEDIDO_HABITOS,
+        contexto: "(o retrato em texto, logo abaixo)"
+      })}</pre>
       <h4>O retrato em texto que vai junto</h4>
       <pre class="json-enviado" id="contextoEnviado" tabindex="0">${esc(contextoConversa)}</pre>`;
+  }
+
+  // ------------------------------------------------------------ espelho financeiro
+
+  // Os meses lado a lado, o que mudou, os hábitos que mais pesam (com a
+  // simulação) e as decisões de consumo. Tudo pelas regras do FinCK.
+  function renderEspelho() {
+    if (!habitos || !HUI) {
+      $("espelho").hidden = true;
+      return;
+    }
+    $("confiancaEspelho").innerHTML = HUI.htmlConfianca(habitos.confianca);
+    $("mesesEspelho").innerHTML = HUI.htmlMeses(habitos) || `<p class="vazio">Ainda não há meses registrados para comparar. <a href="home.html#novo-lancamento">Registrar uma movimentação</a></p>`;
+    const completos = habitos.meses.filter(m => !m.parcial && m.com_registros).length;
+    const m = HB.mudancas(habitos);
+    const lista = itens => `<ul>${itens.map(t => `<li>${esc(t)}</li>`).join("")}</ul>`;
+    $("mudancasEspelho").innerHTML = completos < 2 && !m.melhorou.length ? `<p class="nota">Com dois meses completos registrados, esta parte compara um com o outro.</p>` : `
+      <div><h5>Merece atenção</h5>${m.atencao.length ? lista(m.atencao) : `<p class="nota">${completos < 2 ? "Com dois meses completos registrados, esta parte compara um com o outro." : "Nada piorou de forma relevante entre os dois últimos meses completos."}</p>`}</div>
+      <div><h5>O que melhorou</h5>${m.melhorou.length ? lista(m.melhorou) : `<p class="nota">Nenhuma melhora relevante entre os dois últimos meses completos.</p>`}</div>`;
+    $("habitosEspelho").innerHTML = HUI.htmlPadroes(habitos, {
+      limite: 3,
+      compacto: true
+    });
+    HUI.ligarSimuladores($("habitosEspelho"), {
+      meta: HB.metaDeReferencia(ctx),
+      valorHora: habitos.valor_hora
+    });
+    renderConsumo();
+  }
+
+  // Decisões de consumo sem nota: esperar, buscar alternativa, não comprar e
+  // comprar o que estava planejado aparecem lado a lado.
+  function renderConsumo() {
+    const R = window.FinckReality;
+    const r = R.resumoHistorico(ctx.analises || []);
+    const duraveis = habitos?.padroes.find(q => q.ods12);
+    const item = (n, rotulo) => `<li><strong>${n}</strong>${esc(rotulo)}</li>`;
+    const ods = `<p class="nota">A ODS 12 da ONU trata de consumo e produção responsáveis: usar por mais tempo, consertar, reutilizar, comprar usado e evitar desperdício. <a href="locais.html">Conserto, usado e troca perto de você</a></p>`;
+    $("consumoEspelho").innerHTML = r.total ? `
+      <ul class="consumo-ods__lista">
+        ${item(r.total, r.total === 1 ? "compra analisada antes de decidir" : "compras analisadas antes de decidir")}
+        ${item(r.adiadas, "com a escolha de esperar")}
+        ${item(r.com_alternativa, "com alternativa: usado, conserto ou outra opção")}
+        ${item(r.descartadas, "sem comprar")}
+        ${item(r.planejadas, r.planejadas === 1 ? "comprada de forma planejada" : "compradas de forma planejada")}
+        ${r.sem_decisao ? item(r.sem_decisao, "ainda sem decisão") : ""}
+      </ul>
+      <p class="nota">Nenhum desses números é nota. Comprar o que é necessário e cabe no orçamento também é consumo consciente: a análise serve para escolher sabendo o impacto. <a href="decisoes.html">Rever as decisões</a></p>
+      ${duraveis ? `<p class="consumo-ods__duraveis">${esc(duraveis.texto)}</p>` : ""}
+      ${ods}` : `
+      <p>Nenhuma compra analisada ainda. <a href="reality.html">Analisar a próxima compra no FinCK of Reality</a> mostra o preço em horas de trabalho e o efeito no mês antes de decidir.</p>
+      ${duraveis ? `<p class="consumo-ods__duraveis">${esc(duraveis.texto)}</p>` : ""}
+      ${ods}`;
   }
 
   if (demo) {
@@ -334,6 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("avisoEnvioConversa").innerHTML = "<strong>O que é enviado:</strong> a sua pergunta e os números de exemplo desta revisão, em texto. Não vão nomes de metas, contas ou lançamentos.";
   }
   renderIndice();
+  renderEspelho();
   renderAcoes();
   renderDimensoes();
   renderNumeros();
@@ -901,6 +981,117 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // ------------------------------------------------------------ explicação dos hábitos
+
+  // Com conta e a rota da revisão no ar, a resposta vem no esquema e passa
+  // pelas conferências do servidor (só padrões que existem, perguntas que são
+  // perguntas, sem veredito). Sem isso, a rota geral responde em texto.
+  const secaoHabitosIA = $("secaoHabitosIA");
+  const btnHabitosIA = $("btnHabitosIA");
+  const statusHabitosIA = $("statusHabitosIA");
+  const temHabitos = Boolean(retrato.habitos && retrato.habitos.padroes.length);
+  if (!temHabitos) {
+    // Sem padrão para explicar, nem o trecho nem o atalho aparecem.
+    secaoHabitosIA.hidden = true;
+    $("atalhoHabitos").hidden = true;
+  }
+  async function canalHabitos() {
+    if (comExplicacao) {
+      const m = await rotaAssistente();
+      if (m.tipo === "ia") {
+        return "assistente";
+      }
+    }
+    const livre = await iaLivre();
+    return livre && livre.ok === false ? null : "livre";
+  }
+  function habitosIndisponivel() {
+    const aviso = $("habitosIAIndisponivel");
+    aviso.textContent = `A explicação dos hábitos não está disponível agora. ${VALEM} Os hábitos e a conta de cada um continuam no Espelho financeiro.`;
+    aviso.hidden = false;
+    btnHabitosIA.hidden = true;
+    return aviso;
+  }
+  secaoHabitosIA.addEventListener("toggle", async () => {
+    if (secaoHabitosIA.open && !await canalHabitos()) {
+      habitosIndisponivel();
+    }
+  });
+  const tituloDoPadrao = id => habitos?.padroes.find(q => q.id === id)?.titulo || "";
+  function renderHabitosIA(r, {livre: livre = false} = {}) {
+    const rodape = `<p class="troca-finck__rodape">${demo ? "Com os números de exemplo da demonstração. " : ""}Os números são do FinCK; a IA não recebeu descrições de lançamentos. É educativo: não é consultoria financeira.</p>`;
+    if (livre) {
+      $("habitosIA").innerHTML = `
+        <article class="troca-finck troca-finck--ia explicacao-escrita">
+          <p class="troca-finck__origem">${esc(ROTULO_HABITOS)}</p>
+          <p class="troca-finck__texto">${esc(r.resposta)}</p>
+          ${rodape}
+        </article>`;
+      return;
+    }
+    $("habitosIA").innerHTML = `
+      <article class="troca-finck troca-finck--ia explicacao-escrita">
+        <p class="troca-finck__origem">${esc(ROTULO_HABITOS)}</p>
+        <p class="troca-finck__texto">${esc(r.leitura)}</p>
+        <ol class="explicacao-escrita__acoes">${r.padroes.map(q => `
+          <li>
+            <strong>${esc(tituloDoPadrao(q.id) || q.id)}</strong>
+            <p>${esc(q.explicacao)}</p>
+            ${q.pergunta ? `<p class="padrao-habito__reflexao"><span>Para pensar:</span> ${esc(q.pergunta)}</p>` : ""}
+          </li>`).join("")}</ol>
+        ${r.ideias && r.ideias.length ? `<div class="plano__habito"><h4>Ideias para testar, se quiser</h4><ul>${r.ideias.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+        ${r.ods12 ? `<p><span class="selo-ods12">ODS 12</span> ${esc(r.ods12)}</p>` : ""}
+        ${r.faltam_dados && r.faltam_dados.length ? `<div class="plano__faltam"><h4>Para a leitura ficar mais precisa</h4><ul>${r.faltam_dados.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+        ${rodape}
+      </article>`;
+  }
+  const ETAPAS_HABITOS = [ "Conferindo a sua sessão…", "Enviando os hábitos agregados e esperando a resposta…", "Conferindo a resposta antes de mostrar…" ];
+  btnHabitosIA.addEventListener("click", async () => {
+    if (btnHabitosIA.getAttribute("aria-busy") === "true") {
+      return;
+    }
+    btnHabitosIA.disabled = true;
+    btnHabitosIA.setAttribute("aria-busy", "true");
+    const rotulo = btnHabitosIA.textContent;
+    btnHabitosIA.textContent = "Pedindo a explicação…";
+    try {
+      const via = await canalHabitos();
+      if (!via) {
+        habitosIndisponivel().focus();
+        return;
+      }
+      statusHabitosIA.textContent = via === "livre" ? "Enviando os hábitos agregados e esperando a resposta…" : ETAPAS_HABITOS[0];
+      const r = via === "livre" ? await perguntarLivre(PEDIDO_HABITOS) : await pedir({
+        modo: "habitos",
+        retrato: retrato
+      }, i => {
+        statusHabitosIA.textContent = ETAPAS_HABITOS[i];
+      });
+      const veio = via === "livre" ? r && r.ok && r.resposta : r && r.ok && r.leitura;
+      if (!veio) {
+        $("habitosIA").innerHTML = `<article class="troca-finck troca-finck--erro">${htmlErro(r, {
+          comPerguntas: false
+        })}</article>`;
+        statusHabitosIA.textContent = "A explicação dos hábitos não veio. Os hábitos do Espelho financeiro continuam valendo.";
+        if (r?.codigo === "AUSENTE" || r?.codigo === "IA_INDISPONIVEL") {
+          habitosIndisponivel();
+        }
+        return;
+      }
+      renderHabitosIA(r, {
+        livre: via === "livre"
+      });
+      statusHabitosIA.textContent = "Explicação dos hábitos pronta, logo abaixo. Ela não fica salva.";
+      btnHabitosIA.textContent = "Pedir uma nova explicação (usa IA)";
+    } finally {
+      btnHabitosIA.disabled = false;
+      btnHabitosIA.removeAttribute("aria-busy");
+      if (btnHabitosIA.textContent === "Pedindo a explicação…") {
+        btnHabitosIA.textContent = rotulo;
+      }
+    }
+  });
+
   // ------------------------------------------------------------ painel da FINCK AI
 
   // Os botões do painel só abrem o trecho certo no fim da página e levam o
@@ -921,7 +1112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     alvo.open = true;
     rolarAte(alvo, "start");
-    const foco = alvo === perguntaLivre ? campo : alvo === secaoExplicacao ? btnExplicacao : alvo.querySelector("summary");
+    const foco = alvo === perguntaLivre ? campo : alvo === secaoExplicacao ? btnExplicacao : alvo === secaoHabitosIA ? btnHabitosIA : alvo.querySelector("summary");
     foco?.focus({
       preventScroll: true
     });

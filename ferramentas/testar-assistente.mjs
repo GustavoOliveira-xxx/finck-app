@@ -442,6 +442,61 @@ r = res();
 await api(req("POST", { planejamento: { modo: "pergunta", retrato: RETRATO, pergunta: "Quanto sobra por mês?" } }, "valido"), r);
 conferir("resposta cortada vira CORTADA", [r.statusCode, r.corpo.codigo], [200, "CORTADA"]);
 
+// ------------------------------------------------------------------ hábitos
+
+// No formato de FinckHabitos.paraIA() (js/habitos-engine.js), com um id
+// inventado e um campo a mais que não podem passar.
+const HABITOS = {
+  confianca: "consistente",
+  dias_de_historico: 120,
+  meses: [{ mes: "2026-09", parcial: false, entradas: 3500, gastos: 3613, dia_a_dia: 2259, guardado_em_metas: 0, sobra: -113 }],
+  padroes: [
+    { id: "pequenos", categoria: "Alimentação", valor_mensal: 695.6, acumulado_12_meses: 8347.2, pct_renda: 19.9, vezes: 26, certeza: "confirmado", ods12: false, resumo: "26 gastos pequenos em 30 dias somaram R$ 695,60." },
+    { id: "duraveis", categoria: "Vestuário", valor_mensal: 252, acumulado_12_meses: 3024, pct_renda: 7.2, vezes: 4, certeza: "confirmado", ods12: true, resumo: "4 compras de Vestuário em 90 dias." },
+    { id: "inventado", categoria: "X", resumo: "não pode passar" },
+  ],
+  positivos: ["3 compras analisadas antes de decidir."],
+  descricoes: ["Padaria do Zé"],
+};
+const RETRATO_HABITOS = { ...RETRATO, habitos: HABITOS };
+const pedidoHabitos = api.lerPedido({ modo: "habitos", retrato: RETRATO_HABITOS });
+conferir("hábitos: só ids conhecidos passam", pedidoHabitos.retrato.habitos.padroes.map((q) => q.id), ["pequenos", "duraveis"]);
+conferir("hábitos: campo desconhecido não passa", JSON.stringify(pedidoHabitos.retrato.habitos).includes("Padaria"), false);
+conferir("hábitos: sem hábitos no retrato, o pedido é recusado", Boolean(api.lerPedido({ modo: "habitos", retrato: RETRATO }).erro), true);
+const textoHabitos = api.conteudoDoPedido(pedidoHabitos);
+conferir("hábitos: o pedido pede leitura, padrões com pergunta, ideias e ODS 12", ["\"leitura\"", "\"pergunta\"", "\"ideias\"", "ODS 12"].every((t) => textoHabitos.includes(t)), true);
+conferir("o sistema fala de hábitos sem julgar gasto", [api.SISTEMA.includes("habitos"), api.SISTEMA.includes("sem chamar um gasto de desnecessário")], [true, true]);
+
+const brutoHabitos = {
+  leitura: "Os pequenos gastos somaram R$ 695,60 em 30 dias e setembro fechou com sobra negativa de R$ 113,00.",
+  padroes: [
+    { id: "pequenos", explicacao: "São gastos de até R$ 52,50 que, juntos, passam de 19% da renda.", pergunta: "Quais deles você repetiria do mesmo jeito?" },
+    { id: "pequenos", explicacao: "repetido", pergunta: "De novo?" },
+    { id: "inventado", explicacao: "não existe", pergunta: "?" },
+    { id: "duraveis", explicacao: "Quatro compras de roupa em 90 dias somam R$ 756,00.", pergunta: "isso é uma pergunta sem interrogação" },
+  ],
+  ideias: ["Definir um valor para o delivery da semana", "", "Anotar os pequenos gastos por 7 dias", "Uma quarta ideia"],
+  ods12: "Usar por mais tempo e consertar reduz o que é produzido e descartado.",
+  faltam_dados: [],
+};
+const habitos = api.montarHabitos(brutoHabitos, pedidoHabitos.retrato);
+conferir("montarHabitos: um padrão por id, só os que existem", habitos.padroes.map((q) => q.id), ["pequenos", "duraveis"]);
+conferir("montarHabitos: pergunta sem interrogação vira null", [habitos.padroes[0].pergunta, habitos.padroes[1].pergunta], ["Quais deles você repetiria do mesmo jeito?", null]);
+conferir("montarHabitos: até 3 ideias, com ponto final", habitos.ideias, ["Definir um valor para o delivery da semana.", "Anotar os pequenos gastos por 7 dias.", "Uma quarta ideia."]);
+conferir("montarHabitos: sem leitura não serve", api.montarHabitos({ ...brutoHabitos, leitura: "" }, pedidoHabitos.retrato), null);
+conferir("montarHabitos: nenhum padrão explicado não serve", api.montarHabitos({ ...brutoHabitos, padroes: [] }, pedidoHabitos.retrato), null);
+
+// Pelo Gemini: a primeira resposta julga ("não compre"), a segunda serve.
+chamadasGemini.length = 0;
+respostaGemini = (n) => textoGemini(n === 1 ? { ...brutoHabitos, ideias: ["Não compre mais delivery"] } : brutoHabitos);
+r = res();
+await api(req("POST", { planejamento: { modo: "habitos", retrato: RETRATO_HABITOS } }, "valido"), r);
+conferir("hábitos pelo Gemini: julgamento pede outra resposta", [r.statusCode, r.corpo.ok, r.corpo.modo, r.corpo.padroes?.length, chamadasGemini.length], [200, true, "habitos", 2, 2]);
+conferir("hábitos: o enum dos padrões chega ao Gemini", chamadasGemini[0]?.corpo.generationConfig?.responseSchema?.properties?.padroes?.items?.properties?.id?.enum, api.PADROES);
+r = res();
+await api(req("POST", { planejamento: { modo: "habitos", retrato: RETRATO_HABITOS } }, "valido"), r);
+conferir("hábitos: o mesmo retrato vem do cache, sem nova chamada", [r.corpo.ok, chamadasGemini.length], [true, 2]);
+
 process.env.ASSISTENTE_GEMINI_MODELO = "gemini-teste";
 conferir("ASSISTENTE_GEMINI_MODELO vai na frente da lista", [api.modeloAtual(), G.modelos().length], ["gemini-teste", 4]);
 delete process.env.ASSISTENTE_GEMINI_MODELO;
