@@ -580,9 +580,30 @@ escrita em 5,4 s.
 { "planejamento": { "modo": "pergunta", "retrato": { ... },
                     "pergunta": "Quanto consigo guardar por mês?",
                     "historico": [{ "papel": "pessoa", "texto": "..." }] } }
+{ "planejamento": { "modo": "habitos", "retrato": { ..., "habitos": { ... } } } }
 ```
 
-O plano usa esforço `medium`; a pergunta, `low`. O prompt de sistema é fixo
+O retrato pode trazer `habitos`, no formato de `FinckHabitos.paraIA()`
+(`js/habitos-engine.js`): a confiança da leitura, os meses lado a lado e os
+padrões que o FinCK encontrou (ids `pequenos`, `repetido`, `alta`, `peso`,
+`momento`, `compromissos`, `sobra` e `duraveis`), com categoria, números e
+um resumo sem descrição de lançamento. `limparHabitos` deixa passar só ids
+conhecidos e campos do formato.
+
+O modo `habitos` pede a explicação dos hábitos, no esquema
+`esquemaDosHabitos`: `leitura` (2 ou 3 frases), `padroes` (um item por
+padrão do retrato, com `explicacao` e uma `pergunta` de reflexão),
+`ideias` (até 3, opcionais), `ods12` e `faltam_dados`. `montarHabitos`
+descarta padrão que não está no retrato, repetido ou sem explicação, e
+pergunta que não termina em interrogação; sem leitura, a resposta não
+serve. Como o plano, fica 10 minutos em cache para o mesmo retrato. O
+sistema pede para não chamar gasto de desnecessário, supérfluo ou errado,
+lembra que comprar o necessário e planejado também é consumo consciente e
+liga o consumo à ODS 12 de forma prática, sem inventar números de impacto
+ambiental. Na demonstração (sem conta), a tela pede a mesma explicação
+pela rota geral, em texto, com o retrato em texto como `contexto`.
+
+O plano usa esforço `medium`; a pergunta e os hábitos, `low`. O prompt de sistema é fixo
 e marcado para cache. O retrato e a pergunta vão entre marcadores
 (`<retrato_financeiro>`, `<pergunta_da_pessoa>`) e o sistema avisa que esse
 conteúdo é dado, nunca instrução.
@@ -636,23 +657,35 @@ oficial falando com uma API simulada e o motor da página (próximas ações
 com a conta e o porquê, perguntas prontas com resposta calculada). O segundo gera um plano e responde uma
 pergunta de verdade, e mostra tempo e resultado.
 
-## FINCK AI (OpenRouter, modelos gratuitos)
+## FINCK AI (Gemini, com o OpenRouter de reserva)
 
-A conversa com o OpenRouter (modelos preferidos, descarte de
-classificadores, novas tentativas, data no prompt) fica em
-`_openrouter.js`, compartilhado com o Assistente quando não há chave da
-Anthropic.
+`ia.js` é a rota `/api/ia`, usada pela ajuda opcional do Reality e, na
+demonstração, pela pergunta livre e pela explicação dos hábitos da
+Revisão financeira.
 
-`ia.js` é a rota `/api/ia`. Usa o roteador `openrouter/free` do
-OpenRouter, que escolhe sozinho um modelo gratuito disponível, então não
-depende de um modelo específico continuar no ar.
+Com `GEMINI_API_KEY` (ou `ASSISTENTE_GEMINI_API_KEY`), quem responde é o
+Gemini, pela mesma cadeia de modelos gratuitos da Revisão
+(`_gemini.js`, começando pelo `gemini-3.5-flash-lite`). A resposta vem num
+esquema com uma chave só (`resposta`) e passa pela mesma conferência de
+veredito; resposta com ordem de compra vai para o próximo modelo. Se o
+Gemini estiver sem cota, fora do ar ou sem resposta aproveitável e houver
+`OPENROUTER_API_KEY`, o OpenRouter responde no lugar. Chave do Gemini
+recusada não cai na reserva: vira 503, para o problema aparecer.
+
+Sem a chave do Gemini, vale só o OpenRouter. A conversa com ele (modelos
+preferidos, descarte de classificadores, novas tentativas, data no prompt)
+fica em `_openrouter.js`, compartilhado com a Revisão financeira. Ele usa o
+roteador `openrouter/free`, que escolhe sozinho um modelo gratuito
+disponível.
 
 ### Variáveis de ambiente
 
 | Variável | Obrigatória | Para que serve |
 |---|---|---|
-| `OPENROUTER_API_KEY` | sim | Chave do painel do OpenRouter. Sem ela, o GET responde `ia: false` e o POST responde 500 com uma frase para a tela. |
-| `IA_TETO_DIA` | não | Teto global de chamadas por dia. Padrão 40, abaixo das 50 diárias do plano gratuito, para sobrar margem nos testes. |
+| `GEMINI_API_KEY` | uma das chaves | A mesma da busca de preço. Com ela, a rota usa o Gemini. `ASSISTENTE_GEMINI_API_KEY`, se existir, vale antes. |
+| `OPENROUTER_API_KEY` | uma das chaves | Sem a chave do Gemini, a rota usa o OpenRouter; com ela, ele fica de reserva. Sem nenhuma das duas, o GET responde `ia: false` e o POST responde 500 com uma frase para a tela. |
+| `IA_PROVEDOR` | não | `gemini` ou `openrouter`, para forçar um provedor que tenha chave. |
+| `IA_TETO_DIA` | não | Teto global de chamadas por dia. Padrão 150 com o Gemini e 40 com o OpenRouter (abaixo das 50 diárias do plano gratuito dele). Num dia de apresentação ou de teste com participantes, vale aumentar. |
 | `IA_MODELOS` | não | Ids de modelos gratuitos preferidos, separados por vírgula, no lugar da lista padrão do código (`PREFERIDOS_PADRAO`: Nemotron 3 Super e Ling 3.0 Flash, os mais rápidos entre os que responderam certo nos testes de 7/10/2026). O `openrouter/free` fica sempre como último recurso, e se um id da lista sumir do OpenRouter a rota cai direto para ele. |
 
 Além do teto do dia, cada IP tem até 15 perguntas por hora.
@@ -713,9 +746,9 @@ mesmas três tentativas.
 | 400 | Sem pergunta, ou `contexto` que não é texto |
 | 405 | Método diferente de GET, POST e OPTIONS |
 | 429 | Limite por IP, teto do dia, ou o OpenRouter pediu para esperar |
-| 500 | `OPENROUTER_API_KEY` não configurada |
+| 500 | Nenhuma chave de IA configurada (`GEMINI_API_KEY` ou `OPENROUTER_API_KEY`) |
 | 502 | O provedor falhou ou respondeu fora do combinado nas três tentativas |
-| 503 | Chave recusada pelo OpenRouter |
+| 503 | Chave recusada pelo Gemini ou pelo OpenRouter |
 | 504 | Nenhuma resposta dentro do prazo (55 s) |
 
 O `erro` é sempre uma frase para a tela, sem detalhe técnico. Um 404 do
@@ -746,7 +779,7 @@ Um `GET /api/ia` responde, sem gastar cota, se a chave está configurada
 (`ia`), o modelo, se o POST lê o campo `contexto` e os limites de tamanho:
 
 ```json
-{ "ok": true, "ia": true, "modelo": "openrouter/free", "contexto": true,
+{ "ok": true, "ia": true, "provedor": "gemini", "modelo": "gemini-3.5-flash-lite", "contexto": true,
   "limites": { "pergunta": 3000, "pergunta_com_contexto": 600, "contexto": 4000 } }
 ```
 
@@ -762,7 +795,8 @@ node ferramentas/testar-ia.mjs
 ```
 
 roda sem rede: leitura do pedido, limites, limpeza do contexto, proteção
-contra rótulo falso, prompt de sistema, `limparMarkdown`, erros, GET e o
-que vai para o log. A página `teste-ia.html` é interna, de desenvolvedor
+contra rótulo falso, prompt de sistema, `limparMarkdown`, erros, GET, o
+caminho pelo Gemini (esquema, veredito recusado, reserva no OpenRouter
+quando falta cota) e o que vai para o log. A página `teste-ia.html` é interna, de desenvolvedor
 (`noindex`, fora da navegação do app), e serve só para conferir a conexão
 de ponta a ponta com a chave de verdade.

@@ -308,6 +308,43 @@
     });
   });
 
+  descrever("Validação com usuários: indicadores", () => {
+    const V = () => window.FinckValidacao;
+    const sessoes = [
+      { codigo: "P01", antes: { decisao: "comprar", fatores: [ "preco" ] }, depois: { decisao: "esperar", fatores: [ "preco", "horas", "acumulados" ], diferenca: "sim", acumulados: "sim" }, tarefa: { ajuda: "sem", tempo_s: 40 }, escalas: { clareza: 5, facilidade: 4 } },
+      { codigo: "P02", antes: { decisao: "comprar", fatores: [ "preco", "renda" ] }, depois: { decisao: "comprar", fatores: [ "preco", "renda" ], diferenca: "parcialmente", acumulados: "nao" }, tarefa: { ajuda: "com", tempo_s: 80 }, escalas: { clareza: 3, facilidade: 0 } }
+    ];
+    teste("os indicadores da seção 6 saem das sessões salvas", () => {
+      const r = V().indicadores(sessoes);
+      esperar(r.participantes).aSer(2);
+      esperar(r.compreenderam_impacto).aSer(50);
+      esperar(r.identificaram_acumulados).aSer(50);
+      esperar(r.explicaram_diferenca).aSer(50);
+      esperar(r.explicaram_em_parte).aSer(50);
+      esperar(r.fatores_antes).aSer(1.5);
+      esperar(r.fatores_depois).aSer(2.5);
+      esperar(r.mudaram_escolha).aSer(50);
+      esperar(r.sem_ajuda).aSer(50);
+      esperar(r.tempo_medio_s).aSer(60);
+      esperar(r.escalas.clareza).aSer(4);
+      // Fora da escala de 1 a 5 não entra na média.
+      esperar(r.escalas.facilidade).aSer(4);
+      esperar(V().indicadores([]).compreenderam_impacto).aSer(null);
+    });
+    teste("o CSV tem uma linha por sessão e escapa o texto", () => {
+      const csv = V().paraCSV([ { ...sessoes[0], comentarios: { ajudou: 'As horas; "o mês"' } } ]);
+      const linhas = csv.split("\n");
+      esperar(linhas).aTerTamanho(2);
+      esperar(linhas[0].startsWith("codigo;data;")).aSerVerdadeiro();
+      esperar(linhas[1]).aConter('"As horas; ""o mês"""');
+      esperar(linhas[1]).aConter("preco|horas|acumulados");
+    });
+    teste("o código do participante segue a sequência", () => {
+      esperar(V().proximoCodigo([])).aSer("P01");
+      esperar(V().proximoCodigo([ { codigo: "P01" }, { codigo: "P09" } ])).aSer("P10");
+    });
+  });
+
   // Mesmo padrão das outras suítes: guarda o que havia no aparelho, entra na
   // demonstração vazia e devolve tudo no fim.
   const comSessaoLimpa = async fn => {
