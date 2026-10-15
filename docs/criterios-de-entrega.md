@@ -30,6 +30,7 @@ depende de pessoas ou de infraestrutura está marcado como pendente.
 | `GET /api/ia` | `ia: true`, `provedor: gemini`, `gemini-3.5-flash-lite`; o campo `provedor` confirma que a versão nova está publicada |
 | `GET /api/assistente-ia` | `ia: true`, `provedor: gemini`, `gemini-3.5-flash-lite` |
 | Pergunta real em `teste-ia.html`, com contexto conhecido (compra de R$ 800,00, renda de R$ 3.500,00, 40 h, atraso de 21 dias) | Respondeu em 1,2 s pelo `gemini-3.5-flash-lite`, só com os números do contexto e sem ordem de compra. Problema encontrado: os valores vieram por extenso ("três mil e quinhentos reais"), o que dificulta conferir com a tela. Corrigido: as duas rotas passaram a pedir algarismos no formato brasileiro (R$ 3.500,00), com teste em `ferramentas/testar-ia.mjs` |
+| A mesma pergunta depois da correção | Respondeu em 1,3 s pelo `gemini-3.5-flash-lite` com R$ 800,00, R$ 3.500,00, 40 h, 21 dias e 2 meses em algarismos, sem número novo e sem ordem de compra. Disse que falta o valor guardado por mês e pediu esse dado, em vez de supor |
 | Reality na demonstração, pergunta livre | Pendente |
 | Revisão na demonstração, "Explicar meus hábitos" | Pendente |
 | Revisão com conta, hábitos e próximas ações | Pendente |
