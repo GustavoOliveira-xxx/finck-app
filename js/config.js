@@ -142,6 +142,41 @@ window.FINCK_CONFIG = {
       consumo: .1
     }
   },
+  // Hábitos de consumo (js/habitos-engine.js): limites das regras que
+  // encontram padrões no histórico registrado. São referências de design do
+  // projeto, num lugar só para poderem ser lidas e discutidas, não dados de
+  // pesquisa. Valores em reais ou em porcentagem da renda declarada.
+  HABITOS: {
+    JANELA_DIAS: 30,
+    JANELA_LONGA_DIAS: 90,
+    MESES_COMPARADOS: 3,
+    // Um gasto é "pequeno" até 1,5% da renda, entre R$ 30 e R$ 80.
+    PEQUENO_PCT_RENDA: 1.5,
+    PEQUENO_MIN_REAIS: 30,
+    PEQUENO_MAX_REAIS: 80,
+    PEQUENOS_MIN_QTD: 6,
+    PEQUENOS_MIN_PCT_RENDA: 5,
+    REPETIDO_MIN_VEZES: 4,
+    TENDENCIA_ALTA_PCT: 25,
+    TENDENCIA_QUEDA_PCT: 15,
+    TENDENCIA_MIN_REAIS: 50,
+    CATEGORIA_PESO_PCT_RENDA: 10,
+    // Sábado e domingo são 2 de 7 dias (29%); os 7 dias depois do
+    // pagamento, cerca de 23% do mês.
+    FIM_DE_SEMANA_PCT: 45,
+    POS_PAGAMENTO_DIAS: 7,
+    POS_PAGAMENTO_PCT: 40,
+    MOMENTO_MIN_GASTOS: 8,
+    COMPROMISSOS_ATENCAO_PCT: 50,
+    CONTA_PEQUENA_MAX_REAIS: 100,
+    DURAVEIS: [ "Eletrônicos", "Vestuário" ],
+    DURAVEIS_MIN_COMPRAS: 3,
+    SIMULACOES_PCT: [ 10, 15, 20 ],
+    CONFIANCA_MODERADA_DIAS: 30,
+    CONFIANCA_CONSISTENTE_DIAS: 90,
+    MIN_GASTOS: 5,
+    MAX_PADROES: 5
+  },
   // Linha do tempo da compra (js/linha-tempo-engine.js). As taxas do cartão
   // são as médias do Banco Central; o rotativo vale só no primeiro mês da
   // dívida e depois entra o parcelamento da fatura (Resolução CMN 4.549/2017).

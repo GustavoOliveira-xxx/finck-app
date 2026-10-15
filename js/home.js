@@ -21,14 +21,15 @@ window.FinckPainel = (() => {
       }
     } catch {}
   }
-  // Análises que a própria pessoa salvou. A de exemplo da demonstração não
-  // conta: quem abre a demo pela primeira vez ainda não decidiu nada.
+  // Análises que a própria pessoa salvou. As de exemplo da demonstração não
+  // contam: quem abre a demo pela primeira vez ainda não decidiu nada.
   function analisesProprias(analises = [], {demo: demo = false, exemplo: exemplo = null} = {}) {
     const lista = analises || [];
-    if (!demo || !exemplo) {
+    const exemplos = (Array.isArray(exemplo) ? exemplo : [ exemplo ]).filter(Boolean);
+    if (!demo || !exemplos.length) {
       return lista.length;
     }
-    return lista.filter(a => !(a.item_name === exemplo.item_name && Number(a.price) === Number(exemplo.price))).length;
+    return lista.filter(a => !exemplos.some(e => a.item_name === e.item_name && Number(a.price) === Number(e.price))).length;
   }
   const mostrarFaixaInicio = ({dispensada: dispensada = false, concluida: concluida = false, proprias: proprias = 0} = {}) => !dispensada && !concluida && proprias === 0;
   // O convite de instalação só aparece depois de uma ação de valor (a
@@ -452,7 +453,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     const proprias = PN.analisesProprias(ctx.analises, {
       demo: emDemo(),
-      exemplo: F.FIXTURE_DEMO?.analise
+      exemplo: [ F.FIXTURE_DEMO?.analise, ...F.FIXTURE_DEMO?.historico?.analises || [] ]
     });
     renderTopo(ctx, tarefas, pendentes);
     renderFaixaInicio(proprias);

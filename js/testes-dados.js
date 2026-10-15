@@ -216,7 +216,10 @@
       await comSessaoLimpa(async () => {
         await semear();
         const ctx = await F.carregarContexto();
-        esperar(ctx.todasTransacoes.some(t => t.description === "Streaming")).aSerFalso();
+        // Os streamings dos meses anteriores (histórico de exemplo) já foram
+        // pagos; do mês atual em diante, só a recorrência prevê.
+        const mesAtual = window.FinckUtils.mesAtual();
+        esperar(ctx.todasTransacoes.some(t => t.description === "Streaming" && String(t.date).slice(0, 7) >= mesAtual)).aSerFalso();
         const datas = (ctx.programacao?.compromissos || []).filter(c => c.descricao === "Streaming").map(c => c.iso);
         esperar(datas.length > 0).aSerVerdadeiro();
         esperar(new Set(datas).size).aSer(datas.length);
