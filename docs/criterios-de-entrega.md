@@ -13,7 +13,7 @@ depende de pessoas ou de infraestrutura está marcado como pendente.
 | 5 | A Revisão financeira usa os dados cadastrados corretamente | Pronto | Seis dimensões, Índice FinCK e Espelho financeiro calculados no aparelho (`js/diagnostico-engine.js`, `js/habitos-engine.js`); testes em `ferramentas/testar-assistente.mjs` e `js/testes-habitos.js` |
 | 6 | O Reality mostra como uma compra afeta a situação financeira | Pronto | Horas de trabalho, peso no mês, atraso nas metas, próximos meses e "No seu histórico de <categoria>"; testes em `js/testes-reality.js`, `js/testes-inteligencia.js` e `js/testes-linha-tempo.js` |
 | 7 | Há informações claras sobre hábitos de consumo e seus efeitos acumulados | Pronto | "Hábitos de consumo" em Análises, com o efeito em 12 meses, a simulação e a conta de cada padrão (`docs/habitos-e-espelho.md`) |
-| 8 | A IA interpreta informações reais e não inventa resultados matemáticos | Pronto | Respostas em esquema, conferidas no servidor (padrões que existem, sem veredito, meta dentro da sobra); contexto só com os números do FinCK. Testes em `ferramentas/testar-assistente.mjs` e `ferramentas/testar-ia.mjs` |
+| 8 | A IA interpreta informações reais e não inventa resultados matemáticos | Pronto, verificação em produção em andamento | Respostas em esquema, conferidas no servidor (padrões que existem, sem veredito, meta dentro da sobra); contexto só com os números do FinCK. Testes em `ferramentas/testar-assistente.mjs` e `ferramentas/testar-ia.mjs` |
 | 9 | O sistema funciona quando a IA está indisponível | Pronto | Hábitos, Espelho, simulação, Reality e Revisão são regras do FinCK; a ajuda opcional some ou explica o erro. Testes de rota ausente e sem chave |
 | 10 | O vínculo com a ODS 12 é compreensível e demonstrável | Pronto | Selo ODS 12 no Reality (durabilidade, reparo, reuso, descarte e o lembrete de compras frequentes de duráveis), no padrão de itens duráveis, no consumo consciente do Espelho e em "Alternativas perto de você" |
 | 11 | As principais telas funcionam no computador e no celular | Pronto | Sem rolagem horizontal em 320 e 390 px nas telas novas; "Analisar uma compra" acima da navegação em 360 × 740, 375 × 667, 375 × 812, 390 × 844 e 412 × 915 |
@@ -22,6 +22,19 @@ depende de pessoas ou de infraestrutura está marcado como pendente.
 | 14 | O projeto apresenta evidências de avaliação com usuários | Pendente: falta aplicar | Roteiro e ferramenta prontos (`docs/validacao-com-usuarios.md`, `validacao.html`); faltam as sessões com participantes |
 | 15 | O repositório tem instruções e documentação atualizadas | Pronto | `README.md`, `api/README.md`, `supabase/README.md` e os documentos em `docs/` |
 
+## Verificação da IA em produção (15/10/2026)
+
+| Etapa | Resultado |
+|---|---|
+| `GEMINI_API_KEY` na Vercel | Configurada para Production e Preview, como segredo |
+| `GET /api/ia` | `ia: true`, `provedor: gemini`, `gemini-3.5-flash-lite`; o campo `provedor` confirma que a versão nova está publicada |
+| `GET /api/assistente-ia` | `ia: true`, `provedor: gemini`, `gemini-3.5-flash-lite` |
+| Pergunta real em `teste-ia.html`, com contexto conhecido (compra de R$ 800,00, renda de R$ 3.500,00, 40 h, atraso de 21 dias) | Respondeu em 1,2 s pelo `gemini-3.5-flash-lite`, só com os números do contexto e sem ordem de compra. Problema encontrado: os valores vieram por extenso ("três mil e quinhentos reais"), o que dificulta conferir com a tela. Corrigido: as duas rotas passaram a pedir algarismos no formato brasileiro (R$ 3.500,00), com teste em `ferramentas/testar-ia.mjs` |
+| Reality na demonstração, pergunta livre | Pendente |
+| Revisão na demonstração, "Explicar meus hábitos" | Pendente |
+| Revisão com conta, hábitos e próximas ações | Pendente |
+| Rotas `/api/*` bloqueadas no navegador | Pendente |
+
 ## O que falta antes da entrega
 
 1. Aplicar o teste com 5 a 10 participantes e registrar os resultados na
@@ -29,6 +42,5 @@ depende de pessoas ou de infraestrutura está marcado como pendente.
 2. Conferir na Vercel que `GEMINI_API_KEY` está configurada e, para o dia
    da apresentação ou do teste, aumentar `IA_TETO_DIA` se muitas pessoas
    forem usar a ajuda opcional da mesma rede.
-3. Fazer uma pergunta real na Revisão financeira e no Reality depois da
-   publicação, para confirmar a IA ao vivo (as rotas foram testadas com
-   respostas simuladas).
+3. Terminar a verificação em produção (tabela acima): Reality, Revisão na
+   demonstração e com conta, e o app com as rotas de IA bloqueadas.

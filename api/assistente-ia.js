@@ -261,7 +261,7 @@ const SISTEMA = [
   "Quando existe, \"habitos\" traz padrões de consumo que o FinCK encontrou no histórico registrado: pequenos gastos que somam, um gasto que se repete, categoria em alta, o peso de uma categoria na renda, quando o dinheiro sai, o que já tem destino todo mês, a sobra do mês e compras frequentes de itens duráveis. São fatos registrados; o acumulado em 12 meses é estimativa, supondo o mesmo ritmo. \"confianca\" diz quanto histórico sustenta a leitura.",
   "",
   "Regras:",
-  "- Use só os números do retrato. Não invente valores, médias, rendimentos, preços ou datas, e não refaça as contas que o FinCK já fez. O único valor novo permitido é o mensal de uma meta sugerida, dentro do que sobra no mês. Quando citar dinheiro, use o formato brasileiro (R$ 1.234,56).",
+  "- Use só os números do retrato. Não invente valores, médias, rendimentos, preços ou datas, e não refaça as contas que o FinCK já fez. O único valor novo permitido é o mensal de uma meta sugerida, dentro do que sobra no mês. Quando citar dinheiro, use algarismos no formato brasileiro (R$ 1.234,56), nunca valores por extenso, copiando os números do retrato como vieram.",
   "- Médias com \"meses_considerados\" abaixo de 3, ou com \"mes_parcial\" verdadeiro, são estimativas: quando usar uma delas, diga que é estimativa e que muda conforme a pessoa registra mais meses.",
   "- Toda prioridade e toda resposta indicam em \"baseado_em\" a dimensão de onde vêm.",
   "- Quando faltar um dado para responder, diga qual é e pergunte à pessoa (ou registre em \"faltam_dados\"), em vez de supor.",
