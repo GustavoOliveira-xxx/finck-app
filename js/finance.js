@@ -691,8 +691,8 @@ window.FinckFinance = (() => {
   // também, confirmar a recorrência criava um segundo e a programação somava
   // os dois.
   //
-  // Invariante da demonstração: saldo atual = 1200 + 3500 − 1200 − 620 = 2880,
-  // dividido entre Conta corrente 2580 e Carteira 300 (100 de saldo inicial
+  // Invariante da demonstração: saldo atual = 1200 + 3500 − 1200 − 620 = 2880
+  // (o histórico dos meses anteriores soma zero), dividido entre Conta corrente 2580 e Carteira 300 (100 de saldo inicial
   // mais o saque de 200; js/store.js prepararContasDemo). O previsto (−620)
   // nunca entra nesse número.
   const FIXTURE_DEMO = {
@@ -805,8 +805,241 @@ window.FinckFinance = (() => {
         descarte: "Uso por muitos anos"
       },
       note: "Vou reavaliar em 30 dias."
+    },
+    // Quatro meses anteriores, para a leitura de hábitos ter o que mostrar.
+    // O salário e as contas fixas caem nos mesmos dias das recorrências; os
+    // gastos do dia a dia são contados em dias para trás a partir de hoje
+    // (de 1 a 120), então os três meses completos e os últimos 30 e 90 dias
+    // sempre têm movimento, em qualquer data. Invariante: o histórico soma
+    // zero. As entradas (4 × 3500 + 250) pagam exatamente as fixas (4 × 1354)
+    // e o dia a dia (8834), e o saldo atual continua 2880.
+    historico: {
+      meses: 4,
+      categoriasFixas: {
+        Salário: "Salário",
+        Aluguel: "Moradia",
+        Internet: "Moradia",
+        Streaming: "Lazer"
+      },
+      entradas: [ {
+        mes: -2,
+        dia: 20,
+        description: "Freela de design",
+        amount: 250,
+        category: "Outros"
+      } ],
+      // [dias atrás, descrição, categoria, valor]. O consumo cresce nos
+      // ciclos mais recentes: é o que a leitura de hábitos tem de mostrar.
+      diaADia: [
+        [ 1, "Delivery", "Alimentação", 42.9 ],
+        [ 2, "Lanche", "Alimentação", 14.5 ],
+        [ 3, "Café", "Alimentação", 9.5 ],
+        [ 3, "Pizza com amigos", "Lazer", 151.3 ],
+        [ 4, "Delivery", "Alimentação", 38.5 ],
+        [ 5, "Transporte por aplicativo", "Transporte", 24.9 ],
+        [ 6, "Lanche", "Alimentação", 12 ],
+        [ 7, "Bar com amigos", "Lazer", 128 ],
+        [ 8, "Delivery", "Alimentação", 45 ],
+        [ 8, "Restaurante", "Alimentação", 96.4 ],
+        [ 9, "Hortifruti", "Alimentação", 58.4 ],
+        [ 9, "Transporte por aplicativo", "Transporte", 31.5 ],
+        [ 10, "Café", "Alimentação", 11 ],
+        [ 11, "Farmácia", "Saúde", 67.8 ],
+        [ 11, "Lanche", "Alimentação", 18.9 ],
+        [ 12, "Delivery", "Alimentação", 39.9 ],
+        [ 13, "Cinema", "Lazer", 52 ],
+        [ 14, "Conta de luz", "Moradia", 126.3 ],
+        [ 14, "Ingresso de festa", "Lazer", 85 ],
+        [ 14, "Transporte por aplicativo", "Transporte", 19.8 ],
+        [ 15, "Lanche", "Alimentação", 16.5 ],
+        [ 16, "Café", "Alimentação", 8.5 ],
+        [ 17, "Delivery", "Alimentação", 47.5 ],
+        [ 17, "Jogo no celular", "Lazer", 29.9 ],
+        [ 18, "Mercado", "Alimentação", 412.6 ],
+        [ 19, "Transporte por aplicativo", "Transporte", 27.4 ],
+        [ 20, "Lanche", "Alimentação", 13 ],
+        [ 20, "Restaurante", "Alimentação", 118.7 ],
+        [ 21, "Bar com amigos", "Lazer", 96 ],
+        [ 22, "Café", "Alimentação", 12 ],
+        [ 22, "Calça", "Vestuário", 159 ],
+        [ 23, "Delivery", "Alimentação", 36 ],
+        [ 24, "Recarga do bilhete", "Transporte", 120 ],
+        [ 25, "Lanche", "Alimentação", 21 ],
+        [ 26, "Transporte por aplicativo", "Transporte", 22 ],
+        [ 27, "Delivery", "Alimentação", 44.9 ],
+        [ 27, "Show", "Lazer", 180 ],
+        [ 28, "Lanche", "Alimentação", 15.5 ],
+        [ 29, "Delivery", "Alimentação", 41 ],
+        [ 31, "Delivery", "Alimentação", 39 ],
+        [ 32, "Lanche", "Alimentação", 15 ],
+        [ 33, "Café", "Alimentação", 10 ],
+        [ 34, "Delivery", "Alimentação", 44 ],
+        [ 35, "Transporte por aplicativo", "Transporte", 26 ],
+        [ 37, "Bar com amigos", "Lazer", 85 ],
+        [ 38, "Restaurante", "Alimentação", 102.3 ],
+        [ 39, "Transporte por aplicativo", "Transporte", 21.5 ],
+        [ 40, "Jaqueta", "Vestuário", 219 ],
+        [ 41, "Farmácia", "Saúde", 54.3 ],
+        [ 41, "Lanche", "Alimentação", 13.5 ],
+        [ 42, "Delivery", "Alimentação", 41.5 ],
+        [ 43, "Cinema", "Lazer", 48 ],
+        [ 44, "Conta de luz", "Moradia", 118.4 ],
+        [ 45, "Carregador", "Eletrônicos", 89.9 ],
+        [ 45, "Lanche", "Alimentação", 17 ],
+        [ 46, "Café", "Alimentação", 9 ],
+        [ 47, "Delivery", "Alimentação", 37.9 ],
+        [ 48, "Mercado", "Alimentação", 446.4 ],
+        [ 49, "Presente de aniversário", "Outros", 120 ],
+        [ 49, "Transporte por aplicativo", "Transporte", 29 ],
+        [ 50, "Lanche", "Alimentação", 14 ],
+        [ 50, "Restaurante", "Alimentação", 88.5 ],
+        [ 51, "Bar com amigos", "Lazer", 79 ],
+        [ 53, "Delivery", "Alimentação", 42 ],
+        [ 54, "Recarga do bilhete", "Transporte", 120 ],
+        [ 60, "Mercado", "Alimentação", 438.7 ],
+        [ 61, "Delivery", "Alimentação", 40 ],
+        [ 62, "Lanche", "Alimentação", 14 ],
+        [ 63, "Café", "Alimentação", 9.5 ],
+        [ 65, "Transporte por aplicativo", "Transporte", 23 ],
+        [ 66, "Lanche", "Alimentação", 16 ],
+        [ 67, "Bar com amigos", "Lazer", 72 ],
+        [ 68, "Delivery", "Alimentação", 43.5 ],
+        [ 70, "Café", "Alimentação", 10.5 ],
+        [ 70, "Tênis de corrida", "Vestuário", 299 ],
+        [ 71, "Farmácia", "Saúde", 61.2 ],
+        [ 73, "Cinema", "Lazer", 46 ],
+        [ 74, "Conta de luz", "Moradia", 104.9 ],
+        [ 74, "Transporte por aplicativo", "Transporte", 25.5 ],
+        [ 75, "Lanche", "Alimentação", 12.5 ],
+        [ 76, "Curso online", "Educação", 49 ],
+        [ 77, "Delivery", "Alimentação", 38 ],
+        [ 78, "Mercado", "Alimentação", 455.8 ],
+        [ 80, "Restaurante", "Alimentação", 92 ],
+        [ 81, "Bar com amigos", "Lazer", 70 ],
+        [ 84, "Camiseta", "Vestuário", 79 ],
+        [ 84, "Recarga do bilhete", "Transporte", 120 ],
+        [ 87, "Delivery", "Alimentação", 45 ],
+        [ 90, "Mercado", "Alimentação", 431.3 ],
+        [ 92, "Lanche", "Alimentação", 13 ],
+        [ 93, "Café", "Alimentação", 8.5 ],
+        [ 94, "Delivery", "Alimentação", 38 ],
+        [ 95, "Transporte por aplicativo", "Transporte", 22.5 ],
+        [ 96, "Livro", "Educação", 58 ],
+        [ 97, "Bar com amigos", "Lazer", 64 ],
+        [ 98, "Restaurante", "Alimentação", 100 ],
+        [ 101, "Farmácia", "Saúde", 58.9 ],
+        [ 101, "Lanche", "Alimentação", 15.5 ],
+        [ 102, "Mochila", "Outros", 139 ],
+        [ 103, "Cinema", "Lazer", 44 ],
+        [ 104, "Conta de luz", "Moradia", 110.2 ],
+        [ 104, "Transporte por aplicativo", "Transporte", 24 ],
+        [ 107, "Delivery", "Alimentação", 41 ],
+        [ 108, "Mercado", "Alimentação", 428.1 ],
+        [ 110, "Lanche", "Alimentação", 12 ],
+        [ 110, "Restaurante", "Alimentação", 85 ],
+        [ 112, "Café", "Alimentação", 9 ],
+        [ 114, "Recarga do bilhete", "Transporte", 120 ],
+        [ 120, "Mercado", "Alimentação", 421.6 ]
+      ],
+      // Duas análises antigas: uma compra planejada (comprar depois de
+      // analisar, com necessidade e orçamento marcados) e uma desistência com
+      // mais de 30 dias, que aparece em "O que aconteceu depois?".
+      analises: [ {
+        diasAtras: 40,
+        item_name: "Jaqueta",
+        price: 219,
+        category: "Vestuário",
+        work_days: 1.38,
+        work_hours: 11.01,
+        income_percent: 6.26,
+        income_base: 3500,
+        income_type: "fixa",
+        work_days_month: 22,
+        work_hours_day: 8,
+        hour_value: 19.89,
+        day_value: 159.09,
+        free_income: 2146,
+        balance_before: 1510,
+        balance_after: 1291,
+        impact_level: "verde",
+        decision: "comprar",
+        reflections: {
+          necessidade: "Preciso agora",
+          uso: "Uso diário",
+          durabilidade: "Média",
+          alternativas: "Não há alternativa",
+          orcamento: "Aperta um pouco",
+          descarte: "Doo ou revendo depois"
+        },
+        note: "A jaqueta antiga rasgou."
+      }, {
+        diasAtras: 35,
+        item_name: "Videogame",
+        price: 2400,
+        category: "Eletrônicos",
+        work_days: 15.09,
+        work_hours: 120.69,
+        income_percent: 68.57,
+        income_base: 3500,
+        income_type: "fixa",
+        work_days_month: 22,
+        work_hours_day: 8,
+        hour_value: 19.89,
+        day_value: 159.09,
+        free_income: 2146,
+        balance_before: 1380,
+        balance_after: -1020,
+        impact_level: "alerta",
+        decision: "desistir",
+        reflections: {
+          necessidade: "É impulso",
+          uso: "Uso ocasional",
+          durabilidade: "Alta, com garantia",
+          alternativas: "Existe opção usada",
+          orcamento: "Compromete o essencial",
+          descarte: "Uso por muitos anos"
+        },
+        note: "Vi em promoção, mas apertaria o mês."
+      } ]
     }
   };
+  // Os lançamentos dos meses anteriores da demonstração, com as datas
+  // calculadas a partir de hoje (FIXTURE_DEMO.historico).
+  function historicoDaDemo(hoje = new Date) {
+    const H = FIXTURE_DEMO.historico;
+    const {base: base, emDias: emDias} = datasDaDemo(hoje);
+    const noMes = (deslocamento, diaDoMes) => {
+      const ultimo = new Date(base.getFullYear(), base.getMonth() + deslocamento + 1, 0).getDate();
+      return U.dataISO(new Date(base.getFullYear(), base.getMonth() + deslocamento, Math.min(ultimo, diaDoMes)));
+    };
+    const lista = [];
+    for (let m = H.meses; m >= 1; m--) {
+      FIXTURE_DEMO.recorrentes.forEach(r => lista.push({
+        type: r.type,
+        description: r.description,
+        amount: r.amount,
+        category: H.categoriasFixas[r.description] || "Outros",
+        date: noMes(-m, emDias(r.dias).getDate())
+      }));
+    }
+    H.entradas.forEach(({mes: mes, dia: dia, ...campos}) => lista.push({
+      type: "entrada",
+      ...campos,
+      date: noMes(mes, dia)
+    }));
+    H.diaADia.forEach(([dias, description, category, amount]) => {
+      const d = new Date(base);
+      d.setDate(d.getDate() - dias);
+      lista.push({
+        type: "saida",
+        description: description,
+        category: category,
+        amount: amount,
+        date: U.dataISO(d)
+      });
+    });
+    return lista;
+  }
   function datasDaDemo(hoje = new Date) {
     const base = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     // Um recuo nunca atravessa para o mês anterior: se hoje é dia 2, o salário
@@ -876,13 +1109,31 @@ window.FinckFinance = (() => {
         await ajustarMeta(meta.id, Number(campos.current_amount), "Saldo inicial da meta de exemplo");
       }
     }
-    const {diasAtras: diasAtras, ...analise} = FIXTURE_DEMO.analise;
-    await registrar("purchase_analyses", {
-      ...analise,
-      responsibility_score: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).pontuacao : null,
-      responsibility_label: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).nivel : null,
-      analyzed_at: `${iso(-diasAtras)}T12:00:00.000Z`
-    });
+    for (const t of historicoDaDemo(hoje)) {
+      await registrar("transactions", t);
+    }
+    // A análise de exemplo mais recente e as duas antigas do histórico. As
+    // antigas usam a data corrida (podem cair no mês anterior).
+    const quando = dias => {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+      d.setDate(d.getDate() - dias);
+      return U.dataISO(d);
+    };
+    const exemplos = [ {
+      ...FIXTURE_DEMO.analise,
+      data: iso(-FIXTURE_DEMO.analise.diasAtras)
+    }, ...FIXTURE_DEMO.historico.analises.map(a => ({
+      ...a,
+      data: quando(a.diasAtras)
+    })) ];
+    for (const {diasAtras: diasAtras, data: data, ...analise} of exemplos) {
+      await registrar("purchase_analyses", {
+        ...analise,
+        responsibility_score: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).pontuacao : null,
+        responsibility_label: window.FinckReality ? window.FinckReality.indicadorResponsavel(analise.reflections).nivel : null,
+        analyzed_at: `${data}T12:00:00.000Z`
+      });
+    }
     // Contas de exemplo, saque para a carteira e salário e aluguel já
     // confirmados (js/store.js) entram na mesma operação, sem esperar a
     // próxima tela. Fora da demonstração, não faz nada.
@@ -933,6 +1184,7 @@ window.FinckFinance = (() => {
     carregarDemo: carregarDemo,
     resetarDemo: resetarDemo,
     datasDaDemo: datasDaDemo,
+    historicoDaDemo: historicoDaDemo,
     FIXTURE_DEMO: FIXTURE_DEMO
   };
 })();

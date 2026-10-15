@@ -695,6 +695,14 @@ window.FinckReality = (() => {
     };
   }
   const valorTotal = a => Number(a?.price || 0) * (Number(a?.quantity) > 0 ? Math.floor(Number(a.quantity)) : 1);
+  // Comprar também pode ser uma decisão consciente: a compra é "planejada"
+  // quando foi analisada antes, a pessoa marcou na reflexão que precisa dela
+  // agora e que ela não compromete o essencial. Sem as respostas, o FinCK
+  // não presume nada.
+  function compraPlanejada(a) {
+    const r = a?.reflections || {};
+    return a?.decision === "comprar" && r.necessidade === "Preciso agora" && Boolean(r.orcamento) && r.orcamento !== "Compromete o essencial";
+  }
   function resumoHistorico(analises) {
     const lista = analises || [];
     const conscientes = new Set(cfg.DECISOES.filter(d => d.consciente).map(d => d.id));
@@ -729,7 +737,9 @@ window.FinckReality = (() => {
       com_alternativa: decididas.filter(a => deAlternativa.has(a.decision)).length,
       realizadas: comDecisao("comprar"),
       sem_decisao: lista.length - decididas.length,
-      diferentes_de_comprar: decididas.filter(a => a.decision !== "comprar").length
+      diferentes_de_comprar: decididas.filter(a => a.decision !== "comprar").length,
+      planejadas: decididas.filter(compraPlanejada).length,
+      com_reflexao: decididas.filter(a => a.reflections && Object.keys(a.reflections).length).length
     };
   }
   // A frase do histórico conta só o que foi salvo: decisões registradas na
@@ -932,6 +942,7 @@ window.FinckReality = (() => {
     ROTULO_IMPACTO: ROTULO_IMPACTO,
     paraRegistro: paraRegistro,
     resumoHistorico: resumoHistorico,
+    compraPlanejada: compraPlanejada,
     valorTotal: valorTotal,
     custoDeUso: custoDeUso,
     paraAcompanhar: paraAcompanhar,
