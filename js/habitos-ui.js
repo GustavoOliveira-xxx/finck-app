@@ -32,7 +32,7 @@ window.FinckHabitosUI = (() => {
   // Um padrão: título, o fato com os números, o efeito acumulado (sempre
   // estimativa), a pergunta de reflexão e, recolhidos, a conta e a simulação.
   function htmlPadrao(q, {simulador: simulador = true, link: link = true, compacto: compacto = false} = {}) {
-    const acumulado = q.acumulado_12m ? `<p class="padrao-habito__acumulado"><span>Mantido esse ritmo, em 12 meses:</span> <strong>${U.moeda(q.acumulado_12m)}</strong>${q.horas_mes ? ` <small>(${casa1(q.horas_mes * 12)} h de trabalho)</small>` : ""} ${selo("estimativa")}</p>` : "";
+    const acumulado = q.acumulado_12m ? `<p class="padrao-habito__acumulado"><span>Mantido esse ritmo, em 12 meses:</span> <strong>${U.moeda(q.acumulado_12m)}</strong>${q.horas_12m ? ` <small>(${casa1(q.horas_12m)} h de trabalho)</small>` : ""} ${selo("estimativa")}</p>` : "";
     const podeSimular = simulador && q.simulavel && q.base_mensal > 0;
     return `
       <li class="padrao-habito${q.ods12 ? " padrao-habito--ods12" : ""}" data-padrao="${esc(q.id)}">

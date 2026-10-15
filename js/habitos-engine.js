@@ -33,6 +33,9 @@ window.FinckHabitos = (() => {
   const soma = lista => lista.reduce((s, t) => s + num(t.amount), 0);
   const normalizar = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
   const vezes = n => `${n} ${n === 1 ? "vez" : "vezes"}`;
+  // O resultado do mês em palavras: "sobraram R$ 57,80" ou "faltaram
+  // R$ 18,90". Um valor com sinal de menos depois de "a sobra foi de" confunde.
+  const resultadoDoMes = v => v < 0 ? `faltaram ${moeda(-v)}` : `sobraram ${moeda(v)}`;
   const meses = n => `${casa1(n)} ${arred(n, 1) === 1 ? "mês" : "meses"}`;
 
   // ------------------------------------------------------------ classificação
@@ -560,7 +563,7 @@ window.FinckHabitos = (() => {
         padrao: {
           id: "sobra",
           titulo: ultimo.sobra < 0 ? "O último mês fechou no vermelho" : "A sobra do mês diminuiu",
-          texto: ultimo.sobra < 0 ? `Em ${ultimo.rotulo}, os gastos passaram do que entrou em ${moeda(-ultimo.sobra)}. Nos meses anteriores, a sobra foi de ${anteriores.map(m => `${moeda(m.sobra)} em ${m.rotulo}`).join(" e ")}.` : `Em ${ultimo.rotulo} sobraram ${moeda(ultimo.sobra)}, abaixo da média de ${moeda(media)} dos meses anteriores.`,
+          texto: ultimo.sobra < 0 ? `Em ${ultimo.rotulo}, os gastos passaram do que entrou em ${moeda(-ultimo.sobra)}. Nos meses anteriores, ${anteriores.map(m => `${resultadoDoMes(m.sobra)} em ${m.rotulo}`).join(" e ")}.` : `Em ${ultimo.rotulo} sobraram ${moeda(ultimo.sobra)}, abaixo da média de ${moeda(media)} dos meses anteriores.`,
           categoria: null,
           base_mensal: null,
           pct_renda: null,
@@ -693,6 +696,8 @@ window.FinckHabitos = (() => {
     padroes.forEach(q => {
       q.acumulado_12m = q.base_mensal && q.id !== "peso" ? arred(q.base_mensal * 12) : null;
       q.horas_mes = q.base_mensal && valorHora > 0 ? arred(q.base_mensal / valorHora, 1) : null;
+      // Do total de 12 meses, não das horas do mês já arredondadas.
+      q.horas_12m = q.acumulado_12m && valorHora > 0 ? arred(q.acumulado_12m / valorHora, 1) : null;
     });
     padroes.sort((a, b) => b.relevancia - a.relevancia);
     let escolhidos = padroes.slice(0, p.MAX_PADROES);
@@ -1007,7 +1012,7 @@ window.FinckHabitos = (() => {
       }
       const dSobra = depois.sobra - antes.sobra;
       if (Math.abs(dSobra) >= minimo) {
-        (dSobra < 0 ? atencao : melhorou).push(`A sobra ${dSobra < 0 ? "diminuiu" : "aumentou"} de ${moeda(antes.sobra)} em ${antes.rotulo} para ${moeda(depois.sobra)} em ${depois.rotulo}.`);
+        (dSobra < 0 ? atencao : melhorou).push(`O resultado do mês ${dSobra < 0 ? "piorou" : "melhorou"}: ${resultadoDoMes(antes.sobra)} em ${antes.rotulo} e ${resultadoDoMes(depois.sobra)} em ${depois.rotulo}.`);
       }
       const variacoes = (h.categorias || []).map(c => ({
         nome: c.nome,
