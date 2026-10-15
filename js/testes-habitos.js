@@ -288,6 +288,24 @@
       esperar(R.compraPlanejada({ ...base, decision: "adiar" })).aSerFalso();
       esperar(R.resumoHistorico([ base, { decision: "adiar" }, { decision: "comprar" } ]).planejadas).aSer(1);
     });
+
+    teste("a retrospectiva separa as escolhas, sem ordem de mérito", () => {
+      const r = R.retrospectiva([
+        { decision: "comprar", price: 100, reflections: { necessidade: "Preciso agora", orcamento: "Não compromete nada" } },
+        { decision: "comprar", price: 50 },
+        { decision: "adiar", price: 300, outcome: "mantive" },
+        { decision: "usado", price: 200 },
+        { decision: "reparar", price: 80 },
+        { decision: "desistir", price: 900 },
+        { price: 30 }
+      ]);
+      const n = Object.fromEntries(r.grupos.map(g => [ g.id, g.n ]));
+      esperar(r.total).aSer(7);
+      esperar(JSON.stringify(n)).aSer(JSON.stringify({ planejada: 1, comprou: 1, esperou: 1, alternativa: 2, nao_comprou: 1, sem_decisao: 1 }));
+      esperar(r.grupos.find(g => g.id === "alternativa").valor).aSer(280);
+      esperar(r.depois.map(o => o.id).join()).aSer("mantive");
+      esperar(r.grupos.map(g => g.rotulo).some(t => /errad|ruim|melhor|pior/i.test(t))).aSerFalso();
+    });
   });
 
   // Mesmo padrão das outras suítes: guarda o que havia no aparelho, entra na

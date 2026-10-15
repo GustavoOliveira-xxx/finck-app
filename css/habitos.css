@@ -216,3 +216,24 @@
 .historico-reality__titulo{ margin:0; font-size:.8rem; font-weight:700; color:#d9b3f7; }
 .historico-reality__texto{ margin:0; font-size:.9rem; line-height:1.5; color:var(--texto); }
 .historico-reality__extra{ margin:0; font-size:.84rem; color:var(--texto-fraco); }
+
+/* --- Decisões: retrospectiva sem ordem de mérito ------------------------- */
+.retrospectiva{ display:grid; grid-template-columns:minmax(0,1fr); gap:.7rem; }
+.retro-lista{ list-style:none; margin:0; padding:0; display:grid; gap:.55rem; }
+.retro-lista__item{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.2rem .7rem; align-items:center;
+  padding:.6rem .75rem; border-radius:var(--raio-md);
+  border:1px solid var(--superficie-borda); background:rgba(255,255,255,.025);
+}
+.retro-lista__rotulo{ font-size:.9rem; font-weight:600; color:var(--texto); }
+.retro-lista__numero{ font-family:var(--fonte-dados); font-size:.8rem; color:var(--texto-fraco); text-align:right; }
+.retro-lista__barra{ height:6px; border-radius:var(--raio-selo); background:rgba(255,255,255,.06); overflow:hidden; }
+.retro-lista__barra span{ display:block; height:100%; background:var(--roxo-claro); }
+.retro-lista__pct{ font-family:var(--fonte-dados); font-size:.8rem; color:var(--texto); text-align:right; }
+@media (max-width: 420px){
+  .retro-lista__item{ grid-template-columns:minmax(0,1fr); }
+  .retro-lista__numero, .retro-lista__pct{ text-align:left; }
+}
+.acompanhar-agora{ display:flex; flex-wrap:wrap; align-items:center; gap:.3rem .5rem; margin-top:.35rem; font-size:.8rem; color:var(--texto-fraco); }
+#conteudoRetrospectiva{ display:grid; grid-template-columns:minmax(0,1fr); gap:.6rem; }
+#conteudoRetrospectiva p{ margin:0; }

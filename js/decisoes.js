@@ -19,10 +19,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       asc: false
     });
     renderResumo();
+    renderRetrospectiva();
     renderAcompanhar();
     renderLista();
   }
+  // Cada escolha com o número, o valor e uma barra com o texto ao lado: a
+  // proporção não depende só da cor.
+  function renderRetrospectiva() {
+    const r = R.retrospectiva(analises);
+    const host = document.getElementById("conteudoRetrospectiva");
+    if (!r.total) {
+      host.innerHTML = "";
+      return;
+    }
+    const leitura = R.leituraHistorico(analises);
+    host.innerHTML = `
+      <ul class="retro-lista">${r.grupos.filter(g => g.n > 0).map(g => `
+        <li class="retro-lista__item retro-lista__item--${U.escapeHTML(g.id)}">
+          <span class="retro-lista__rotulo">${U.escapeHTML(g.rotulo)}</span>
+          <span class="retro-lista__numero">${g.n} ${g.n === 1 ? "análise" : "análises"} · ${U.moeda(g.valor)}</span>
+          <span class="retro-lista__barra" aria-hidden="true"><span style="width:${Math.max(4, Math.round(g.pct))}%"></span></span>
+          <span class="retro-lista__pct">${U.percentual(g.pct, 0)}</span>
+        </li>`).join("")}
+      </ul>
+      ${leitura ? `<p class="nota">${U.escapeHTML(leitura)}</p>` : ""}
+      ${r.depois.length ? `<p class="nota">Depois de decidir, você contou: ${r.depois.map(o => `${U.escapeHTML(o.rotulo.toLowerCase())} (${o.n})`).join(", ")}.</p>` : ""}
+      <p class="nota">Para pensar: entre as compras que você fez, qual faria de novo do mesmo jeito? E entre as que esperou, alguma ainda faz falta?</p>`;
+  }
   const rotuloAcompanhamento = id => cfg.ACOMPANHAMENTO.find(a => a.id === id)?.label || null;
+  const conscientes = new Set(cfg.DECISOES.filter(d => d.consciente).map(d => d.id));
   function renderResumo() {
     const r = R.resumoHistorico(analises);
     document.getElementById("resumoDecisoes").innerHTML = `\n      <article class="card-indicador"><span>Análises registradas</span><strong>${r.total}</strong>\n        <small class="explica-numero">Compras que passaram pelo Reality, desde a primeira.</small></article>\n      <article class="card-indicador"><span>Decisões conscientes</span><strong>${r.evitadas}</strong>\n        <small class="explica-numero">Adiar, buscar alternativa, usado, reparo ou desistir, desde o início.</small></article>\n      <article class="card-indicador"><span>Valor potencial preservado</span><strong class="cor-verde">${U.moeda(r.valor_potencial)}</strong>\n        <small class="explica-numero">Preço do que não saiu na hora da decisão. Ainda não é economia.</small></article>\n      <article class="card-indicador"><span>Economia confirmada</span><strong class="cor-verde">${U.moeda(r.economia_confirmada)}</strong>\n        <small class="explica-numero">Só o que você confirmou no acompanhamento depois de 30 dias.</small></article>\n      <article class="card-indicador"><span>Horas de trabalho equivalentes</span><strong>${U.numero(r.horas_preservadas, 1)} h</strong>\n        <small class="explica-numero">O valor potencial em horas, pela sua renda e jornada.</small></article>\n      ${r.indicador_medio !== null ? `<article class="card-indicador"><span>Indicador de decisão responsável</span><strong>${r.indicador_medio}/100</strong>\n        <small class="explica-numero">Média de 0 a 100 das suas respostas de reflexão.</small></article>` : ""}`;
@@ -59,8 +84,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll("[data-com-analises]").forEach(el => {
       el.hidden = semAnalises;
     });
-    host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${U.escapeHTML(rotulo(a.decision))}</p>\n          ${a.outcome ? `<p class="tag-acompanhamento">Depois: ${U.escapeHTML(rotuloAcompanhamento(a.outcome) || a.outcome)}</p>` : ""}\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(R.valorTotal(a))}</strong>\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir análise">✕</button>\n        </div>\n      </article>`).join("");
+    host.innerHTML = itens.map(a => `\n      <article class="item-decisao impacto--${a.impact_level || "verde"}">\n        <div class="item-info">\n          <h4>${U.escapeHTML(a.item_name)}</h4>\n          <small>${U.escapeHTML(a.category || "Outros")} · ${U.dataBR(a.analyzed_at || a.created_at)}</small>\n          <p class="tag-decisao">${U.escapeHTML(rotulo(a.decision))}</p>\n          ${a.outcome ? `<p class="tag-acompanhamento">Depois: ${U.escapeHTML(rotuloAcompanhamento(a.outcome) || a.outcome)}</p>` : ""}\n          ${R.compraPlanejada(a) ? `<p class="tag-acompanhamento">Compra planejada: necessidade e orçamento marcados na reflexão.</p>` : ""}\n          ${!a.outcome && conscientes.has(a.decision) ? `<label class="acompanhar-agora">O que aconteceu depois? <select class="select-mini" data-acompanhar-item="${U.escapeHTML(a.id)}"><option value="">Ainda não contei</option>${cfg.ACOMPANHAMENTO.map(o => `<option value="${o.id}">${U.escapeHTML(o.label)}</option>`).join("")}</select></label>` : ""}\n        </div>\n        <div class="item-lado">\n          <strong>${U.moeda(R.valorTotal(a))}</strong>\n          <small>${U.numero(a.work_hours, 1)} h de trabalho</small>\n          <button type="button" class="btn-secundario btn-mini" data-detalhe="${a.id}">Detalhes</button>\n          <button type="button" class="btn-excluir-item" data-excluir="${a.id}" aria-label="Excluir análise">✕</button>\n        </div>\n      </article>`).join("");
     host.querySelectorAll("[data-detalhe]").forEach(b => b.addEventListener("click", () => abrirDetalhe(b.dataset.detalhe)));
+    // O acompanhamento não precisa esperar 30 dias: quem já sabe o que
+    // aconteceu pode contar agora.
+    host.querySelectorAll("[data-acompanhar-item]").forEach(sel => sel.addEventListener("change", async () => {
+      if (!sel.value) {
+        return;
+      }
+      await S.atualizar("purchase_analyses", sel.dataset.acompanharItem, {
+        outcome: sel.value,
+        outcome_at: (new Date).toISOString()
+      });
+      U.toast("Acompanhamento registrado.", "sucesso");
+      carregar();
+    }));
     host.querySelectorAll("[data-excluir]").forEach(b => b.addEventListener("click", async () => {
       if (!await U.confirmar("Excluir esta análise?", "Ela sai do histórico de decisões conscientes e deixa de contar no valor potencial preservado.", {
         confirmar: "Excluir"

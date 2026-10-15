@@ -742,6 +742,42 @@ window.FinckReality = (() => {
       com_reflexao: decididas.filter(a => a.reflections && Object.keys(a.reflections).length).length
     };
   }
+  // Retrospectiva das decisões: quantas e quanto em cada escolha, lado a
+  // lado e sem ordem de mérito. A compra planejada aparece separada da
+  // compra feita sem as respostas de necessidade e orçamento.
+  function retrospectiva(analises) {
+    const lista = (analises || []).filter(Boolean);
+    const alternativas = new Set(cfg.DECISOES.filter(d => d.grupo === "alternativa").map(d => d.id));
+    const grupoDe = a => !a.decision ? "sem_decisao" : a.decision === "comprar" ? compraPlanejada(a) ? "planejada" : "comprou" : a.decision === "adiar" ? "esperou" : a.decision === "desistir" ? "nao_comprou" : alternativas.has(a.decision) ? "alternativa" : "sem_decisao";
+    const ROTULOS = {
+      planejada: "Comprou de forma planejada",
+      comprou: "Comprou",
+      esperou: "Esperou",
+      alternativa: "Buscou alternativa (usado, conserto ou outra opção)",
+      nao_comprou: "Não comprou",
+      sem_decisao: "Ainda sem decisão"
+    };
+    const grupos = Object.keys(ROTULOS).map(id => {
+      const itens = lista.filter(a => grupoDe(a) === id);
+      return {
+        id: id,
+        rotulo: ROTULOS[id],
+        n: itens.length,
+        valor: itens.reduce((s, a) => s + valorTotal(a), 0),
+        pct: lista.length ? itens.length / lista.length * 100 : 0
+      };
+    });
+    const depois = cfg.ACOMPANHAMENTO.map(o => ({
+      id: o.id,
+      rotulo: o.label,
+      n: lista.filter(a => a.outcome === o.id).length
+    })).filter(o => o.n > 0);
+    return {
+      total: lista.length,
+      grupos: grupos,
+      depois: depois
+    };
+  }
   // A frase do histórico conta só o que foi salvo: decisões registradas na
   // hora da análise, não o que aconteceu depois.
   function fraseHistorico(resumo) {
@@ -943,6 +979,7 @@ window.FinckReality = (() => {
     paraRegistro: paraRegistro,
     resumoHistorico: resumoHistorico,
     compraPlanejada: compraPlanejada,
+    retrospectiva: retrospectiva,
     valorTotal: valorTotal,
     custoDeUso: custoDeUso,
     paraAcompanhar: paraAcompanhar,
