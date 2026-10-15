@@ -68,6 +68,8 @@
       esperar(h.padroes.length).aSer(window.FINCK_CONFIG.HABITOS.MAX_PADROES);
       esperar(ids[0]).aSer("sobra");
       esperar(h.padroes[0].titulo).aSer("O último mês fechou no vermelho");
+      esperar(h.padroes[0].texto.includes("-R$")).aSerFalso();
+      esperar(h.padroes[0].texto).aConter("Nos meses anteriores, sobraram");
       esperar(ids.includes("duraveis")).aSerVerdadeiro();
       esperar(h.padroes.find(q => q.id === "duraveis").ods12).aSerVerdadeiro();
       // Ordem por relevância, com o ODS 12 no lugar do último quando não cabe.
@@ -97,8 +99,10 @@
       esperar(p.pct_renda).aSerPerto(7, 2);
       esperar(p.base_mensal).aSerPerto(210, 2);
       esperar(p.acumulado_12m).aSerPerto(2520, 2);
-      // R$ 210 ÷ R$ 18,75 por hora.
+      // R$ 210 ÷ R$ 18,75 por hora; em 12 meses, do total (R$ 2.520), não de
+      // 11,2 h × 12.
       esperar(p.horas_mes).aSerPerto(11.2, 1);
+      esperar(p.horas_12m).aSerPerto(134.4, 1);
     });
 
     teste("contas fixas, parcelas e aportes não entram no dia a dia", () => {
@@ -162,7 +166,8 @@
       const m = H().mudancas(H().analisar(cenarioCompleto(), { hoje: HOJE }));
       // Agosto: 1.250 de gastos; setembro: 3.920 (o conserto do carro).
       esperar(m.atencao.some(t => t.startsWith("Os gastos subiram") && t.includes("agosto") && t.includes("setembro"))).aSerVerdadeiro();
-      esperar(m.atencao.some(t => t.startsWith("A sobra diminuiu"))).aSerVerdadeiro();
+      // Sobra negativa em palavras ("faltaram"), sem o sinal de menos solto.
+      esperar(m.atencao.some(t => t.startsWith("O resultado do mês piorou: sobraram") && t.includes("faltaram"))).aSerVerdadeiro();
       esperar(m.atencao.some(t => t.includes("Transporte foi a categoria que mais subiu"))).aSerVerdadeiro();
       esperar(H().mudancas({ meses: [], categorias: [], positivos: [] }).atencao).aTerTamanho(0);
     });
