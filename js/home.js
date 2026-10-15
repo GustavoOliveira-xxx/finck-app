@@ -298,12 +298,12 @@ window.FinckPainel = (() => {
   // Atalhos de "Mais ferramentas": quatro por tarefa à vista e o resto em
   // "Ver todas", separado pelas famílias de FinckNav.FAMILIAS (js/nav.js).
   const ATALHOS = [
-    { href: "analises.html", tarefa: "Ver para onde vai o dinheiro", nome: "Análises", icone: "analises", familia: "financas", principal: true },
+    { href: "analises.html", tarefa: "Ver hábitos e para onde vai o dinheiro", nome: "Análises", icone: "analises", familia: "financas", principal: true },
     { href: "recorrentes.html", tarefa: "Cadastrar contas de todo mês", nome: "Recorrentes", icone: "recorrentes", familia: "financas", principal: true },
     { href: "planejamento.html", tarefa: "Acompanhar parcelas", nome: "Planejamento", icone: "planejamento", familia: "financas", principal: true },
     { href: "decisoes.html", tarefa: "Rever minhas decisões de compra", nome: "Decisões", icone: "decisoes", familia: "reality", principal: true },
     { href: "contas.html", tarefa: "Onde seu dinheiro está", nome: "Contas", icone: "contas", familia: "financas" },
-    { href: "assistente.html", tarefa: "Prioridades e próximas ações", nome: "Revisão financeira", icone: "revisao", familia: "financas" },
+    { href: "assistente.html", tarefa: "Espelho financeiro e próximas ações", nome: "Revisão financeira", icone: "revisao", familia: "financas" },
     { href: "relatorios.html", tarefa: "Fechamento do mês e exportação", nome: "Relatórios", icone: "relatorios", familia: "financas" },
     { href: "gamificacao.html", tarefa: "Conquistas e hábitos", nome: "Jornada", icone: "jornada", familia: "financas" },
     { href: "cenarios.html", tarefa: "Comparar formas de decidir", nome: "Cenários", icone: "cenarios", familia: "reality" },
@@ -623,6 +623,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const d = D.diagnosticar(ctx);
     $("resumoAssistente").textContent = d.resumo;
     host.innerHTML = d.prioridades.slice(0, 2).map(p => `\n      <li class="sinal sinal--${U.escapeHTML(p.nivel)}"><span class="sinal__ponto" aria-hidden="true"></span>${U.escapeHTML(p.titulo)}</li>`).join("");
+    // O hábito que mais pesa: um fato com números, sem julgamento. Sem
+    // padrão (ou com poucos registros), o bloco não aparece.
+    const HB = window.FinckHabitos;
+    const habito = HB ? HB.habitoPrincipal(HB.analisar(ctx)) : null;
+    // A mudança em relação ao mês passado, no mesmo período (do dia 1 até
+    // hoje), para não comparar um mês inteiro com um pela metade.
+    const comparacao = HB ? HB.comparacaoMesAnterior(ctx) : null;
+    $("habitoHome").hidden = !habito && !comparacao;
+    $("habitoHomeTexto").innerHTML = habito ? `<strong>${U.escapeHTML(habito.titulo)}.</strong> ${U.escapeHTML(habito.texto)}` : "";
+    $("habitoHomeTexto").hidden = !habito;
+    $("comparacaoHome").textContent = comparacao ? `Gastos deste mês até hoje: ${U.moeda(comparacao.atual)}, ${comparacao.texto.charAt(0).toLowerCase()}${comparacao.texto.slice(1)}` : "";
+    $("comparacaoHome").hidden = !comparacao;
   }
 
   // Atalhos de "Mais ferramentas" (FinckPainel.ATALHOS): quatro por tarefa à

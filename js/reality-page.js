@@ -657,7 +657,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <button type="button" class="btn-texto" data-alterar-categoria>Alterar</button>`;
   }
   // Trocar a categoria depois do resultado não muda a conta; só o que será
-  // salvo. A linha da resposta acompanha na hora.
+  // salvo. A linha da resposta e o histórico da categoria acompanham na hora.
   function atualizarCategoriaNaResposta() {
     if (!entrada) {
       return;
@@ -667,6 +667,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (linha) {
       linha.innerHTML = textoCategoriaResposta();
     }
+    const historico = $("historicoReality");
+    if (historico && resultado) {
+      historico.innerHTML = htmlHistorico(Number(entrada.price) * (Number(entrada.quantity) || 1));
+    }
+  }
+  // A compra dentro do histórico da mesma categoria: quanto já saiu no mês,
+  // a média dos meses completos e as compras parecidas já analisadas
+  // (js/habitos-engine.js). Fatos registrados, sem julgamento.
+  function htmlHistorico(total) {
+    const HB = window.FinckHabitos;
+    if (!HB || !ctx || !entrada) {
+      return "";
+    }
+    const h = HB.historicoDaCategoria(ctx, entrada.category, total);
+    const selo = h.certeza === "estimativa" ? '<span class="selo-certeza selo-certeza--estimativa">Estimativa</span>' : '<span class="selo-certeza selo-certeza--confirmado">Dado confirmado</span>';
+    return `
+      <p class="historico-reality__titulo">No seu histórico de ${esc(h.categoria)}</p>
+      <p class="historico-reality__texto">${esc(h.texto)} ${selo}</p>
+      ${h.extra ? `<p class="historico-reality__extra">${esc(h.extra)}</p>` : ""}
+      ${h.ods12 ? `<p class="historico-reality__extra"><span class="selo-ods12">ODS 12</span> ${esc(h.ods12)}</p>` : ""}
+      <details class="detalhe-habito">
+        <summary>Como foi calculado?</summary>
+        <div class="detalhe-habito__corpo">
+          <dl class="conta-habito">${h.calculo.map(l => `<div><dt>${esc(l.rotulo)}</dt><dd>${esc(l.valor)}</dd></div>`).join("")}</dl>
+          <p>${h.certeza === "estimativa" ? "A média usa menos de três meses completos, então muda conforme você registra mais." : "Média dos últimos três meses completos, com o que você registrou."} <a href="analises.html#habitos">Ver os seus hábitos</a></p>
+        </div>
+      </details>`;
   }
 
   // O texto do semáforo só aparece quando diz algo que a frase-síntese não
@@ -720,6 +747,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p class="impacto-nivel__nao-julga">O selo mede o peso desta compra no seu dinheiro de agora, não se você deve comprar.</p>
       </div>
       ${mudancas.length ? `<div class="o-que-mudou"><p class="o-que-mudou__titulo">O que mudou desde a última análise</p><ul>${mudancas.map(textoMudanca).join("")}</ul></div>` : ""}
+      <div class="historico-reality" id="historicoReality">${htmlHistorico(cadeia.total)}</div>
       <p class="resposta-reality__categoria">${textoCategoriaResposta()}</p>
       <div class="resposta-reality__links">
         <a class="link-mais resposta-reality__mais" href="#detalhesAnalise" data-abrir-detalhe="detalhesAnalise">Ver o orçamento completo</a>
