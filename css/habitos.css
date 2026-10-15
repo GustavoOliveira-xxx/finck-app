@@ -237,3 +237,34 @@
 .acompanhar-agora{ display:flex; flex-wrap:wrap; align-items:center; gap:.3rem .5rem; margin-top:.35rem; font-size:.8rem; color:var(--texto-fraco); }
 #conteudoRetrospectiva{ display:grid; grid-template-columns:minmax(0,1fr); gap:.6rem; }
 #conteudoRetrospectiva p{ margin:0; }
+
+/* --- Validação com usuários (validacao.html) ----------------------------- */
+.cabecalho-validacao{
+  display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
+  max-width:1100px; margin:0 auto; padding:1rem clamp(16px, 4vw, 2rem) 0;
+}
+.cabecalho-validacao img{ border-radius:var(--raio-md); }
+.cabecalho-validacao p{ margin:0; flex:1; display:grid; line-height:1.2; }
+.cabecalho-validacao span{ font-size:.8rem; color:var(--texto-fraco); }
+.etapas-validacao{ display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; }
+.etapa-validacao{
+  display:grid; grid-template-columns:minmax(0,1fr); gap:.55rem; min-width:0;
+  margin:0; padding:.9rem 1rem;
+  border:1px solid var(--superficie-borda); border-radius:var(--raio-lg);
+}
+.etapa-validacao legend{ padding:0 .3rem; font-weight:700; color:var(--texto); }
+.etapa-validacao label{ display:grid; gap:.3rem; font-size:.88rem; color:var(--texto-fraco); }
+.etapa-validacao label.chip{ display:inline-flex; }
+.etapa-validacao textarea, .etapa-validacao input[type="number"], .etapa-validacao select{ width:100%; }
+.etapa-validacao__cenario{ margin:0; padding:.7rem .85rem; border-left:3px solid var(--amarelo); background:var(--amarelo-fraco); border-radius:var(--raio-md); color:var(--texto); line-height:1.55; }
+.etapa-validacao__pergunta{ margin:.2rem 0 0; font-size:.88rem; font-weight:600; color:var(--texto); }
+.etapa-validacao__opcoes{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.etapa-validacao .chip{ cursor:pointer; min-height:36px; }
+@media (pointer: coarse){ .etapa-validacao .chip{ min-height:44px; } }
+.etapa-validacao__consentimento{ display:flex !important; flex-direction:row !important; align-items:center; gap:.5rem; color:var(--texto) !important; }
+.etapa-validacao__consentimento input{ width:auto; min-width:20px; height:20px; margin:0; flex:none; }
+.escala-validacao{ margin:0; padding:0; border:none; display:grid; gap:.3rem; }
+.escala-validacao legend{ font-weight:600; font-size:.88rem; padding:0; margin-bottom:.3rem; }
+.escala-validacao__opcoes{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.escala-validacao small{ color:var(--texto-fraquissimo); font-size:.76rem; }
+.escala-validacao + .escala-validacao{ margin-top:.6rem; }

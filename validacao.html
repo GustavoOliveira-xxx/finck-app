@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FinCK | Validação com usuários</title>
+  <!-- Ferramenta do pesquisador para a avaliação com participantes: fora dos
+       buscadores e fora da navegação principal. -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Roteiro da avaliação do FinCK com participantes voluntários, com as respostas guardadas só neste aparelho.">
+  <link rel="icon" href="assets/favicon-finck.png" type="image/png">
+  <meta name="theme-color" content="#07060a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style-principal.css">
+  <link rel="stylesheet" href="css/clareza.css">
+  <link rel="stylesheet" href="css/habitos.css">
+</head>
+<body data-page="validacao">
+  <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="cabecalho-validacao">
+    <img src="assets/logo-ck-256.png" alt="" width="40" height="40">
+    <p><strong>FinCK</strong> <span>Validação com usuários</span></p>
+    <a class="link-mais" href="home.html">Voltar ao app</a>
+  </header>
+
+  <main class="conteudo" id="conteudo" tabindex="-1">
+    <section class="hero">
+      <h2>Validação com usuários</h2>
+      <p>O roteiro para avaliar com participantes voluntários se o FinCK ajuda a entender o impacto de uma compra e os hábitos de consumo. As respostas ficam só neste aparelho, sem nome nem dado pessoal: cada pessoa vira um código.</p>
+      <p class="nota">O teste mede compreensão e reflexão. Ele não comprova que o consumo de alguém caiu no longo prazo. O protocolo completo está em <code>docs/validacao-com-usuarios.md</code>.</p>
+    </section>
+
+    <details class="bloco detalhe-habito" open>
+      <summary>Antes de começar</summary>
+      <div class="detalhe-habito__corpo">
+        <ol class="lista-simples">
+          <li>Use a demonstração do FinCK (na entrada, "Experimentar com dados de exemplo") em outro aparelho ou aba. Ninguém registra dados financeiros reais.</li>
+          <li>Leia para o participante: "Este é um teste do aplicativo, não de você. Não existe resposta certa. Você pode parar quando quiser, e nada do que disser leva o seu nome."</li>
+          <li>Não explique o aplicativo antes das tarefas. Anote hesitações e dúvidas, sem corrigir.</li>
+          <li>Cada sessão leva de 10 a 15 minutos.</li>
+        </ol>
+      </div>
+    </details>
+
+    <form class="bloco etapas-validacao" id="formSessao" novalidate>
+      <div class="bloco-cabecalho">
+        <h3>Nova sessão</h3>
+        <span class="chip">Participante <strong id="codigo">P01</strong></span>
+      </div>
+
+      <fieldset class="etapa-validacao">
+        <legend>Participante (opcional)</legend>
+        <label>Faixa etária
+          <select id="faixa">
+            <option value="">Prefere não dizer</option>
+            <option value="ate17">Até 17 anos</option>
+            <option value="18-24">18 a 24 anos</option>
+            <option value="25-34">25 a 34 anos</option>
+            <option value="35+">35 anos ou mais</option>
+          </select>
+        </label>
+        <p class="etapa-validacao__pergunta">Usa algum aplicativo de finanças?</p>
+        <div class="etapa-validacao__opcoes">
+          <label class="chip"><input type="radio" name="usaApp" value="sim"><span>Sim</span></label>
+          <label class="chip"><input type="radio" name="usaApp" value="nao"><span>Não</span></label>
+        </div>
+        <label class="etapa-validacao__consentimento"><input type="checkbox" id="consentimento"> O participante ouviu a explicação e concordou em participar.</label>
+      </fieldset>
+
+      <fieldset class="etapa-validacao">
+        <legend>1. A situação fictícia</legend>
+        <p class="etapa-validacao__cenario" id="cenario"></p>
+      </fieldset>
+
+      <fieldset class="etapa-validacao">
+        <legend>2. Sem o FinCK</legend>
+        <p class="etapa-validacao__pergunta">"Você compraria agora? O que pesou na sua resposta?"</p>
+        <div class="etapa-validacao__opcoes" id="decisaoAntes"></div>
+        <p class="etapa-validacao__pergunta">Fatores que a pessoa citou</p>
+        <div class="etapa-validacao__opcoes" id="fatoresAntes"></div>
+        <label>Anotações
+          <textarea id="comentarioAntes" rows="2" maxlength="600"></textarea>
+        </label>
+      </fieldset>
+
+      <fieldset class="etapa-validacao">
+        <legend>3. Com o FinCK</legend>
+        <p>Peça: "Analise esse fone no FinCK e depois abra a Revisão financeira." A pessoa usa o FinCK of Reality e o Espelho financeiro.</p>
+        <label>Tempo até ver o impacto (segundos)
+          <input type="number" id="tempo" min="0" max="3600" inputmode="numeric">
+        </label>
+        <p class="etapa-validacao__pergunta">Concluiu a tarefa</p>
+        <div class="etapa-validacao__opcoes">
+          <label class="chip"><input type="radio" name="ajuda" value="sem"><span>Sem ajuda</span></label>
+          <label class="chip"><input type="radio" name="ajuda" value="com"><span>Com ajuda</span></label>
+          <label class="chip"><input type="radio" name="ajuda" value="nao"><span>Não concluiu</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="etapa-validacao">
+        <legend>4. Depois do FinCK</legend>
+        <p class="etapa-validacao__pergunta">"E agora, o que você faria?"</p>
+        <div class="etapa-validacao__opcoes" id="decisaoDepois"></div>
+        <p class="etapa-validacao__pergunta">Fatores que a pessoa citou</p>
+        <div class="etapa-validacao__opcoes" id="fatoresDepois"></div>
+        <label>"Qual é a diferença entre o preço e o impacto dessa compra?"
+          <textarea id="explicacao" rows="2" maxlength="600"></textarea>
+        </label>
+        <p class="etapa-validacao__pergunta">Explicou a diferença entre preço e impacto?</p>
+        <div class="etapa-validacao__opcoes">
+          <label class="chip"><input type="radio" name="diferenca" value="sim"><span>Sim</span></label>
+          <label class="chip"><input type="radio" name="diferenca" value="parcialmente"><span>Em parte</span></label>
+          <label class="chip"><input type="radio" name="diferenca" value="nao"><span>Não</span></label>
+        </div>
+        <p class="etapa-validacao__pergunta">Percebeu gastos acumulados (pequenos gastos, categoria em alta)?</p>
+        <div class="etapa-validacao__opcoes">
+          <label class="chip"><input type="radio" name="acumulados" value="sim"><span>Sim</span></label>
+          <label class="chip"><input type="radio" name="acumulados" value="nao"><span>Não</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="etapa-validacao">
+        <legend>5. Questionário</legend>
+        <div id="escalas"></div>
+        <label>O que mais ajudou?
+          <textarea id="ajudou" rows="2" maxlength="600"></textarea>
+        </label>
+        <label>O que confundiu?
+          <textarea id="confundiu" rows="2" maxlength="600"></textarea>
+        </label>
+      </fieldset>
+
+      <button type="submit" class="btn-primario">Salvar sessão neste aparelho</button>
+    </form>
+
+    <section class="bloco" id="resultados" aria-labelledby="tituloResultados">
+      <div class="bloco-cabecalho">
+        <h3 id="tituloResultados">Indicadores</h3>
+      </div>
+      <div id="indicadores"></div>
+      <h4>Sessões salvas</h4>
+      <ul class="lista-simples" id="listaSessoes"></ul>
+      <div class="acoes-etapa">
+        <button type="button" class="btn-secundario" id="btnExportarCSV">Exportar CSV</button>
+        <button type="button" class="btn-secundario" id="btnExportarJSON">Exportar JSON</button>
+        <button type="button" class="btn-perigo" id="btnApagarTudo">Apagar todas</button>
+      </div>
+      <p class="nota">Com poucas pessoas, os percentuais são um indício, não uma medida estatística. Registre também o que aparecer em mais de uma sessão e corrija o que bloquear a tarefa.</p>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/validacao.js"></script>
+</body>
+</html>
