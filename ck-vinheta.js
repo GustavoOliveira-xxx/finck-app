@@ -36,8 +36,35 @@
     try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
 
+  /* ------------------------------------------------------------------ app em espera */
+  // Enquanto a vinheta toca, as animações do próprio app (que rodam escondidas atrás
+  // dela) ficam numa fila e começam quando ela termina. Sem isso, efeitos do app
+  // disputam o processador com a vinheta e ela trava em celular mais fraco.
+  // O app continua carregando normalmente; só o requestAnimationFrame dele espera.
+  var rafOriginal = window.requestAnimationFrame.bind(window);
+  var cafOriginal = window.cancelAnimationFrame.bind(window);
+  var filaApp = [], seqApp = 0, segurando = false;
+  window.requestAnimationFrame = function (cb) {
+    if (!segurando) return rafOriginal(cb);
+    var id = -(++seqApp); filaApp.push({ id: id, cb: cb }); return id;
+  };
+  window.cancelAnimationFrame = function (id) {
+    if (id < 0) filaApp = filaApp.filter(function (x) { return x.id !== id; });
+    else cafOriginal(id);
+  };
+  function soltarApp() {
+    if (!segurando) return;
+    segurando = false;
+    var f = filaApp; filaApp = [];
+    if (f.length) rafOriginal(function (tempo) {
+      f.forEach(function (x) { try { x.cb(tempo); } catch (e) { setTimeout(function () { throw e; }); } });
+    });
+  }
+
   /* ------------------------------------------------------------------ estilos */
   var CSS =
+    // o app fica sem ser desenhado enquanto a vinheta o cobre (o JavaScript dele continua carregando)
+    'html.ck-vinheta-ativa>body{content-visibility:hidden}' +
     '#ck-vinheta{position:fixed;inset:0;z-index:2147483000;background:#06020b;overflow:hidden;contain:strict;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}' +
     '#ck-vinheta div,#ck-vinheta canvas{position:absolute;pointer-events:none}' +
     '#ck-vinheta .ckv-tela{inset:0}' +
@@ -132,7 +159,7 @@
     window.addEventListener('keydown', V.pular, true);
     V.seguranca = setTimeout(function () { V.remover(); }, 9000);
     V.roteiro();
-    V.raf = requestAnimationFrame(function (t) { V.quadro(t); });
+    V.raf = rafOriginal(function (t) { V.quadro(t); });
   }
   Vinheta.prototype.medir = function () {
     var V = this, r = V.m.caixa.getBoundingClientRect(), W = innerWidth, H = innerHeight;
@@ -183,7 +210,11 @@
   /* roteiro: tempos em ms */
   Vinheta.prototype.roteiro = function () {
     var V = this, L = V.m.L, a = V.anim.bind(V), H = V.m.caixa.getBoundingClientRect().height;
-    var tudo = function (fn) { Object.keys(L).forEach(function (k) { fn(L[k], k); }); };
+    var piscar = function (em) {
+      ['olhoE', 'olhoD'].forEach(function (n) {
+        a(L[n].i, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(.06)', offset: .34 }, { transform: 'scaleY(.06)', offset: .57 }, { transform: 'scaleY(1)' }], { em: em, dur: 350, ease: 'ease-in-out', fill: 'none' });
+      });
+    };
     if (V.tipo === 'reduzida') {
       a(V.m.caixa, [{ opacity: 0 }, { opacity: 1 }], { dur: 350 });
       a(V.m.gr, [{ opacity: 0 }, { opacity: 1 }], { dur: 350 });
@@ -191,68 +222,77 @@
       V.agendarFim(1500, 300); return;
     }
     if (V.tipo === 'curta') {
-      a(V.m.caixa, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.97)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }], { dur: 260 });
-      ['olhoE', 'olhoD'].forEach(function (n) { a(L[n].i, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(.06)', offset: .45 }, { transform: 'scaleY(1)' }], { em: 300, dur: 230, ease: E.io, fill: 'none' }); });
-      a(L.raios.i, [{ transform: 'scale(1)' }, { transform: 'scale(1.07) rotate(5deg)', offset: .4 }, { transform: 'scale(1)' }], { em: 380, dur: 520, fill: 'none' });
-      ['exc1', 'exc2', 'exc3'].forEach(function (n, i) { a(L[n].i, [{ transform: 'scale(1)' }, { transform: 'scale(1.25) rotate(6deg)', offset: .5 }, { transform: 'scale(1)' }], { em: 430 + i * 55, dur: 250, fill: 'none' }); });
-      a(V.m.faixa, [{ transform: 'translateX(-120%) skewX(-20deg)' }, { transform: 'translateX(420%) skewX(-20deg)' }], { em: 450, dur: 620, ease: E.io });
-      a(L.ckBrilho.o, [{ opacity: .5 }, { opacity: 1, offset: .3 }, { opacity: .55 }], { em: 420, dur: 700 });
-      a(V.m.gr, [{ opacity: 0 }, { opacity: 1 }], { dur: 300 });
-      V.cena = { raios: [0, 0, 1], brasas: 10, estouro: [[450, 30]], eletrico: [[450, 700]], estrelas: 300 };
-      V.agendarFim(1250, 330); return;
+      // versão curta (aberturas repetidas no mesmo dia): marca pronta, piscadinha e brilho
+      a(V.m.caixa, [{ opacity: 0, transform: 'translate(-50%,-50%) scale(.97)' }, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }], { dur: 350 });
+      a(V.m.gr, [{ opacity: 0 }, { opacity: 1 }], { dur: 350 });
+      piscar(700);
+      a(L.raios.i, [{ transform: 'scale(1)' }, { transform: 'scale(1.07) rotate(5deg)', offset: .4 }, { transform: 'scale(1)' }], { em: 1050, dur: 560, fill: 'none' });
+      ['exc1', 'exc2', 'exc3'].forEach(function (n, i) { a(L[n].i, [{ transform: 'scale(1)' }, { transform: 'scale(1.25) rotate(6deg)', offset: .5 }, { transform: 'scale(1)' }], { em: 1100 + i * 60, dur: 280, fill: 'none' }); });
+      a(V.m.faixa, [{ transform: 'translateX(-120%) skewX(-20deg)' }, { transform: 'translateX(420%) skewX(-20deg)' }], { em: 1150, dur: 700, ease: E.io });
+      a(L.ckBrilho.o, [{ opacity: .55 }, { opacity: 1, offset: .3 }, { opacity: .55 }], { em: 1100, dur: 800 });
+      V.cena = { raios: [0, 0, 1], brasas: 10, estouro: [[1150, 30]], eletrico: [[1150, 1400]], estrelas: 400 };
+      V.agendarFim(1900, 380); return;
     }
     // ---------- completa (Aurora) ----------
     var sobe = 'translateY(' + (H * .28).toFixed(0) + 'px) scale(.72)';
-    a(V.m.aurora, [{ opacity: 0 }, { opacity: 1 }], { dur: 1700 });
-    if (L.credito) a(L.credito.o, [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { em: 80, dur: 700 });
+    a(V.m.aurora, [{ opacity: 0 }, { opacity: 1 }], { dur: 1900 });
+    a(V.m.gr, [{ opacity: 0 }, { opacity: 1 }], { dur: 1800 });
+    if (L.credito) a(L.credito.o, [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { em: 100, dur: 800 });
     ['raios', 'exc1', 'exc2', 'exc3', 'cabeca', 'olhoE', 'olhoD', 'olhosBrilho'].forEach(function (n) {
-      a(L[n].o, [{ opacity: 0, transform: sobe }, { opacity: 1, transform: 'none' }], { dur: 1500 });
+      a(L[n].o, [{ opacity: 0, transform: sobe }, { opacity: 1, transform: 'none' }], { dur: 1700 });
     });
-    a(L.raios.i, [{ transform: 'rotate(-140deg) scale(.55)' }, { transform: 'none' }], { em: 60, dur: 1750 });
-    ['exc1', 'exc2', 'exc3'].forEach(function (n, i) { a(L[n].i, [{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'none' }], { em: 950 + i * 90, dur: 420, ease: E.volta }); });
+    a(L.raios.i, [{ transform: 'rotate(-140deg) scale(.55)' }, { transform: 'none' }], { em: 60, dur: 2000 });
+    ['exc1', 'exc2', 'exc3'].forEach(function (n, i) { a(L[n].i, [{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'none' }], { em: 1100 + i * 100, dur: 450, ease: E.volta }); });
     ['olhoE', 'olhoD'].forEach(function (n) {
-      a(L[n].i, [{ opacity: .12 }, { opacity: .12, offset: .86 }, { opacity: 1 }], { dur: 1180, ease: 'linear' });
-      // a piscadinha
-      a(L[n].i, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(.06)', offset: .45 }, { transform: 'scaleY(1)' }], { em: 1950, dur: 230, ease: E.io, fill: 'none' });
+      a(L[n].i, [{ opacity: .12 }, { opacity: .12, offset: .865 }, { opacity: 1 }], { dur: 1330, ease: 'linear' });
     });
-    a(L.olhosBrilho.i, [{ opacity: 0 }, { opacity: 0, offset: .2 }, { opacity: 1, offset: .4 }, { opacity: 0 }], { em: 800, dur: 1000, ease: 'linear' });
-    a(L.letraC.o, [{ opacity: 0, transform: 'scale(1.45)' }, { opacity: 1, transform: 'none' }], { em: 1100, dur: 800 });
-    a(L.letraK.o, [{ opacity: 0, transform: 'scale(1.45)' }, { opacity: 1, transform: 'none' }], { em: 1210, dur: 800 });
-    var hit = 1600;
-    a(L.ckBrilho.o, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1.15)', offset: .25 }, { opacity: .55, transform: 'none' }], { em: hit - 120, dur: 900, ease: 'linear' });
-    a(V.m.clarao, [{ opacity: 0 }, { opacity: .9, offset: .15 }, { opacity: 0 }], { em: hit - 30, dur: 700, ease: 'linear' });
-    a(L.nome.o, [{ opacity: 0, transform: 'translateY(16px) scaleX(1.25)' }, { opacity: 1, transform: 'none' }], { em: 1800, dur: 650 });
-    a(V.m.faixa, [{ transform: 'translateX(-120%) skewX(-20deg)' }, { transform: 'translateX(420%) skewX(-20deg)' }], { em: 2100, dur: 720, ease: E.io });
-    a(L.slogan1.o, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { em: 2250, dur: 560 });
-    a(L.slogan2.o, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { em: 2450, dur: 560 });
-    a(V.m.gr, [{ opacity: 0 }, { opacity: 1 }], { dur: 1600 });
-    V.cena = { raios: [-60, 0, 1600], brasas: 18, estouro: [[hit, 70], [2150, 18]], eletrico: [[hit, hit + 650], [2950, 3150]], estrelas: 2050 };
-    V.agendarFim(3650, 400);
+    a(L.olhosBrilho.i, [{ opacity: 0 }, { opacity: 0, offset: .2 }, { opacity: 1, offset: .4 }, { opacity: 0 }], { em: 950, dur: 1100, ease: 'linear' });
+    a(L.letraC.o, [{ opacity: 0, transform: 'scale(1.45)' }, { opacity: 1, transform: 'none' }], { em: 1250, dur: 900 });
+    a(L.letraK.o, [{ opacity: 0, transform: 'scale(1.45)' }, { opacity: 1, transform: 'none' }], { em: 1370, dur: 900 });
+    var hit = 1800;
+    a(L.ckBrilho.o, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1.15)', offset: .25 }, { opacity: .55, transform: 'none' }], { em: hit - 120, dur: 1000, ease: 'linear' });
+    a(V.m.clarao, [{ opacity: 0 }, { opacity: .9, offset: .15 }, { opacity: 0 }], { em: hit - 30, dur: 760, ease: 'linear' });
+    a(L.nome.o, [{ opacity: 0, transform: 'translateY(16px) scaleX(1.25)' }, { opacity: 1, transform: 'none' }], { em: 2050, dur: 700 });
+    a(V.m.faixa, [{ transform: 'translateX(-120%) skewX(-20deg)' }, { transform: 'translateX(420%) skewX(-20deg)' }], { em: 2400, dur: 800, ease: E.io });
+    a(L.slogan1.o, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { em: 2600, dur: 600 });
+    a(L.slogan2.o, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { em: 2800, dur: 600 });
+    // a piscadinha: com tudo já parado na tela
+    piscar(3450);
+    V.cena = { raios: [-60, 0, 1800], brasas: 18, estouro: [[hit, 70], [2450, 18]], eletrico: [[hit, hit + 700], [3300, 3450]], estrelas: 2350 };
+    V.agendarFim(4500, 450);
   };
+  // O fim segue o relógio das animações: se o aparelho atrasar alguns quadros,
+  // a vinheta atrasa junto em vez de ser cortada antes da hora.
   Vinheta.prototype.agendarFim = function (em, dur) {
-    var V = this; V.timerFim = setTimeout(function () { V.encerrar(dur); }, em);
+    var V = this;
+    V.mestre = V.m.raiz.animate([{ opacity: 1 }, { opacity: 1 }], { duration: em });
+    V.mestre.finished.then(function () { V.encerrar(dur); }, function () {});
   };
   Vinheta.prototype.encerrar = function (dur) {
     var V = this; if (V.fim) return; V.fim = true;
-    clearTimeout(V.timerFim);
+    if (V.mestre) V.mestre.cancel();
     if (V.aoTerminar) V.aoTerminar();
+    // o app volta a ser desenhado já no começo do esmaecimento, para não piscar no fim
+    document.documentElement.classList.remove('ck-vinheta-ativa');
+    soltarApp();
     var an = V.m.raiz.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
     V.m.caixa.animate([{ transform: 'translate(-50%,-50%) scale(1)' }, { transform: 'translate(-50%,-50%) scale(1.04)' }], { duration: dur, easing: 'ease-in', fill: 'forwards', composite: 'replace' });
     an.onfinish = function () { V.remover(); };
   };
   Vinheta.prototype.remover = function () {
     var V = this; if (V.removida) return; V.removida = true; V.fim = true;
-    cancelAnimationFrame(V.raf); clearTimeout(V.timerFim); clearTimeout(V.seguranca);
+    cafOriginal(V.raf); clearTimeout(V.timerFim); clearTimeout(V.seguranca);
     window.removeEventListener('resize', V.aoRedimensionar); window.removeEventListener('keydown', V.pular, true);
     if (V.m.raiz.parentNode) V.m.raiz.parentNode.removeChild(V.m.raiz);
     document.documentElement.classList.remove('ck-vinheta-ativa');
+    soltarApp();
     ativa = null;
     try { document.dispatchEvent(new CustomEvent('ck:vinheta-fim')); } catch (e) {}
   };
   Vinheta.prototype.quadro = function (agora) {
     var V = this;
     if (!V.t0) V.t0 = agora;
-    var t = agora - V.t0, dt = Math.min(.05, (agora - (V.ult || agora)) / 1000); V.ult = agora;
+    var t = V.mestre && V.mestre.currentTime != null ? V.mestre.currentTime : agora - V.t0, dt = Math.min(.05, (agora - (V.ult || agora)) / 1000); V.ult = agora;
     // qualidade adaptativa: se os primeiros quadros vierem lentos, desliga os efeitos de fundo
     // (ignora os primeiros 400ms, quando o próprio app ainda está carregando)
     if (!V.leve && dt > 0 && t > 400 && t < 1600) {
@@ -262,7 +302,7 @@
         if (ord[12] > .024) V.modoLeve();
       }
     }
-    if (V.leve) { if (!V.removida) V.raf = requestAnimationFrame(function (tt) { V.quadro(tt); }); return; }
+    if (V.leve) { if (!V.removida) V.raf = rafOriginal(function (tt) { V.quadro(tt); }); return; }
     var cn = V.cena || {}, dpr = V.dpr;
     // raios de luz girando atrás da máscara (tela pequena)
     if (cn.raios) {
@@ -306,7 +346,7 @@
       });
     }
     cf.globalAlpha = 1; cf.globalCompositeOperation = 'source-over';
-    if (!V.removida) V.raf = requestAnimationFrame(function (tt) { V.quadro(tt); });
+    if (!V.removida) V.raf = rafOriginal(function (tt) { V.quadro(tt); });
   };
   Vinheta.prototype.modoLeve = function () {
     var V = this; V.leve = true; V.parts = [];
@@ -337,9 +377,10 @@
     if (ativa || typeof Element === 'undefined' || !Element.prototype.animate) return null;
     garantirEstilo();
     document.documentElement.classList.add('ck-vinheta-ativa');
+    segurando = true;
     var tipo = reduzMovimento() ? 'reduzida' : (opcoes.tipo || 'completa');
     try { ativa = new Vinheta({ tipo: tipo, credito: opcoes.credito != null ? opcoes.credito : CFG.credito }); }
-    catch (e) { var r = document.getElementById('ck-vinheta'); if (r) r.parentNode.removeChild(r); document.documentElement.classList.remove('ck-vinheta-ativa'); ativa = null; }
+    catch (e) { var r = document.getElementById('ck-vinheta'); if (r) r.parentNode.removeChild(r); document.documentElement.classList.remove('ck-vinheta-ativa'); soltarApp(); ativa = null; }
     return ativa;
   }
   function decidir() {
